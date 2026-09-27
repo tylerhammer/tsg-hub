@@ -52,7 +52,7 @@ final class TsgHubPanel extends JPanel
 	// Order matches the index TsgHubPlugin#saveTask expects.
 	private enum TaskType
 	{
-		MANUAL("Manual (organizer reviews proof)"),
+		MANUAL("Manual (admin reviews proof)"),
 		KILL("Boss kill count"),
 		DROP("Item drop"),
 		ITEM_SET("Complete a set"),
@@ -1013,7 +1013,7 @@ final class TsgHubPanel extends JPanel
 	private void promptComplete(String taskId, String teamId, String taskName, String teamName)
 	{
 		JComboBox<String[]> credit = new JComboBox<>();
-		credit.addItem(new String[] {"", "No one (organizer)"});
+		credit.addItem(new String[] {"", "No one (admin)"});
 		List<String[]> roster = new ArrayList<>();
 		JsonArray members = TsgHubUi.array(currentEvent, "members");
 		for (int i = 0; i < members.size(); i++)
@@ -1037,7 +1037,7 @@ final class TsgHubPanel extends JPanel
 		form.add(new JLabel("Mark \"" + taskName + "\" complete for " + teamName + "."));
 		form.add(new JLabel("Credit to"));
 		form.add(credit);
-		form.add(new JLabel("Reason (organizers only)"));
+		form.add(new JLabel("Reason (admins only)"));
 		form.add(reason);
 		SwingUtilities.invokeLater(reason::requestFocusInWindow);
 		while (true)
@@ -1045,7 +1045,7 @@ final class TsgHubPanel extends JPanel
 			int choice = JOptionPane.showConfirmDialog(this, form, "Mark complete", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
 			if (choice != JOptionPane.OK_OPTION) return;
 			if (!reason.getText().trim().isEmpty()) break;
-			JOptionPane.showMessageDialog(this, "Add a short reason so other organizers know why.", "Reason required", JOptionPane.WARNING_MESSAGE);
+			JOptionPane.showMessageDialog(this, "Add a short reason so other admins know why.", "Reason required", JOptionPane.WARNING_MESSAGE);
 		}
 		String[] picked = (String[]) credit.getSelectedItem();
 		plugin.completeTask(taskId, teamId, picked == null || picked[0].isEmpty() ? null : picked[0], reason.getText().trim());

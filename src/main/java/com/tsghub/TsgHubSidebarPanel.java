@@ -46,7 +46,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final JLabel subtitle = TsgHubUi.label("", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont());
 	private final TsgHubUi.RefreshIcon refreshIcon = new TsgHubUi.RefreshIcon();
 	private final JButton refresh = TsgHubUi.iconButton(refreshIcon, "Refresh");
-	private final JButton organizer = TsgHubUi.iconButton(new TsgHubUi.OrganizerIcon(), "Organizer tools");
+	private final JButton organizer = TsgHubUi.iconButton(new TsgHubUi.OrganizerIcon(), "Admin tools");
 	private final TsgHubUi.StatusLine status = new TsgHubUi.StatusLine(TEXT_W);
 
 	private final CardLayout centerLayout = new CardLayout();
@@ -124,7 +124,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		center.add(TsgHubUi.scroll(groupsPage), "groups");
 		add(center, BorderLayout.CENTER);
 
-		codeField.setToolTipText("Team code from your organizer");
+		codeField.setToolTipText("Team code from an admin");
 		codeField.putClientProperty("JTextField.placeholderText", "Team code, e.g. DRGN42");
 		manualNote.putClientProperty("JTextField.placeholderText", "Screenshot link or note");
 		codeField.addActionListener(e -> submitJoin());
@@ -436,7 +436,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 		if (hidden)
 		{
-			page.add(errorPanel("Scores are hidden", "The organizers are keeping the leaderboard secret for now."));
+			page.add(errorPanel("Scores are hidden", "The admins are keeping the leaderboard secret for now."));
 		}
 		else
 		{
@@ -848,7 +848,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 				.thenComparing(e -> TsgHubUi.str(e, "startDate")));
 			if (visible.isEmpty())
 			{
-				page.add(errorPanel("No events yet", "When an organizer creates an event, it will show up here."));
+				page.add(errorPanel("No events yet", "When an admin creates an event, it will show up here."));
 			}
 			for (JsonObject event : visible)
 			{
@@ -904,7 +904,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		setView(View.PREVIEW);
 		setHeader(TsgHubUi.str(event, "name"), TsgHubUi.statusLabel(TsgHubUi.str(event, "status")) + " · " + TsgHubUi.dateRange(event), true, false);
 		page.removeAll();
-		page.add(TsgHubUi.wrapped("Enter the team code your organizer gave you.", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), TEXT_W));
+		page.add(TsgHubUi.wrapped("Enter the team code an admin gave you.", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), TEXT_W));
 		page.add(Box.createVerticalStrut(6));
 		codeField.setText("");
 		page.add(TsgHubUi.fitHeight(codeField));
@@ -1028,7 +1028,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 		if (tasks.size() == 0)
 		{
-			tasksTab.add(errorPanel("No tasks yet", "Your organizer hasn't added tasks to this event."));
+			tasksTab.add(errorPanel("No tasks yet", "The admins haven't added tasks to this event yet."));
 		}
 		else if (open.isEmpty() && hideCompleted.isSelected())
 		{
@@ -1081,7 +1081,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (completed)
 		{
 			boolean creditedToOrganizer = TsgHubUi.bool(progress, "override") && !TsgHubUi.bool(progress, "overrideCredited");
-			body.add(TsgHubUi.label(creditedToOrganizer ? "Marked complete by an organizer" : TsgHubUi.completedLine(progress), TsgHubUi.SUCCESS, small));
+			body.add(TsgHubUi.label(creditedToOrganizer ? "Marked complete by an admin" : TsgHubUi.completedLine(progress), TsgHubUi.SUCCESS, small));
 		}
 		else if (addSetProgress(body, individual || solo ? myEntry(progress) : progress, individual || solo))
 		{
@@ -1136,7 +1136,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (pending && !completed)
 		{
 			body.add(Box.createVerticalStrut(3));
-			body.add(TsgHubUi.badge("Awaiting organizer review", TsgHubUi.WARNING));
+			body.add(TsgHubUi.badge("Awaiting admin review", TsgHubUi.WARNING));
 		}
 		if (manual && !completed && !pending) addManualSubmit(body, taskId);
 		addLineSpacing(body);
@@ -1160,7 +1160,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			body.add(TsgHubUi.fitHeight(fullWidth(submit)));
 			return;
 		}
-		body.add(TsgHubUi.wrapped("Add a note or link for your organizer.", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), CARD_TEXT_W));
+		body.add(TsgHubUi.wrapped("Add a note or link for the admins.", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), CARD_TEXT_W));
 		body.add(Box.createVerticalStrut(3));
 		body.add(TsgHubUi.fitHeight(manualNote));
 		body.add(Box.createVerticalStrut(4));
@@ -1288,7 +1288,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		JsonArray scores = TsgHubUi.array(boardEvent, "teamScores");
 		int totalTasks = TsgHubUi.array(boardEvent, "tasks").size();
 		String ownTeam = ownTeamId();
-		if (ranked.isEmpty()) scoreboardTab.add(errorPanel("No teams yet", "Teams appear here once your organizer adds them."));
+		if (ranked.isEmpty()) scoreboardTab.add(errorPanel("No teams yet", "Teams appear here once an admin adds them."));
 		for (int i = 0; i < ranked.size(); i++)
 		{
 			JsonObject team = ranked.get(i);
@@ -1313,7 +1313,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	private void renderHiddenScoreboard()
 	{
-		scoreboardTab.add(errorPanel("Scores are hidden", "The organizers are keeping scores secret for now. Your own team's progress is on the Tasks tab."));
+		scoreboardTab.add(errorPanel("Scores are hidden", "The admins are keeping scores secret for now. Your own team's progress is on the Tasks tab."));
 		List<JsonObject> teams = new ArrayList<>();
 		JsonArray all = TsgHubUi.array(boardEvent, "teams");
 		for (int i = 0; i < all.size(); i++) teams.add(all.get(i).getAsJsonObject());

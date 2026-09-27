@@ -191,13 +191,13 @@ public class TsgHubPlugin extends Plugin
 	{
 		if (!canManageOrganizerUi())
 		{
-			memberStatus("Organizer tools are for the event creator and Clan Administrators or higher.", Tone.ERROR);
+			memberStatus("Admin tools are for the event creator and Clan Administrators or higher.", Tone.ERROR);
 			return;
 		}
 		SwingUtilities.invokeLater(() -> {
 			if (hubWindow == null || !hubWindow.isDisplayable())
 			{
-				hubWindow = new JFrame("TSG Hub · Organizer");
+				hubWindow = new JFrame("TSG Hub · Admin");
 				hubWindow.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
 				hubWindow.setContentPane(panel);
 				hubWindow.setMinimumSize(new Dimension(680, 480));
@@ -755,7 +755,7 @@ public class TsgHubPlugin extends Plugin
 			try
 			{
 				api().request("POST", "/v1/events/" + eventId + "/claims", token, body);
-				memberStatus("Sent. An organizer will review it.", Tone.SUCCESS);
+				memberStatus("Sent. An admin will review it.", Tone.SUCCESS);
 				SwingUtilities.invokeLater(() -> sidebar.manualSubmitFinished(true));
 				refreshBoard();
 			}
@@ -811,7 +811,7 @@ public class TsgHubPlugin extends Plugin
 			return;
 		}
 		if (detectedClanName.isEmpty()) { eventFormFailed("No clan detected. Log in to a character in your clan first."); return; }
-		if (client.getLocalPlayer() == null || client.getLocalPlayer().getName() == null) { eventFormFailed("Log in first so you're recorded as the organizer."); return; }
+		if (client.getLocalPlayer() == null || client.getLocalPlayer().getName() == null) { eventFormFailed("Log in first so you're recorded as the admin."); return; }
 		JsonObject body = new JsonObject();
 		String creatorName = client.getLocalPlayer().getName();
 		body.addProperty("name", name.trim());
