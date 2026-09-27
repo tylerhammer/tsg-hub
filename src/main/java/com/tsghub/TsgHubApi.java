@@ -1,6 +1,8 @@
 package com.tsghub;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import java.util.concurrent.TimeUnit;
 import okhttp3.MediaType;
@@ -51,13 +53,27 @@ final class TsgHubApi
 		{
 			ResponseBody responseBody = response.body();
 			String text = responseBody == null ? "" : responseBody.string();
-			JsonObject json = text.isEmpty() ? new JsonObject() : new JsonParser().parse(text).getAsJsonObject();
+			JsonObject json = parseObject(text);
 			if (!response.isSuccessful())
 			{
-				String message = json.has("error") ? json.get("error").getAsString() : "Service returned HTTP " + response.code();
+				String message = json != null && json.has("error") && json.get("error").isJsonPrimitive()
+					? json.get("error").getAsString()
+					: "Service returned HTTP " + response.code();
 				throw new HttpError(response.code(), message);
 			}
+			if (json == null) throw new IllegalStateException("Service returned an unexpected response");
 			return json;
 		}
+	}
+
+	private static JsonObject parseObject(String text)
+	{
+		if (text.isEmpty()) return new JsonObject();
+		try
+		{
+			JsonElement element = new JsonParser().parse(text);
+			return element.isJsonObject() ? element.getAsJsonObject() : null;
+		}
+		catch (JsonParseException e) { return null; }
 	}
 }
