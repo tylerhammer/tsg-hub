@@ -382,6 +382,18 @@ public class TsgHubPlugin extends Plugin
 		else if (client.getGameState() != GameState.LOGGED_IN && !sidebarRouted) SwingUtilities.invokeLater(() -> sidebar.showLoggedOut());
 	}
 
+	@net.runelite.client.eventbus.Subscribe
+	public void onRuneScapeProfileChanged(net.runelite.client.events.RuneScapeProfileChanged event)
+	{
+		attemptedXpClaims.clear();
+		xpTasks = Collections.emptyList();
+		pvmTasks = Collections.emptyList();
+		if (boardOverlay != null) boardOverlay.setVisible(false);
+		if (detectedPlayerName.isEmpty()) return;
+		sidebarRouted = false;
+		routeSidebar();
+	}
+
 	private void routeSidebar()
 	{
 		if (sidebar == null) return;

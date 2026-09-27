@@ -7,6 +7,7 @@ import net.runelite.client.config.ConfigManager;
 final class TsgHubSession
 {
 	private static final String GROUP = "tsghubsession";
+	private static final String PROFILE_PREFIX = GROUP + "." + ConfigManager.RSPROFILE_GROUP + ".";
 	private static volatile ConfigManager configManager;
 
 	private TsgHubSession()
@@ -16,6 +17,16 @@ final class TsgHubSession
 	static void init(ConfigManager manager)
 	{
 		configManager = manager;
+		clearLegacyGlobalKeys(manager);
+	}
+
+	private static void clearLegacyGlobalKeys(ConfigManager manager)
+	{
+		for (String key : manager.getConfigurationKeys(GROUP + "."))
+		{
+			if (key.startsWith(PROFILE_PREFIX)) continue;
+			manager.unsetConfiguration(GROUP, key.substring(GROUP.length() + 1));
+		}
 	}
 
 	// ConfigManager rejects ':' in keys, so ':' is stored as '_'.
@@ -34,7 +45,7 @@ final class TsgHubSession
 	{
 		ConfigManager manager = configManager;
 		if (manager == null) return "";
-		String value = manager.getConfiguration(GROUP, encode(key));
+		String value = manager.getRSProfileConfiguration(GROUP, encode(key));
 		return value == null ? "" : value;
 	}
 
@@ -42,8 +53,8 @@ final class TsgHubSession
 	{
 		ConfigManager manager = configManager;
 		if (manager == null) return;
-		if (value == null || value.isEmpty()) manager.unsetConfiguration(GROUP, encode(key));
-		else manager.setConfiguration(GROUP, encode(key), value);
+		if (value == null || value.isEmpty()) manager.unsetRSProfileConfiguration(GROUP, encode(key));
+		else manager.setRSProfileConfiguration(GROUP, encode(key), value);
 	}
 
 	static List<String> keysWithPrefix(String prefix)
@@ -51,9 +62,9 @@ final class TsgHubSession
 		ConfigManager manager = configManager;
 		List<String> keys = new ArrayList<>();
 		if (manager == null) return keys;
-		// ConfigManager returns full "group.key" names.
-		String full = GROUP + "." + encode(prefix);
-		for (String key : manager.getConfigurationKeys(full)) keys.add(decode(key.substring(GROUP.length() + 1)));
+		String profile = manager.getRSProfileKey();
+		if (profile == null) return keys;
+		for (String key : manager.getRSProfileConfigurationKeys(GROUP, profile, encode(prefix))) keys.add(decode(key));
 		return keys;
 	}
 
