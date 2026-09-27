@@ -314,7 +314,6 @@ public class TsgHubPlugin extends Plugin
 			if (sidebar != null)
 			{
 				sidebar.setOrganizerAccess(false);
-				sidebar.setIdentity("", -1);
 				sidebar.showLoggedOut();
 			}
 			if (hubWindow != null) hubWindow.setVisible(false);
@@ -384,7 +383,6 @@ public class TsgHubPlugin extends Plugin
 			if (sidebar != null)
 			{
 				sidebar.setOrganizerAccess(organizerAccess);
-				sidebar.setIdentity(detectedPlayerName, detectedClanRank);
 			}
 			if (!organizerAccess && hubWindow != null) hubWindow.setVisible(false);
 		});

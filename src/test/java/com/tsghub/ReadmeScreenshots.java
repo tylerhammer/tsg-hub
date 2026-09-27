@@ -62,7 +62,6 @@ public class ReadmeScreenshots
 		set(plugin, "groups", new TsgHubGroups(plugin, null, (PartyService) unsafe().allocateInstance(PartyService.class), null, null, null));
 
 		TsgHubSidebarPanel sidebar = new TsgHubSidebarPanel(plugin, new GroupMembersPanel(new GroupViewSettings() {}, null, null));
-		sidebar.setIdentity("Crab Legs", 50);
 
 		sidebar.showSharingOff();
 		shoot(sidebar, SIDEBAR_W, 210, "sharing");
