@@ -2,6 +2,8 @@ package com.tsghub;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -21,14 +23,16 @@ final class TsgHubCompetitionTracker
 {
 	private static final Pattern KILL_COUNT = Pattern.compile("(?:kill count|kill-count)[^0-9]*([0-9][0-9,]*)");
 	private static final long XP_FLUSH_SECONDS = 10;
+	private static final long SCHEDULE_CHECK_SECONDS = 60;
 
 	private final Supplier<TsgHubApi> api;
 	private final ScheduledExecutorService executor;
 	private final Client client;
 	private final ClientThread clientThread;
+	private volatile List<JsonObject> tracked = Collections.emptyList();
 	private volatile List<JsonObject> joined = Collections.emptyList();
 	// Flushed on a delay so each XP drop doesn't send a request.
-	private final Map<String, Integer> pendingXp = new ConcurrentHashMap<>();
+	private final Map<String, PendingXp> pendingXp = new ConcurrentHashMap<>();
 
 	TsgHubCompetitionTracker(Supplier<TsgHubApi> api, ScheduledExecutorService executor, Client client, ClientThread clientThread)
 	{
@@ -36,27 +40,61 @@ final class TsgHubCompetitionTracker
 		this.executor = executor;
 		this.client = client;
 		this.clientThread = clientThread;
+		executor.scheduleAtFixedRate(this::checkSchedule, SCHEDULE_CHECK_SECONDS, SCHEDULE_CHECK_SECONDS, TimeUnit.SECONDS);
 	}
 
 	void setEvents(JsonArray events)
 	{
-		List<JsonObject> running = new ArrayList<>();
+		List<JsonObject> found = new ArrayList<>();
 		for (int i = 0; i < events.size(); i++)
 		{
 			JsonObject event = events.get(i).getAsJsonObject();
 			String type = TsgHubUi.str(event, "type");
-			if (!("skill".equals(type) || "boss".equals(type)) || !"active".equals(TsgHubUi.str(event, "status"))) continue;
+			if (!("skill".equals(type) || "boss".equals(type)) || "ended".equals(TsgHubUi.str(event, "status"))) continue;
 			if (token(event).isEmpty()) continue;
-			running.add(event);
+			found.add(event);
 		}
-		joined = running;
+		tracked = found;
+		joined = running(found);
 		reportAllSkills();
 	}
 
 	void clear()
 	{
+		tracked = Collections.emptyList();
 		joined = Collections.emptyList();
 		pendingXp.clear();
+	}
+
+	private void checkSchedule()
+	{
+		List<JsonObject> running = running(tracked);
+		if (ids(running).equals(ids(joined))) return;
+		joined = running;
+		reportAllSkills();
+	}
+
+	private static List<JsonObject> running(List<JsonObject> events)
+	{
+		String today = LocalDate.now(ZoneOffset.UTC).toString();
+		List<JsonObject> running = new ArrayList<>();
+		for (JsonObject event : events)
+		{
+			String start = TsgHubUi.str(event, "startDate");
+			String end = TsgHubUi.str(event, "endDate");
+			boolean active = start.isEmpty() || end.isEmpty()
+				? "active".equals(TsgHubUi.str(event, "status"))
+				: today.compareTo(start) >= 0 && today.compareTo(end) <= 0;
+			if (active) running.add(event);
+		}
+		return running;
+	}
+
+	private static List<String> ids(List<JsonObject> events)
+	{
+		List<String> ids = new ArrayList<>();
+		for (JsonObject event : events) ids.add(TsgHubUi.str(event, "id"));
+		return ids;
 	}
 
 	void reportAllSkills()
@@ -117,27 +155,31 @@ final class TsgHubCompetitionTracker
 	private void queueXp(JsonObject event, int xp)
 	{
 		String id = TsgHubUi.str(event, "id");
-		boolean scheduled = pendingXp.containsKey(id);
-		pendingXp.put(id, xp);
-		if (scheduled || executor.isShutdown()) return;
+		String token = token(event);
+		if (token.isEmpty() || executor.isShutdown()) return;
+		boolean[] schedule = {false};
+		pendingXp.compute(id, (key, previous) -> {
+			schedule[0] = previous == null;
+			return new PendingXp(xp, token);
+		});
+		if (!schedule[0]) return;
 		executor.schedule(() -> {
-			Integer latest = pendingXp.remove(id);
+			PendingXp latest = pendingXp.remove(id);
 			if (latest == null) return;
 			JsonObject body = new JsonObject();
-			body.addProperty("value", latest);
-			send(event, body);
+			body.addProperty("value", latest.xp);
+			send(event, latest.token, body);
 		}, XP_FLUSH_SECONDS, TimeUnit.SECONDS);
 	}
 
 	private void submit(JsonObject event, JsonObject body)
 	{
-		if (!executor.isShutdown()) executor.submit(() -> send(event, body));
+		String token = token(event);
+		if (!token.isEmpty() && !executor.isShutdown()) executor.submit(() -> send(event, token, body));
 	}
 
-	private void send(JsonObject event, JsonObject body)
+	private void send(JsonObject event, String token, JsonObject body)
 	{
-		String token = token(event);
-		if (token.isEmpty()) return;
 		try { api.get().request("POST", "/v1/events/" + TsgHubUi.str(event, "id") + "/progress", token, body); }
 		catch (Exception ignored) { /* The next XP change or kill reports the latest total again. */ }
 	}
@@ -156,5 +198,12 @@ final class TsgHubCompetitionTracker
 	{
 		try { return Skill.valueOf(TsgHubUi.str(config(event), "skill")); }
 		catch (IllegalArgumentException e) { return null; }
+	}
+
+	private static final class PendingXp
+	{
+		private final int xp;
+		private final String token;
+		private PendingXp(int xp, String token) { this.xp = xp; this.token = token; }
 	}
 }

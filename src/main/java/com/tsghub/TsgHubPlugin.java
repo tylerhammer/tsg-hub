@@ -307,6 +307,7 @@ public class TsgHubPlugin extends Plugin
 		detectedClanRank = -1;
 		inClanChat = false;
 		sidebarRouted = false;
+		if (competitions != null) competitions.clear();
 		SwingUtilities.invokeLater(() -> {
 			if (panel != null) panel.setDetectedClanName("", -1);
 			if (sidebar != null)
@@ -395,6 +396,7 @@ public class TsgHubPlugin extends Plugin
 	public void onRuneScapeProfileChanged(net.runelite.client.events.RuneScapeProfileChanged event)
 	{
 		attemptedXpClaims.clear();
+		if (competitions != null) competitions.clear();
 		clearTaskCache();
 		if (boardOverlay != null) boardOverlay.setVisible(false);
 		if (detectedPlayerName.isEmpty()) return;
