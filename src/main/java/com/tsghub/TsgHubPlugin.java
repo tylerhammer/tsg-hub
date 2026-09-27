@@ -101,6 +101,7 @@ public class TsgHubPlugin extends Plugin
 	private volatile boolean routedAsHubMember;
 	private volatile String hubClanName = "TSGaming";
 	private volatile List<PvmTask> pvmTasks = Collections.emptyList();
+	private volatile String taskEventId = "";
 	private volatile TsgHubApi api;
 	private TsgHubCompetitionTracker competitions;
 	private TsgHubGroups groups;
@@ -386,8 +387,7 @@ public class TsgHubPlugin extends Plugin
 	public void onRuneScapeProfileChanged(net.runelite.client.events.RuneScapeProfileChanged event)
 	{
 		attemptedXpClaims.clear();
-		xpTasks = Collections.emptyList();
-		pvmTasks = Collections.emptyList();
+		clearTaskCache();
 		if (boardOverlay != null) boardOverlay.setVisible(false);
 		if (detectedPlayerName.isEmpty()) return;
 		sidebarRouted = false;
@@ -442,6 +442,7 @@ public class TsgHubPlugin extends Plugin
 				String joinedEventId = result.getAsJsonObject("member").get("eventId").getAsString();
 				String memberToken = result.get("token").getAsString();
 				String memberName = result.getAsJsonObject("member").get("displayName").getAsString();
+				clearTaskCache();
 				TsgHubSession.set("memberToken:" + joinedEventId, memberToken);
 				TsgHubSession.set("memberName:" + joinedEventId, memberName);
 				TsgHubSession.set("token", memberToken);
@@ -480,8 +481,7 @@ public class TsgHubPlugin extends Plugin
 			TsgHubSession.set("token", "");
 			TsgHubSession.set("eventId", "");
 			attemptedXpClaims.clear();
-			xpTasks = Collections.emptyList();
-			pvmTasks = Collections.emptyList();
+			clearTaskCache();
 			if (boardOverlay != null) boardOverlay.setVisible(false);
 		}
 		memberStatus("Disconnected. Rejoin anytime with your team code.", Tone.SUCCESS);
@@ -501,8 +501,7 @@ public class TsgHubPlugin extends Plugin
 		TsgHubSession.removePrefix("clanAdminToken:");
 		TsgHubSession.removePrefix("clanAdminExpiresAt:");
 		attemptedXpClaims.clear();
-		xpTasks = Collections.emptyList();
-		pvmTasks = Collections.emptyList();
+		clearTaskCache();
 		if (boardOverlay != null) boardOverlay.setVisible(false);
 	}
 
@@ -554,8 +553,12 @@ public class TsgHubPlugin extends Plugin
 				JsonObject result = api().request("GET", "/v1/events/" + eventId, token, null);
 				JsonObject event = result.getAsJsonObject("event");
 				syncClanRank(eventId, token, event);
-				cacheXpTasks(event);
-				cachePvmTasks(event);
+				if (eventId.equals(TsgHubSession.get("eventId")))
+				{
+					cacheXpTasks(event);
+					cachePvmTasks(event);
+					taskEventId = eventId;
+				}
 				SwingUtilities.invokeLater(() -> {
 					String displayName = TsgHubSession.get("displayName");
 					setBoardOverlayData(event, displayName);
@@ -695,6 +698,7 @@ public class TsgHubPlugin extends Plugin
 		}
 		String displayName = TsgHubSession.get("memberName:" + eventId);
 		if (displayName.isEmpty() && eventId.equals(TsgHubSession.get("eventId"))) displayName = TsgHubSession.get("displayName");
+		clearTaskCache();
 		TsgHubSession.set("token", token);
 		TsgHubSession.set("eventId", eventId);
 		TsgHubSession.set("displayName", displayName);
@@ -992,8 +996,7 @@ public class TsgHubPlugin extends Plugin
 		{
 			TsgHubSession.set("token", "");
 			TsgHubSession.set("eventId", "");
-			xpTasks = Collections.emptyList();
-			pvmTasks = Collections.emptyList();
+			clearTaskCache();
 			SwingUtilities.invokeLater(() -> sidebar.showEventList());
 		}
 	}
@@ -1083,8 +1086,8 @@ public class TsgHubPlugin extends Plugin
 	{
 		if (!isInHubClan()) return;
 		if (config.dataSharingOptIn() && competitions != null) competitions.onXp(event.getSkill(), event.getXp());
-		if (!config.dataSharingOptIn() || TsgHubSession.get("token").isEmpty() || client.getLocalPlayer() == null) return;
-		String eventId = TsgHubSession.get("eventId");
+		if (!config.dataSharingOptIn() || client.getLocalPlayer() == null) return;
+		String eventId = claimEventId();
 		if (eventId.isEmpty()) return;
 		String skill = event.getSkill().getName();
 		int xp = event.getXp();
@@ -1121,8 +1124,8 @@ public class TsgHubPlugin extends Plugin
 		if (event == null || event.getMessage() == null || client.getLocalPlayer() == null) return;
 		String message = event.getMessage().replaceAll("<[^>]*>", "").toLowerCase(java.util.Locale.ROOT);
 		if (config.dataSharingOptIn() && competitions != null) competitions.onChat(message);
-		if (!config.dataSharingOptIn() || TsgHubSession.get("token").isEmpty()) return;
-		String eventId = TsgHubSession.get("eventId");
+		if (!config.dataSharingOptIn()) return;
+		String eventId = claimEventId();
 		if (eventId.isEmpty()) return;
 		submitKillCountSignals(eventId, message);
 		submitCollectionLogSignals(eventId, message);
@@ -1191,7 +1194,7 @@ public class TsgHubPlugin extends Plugin
 			executor.submit(() -> {
 				try
 				{
-					JsonObject result = api().request("POST", "/v1/events/" + eventId + "/claims", TsgHubSession.get("token"), claim);
+					JsonObject result = api().request("POST", "/v1/events/" + eventId + "/claims", claimToken(eventId), claim);
 					showProgressMessage(result);
 					SwingUtilities.invokeLater(() -> refreshBoard());
 				}
@@ -1252,7 +1255,7 @@ public class TsgHubPlugin extends Plugin
 		executor.submit(() -> {
 			try
 			{
-				JsonObject result = api().request("POST", "/v1/events/" + eventId + "/claims", TsgHubSession.get("token"), claim);
+				JsonObject result = api().request("POST", "/v1/events/" + eventId + "/claims", claimToken(eventId), claim);
 				showProgressMessage(result);
 				SwingUtilities.invokeLater(() -> refreshBoard());
 			}
@@ -1262,9 +1265,9 @@ public class TsgHubPlugin extends Plugin
 
 	private void processLoot(String sourceType, String sourceName, Collection<ItemStack> items, int amount)
 	{
-		if (!config.dataSharingOptIn() || TsgHubSession.get("token").isEmpty() || client.getLocalPlayer() == null
+		if (!config.dataSharingOptIn() || client.getLocalPlayer() == null
 			|| sourceName == null || items == null || isDuplicateLootEvent(sourceType, sourceName, items)) return;
-		String eventId = TsgHubSession.get("eventId");
+		String eventId = claimEventId();
 		if (eventId.isEmpty()) return;
 		for (PvmTask task : pvmTasks)
 		{
@@ -1304,6 +1307,27 @@ public class TsgHubPlugin extends Plugin
 		return recentLootEvents.putIfAbsent(key, tick) != null;
 	}
 
+	private void clearTaskCache()
+	{
+		taskEventId = "";
+		xpTasks = Collections.emptyList();
+		pvmTasks = Collections.emptyList();
+	}
+
+	private String claimEventId()
+	{
+		String eventId = TsgHubSession.get("eventId");
+		if (eventId.isEmpty() || !eventId.equals(taskEventId) || claimToken(eventId).isEmpty()) return "";
+		return eventId;
+	}
+
+	private String claimToken(String eventId)
+	{
+		String token = TsgHubSession.get("memberToken:" + eventId);
+		if (token.isEmpty() && eventId.equals(TsgHubSession.get("eventId"))) token = TsgHubSession.get("token");
+		return token;
+	}
+
 	private void submitPvmClaim(String eventId, PvmTask task, String source, String name, int quantity, int itemId)
 	{
 		JsonObject claim = new JsonObject();
@@ -1318,7 +1342,7 @@ public class TsgHubPlugin extends Plugin
 		executor.submit(() -> {
 			try
 			{
-				JsonObject result = api().request("POST", "/v1/events/" + eventId + "/claims", TsgHubSession.get("token"), claim);
+				JsonObject result = api().request("POST", "/v1/events/" + eventId + "/claims", claimToken(eventId), claim);
 				showProgressMessage(result);
 				SwingUtilities.invokeLater(() -> refreshBoard());
 			}
@@ -1396,7 +1420,7 @@ public class TsgHubPlugin extends Plugin
 		claim.addProperty("evidenceId", "xp-" + key);
 		claim.addProperty("source", "xp");
 		JsonObject evidence = new JsonObject(); evidence.addProperty("skill", skill); evidence.addProperty("xp", xp); claim.add("evidence", evidence);
-		try { showProgressMessage(api().request("POST", "/v1/events/" + eventId + "/claims", TsgHubSession.get("token"), claim)); }
+		try { showProgressMessage(api().request("POST", "/v1/events/" + eventId + "/claims", claimToken(eventId), claim)); }
 		catch (Exception e)
 		{
 			attemptedXpClaims.remove(key);
