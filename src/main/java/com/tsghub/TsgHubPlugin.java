@@ -92,6 +92,7 @@ public class TsgHubPlugin extends Plugin
 	private final Set<String> attemptedXpClaims = ConcurrentHashMap.newKeySet();
 	private final Set<String> attemptedKillCountClaims = ConcurrentHashMap.newKeySet();
 	private final Map<String, Integer> recentLootEvents = new ConcurrentHashMap<>();
+	private static final long CLAN_ADMIN_TOKEN_MARGIN_MILLIS = 60_000;
 	private volatile List<XpTask> xpTasks = Collections.emptyList();
 	private volatile String detectedClanName = "";
 	private volatile String detectedPlayerName = "";
@@ -1588,6 +1589,7 @@ public class TsgHubPlugin extends Plugin
 		String tokenKey = "clanAdminToken:" + clanKey;
 		String expiresKey = "clanAdminExpiresAt:" + clanKey;
 		String previousToken = TsgHubSession.get(tokenKey);
+		if (!previousToken.isEmpty() && clanAdminExpiresAt(clanKey) > System.currentTimeMillis() + CLAN_ADMIN_TOKEN_MARGIN_MILLIS) return previousToken;
 		if (!previousToken.isEmpty())
 		{
 			try { api().request("POST", "/v1/organizer-session/disconnect", previousToken, new JsonObject()); }
@@ -1610,13 +1612,13 @@ public class TsgHubPlugin extends Plugin
 		if (!canUseClanAdminSession()) return "";
 		String clanKey = normalizePlayerName(detectedClanName);
 		if (clanKey.isEmpty()) return "";
-		String token = TsgHubSession.get("clanAdminToken:" + clanKey);
-		try
-		{
-			long expiresAt = Long.parseLong(TsgHubSession.get("clanAdminExpiresAt:" + clanKey));
-			return expiresAt > System.currentTimeMillis() ? token : "";
-		}
-		catch (NumberFormatException ignored) { return ""; }
+		return clanAdminExpiresAt(clanKey) > System.currentTimeMillis() ? TsgHubSession.get("clanAdminToken:" + clanKey) : "";
+	}
+
+	private long clanAdminExpiresAt(String clanKey)
+	{
+		try { return Long.parseLong(TsgHubSession.get("clanAdminExpiresAt:" + clanKey)); }
+		catch (NumberFormatException ignored) { return 0; }
 	}
 
 	private boolean canUseClanAdminSession()
