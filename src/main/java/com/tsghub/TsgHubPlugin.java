@@ -97,6 +97,7 @@ public class TsgHubPlugin extends Plugin
 	private final Set<String> attemptedXpClaims = ConcurrentHashMap.newKeySet();
 	private final Set<String> attemptedKillCountClaims = ConcurrentHashMap.newKeySet();
 	private final Map<String, Integer> recentLootEvents = new ConcurrentHashMap<>();
+	private final Map<String, Integer> syncedClanRanks = new ConcurrentHashMap<>();
 	private static final long CLAN_ADMIN_TOKEN_MARGIN_MILLIS = 60_000;
 	private static final int PET_CHECK_TICKS = 5;
 	private int petCheckTicks;
@@ -396,6 +397,7 @@ public class TsgHubPlugin extends Plugin
 	public void onRuneScapeProfileChanged(net.runelite.client.events.RuneScapeProfileChanged event)
 	{
 		attemptedXpClaims.clear();
+		syncedClanRanks.clear();
 		if (competitions != null) competitions.clear();
 		clearTaskCache();
 		if (boardOverlay != null) boardOverlay.setVisible(false);
@@ -510,6 +512,7 @@ public class TsgHubPlugin extends Plugin
 		TsgHubSession.removePrefix("clanAdminToken:");
 		TsgHubSession.removePrefix("clanAdminExpiresAt:");
 		attemptedXpClaims.clear();
+		syncedClanRanks.clear();
 		clearTaskCache();
 		if (boardOverlay != null) boardOverlay.setVisible(false);
 	}
@@ -722,11 +725,19 @@ public class TsgHubPlugin extends Plugin
 		String eventClan = event.has("clanName") && !event.get("clanName").isJsonNull() ? event.get("clanName").getAsString() : "";
 		if (token.isEmpty() || displayName.isEmpty() || !displayName.equalsIgnoreCase(memberName)
 			|| eventClan.isEmpty() || !eventClan.equalsIgnoreCase(detectedClanName)) return;
+		int rank = detectedClanRank;
+		String key = eventId + ":" + normalizePlayerName(displayName);
+		Integer synced = syncedClanRanks.get(key);
+		if (synced != null && synced == rank) return;
 		JsonObject body = new JsonObject();
 		body.addProperty("displayName", displayName);
 		body.addProperty("clanName", detectedClanName);
-		body.addProperty("clanRank", detectedClanRank);
-		try { api().request("POST", "/v1/events/" + eventId + "/clan-rank", token, body); }
+		body.addProperty("clanRank", rank);
+		try
+		{
+			api().request("POST", "/v1/events/" + eventId + "/clan-rank", token, body);
+			syncedClanRanks.put(key, rank);
+		}
 		catch (Exception ignored) { /* Board refresh should still succeed if a rank sync is unavailable. */ }
 	}
 
