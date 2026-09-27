@@ -20,7 +20,7 @@ import net.runelite.client.callback.ClientThread;
 final class TsgHubCompetitionTracker
 {
 	private static final Pattern KILL_COUNT = Pattern.compile("(?:kill count|kill-count)[^0-9]*([0-9][0-9,]*)");
-	private static final long XP_FLUSH_SECONDS = 30;
+	private static final long XP_FLUSH_SECONDS = 10;
 
 	private final Supplier<TsgHubApi> api;
 	private final ScheduledExecutorService executor;

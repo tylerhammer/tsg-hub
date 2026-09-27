@@ -65,7 +65,7 @@ public class TsgHubPlugin extends Plugin
 	// Dev mode only; must match the server's TEST_MANAGER_NAMES.
 	private static final java.util.Set<String> DEV_TEST_MANAGER_NAMES = parseNames(System.getProperty("tsghub.testManagers", ""));
 	private static final String SERVICE_URL = "https://tsg-api.tylerhammer.com";
-	private static final long BOARD_AUTO_REFRESH_SECONDS = 60;
+	private static final long BOARD_AUTO_REFRESH_SECONDS = 15;
 	private static final Set<Integer> PVM_PET_ITEM_IDS = Set.of(11995, 12643, 12644, 12645, 12646, 12647, 12648, 12649, 12650, 12651, 12652, 12654, 12655, 12703, 12816, 12921, 12939, 12940, 13178, 13179, 13180, 13181, 13182, 13225, 13247, 13262, 20693, 20851, 21273, 21291, 21748, 21992, 22318, 22319, 22376, 22378, 22380, 22382, 22384, 22473, 22663, 22746, 22748, 22750, 22752, 23495, 23757, 23759, 23760, 24491, 25748, 25749, 25750, 25751, 25752, 25836, 25842, 25843, 26348, 27352, 27386, 27590, 27592, 27593, 27649, 27650, 27651, 28246, 28248, 28250, 28252, 28801, 28960, 29836, 30152, 30154, 30622, 30888, 31130, 31285, 31287);
 	@Inject private Client client;
 	@Inject private ItemManager itemManager;
@@ -119,7 +119,7 @@ public class TsgHubPlugin extends Plugin
 			thread.setDaemon(true);
 			return thread;
 		});
-		executor.scheduleAtFixedRate(this::pollTeamNotifications, 10, 12, TimeUnit.SECONDS);
+		executor.scheduleAtFixedRate(this::pollTeamNotifications, 10, 5, TimeUnit.SECONDS);
 		executor.scheduleAtFixedRate(this::autoRefreshBoard, BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
 		competitions = new TsgHubCompetitionTracker(this::api, executor, client, clientThread);
 		itemSearchExecutor = Executors.newFixedThreadPool(2, r -> {
