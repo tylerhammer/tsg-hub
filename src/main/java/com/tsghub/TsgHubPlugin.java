@@ -1221,19 +1221,8 @@ public class TsgHubPlugin extends Plugin
 			if (message.contains("entry mode")) return "toa_entry";
 			return "toa";
 		}
-		if (message.contains("your raid is complete") || message.contains("raid is complete"))
-		{
-			int[] regions = client.getTopLevelWorldView().getMapRegions();
-			if (regions != null)
-			{
-				for (int region : regions)
-				{
-					if (region == 13138 || region == 13137 || region == 13139 || region == 13141 || region == 13136
-						|| region == 13145 || region == 13393 || region == 13394 || region == 13140 || region == 13395 || region == 13397) return "cox_cm";
-				}
-			}
-			return "cox";
-		}
+		if (message.contains("your completed chambers of xeric challenge mode count is")) return "cox_cm";
+		if (message.contains("your completed chambers of xeric count is")) return "cox";
 		return null;
 	}
 
