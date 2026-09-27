@@ -511,6 +511,8 @@ public class TsgHubPlugin extends Plugin
 		TsgHubSession.removePrefix("memberName:");
 		TsgHubSession.removePrefix("clanAdminToken:");
 		TsgHubSession.removePrefix("clanAdminExpiresAt:");
+		TsgHubSession.removePrefix("organizerToken:");
+		TsgHubSession.removePrefix("organizerName:");
 		attemptedXpClaims.clear();
 		syncedClanRanks.clear();
 		clearTaskCache();
