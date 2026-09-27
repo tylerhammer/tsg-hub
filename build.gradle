@@ -1,0 +1,57 @@
+plugins {
+	id 'java'
+}
+
+repositories {
+	mavenLocal()
+	maven {
+		url = 'https://repo.runelite.net'
+		content { includeGroupByRegex('net\\.runelite.*') }
+	}
+	mavenCentral()
+}
+
+def runeLiteVersion = 'latest.release'
+def pluginMainClass = 'com.tsghub.TsgHubPluginTest'
+
+dependencies {
+	compileOnly group: 'net.runelite', name: 'client', version: runeLiteVersion
+	compileOnly 'org.projectlombok:lombok:1.18.30'
+	annotationProcessor 'org.projectlombok:lombok:1.18.30'
+	testImplementation 'junit:junit:4.12'
+	testImplementation group: 'net.runelite', name: 'client', version: runeLiteVersion
+	testImplementation group: 'net.runelite', name: 'jshell', version: runeLiteVersion
+}
+
+group = 'com.tsghub'
+version = '0.1.0'
+
+tasks.withType(JavaCompile).configureEach {
+	options.encoding = 'UTF-8'
+	options.release.set(11)
+}
+
+tasks.register('run', JavaExec) {
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = pluginMainClass
+	jvmArgs '-ea'
+	if (System.getProperty('os.name').toLowerCase().contains('mac')) {
+		jvmArgs '--add-exports=java.desktop/com.apple.eawt=ALL-UNNAMED'
+		jvmArgs '--add-exports=java.desktop/com.apple.eawt.event=ALL-UNNAMED'
+	}
+	args '--developer-mode', '--debug'
+	systemProperty 'tsghub.serviceUrl', System.getenv('TSGHUB_URL') ?: 'http://127.0.0.1:8787'
+	// Local test organizers (developer mode only); should match the server's TEST_MANAGER_NAMES.
+	systemProperty 'tsghub.testManagers', System.getenv('TSGHUB_TEST_MANAGERS') ?: ''
+	// Test with another clan (developer mode only); should match the server's CLAN_NAME.
+	systemProperty 'tsghub.clanName', System.getenv('TSGHUB_CLAN') ?: ''
+}
+
+// Regenerates the README screenshots from fixture JSON: ./gradlew readmeScreenshots -Pfixtures=<file>
+tasks.register('readmeScreenshots', JavaExec) {
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.tsghub.ReadmeScreenshots'
+	jvmArgs '-Duser.timezone=America/New_York'
+	doFirst { if (!project.hasProperty('fixtures')) throw new GradleException('Pass -Pfixtures=<file>') }
+	args project.findProperty('fixtures') ?: '', 'docs/images'
+}
