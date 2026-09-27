@@ -1122,6 +1122,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		if (!isInHubClan()) return;
 		if (event == null || event.getMessage() == null || client.getLocalPlayer() == null) return;
+		if (event.getType() != ChatMessageType.GAMEMESSAGE && event.getType() != ChatMessageType.SPAM) return;
 		String message = event.getMessage().replaceAll("<[^>]*>", "").toLowerCase(java.util.Locale.ROOT);
 		if (config.dataSharingOptIn() && competitions != null) competitions.onChat(message);
 		if (!config.dataSharingOptIn()) return;
