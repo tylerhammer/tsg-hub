@@ -70,13 +70,12 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 
 		g.setColor(GOLD);
 		g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 24));
-		g.drawString(snapshot.get("name").getAsString(), x + 26, y + 42);
+		g.drawString(TsgHubUi.str(snapshot, "name"), x + 26, y + 42);
 		g.setColor(MUTED);
 		g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
-		String clan = snapshot.has("clanName") && !snapshot.get("clanName").isJsonNull() ? snapshot.get("clanName").getAsString() : "Clan";
-		String dates = (snapshot.has("startDate") && !snapshot.get("startDate").isJsonNull() ? snapshot.get("startDate").getAsString() : "")
-			+ " to " + (snapshot.has("endDate") && !snapshot.get("endDate").isJsonNull() ? snapshot.get("endDate").getAsString() : "");
-		g.drawString(clan + "  ·  " + dates + "  ·  " + snapshot.get("status").getAsString().toUpperCase(), x + 26, y + 67);
+		String clan = TsgHubUi.str(snapshot, "clanName");
+		String dates = TsgHubUi.str(snapshot, "startDate") + " to " + TsgHubUi.str(snapshot, "endDate");
+		g.drawString((clan.isEmpty() ? "Clan" : clan) + "  ·  " + dates + "  ·  " + TsgHubUi.str(snapshot, "status").toUpperCase(), x + 26, y + 67);
 		closeButton = new java.awt.Rectangle(x + width - 43, y + 14, 28, 28);
 		g.setColor(new Color(59, 65, 73));
 		g.fillRoundRect(closeButton.x, closeButton.y, closeButton.width, closeButton.height, 8, 8);
@@ -88,24 +87,26 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 		g.setColor(GOLD);
 		g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
 		g.drawString("TEAM SCOREBOARD", x + 26, contentY);
-		JsonArray teams = snapshot.getAsJsonArray("teams");
-		JsonArray scores = snapshot.getAsJsonArray("teamScores");
-		JsonArray tasks = snapshot.getAsJsonArray("tasks");
+		JsonArray teams = TsgHubUi.array(snapshot, "teams");
+		JsonArray scores = TsgHubUi.array(snapshot, "teamScores");
+		JsonArray tasks = TsgHubUi.array(snapshot, "tasks");
 		List<JsonObject> sorted = new ArrayList<>();
 		for (int i = 0; i < teams.size(); i++) sorted.add(teams.get(i).getAsJsonObject());
-		sorted.sort(Comparator.comparingInt((JsonObject team) -> scoreFor(scores, team.get("id").getAsString()).get("points").getAsInt()).reversed());
+		sorted.sort(Comparator.comparingInt((JsonObject team) -> TsgHubUi.integer(TsgHubUi.scoreFor(scores, TsgHubUi.str(team, "id")), "points", 0)).reversed());
 		int rowY = contentY + 30;
 		for (int i = 0; i < sorted.size(); i++)
 		{
 			JsonObject team = sorted.get(i);
-			JsonObject score = scoreFor(scores, team.get("id").getAsString());
+			JsonObject score = TsgHubUi.scoreFor(scores, TsgHubUi.str(team, "id"));
 			g.setColor(i == 0 ? new Color(68, 59, 36) : new Color(48, 54, 63));
 			g.fillRoundRect(x + 22, rowY - 19, width - 44, 34, 8, 8);
 			g.setColor(i == 0 ? GOLD : Color.WHITE);
 			g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 15));
-			g.drawString((i + 1) + ".  " + team.get("name").getAsString(), x + 36, rowY + 3);
+			g.drawString((i + 1) + ".  " + TsgHubUi.str(team, "name"), x + 36, rowY + 3);
 			g.setColor(MUTED);
-			String scoreText = score.get("points").getAsInt() + " pts     " + score.get("completedTasks").getAsInt() + "/" + tasks.size() + " tasks";
+			String scoreText = score.has("points")
+				? TsgHubUi.integer(score, "points", 0) + " pts     " + TsgHubUi.integer(score, "completedTasks", 0) + "/" + tasks.size() + " tasks"
+				: "Hidden";
 			int scoreWidth = g.getFontMetrics().stringWidth(scoreText);
 			g.drawString(scoreText, x + width - scoreWidth - 38, rowY + 3);
 			rowY += 42;
@@ -113,52 +114,24 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 		g.setColor(GOLD);
 		g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
 		g.drawString("YOUR TEAM TASKS", x + 26, rowY + 13);
-		JsonObject ownScore = scoreFor(scores, memberTeamId);
-		JsonArray ownTasks = ownScore.has("tasks") ? ownScore.getAsJsonArray("tasks") : new JsonArray();
+		JsonArray ownTasks = TsgHubUi.array(TsgHubUi.scoreFor(scores, memberTeamId), "tasks");
 		int availableRows = Math.max(0, Math.min(tasks.size(), (y + height - rowY - 54) / 28));
 		g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
 		for (int i = 0; i < availableRows; i++)
 		{
 			JsonObject task = tasks.get(i).getAsJsonObject();
-			JsonObject progress = taskProgress(ownTasks, task.get("id").getAsString());
-			String line = task.get("title").getAsString() + "  ·  "
-				+ (progress.get("completed").getAsBoolean()
-					? "by " + (progress.has("completedBy") && !progress.get("completedBy").isJsonNull() ? progress.get("completedBy").getAsString() : "team")
-					: progress.get("pending").getAsBoolean() ? "IN REVIEW"
-				: progress.get("progress").getAsInt() + "/" + progress.get("target").getAsInt());
-			g.setColor(progress.get("completed").getAsBoolean() ? new Color(139, 220, 165) : MUTED);
+			JsonObject progress = TsgHubUi.progressFor(ownTasks, TsgHubUi.str(task, "id"));
+			boolean completed = TsgHubUi.bool(progress, "completed");
+			String completedBy = TsgHubUi.str(progress, "completedBy");
+			String line = TsgHubUi.str(task, "title") + "  ·  "
+				+ (completed ? "by " + (completedBy.isEmpty() ? "team" : completedBy)
+				: TsgHubUi.bool(progress, "pending") ? "IN REVIEW"
+				: TsgHubUi.integer(progress, "progress", 0) + "/" + TsgHubUi.integer(progress, "target", 1));
+			g.setColor(completed ? new Color(139, 220, 165) : MUTED);
 			g.drawString(line, x + 29, rowY + 42 + i * 26);
 		}
 		g.dispose();
 		return null;
-	}
-
-	private JsonObject scoreFor(JsonArray scores, String teamId)
-	{
-		for (int i = 0; i < scores.size(); i++)
-		{
-			JsonObject score = scores.get(i).getAsJsonObject();
-			if (score.get("teamId").getAsString().equals(teamId)) return score;
-		}
-		return new JsonObject();
-	}
-
-	private JsonObject taskProgress(JsonArray progress, String taskId)
-	{
-		for (int i = 0; i < progress.size(); i++)
-		{
-			JsonObject row = progress.get(i).getAsJsonObject();
-			if (row.get("taskId").getAsString().equals(taskId)) return row;
-		}
-		JsonObject empty = new JsonObject();
-		empty.addProperty("points", 0);
-		empty.addProperty("completedTasks", 0);
-		empty.add("tasks", new JsonArray());
-		empty.addProperty("completed", false);
-		empty.addProperty("pending", false);
-		empty.addProperty("progress", 0);
-		empty.addProperty("target", 1);
-		return empty;
 	}
 
 	@Override public MouseEvent mousePressed(MouseEvent event)
