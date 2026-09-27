@@ -239,8 +239,7 @@ public class TsgHubPlugin extends Plugin
 
 	private String getOrganizerEventId()
 	{
-		String eventId = TsgHubSession.get("organizerEventId");
-		return eventId.isEmpty() ? TsgHubSession.get("eventId") : eventId;
+		return TsgHubSession.get("organizerEventId");
 	}
 
 	String getHubClanName() { return hubClanName; }
@@ -448,7 +447,6 @@ public class TsgHubPlugin extends Plugin
 				TsgHubSession.set("token", memberToken);
 				TsgHubSession.set("displayName", memberName);
 				TsgHubSession.set("eventId", joinedEventId);
-				TsgHubSession.set("organizerEventId", joinedEventId);
 				attemptedXpClaims.clear();
 				memberStatus("You're in! Progress now counts for your team.", Tone.SUCCESS);
 				refreshBoard(true);
