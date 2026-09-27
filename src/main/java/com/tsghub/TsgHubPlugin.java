@@ -1431,20 +1431,12 @@ public class TsgHubPlugin extends Plugin
 
 	private void cacheXpTasks(JsonObject event)
 	{
-		String ownTeamId = "";
-		JsonArray members = event.getAsJsonArray("members");
-		for (int i = 0; i < members.size(); i++)
-		{
-			JsonObject member = members.get(i).getAsJsonObject();
-			if (member.get("displayName").getAsString().equalsIgnoreCase(TsgHubSession.get("displayName")) && !member.get("teamId").isJsonNull()) ownTeamId = member.get("teamId").getAsString();
-		}
 		List<XpTask> found = new ArrayList<>();
 		JsonArray tasks = event.getAsJsonArray("tasks");
 		for (int i = 0; i < tasks.size(); i++)
 		{
 			JsonObject task = tasks.get(i).getAsJsonObject();
 			if (!"xp".equals(task.get("type").getAsString())) continue;
-			if (!task.get("teamId").isJsonNull() && !task.get("teamId").getAsString().equals(ownTeamId)) continue;
 			JsonObject config = task.getAsJsonObject("config");
 			found.add(new XpTask(task.get("id").getAsString(), config.get("skill").getAsString(), config.get("targetXp").getAsInt()));
 		}
