@@ -37,6 +37,11 @@ import net.runelite.api.events.ClanChannelChanged;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.StatChanged;
 import net.runelite.api.events.ChatMessage;
+import net.runelite.api.events.GameTick;
+import net.runelite.api.ItemContainer;
+import net.runelite.api.Item;
+import net.runelite.api.NPC;
+import net.runelite.api.gameval.InventoryID;
 import net.runelite.client.chat.ChatColorType;
 import net.runelite.client.chat.ChatMessageBuilder;
 import net.runelite.client.chat.ChatMessageManager;
@@ -93,6 +98,9 @@ public class TsgHubPlugin extends Plugin
 	private final Set<String> attemptedKillCountClaims = ConcurrentHashMap.newKeySet();
 	private final Map<String, Integer> recentLootEvents = new ConcurrentHashMap<>();
 	private static final long CLAN_ADMIN_TOKEN_MARGIN_MILLIS = 60_000;
+	private static final int PET_CHECK_TICKS = 5;
+	private int petCheckTicks;
+	private Set<Integer> inventoryPets = Collections.emptySet();
 	private volatile List<XpTask> xpTasks = Collections.emptyList();
 	private volatile String detectedClanName = "";
 	private volatile String detectedPlayerName = "";
@@ -1129,6 +1137,7 @@ public class TsgHubPlugin extends Plugin
 		if (eventId.isEmpty()) return;
 		submitKillCountSignals(eventId, message);
 		submitCollectionLogSignals(eventId, message);
+		if (isPetMessage(message) && hasPetTask()) petCheckTicks = PET_CHECK_TICKS;
 		String mode = detectRaidMode(message);
 		if (mode == null) return;
 		List<String> visiblePlayers = new ArrayList<>();
@@ -1149,6 +1158,79 @@ public class TsgHubPlugin extends Plugin
 			if (!"raid".equals(task.type) || !task.targetNames.contains(mode)) continue;
 			submitRaidClaim(eventId, task, mode, visiblePlayers, nonClanPlayers);
 		}
+	}
+
+	@net.runelite.client.eventbus.Subscribe
+	public void onGameTick(GameTick tick)
+	{
+		if (!hasPetTask())
+		{
+			petCheckTicks = 0;
+			inventoryPets = Collections.emptySet();
+			return;
+		}
+		if (petCheckTicks <= 0)
+		{
+			inventoryPets = inventoryPetIds();
+			return;
+		}
+		petCheckTicks--;
+		int petId = newPetId();
+		if (petId <= 0) return;
+		petCheckTicks = 0;
+		inventoryPets = inventoryPetIds();
+		String eventId = claimEventId();
+		if (eventId.isEmpty()) return;
+		String petName = itemManager.getItemComposition(petId).getName();
+		for (PvmTask task : pvmTasks)
+		{
+			if ("drop".equals(task.type) && "pet".equals(task.itemGroup)) submitPvmClaim(eventId, task, "drop", petName, 1, petId);
+		}
+	}
+
+	private static boolean isPetMessage(String message)
+	{
+		return message.contains("you have a funny feeling like you're being followed")
+			|| message.contains("you feel something weird sneaking into your backpack");
+	}
+
+	private boolean hasPetTask()
+	{
+		for (PvmTask task : pvmTasks) if ("drop".equals(task.type) && "pet".equals(task.itemGroup)) return true;
+		return false;
+	}
+
+	private Set<Integer> inventoryPetIds()
+	{
+		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
+		if (inventory == null) return Collections.emptySet();
+		Set<Integer> pets = new java.util.HashSet<>();
+		for (Item item : inventory.getItems())
+		{
+			int itemId = itemManager.canonicalize(item.getId());
+			if (PVM_PET_ITEM_IDS.contains(itemId)) pets.add(itemId);
+		}
+		return pets;
+	}
+
+	private int newPetId()
+	{
+		for (int itemId : inventoryPetIds()) if (!inventoryPets.contains(itemId)) return itemId;
+		NPC follower = client.getFollower();
+		String followerName = follower == null ? null : petName(follower.getName());
+		if (followerName == null || followerName.isEmpty()) return -1;
+		for (int itemId : PVM_PET_ITEM_IDS)
+		{
+			if (followerName.equals(petName(itemManager.getItemComposition(itemId).getName()))) return itemId;
+		}
+		return -1;
+	}
+
+	private static String petName(String name)
+	{
+		if (name == null) return null;
+		String normalized = name.replaceAll("<[^>]*>", "").trim().toLowerCase(java.util.Locale.ROOT);
+		return normalized.startsWith("pet ") ? normalized.substring(4) : normalized;
 	}
 
 	private void submitCollectionLogSignals(String eventId, String message)
