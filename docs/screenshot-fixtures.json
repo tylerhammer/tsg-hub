@@ -1,0 +1,2667 @@
+{
+ "bingo": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+ "skill": "0df1ad0f-8568-45a1-813f-8fc433ddb8f9",
+ "dropParty": "68bae018-5dfd-4854-87a8-2839192ce00f",
+ "groupsList": {
+  "groups": [
+   {
+    "id": "d007b83c-8298-47f8-9f89-84d66c247a15",
+    "activity": "Theatre of Blood",
+    "leaderName": "Mossy Rock",
+    "createdAt": "2026-09-27T23:22:02.551Z",
+    "members": [
+     {
+      "displayName": "Mossy Rock",
+      "world": 416
+     },
+     {
+      "displayName": "Tbow Tuesday",
+      "world": 416
+     },
+     {
+      "displayName": "Sir Gnomealot",
+      "world": 416
+     }
+    ]
+   },
+   {
+    "id": "eaa55475-9e06-4c11-ac8a-3f4514584c7d",
+    "activity": "Nex",
+    "leaderName": "Iron Fenrir",
+    "createdAt": "2026-09-27T23:22:02.552Z",
+    "members": [
+     {
+      "displayName": "Iron Fenrir",
+      "world": 302
+     },
+     {
+      "displayName": "Karil Kid",
+      "world": 302
+     }
+    ]
+   },
+   {
+    "id": "3b2cf296-cb15-48df-a15e-640f18847ca8",
+    "activity": "Wintertodt",
+    "leaderName": "Tiny Imp",
+    "createdAt": "2026-09-27T23:22:02.554Z",
+    "members": [
+     {
+      "displayName": "Tiny Imp",
+      "world": 307
+     }
+    ]
+   },
+   {
+    "id": "2aa312c0-f082-4a5a-8a36-3dfd6b703cd8",
+    "activity": "Clue scrolls",
+    "leaderName": "Spoon Feeder",
+    "createdAt": "2026-09-27T23:22:02.554Z",
+    "members": [
+     {
+      "displayName": "Spoon Feeder",
+      "world": 330
+     }
+    ]
+   }
+  ]
+ },
+ "eventList": {
+  "events": [
+   {
+    "id": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "name": "Autumn Bingo 2026",
+    "startDate": "2026-09-20",
+    "endDate": "2026-10-11",
+    "status": "active",
+    "type": "bingo",
+    "config": {},
+    "description": "Three weeks, eight tiles, bragging rights."
+   },
+   {
+    "id": "0df1ad0f-8568-45a1-813f-8fc433ddb8f9",
+    "name": "Skill of the Week",
+    "startDate": "2026-09-21",
+    "endDate": "2026-09-28",
+    "status": "active",
+    "type": "skill",
+    "config": {
+     "skill": "MINING"
+    },
+    "description": ""
+   },
+   {
+    "id": "60eab8cc-451f-49ed-9af9-68364ec0e7e5",
+    "name": "Boss of the Week",
+    "startDate": "2026-09-29",
+    "endDate": "2026-10-05",
+    "status": "scheduled",
+    "type": "boss",
+    "config": {
+     "npcName": "Vardorvis",
+     "signal": "chat"
+    },
+    "description": ""
+   },
+   {
+    "id": "68bae018-5dfd-4854-87a8-2839192ce00f",
+    "name": "Anniversary Drop Party",
+    "startDate": "2026-10-03",
+    "endDate": "2026-10-03",
+    "status": "scheduled",
+    "type": "drop-party",
+    "config": {
+     "startsAt": "2026-10-03T23:00:00.000Z",
+     "world": 420,
+     "location": "Falador Party Room",
+     "host": "TSG Admin",
+     "notes": "Bring inventory space. Balloons at 7, big drop at 7:30."
+    },
+    "description": ""
+   }
+  ]
+ },
+ "board": {
+  "event": {
+   "id": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+   "name": "Autumn Bingo 2026",
+   "clanName": "TSGaming",
+   "createdByName": "TSG Admin",
+   "description": "Three weeks, eight tiles, bragging rights.",
+   "startDate": "2026-09-20",
+   "endDate": "2026-10-11",
+   "status": "active",
+   "createdAt": "2026-09-27T23:22:02.482Z",
+   "hideScores": false,
+   "type": "bingo",
+   "config": {},
+   "teams": [
+    {
+     "id": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+     "name": "Dragon Slayers"
+    },
+    {
+     "id": "88d53ff2-c501-4d8b-b566-29be32460b05",
+     "name": "Barrows Brothers"
+    },
+    {
+     "id": "d1578c18-ae4e-43ec-9bbf-4311ac03f8b1",
+     "name": "Gnome Child Gang"
+    }
+   ],
+   "tasks": [
+    {
+     "id": "68c47d80-a886-4ef7-8dd8-5213b6bffc0f",
+     "title": "Kill Vorkath 50 times",
+     "description": "",
+     "type": "kill",
+     "scope": "team",
+     "config": {
+      "npcName": "Vorkath",
+      "targetCount": 50,
+      "signal": "chat"
+     },
+     "points": 10,
+     "createdAt": "2026-09-27T23:22:02.493Z"
+    },
+    {
+     "id": "77e119ec-91b7-46b9-93ad-b3617f2ad939",
+     "title": "Complete a Barrows set",
+     "description": "",
+     "type": "drop",
+     "scope": "team",
+     "config": {
+      "itemGroups": [
+       [
+        {
+         "id": 4716,
+         "name": "Dharok's helm"
+        },
+        {
+         "id": 4718,
+         "name": "Dharok's greataxe"
+        },
+        {
+         "id": 4720,
+         "name": "Dharok's platebody"
+        },
+        {
+         "id": 4722,
+         "name": "Dharok's platelegs"
+        }
+       ],
+       [
+        {
+         "id": 4753,
+         "name": "Verac's helm"
+        },
+        {
+         "id": 4755,
+         "name": "Verac's flail"
+        },
+        {
+         "id": 4757,
+         "name": "Verac's brassard"
+        },
+        {
+         "id": 4759,
+         "name": "Verac's plateskirt"
+        }
+       ]
+      ],
+      "itemNames": [
+       "Dharok's helm",
+       "Dharok's greataxe",
+       "Dharok's platebody",
+       "Dharok's platelegs",
+       "Verac's helm",
+       "Verac's flail",
+       "Verac's brassard",
+       "Verac's plateskirt"
+      ],
+      "itemIds": [
+       4716,
+       4718,
+       4720,
+       4722,
+       4753,
+       4755,
+       4757,
+       4759
+      ],
+      "itemGroup": "",
+      "targetCount": 1,
+      "requireAllItems": false
+     },
+     "points": 15,
+     "createdAt": "2026-09-27T23:22:02.494Z"
+    },
+    {
+     "id": "654b5fd2-e2fc-4a9a-8e9f-a02d67716e11",
+     "title": "Theatre of Blood (clan only)",
+     "description": "",
+     "type": "raid",
+     "scope": "team",
+     "config": {
+      "modes": [
+       "tob",
+       "tob_hm"
+      ],
+      "clanOnly": true,
+      "targetCount": 3
+     },
+     "points": 20,
+     "createdAt": "2026-09-27T23:22:02.495Z"
+    },
+    {
+     "id": "94264e83-0d97-4942-b42a-7ab3424c8779",
+     "title": "Any boss pet",
+     "description": "",
+     "type": "drop",
+     "scope": "team",
+     "config": {
+      "itemGroup": "pet",
+      "itemNames": [],
+      "itemIds": [],
+      "targetCount": 1,
+      "requireAllItems": false
+     },
+     "points": 25,
+     "createdAt": "2026-09-27T23:22:02.496Z"
+    },
+    {
+     "id": "75f6f9af-9636-4431-bf31-f446043535b5",
+     "title": "Everyone: 10 Zulrah kills",
+     "description": "",
+     "type": "kill",
+     "scope": "individual",
+     "config": {
+      "npcName": "Zulrah",
+      "targetCount": 10,
+      "signal": "chat"
+     },
+     "points": 10,
+     "createdAt": "2026-09-27T23:22:02.497Z"
+    },
+    {
+     "id": "e880ea37-c64b-4e87-9f22-96203b53c773",
+     "title": "Any jar",
+     "description": "",
+     "type": "drop",
+     "scope": "team",
+     "config": {
+      "itemGroup": "jar",
+      "itemNames": [],
+      "itemIds": [],
+      "targetCount": 1,
+      "requireAllItems": false
+     },
+     "points": 5,
+     "createdAt": "2026-09-27T23:22:02.499Z"
+    },
+    {
+     "id": "968c76bd-b5ff-4063-9231-e54c0fa3ef53",
+     "title": "Clan photo at the GE",
+     "description": "Screenshot with at least 5 teammates in TSG capes.",
+     "type": "manual",
+     "scope": "team",
+     "config": {},
+     "points": 5,
+     "createdAt": "2026-09-27T23:22:02.500Z"
+    },
+    {
+     "id": "499ccdcd-2635-4519-8fad-138dbba8e50f",
+     "title": "Bandos armour set",
+     "description": "",
+     "type": "drop",
+     "scope": "team",
+     "config": {
+      "itemGroups": [
+       [
+        {
+         "id": 11832,
+         "name": "Bandos chestplate"
+        },
+        {
+         "id": 11834,
+         "name": "Bandos tassets"
+        },
+        {
+         "id": 11836,
+         "name": "Bandos boots"
+        }
+       ]
+      ],
+      "itemNames": [
+       "Bandos chestplate",
+       "Bandos tassets",
+       "Bandos boots"
+      ],
+      "itemIds": [
+       11832,
+       11834,
+       11836
+      ],
+      "itemGroup": "",
+      "targetCount": 1,
+      "requireAllItems": false
+     },
+     "points": 15,
+     "createdAt": "2026-09-27T23:22:02.501Z"
+    }
+   ],
+   "teamScores": [
+    {
+     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+     "completedTasks": 3,
+     "points": 40,
+     "tasks": [
+      {
+       "taskId": "68c47d80-a886-4ef7-8dd8-5213b6bffc0f",
+       "scope": "team",
+       "contributors": [
+        {
+         "displayName": "Crab Legs",
+         "amount": 14
+        },
+        {
+         "displayName": "Mossy Rock",
+         "amount": 12
+        },
+        {
+         "displayName": "Tbow Tuesday",
+         "amount": 5
+        }
+       ],
+       "progress": 31,
+       "target": 50,
+       "pending": false,
+       "completed": false,
+       "completedBy": null
+      },
+      {
+       "taskId": "77e119ec-91b7-46b9-93ad-b3617f2ad939",
+       "scope": "team",
+       "contributors": [
+        {
+         "displayName": "Crab Legs",
+         "amount": 1
+        },
+        {
+         "displayName": "Mossy Rock",
+         "amount": 1
+        },
+        {
+         "displayName": "Sir Gnomealot",
+         "amount": 1
+        }
+       ],
+       "progress": 0,
+       "target": 1,
+       "pending": false,
+       "completed": false,
+       "completedBy": null,
+       "alternatives": [
+        {
+         "group": 1,
+         "progress": 2,
+         "target": 4,
+         "completed": false,
+         "items": [
+          {
+           "id": 4716,
+           "name": "Dharok's helm",
+           "complete": true,
+           "obtainedBy": "Crab Legs"
+          },
+          {
+           "id": 4718,
+           "name": "Dharok's greataxe",
+           "complete": false,
+           "obtainedBy": null
+          },
+          {
+           "id": 4720,
+           "name": "Dharok's platebody",
+           "complete": true,
+           "obtainedBy": "Mossy Rock"
+          },
+          {
+           "id": 4722,
+           "name": "Dharok's platelegs",
+           "complete": false,
+           "obtainedBy": null
+          }
+         ]
+        },
+        {
+         "group": 2,
+         "progress": 1,
+         "target": 4,
+         "completed": false,
+         "items": [
+          {
+           "id": 4753,
+           "name": "Verac's helm",
+           "complete": false,
+           "obtainedBy": null
+          },
+          {
+           "id": 4755,
+           "name": "Verac's flail",
+           "complete": true,
+           "obtainedBy": "Sir Gnomealot"
+          },
+          {
+           "id": 4757,
+           "name": "Verac's brassard",
+           "complete": false,
+           "obtainedBy": null
+          },
+          {
+           "id": 4759,
+           "name": "Verac's plateskirt",
+           "complete": false,
+           "obtainedBy": null
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "taskId": "654b5fd2-e2fc-4a9a-8e9f-a02d67716e11",
+       "scope": "team",
+       "contributors": [
+        {
+         "displayName": "Crab Legs",
+         "amount": 1
+        },
+        {
+         "displayName": "Mossy Rock",
+         "amount": 1
+        },
+        {
+         "displayName": "Tbow Tuesday",
+         "amount": 1
+        }
+       ],
+       "progress": 3,
+       "target": 3,
+       "pending": false,
+       "completed": true,
+       "completedBy": "Tbow Tuesday"
+      },
+      {
+       "taskId": "94264e83-0d97-4942-b42a-7ab3424c8779",
+       "scope": "team",
+       "contributors": [],
+       "progress": 0,
+       "target": 1,
+       "pending": false,
+       "completed": false,
+       "completedBy": null
+      },
+      {
+       "taskId": "75f6f9af-9636-4431-bf31-f446043535b5",
+       "scope": "individual",
+       "progress": 2,
+       "target": 4,
+       "pending": false,
+       "completed": false,
+       "completedBy": null,
+       "override": false,
+       "members": [
+        {
+         "memberId": "eff3b7a9-9376-42ea-976b-8bd554641f0e",
+         "displayName": "Crab Legs",
+         "progress": 10,
+         "target": 10,
+         "pending": false,
+         "completed": true
+        },
+        {
+         "memberId": "01b90d8a-17e2-4f22-b3b5-90348aa38b3b",
+         "displayName": "Mossy Rock",
+         "progress": 10,
+         "target": 10,
+         "pending": false,
+         "completed": true
+        },
+        {
+         "memberId": "35211e0d-6a00-4dd3-b947-3d49f969ca64",
+         "displayName": "Sir Gnomealot",
+         "progress": 6,
+         "target": 10,
+         "pending": false,
+         "completed": false
+        },
+        {
+         "memberId": "eaa61ab0-2aaf-4059-8504-17a710c20882",
+         "displayName": "Tbow Tuesday",
+         "progress": 3,
+         "target": 10,
+         "pending": false,
+         "completed": false
+        }
+       ]
+      },
+      {
+       "taskId": "e880ea37-c64b-4e87-9f22-96203b53c773",
+       "scope": "team",
+       "contributors": [
+        {
+         "displayName": "Mossy Rock",
+         "amount": 1
+        }
+       ],
+       "progress": 1,
+       "target": 1,
+       "pending": false,
+       "completed": true,
+       "completedBy": "Mossy Rock"
+      },
+      {
+       "taskId": "968c76bd-b5ff-4063-9231-e54c0fa3ef53",
+       "scope": "team",
+       "contributors": [],
+       "progress": 0,
+       "target": 1,
+       "pending": true,
+       "completed": false,
+       "completedBy": null
+      },
+      {
+       "taskId": "499ccdcd-2635-4519-8fad-138dbba8e50f",
+       "scope": "team",
+       "contributors": [
+        {
+         "displayName": "Crab Legs",
+         "amount": 1
+        },
+        {
+         "displayName": "Sir Gnomealot",
+         "amount": 1
+        },
+        {
+         "displayName": "Tbow Tuesday",
+         "amount": 1
+        }
+       ],
+       "progress": 1,
+       "target": 1,
+       "pending": false,
+       "completed": true,
+       "completedBy": "Sir Gnomealot",
+       "alternatives": [
+        {
+         "group": 1,
+         "progress": 3,
+         "target": 3,
+         "completed": true,
+         "items": [
+          {
+           "id": 11832,
+           "name": "Bandos chestplate",
+           "complete": true,
+           "obtainedBy": "Tbow Tuesday"
+          },
+          {
+           "id": 11834,
+           "name": "Bandos tassets",
+           "complete": true,
+           "obtainedBy": "Crab Legs"
+          },
+          {
+           "id": 11836,
+           "name": "Bandos boots",
+           "complete": true,
+           "obtainedBy": "Sir Gnomealot"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "teamId": "88d53ff2-c501-4d8b-b566-29be32460b05",
+     "completedTasks": 2,
+     "points": 35
+    },
+    {
+     "teamId": "d1578c18-ae4e-43ec-9bbf-4311ac03f8b1",
+     "completedTasks": 2,
+     "points": 15
+    }
+   ],
+   "members": [
+    {
+     "id": "eff3b7a9-9376-42ea-976b-8bd554641f0e",
+     "displayName": "Crab Legs",
+     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2"
+    },
+    {
+     "id": "01b90d8a-17e2-4f22-b3b5-90348aa38b3b",
+     "displayName": "Mossy Rock",
+     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2"
+    },
+    {
+     "id": "35211e0d-6a00-4dd3-b947-3d49f969ca64",
+     "displayName": "Sir Gnomealot",
+     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2"
+    },
+    {
+     "id": "eaa61ab0-2aaf-4059-8504-17a710c20882",
+     "displayName": "Tbow Tuesday",
+     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2"
+    }
+   ],
+   "claims": [
+    {
+     "id": "1efe986d-0203-49f5-a873-fefcc33fa750",
+     "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+     "taskId": "68c47d80-a886-4ef7-8dd8-5213b6bffc0f",
+     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+     "evidenceId": "e1",
+     "quantity": 14,
+     "source": "kill",
+     "status": "approved",
+     "submittedAt": "2026-09-27T23:22:02.511Z",
+     "reviewedAt": null
+    },
+    {
+     "id": "bfad1977-ecbb-4ab3-8353-765162b82731",
+     "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+     "taskId": "68c47d80-a886-4ef7-8dd8-5213b6bffc0f",
+     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+     "evidenceId": "e2",
+     "quantity": 12,
+     "source": "kill",
+     "status": "approved",
+     "submittedAt": "2026-09-27T23:22:02.512Z",
+     "reviewedAt": null
+    },
+    {
+     "id": "c6dd365b-38b4-48de-8361-a79d0028e7b4",
+     "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+     "taskId": "68c47d80-a886-4ef7-8dd8-5213b6bffc0f",
+     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+     "evidenceId": "e3",
+     "quantity": 5,
+     "source": "kill",
+     "status": "approved",
+     "submittedAt": "2026-09-27T23:22:02.518Z",
+     "reviewedAt": null
+    },
+    {
+     "id": "89c527be-a75b-4f57-8b1e-cfed05cb540d",
+     "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+     "taskId": "75f6f9af-9636-4431-bf31-f446043535b5",
+     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+     "evidenceId": "e7",
+     "quantity": 10,
+     "source": "kill",
+     "status": "approved",
+     "submittedAt": "2026-09-27T23:22:02.521Z",
+     "reviewedAt": null
+    },
+    {
+     "id": "0dd6e826-3f1a-48be-80c2-3e1cf9086910",
+     "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+     "taskId": "75f6f9af-9636-4431-bf31-f446043535b5",
+     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+     "evidenceId": "e8",
+     "quantity": 10,
+     "source": "kill",
+     "status": "approved",
+     "submittedAt": "2026-09-27T23:22:02.522Z",
+     "reviewedAt": null
+    },
+    {
+     "id": "c88084b0-18c9-4d2b-8e28-d27e3438681f",
+     "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+     "taskId": "75f6f9af-9636-4431-bf31-f446043535b5",
+     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+     "evidenceId": "e9",
+     "quantity": 6,
+     "source": "kill",
+     "status": "approved",
+     "submittedAt": "2026-09-27T23:22:02.522Z",
+     "reviewedAt": null
+    },
+    {
+     "id": "d4c23e78-5b98-437d-acc8-da90eb8b3dc8",
+     "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+     "taskId": "75f6f9af-9636-4431-bf31-f446043535b5",
+     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+     "evidenceId": "e10",
+     "quantity": 3,
+     "source": "kill",
+     "status": "approved",
+     "submittedAt": "2026-09-27T23:22:02.523Z",
+     "reviewedAt": null
+    },
+    {
+     "id": "0c7e2c5a-ed79-4fd5-a409-03046170008a",
+     "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+     "taskId": "77e119ec-91b7-46b9-93ad-b3617f2ad939",
+     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+     "evidenceId": "e14",
+     "quantity": 1,
+     "source": "drop",
+     "status": "approved",
+     "submittedAt": "2026-09-27T23:22:02.525Z",
+     "reviewedAt": null
+    },
+    {
+     "id": "793433cb-36dc-492c-86b8-087685f57152",
+     "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+     "taskId": "77e119ec-91b7-46b9-93ad-b3617f2ad939",
+     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+     "evidenceId": "e15",
+     "quantity": 1,
+     "source": "drop",
+     "status": "approved",
+     "submittedAt": "2026-09-27T23:22:02.526Z",
+     "reviewedAt": null
+    },
+    {
+     "id": "eb0f6539-e97c-4bae-a69e-0a7ad2bb818b",
+     "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+     "taskId": "77e119ec-91b7-46b9-93ad-b3617f2ad939",
+     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+     "evidenceId": "e16",
+     "quantity": 1,
+     "source": "drop",
+     "status": "approved",
+     "submittedAt": "2026-09-27T23:22:02.527Z",
+     "reviewedAt": null
+    },
+    {
+     "id": "7f496d1d-5040-47cb-899b-5b85b1435e6e",
+     "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+     "taskId": "e880ea37-c64b-4e87-9f22-96203b53c773",
+     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+     "evidenceId": "e20",
+     "quantity": 1,
+     "source": "drop",
+     "status": "approved",
+     "submittedAt": "2026-09-27T23:22:02.529Z",
+     "reviewedAt": null
+    },
+    {
+     "id": "786a21db-228e-45cb-984e-351b53816cb3",
+     "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+     "taskId": "499ccdcd-2635-4519-8fad-138dbba8e50f",
+     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+     "evidenceId": "e22",
+     "quantity": 1,
+     "source": "drop",
+     "status": "approved",
+     "submittedAt": "2026-09-27T23:22:02.531Z",
+     "reviewedAt": null
+    },
+    {
+     "id": "056b805a-b639-40b3-8d30-24d7a90bb8e2",
+     "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+     "taskId": "499ccdcd-2635-4519-8fad-138dbba8e50f",
+     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+     "evidenceId": "e23",
+     "quantity": 1,
+     "source": "drop",
+     "status": "approved",
+     "submittedAt": "2026-09-27T23:22:02.531Z",
+     "reviewedAt": null
+    },
+    {
+     "id": "9234d9e7-5954-493f-b357-4cb300c8cfa7",
+     "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+     "taskId": "654b5fd2-e2fc-4a9a-8e9f-a02d67716e11",
+     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+     "evidenceId": "e25",
+     "quantity": 1,
+     "source": "raid",
+     "status": "approved",
+     "submittedAt": "2026-09-27T23:22:02.533Z",
+     "reviewedAt": null
+    },
+    {
+     "id": "239f2b4c-ba49-4f30-a634-172e0168a2c0",
+     "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+     "taskId": "654b5fd2-e2fc-4a9a-8e9f-a02d67716e11",
+     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+     "evidenceId": "e26",
+     "quantity": 1,
+     "source": "raid",
+     "status": "approved",
+     "submittedAt": "2026-09-27T23:22:02.533Z",
+     "reviewedAt": null
+    },
+    {
+     "id": "2d9e66d8-2924-4569-8d7e-7745e52b6444",
+     "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+     "taskId": "654b5fd2-e2fc-4a9a-8e9f-a02d67716e11",
+     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+     "evidenceId": "e27",
+     "quantity": 1,
+     "source": "raid",
+     "status": "approved",
+     "submittedAt": "2026-09-27T23:22:02.534Z",
+     "reviewedAt": null
+    },
+    {
+     "id": "f44d8b6a-68bd-4ec5-903e-f1bfe9615359",
+     "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+     "taskId": "499ccdcd-2635-4519-8fad-138dbba8e50f",
+     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+     "evidenceId": "e28",
+     "quantity": 1,
+     "source": "drop",
+     "status": "approved",
+     "submittedAt": "2026-09-27T23:22:02.534Z",
+     "reviewedAt": null
+    },
+    {
+     "id": "5ed4ea5f-cea7-4d9f-8fe8-48b005835d89",
+     "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+     "taskId": "968c76bd-b5ff-4063-9231-e54c0fa3ef53",
+     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+     "evidenceId": "e30",
+     "quantity": 0,
+     "source": "manual",
+     "status": "pending",
+     "submittedAt": "2026-09-27T23:22:02.536Z",
+     "reviewedAt": null
+    }
+   ]
+  }
+ },
+ "organizer": {
+  "id": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+  "name": "Autumn Bingo 2026",
+  "clanName": "TSGaming",
+  "createdByName": "TSG Admin",
+  "description": "Three weeks, eight tiles, bragging rights.",
+  "startDate": "2026-09-20",
+  "endDate": "2026-10-11",
+  "status": "active",
+  "createdAt": "2026-09-27T23:22:02.482Z",
+  "hideScores": false,
+  "type": "bingo",
+  "config": {},
+  "teams": [
+   {
+    "id": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+    "name": "Dragon Slayers",
+    "inviteCode": "03392B5941"
+   },
+   {
+    "id": "88d53ff2-c501-4d8b-b566-29be32460b05",
+    "name": "Barrows Brothers",
+    "inviteCode": "1DCBF07891"
+   },
+   {
+    "id": "d1578c18-ae4e-43ec-9bbf-4311ac03f8b1",
+    "name": "Gnome Child Gang",
+    "inviteCode": "42CE2CE1BD"
+   }
+  ],
+  "tasks": [
+   {
+    "id": "68c47d80-a886-4ef7-8dd8-5213b6bffc0f",
+    "title": "Kill Vorkath 50 times",
+    "description": "",
+    "type": "kill",
+    "scope": "team",
+    "config": {
+     "npcName": "Vorkath",
+     "targetCount": 50,
+     "signal": "chat"
+    },
+    "points": 10,
+    "createdAt": "2026-09-27T23:22:02.493Z"
+   },
+   {
+    "id": "77e119ec-91b7-46b9-93ad-b3617f2ad939",
+    "title": "Complete a Barrows set",
+    "description": "",
+    "type": "drop",
+    "scope": "team",
+    "config": {
+     "itemGroups": [
+      [
+       {
+        "id": 4716,
+        "name": "Dharok's helm"
+       },
+       {
+        "id": 4718,
+        "name": "Dharok's greataxe"
+       },
+       {
+        "id": 4720,
+        "name": "Dharok's platebody"
+       },
+       {
+        "id": 4722,
+        "name": "Dharok's platelegs"
+       }
+      ],
+      [
+       {
+        "id": 4753,
+        "name": "Verac's helm"
+       },
+       {
+        "id": 4755,
+        "name": "Verac's flail"
+       },
+       {
+        "id": 4757,
+        "name": "Verac's brassard"
+       },
+       {
+        "id": 4759,
+        "name": "Verac's plateskirt"
+       }
+      ]
+     ],
+     "itemNames": [
+      "Dharok's helm",
+      "Dharok's greataxe",
+      "Dharok's platebody",
+      "Dharok's platelegs",
+      "Verac's helm",
+      "Verac's flail",
+      "Verac's brassard",
+      "Verac's plateskirt"
+     ],
+     "itemIds": [
+      4716,
+      4718,
+      4720,
+      4722,
+      4753,
+      4755,
+      4757,
+      4759
+     ],
+     "itemGroup": "",
+     "targetCount": 1,
+     "requireAllItems": false
+    },
+    "points": 15,
+    "createdAt": "2026-09-27T23:22:02.494Z"
+   },
+   {
+    "id": "654b5fd2-e2fc-4a9a-8e9f-a02d67716e11",
+    "title": "Theatre of Blood (clan only)",
+    "description": "",
+    "type": "raid",
+    "scope": "team",
+    "config": {
+     "modes": [
+      "tob",
+      "tob_hm"
+     ],
+     "clanOnly": true,
+     "targetCount": 3
+    },
+    "points": 20,
+    "createdAt": "2026-09-27T23:22:02.495Z"
+   },
+   {
+    "id": "94264e83-0d97-4942-b42a-7ab3424c8779",
+    "title": "Any boss pet",
+    "description": "",
+    "type": "drop",
+    "scope": "team",
+    "config": {
+     "itemGroup": "pet",
+     "itemNames": [],
+     "itemIds": [],
+     "targetCount": 1,
+     "requireAllItems": false
+    },
+    "points": 25,
+    "createdAt": "2026-09-27T23:22:02.496Z"
+   },
+   {
+    "id": "75f6f9af-9636-4431-bf31-f446043535b5",
+    "title": "Everyone: 10 Zulrah kills",
+    "description": "",
+    "type": "kill",
+    "scope": "individual",
+    "config": {
+     "npcName": "Zulrah",
+     "targetCount": 10,
+     "signal": "chat"
+    },
+    "points": 10,
+    "createdAt": "2026-09-27T23:22:02.497Z"
+   },
+   {
+    "id": "e880ea37-c64b-4e87-9f22-96203b53c773",
+    "title": "Any jar",
+    "description": "",
+    "type": "drop",
+    "scope": "team",
+    "config": {
+     "itemGroup": "jar",
+     "itemNames": [],
+     "itemIds": [],
+     "targetCount": 1,
+     "requireAllItems": false
+    },
+    "points": 5,
+    "createdAt": "2026-09-27T23:22:02.499Z"
+   },
+   {
+    "id": "968c76bd-b5ff-4063-9231-e54c0fa3ef53",
+    "title": "Clan photo at the GE",
+    "description": "Screenshot with at least 5 teammates in TSG capes.",
+    "type": "manual",
+    "scope": "team",
+    "config": {},
+    "points": 5,
+    "createdAt": "2026-09-27T23:22:02.500Z"
+   },
+   {
+    "id": "499ccdcd-2635-4519-8fad-138dbba8e50f",
+    "title": "Bandos armour set",
+    "description": "",
+    "type": "drop",
+    "scope": "team",
+    "config": {
+     "itemGroups": [
+      [
+       {
+        "id": 11832,
+        "name": "Bandos chestplate"
+       },
+       {
+        "id": 11834,
+        "name": "Bandos tassets"
+       },
+       {
+        "id": 11836,
+        "name": "Bandos boots"
+       }
+      ]
+     ],
+     "itemNames": [
+      "Bandos chestplate",
+      "Bandos tassets",
+      "Bandos boots"
+     ],
+     "itemIds": [
+      11832,
+      11834,
+      11836
+     ],
+     "itemGroup": "",
+     "targetCount": 1,
+     "requireAllItems": false
+    },
+    "points": 15,
+    "createdAt": "2026-09-27T23:22:02.501Z"
+   }
+  ],
+  "teamScores": [
+   {
+    "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+    "completedTasks": 3,
+    "points": 40,
+    "tasks": [
+     {
+      "taskId": "68c47d80-a886-4ef7-8dd8-5213b6bffc0f",
+      "scope": "team",
+      "contributors": [
+       {
+        "displayName": "Crab Legs",
+        "amount": 14
+       },
+       {
+        "displayName": "Mossy Rock",
+        "amount": 12
+       },
+       {
+        "displayName": "Tbow Tuesday",
+        "amount": 5
+       }
+      ],
+      "progress": 31,
+      "target": 50,
+      "pending": false,
+      "completed": false,
+      "completedBy": null
+     },
+     {
+      "taskId": "77e119ec-91b7-46b9-93ad-b3617f2ad939",
+      "scope": "team",
+      "contributors": [
+       {
+        "displayName": "Crab Legs",
+        "amount": 1
+       },
+       {
+        "displayName": "Mossy Rock",
+        "amount": 1
+       },
+       {
+        "displayName": "Sir Gnomealot",
+        "amount": 1
+       }
+      ],
+      "progress": 0,
+      "target": 1,
+      "pending": false,
+      "completed": false,
+      "completedBy": null,
+      "alternatives": [
+       {
+        "group": 1,
+        "progress": 2,
+        "target": 4,
+        "completed": false,
+        "items": [
+         {
+          "id": 4716,
+          "name": "Dharok's helm",
+          "complete": true,
+          "obtainedBy": "Crab Legs"
+         },
+         {
+          "id": 4718,
+          "name": "Dharok's greataxe",
+          "complete": false,
+          "obtainedBy": null
+         },
+         {
+          "id": 4720,
+          "name": "Dharok's platebody",
+          "complete": true,
+          "obtainedBy": "Mossy Rock"
+         },
+         {
+          "id": 4722,
+          "name": "Dharok's platelegs",
+          "complete": false,
+          "obtainedBy": null
+         }
+        ]
+       },
+       {
+        "group": 2,
+        "progress": 1,
+        "target": 4,
+        "completed": false,
+        "items": [
+         {
+          "id": 4753,
+          "name": "Verac's helm",
+          "complete": false,
+          "obtainedBy": null
+         },
+         {
+          "id": 4755,
+          "name": "Verac's flail",
+          "complete": true,
+          "obtainedBy": "Sir Gnomealot"
+         },
+         {
+          "id": 4757,
+          "name": "Verac's brassard",
+          "complete": false,
+          "obtainedBy": null
+         },
+         {
+          "id": 4759,
+          "name": "Verac's plateskirt",
+          "complete": false,
+          "obtainedBy": null
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "taskId": "654b5fd2-e2fc-4a9a-8e9f-a02d67716e11",
+      "scope": "team",
+      "contributors": [
+       {
+        "displayName": "Crab Legs",
+        "amount": 1
+       },
+       {
+        "displayName": "Mossy Rock",
+        "amount": 1
+       },
+       {
+        "displayName": "Tbow Tuesday",
+        "amount": 1
+       }
+      ],
+      "progress": 3,
+      "target": 3,
+      "pending": false,
+      "completed": true,
+      "completedBy": "Tbow Tuesday"
+     },
+     {
+      "taskId": "94264e83-0d97-4942-b42a-7ab3424c8779",
+      "scope": "team",
+      "contributors": [],
+      "progress": 0,
+      "target": 1,
+      "pending": false,
+      "completed": false,
+      "completedBy": null
+     },
+     {
+      "taskId": "75f6f9af-9636-4431-bf31-f446043535b5",
+      "scope": "individual",
+      "progress": 2,
+      "target": 4,
+      "pending": false,
+      "completed": false,
+      "completedBy": null,
+      "override": false,
+      "members": [
+       {
+        "memberId": "eff3b7a9-9376-42ea-976b-8bd554641f0e",
+        "displayName": "Crab Legs",
+        "progress": 10,
+        "target": 10,
+        "pending": false,
+        "completed": true
+       },
+       {
+        "memberId": "01b90d8a-17e2-4f22-b3b5-90348aa38b3b",
+        "displayName": "Mossy Rock",
+        "progress": 10,
+        "target": 10,
+        "pending": false,
+        "completed": true
+       },
+       {
+        "memberId": "35211e0d-6a00-4dd3-b947-3d49f969ca64",
+        "displayName": "Sir Gnomealot",
+        "progress": 6,
+        "target": 10,
+        "pending": false,
+        "completed": false
+       },
+       {
+        "memberId": "eaa61ab0-2aaf-4059-8504-17a710c20882",
+        "displayName": "Tbow Tuesday",
+        "progress": 3,
+        "target": 10,
+        "pending": false,
+        "completed": false
+       }
+      ]
+     },
+     {
+      "taskId": "e880ea37-c64b-4e87-9f22-96203b53c773",
+      "scope": "team",
+      "contributors": [
+       {
+        "displayName": "Mossy Rock",
+        "amount": 1
+       }
+      ],
+      "progress": 1,
+      "target": 1,
+      "pending": false,
+      "completed": true,
+      "completedBy": "Mossy Rock"
+     },
+     {
+      "taskId": "968c76bd-b5ff-4063-9231-e54c0fa3ef53",
+      "scope": "team",
+      "contributors": [],
+      "progress": 0,
+      "target": 1,
+      "pending": true,
+      "completed": false,
+      "completedBy": null
+     },
+     {
+      "taskId": "499ccdcd-2635-4519-8fad-138dbba8e50f",
+      "scope": "team",
+      "contributors": [
+       {
+        "displayName": "Crab Legs",
+        "amount": 1
+       },
+       {
+        "displayName": "Sir Gnomealot",
+        "amount": 1
+       },
+       {
+        "displayName": "Tbow Tuesday",
+        "amount": 1
+       }
+      ],
+      "progress": 1,
+      "target": 1,
+      "pending": false,
+      "completed": true,
+      "completedBy": "Sir Gnomealot",
+      "alternatives": [
+       {
+        "group": 1,
+        "progress": 3,
+        "target": 3,
+        "completed": true,
+        "items": [
+         {
+          "id": 11832,
+          "name": "Bandos chestplate",
+          "complete": true,
+          "obtainedBy": "Tbow Tuesday"
+         },
+         {
+          "id": 11834,
+          "name": "Bandos tassets",
+          "complete": true,
+          "obtainedBy": "Crab Legs"
+         },
+         {
+          "id": 11836,
+          "name": "Bandos boots",
+          "complete": true,
+          "obtainedBy": "Sir Gnomealot"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "teamId": "88d53ff2-c501-4d8b-b566-29be32460b05",
+    "completedTasks": 2,
+    "points": 35,
+    "tasks": [
+     {
+      "taskId": "68c47d80-a886-4ef7-8dd8-5213b6bffc0f",
+      "scope": "team",
+      "contributors": [
+       {
+        "displayName": "Iron Fenrir",
+        "amount": 22
+       },
+       {
+        "displayName": "Karil Kid",
+        "amount": 8
+       }
+      ],
+      "progress": 30,
+      "target": 50,
+      "pending": false,
+      "completed": false,
+      "completedBy": null
+     },
+     {
+      "taskId": "77e119ec-91b7-46b9-93ad-b3617f2ad939",
+      "scope": "team",
+      "contributors": [
+       {
+        "displayName": "Iron Fenrir",
+        "amount": 2
+       },
+       {
+        "displayName": "Karil Kid",
+        "amount": 1
+       }
+      ],
+      "progress": 0,
+      "target": 1,
+      "pending": false,
+      "completed": false,
+      "completedBy": null,
+      "alternatives": [
+       {
+        "group": 1,
+        "progress": 0,
+        "target": 4,
+        "completed": false,
+        "items": [
+         {
+          "id": 4716,
+          "name": "Dharok's helm",
+          "complete": false,
+          "obtainedBy": null
+         },
+         {
+          "id": 4718,
+          "name": "Dharok's greataxe",
+          "complete": false,
+          "obtainedBy": null
+         },
+         {
+          "id": 4720,
+          "name": "Dharok's platebody",
+          "complete": false,
+          "obtainedBy": null
+         },
+         {
+          "id": 4722,
+          "name": "Dharok's platelegs",
+          "complete": false,
+          "obtainedBy": null
+         }
+        ]
+       },
+       {
+        "group": 2,
+        "progress": 3,
+        "target": 4,
+        "completed": false,
+        "items": [
+         {
+          "id": 4753,
+          "name": "Verac's helm",
+          "complete": true,
+          "obtainedBy": "Iron Fenrir"
+         },
+         {
+          "id": 4755,
+          "name": "Verac's flail",
+          "complete": true,
+          "obtainedBy": "Iron Fenrir"
+         },
+         {
+          "id": 4757,
+          "name": "Verac's brassard",
+          "complete": true,
+          "obtainedBy": "Karil Kid"
+         },
+         {
+          "id": 4759,
+          "name": "Verac's plateskirt",
+          "complete": false,
+          "obtainedBy": null
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "taskId": "654b5fd2-e2fc-4a9a-8e9f-a02d67716e11",
+      "scope": "team",
+      "contributors": [
+       {
+        "displayName": "Iron Fenrir",
+        "amount": 1
+       }
+      ],
+      "progress": 1,
+      "target": 3,
+      "pending": false,
+      "completed": false,
+      "completedBy": null
+     },
+     {
+      "taskId": "94264e83-0d97-4942-b42a-7ab3424c8779",
+      "scope": "team",
+      "contributors": [
+       {
+        "displayName": "Karil Kid",
+        "amount": 1
+       }
+      ],
+      "progress": 1,
+      "target": 1,
+      "pending": false,
+      "completed": true,
+      "completedBy": "Karil Kid"
+     },
+     {
+      "taskId": "75f6f9af-9636-4431-bf31-f446043535b5",
+      "scope": "individual",
+      "progress": 3,
+      "target": 3,
+      "pending": false,
+      "completed": true,
+      "completedBy": null,
+      "override": false,
+      "members": [
+       {
+        "memberId": "74f5f3a7-42bc-41df-98c3-1290f4198cfb",
+        "displayName": "Iron Fenrir",
+        "progress": 10,
+        "target": 10,
+        "pending": false,
+        "completed": true
+       },
+       {
+        "memberId": "a8e55768-07b6-432e-b410-253d07bc6171",
+        "displayName": "Karil Kid",
+        "progress": 10,
+        "target": 10,
+        "pending": false,
+        "completed": true
+       },
+       {
+        "memberId": "747ced93-094f-44ef-bf13-cc5f5de9c967",
+        "displayName": "Seers Village",
+        "progress": 10,
+        "target": 10,
+        "pending": false,
+        "completed": true
+       }
+      ]
+     },
+     {
+      "taskId": "e880ea37-c64b-4e87-9f22-96203b53c773",
+      "scope": "team",
+      "contributors": [],
+      "progress": 0,
+      "target": 1,
+      "pending": false,
+      "completed": false,
+      "completedBy": null
+     },
+     {
+      "taskId": "968c76bd-b5ff-4063-9231-e54c0fa3ef53",
+      "scope": "team",
+      "contributors": [],
+      "progress": 0,
+      "target": 1,
+      "pending": false,
+      "completed": false,
+      "completedBy": null
+     },
+     {
+      "taskId": "499ccdcd-2635-4519-8fad-138dbba8e50f",
+      "scope": "team",
+      "contributors": [],
+      "progress": 0,
+      "target": 1,
+      "pending": false,
+      "completed": false,
+      "completedBy": null,
+      "alternatives": [
+       {
+        "group": 1,
+        "progress": 0,
+        "target": 3,
+        "completed": false,
+        "items": [
+         {
+          "id": 11832,
+          "name": "Bandos chestplate",
+          "complete": false,
+          "obtainedBy": null
+         },
+         {
+          "id": 11834,
+          "name": "Bandos tassets",
+          "complete": false,
+          "obtainedBy": null
+         },
+         {
+          "id": 11836,
+          "name": "Bandos boots",
+          "complete": false,
+          "obtainedBy": null
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "teamId": "d1578c18-ae4e-43ec-9bbf-4311ac03f8b1",
+    "completedTasks": 2,
+    "points": 15,
+    "tasks": [
+     {
+      "taskId": "68c47d80-a886-4ef7-8dd8-5213b6bffc0f",
+      "scope": "team",
+      "contributors": [
+       {
+        "displayName": "Spoon Feeder",
+        "amount": 50
+       }
+      ],
+      "progress": 50,
+      "target": 50,
+      "pending": false,
+      "completed": true,
+      "completedBy": "Spoon Feeder"
+     },
+     {
+      "taskId": "77e119ec-91b7-46b9-93ad-b3617f2ad939",
+      "scope": "team",
+      "contributors": [],
+      "progress": 0,
+      "target": 1,
+      "pending": false,
+      "completed": false,
+      "completedBy": null,
+      "alternatives": [
+       {
+        "group": 1,
+        "progress": 0,
+        "target": 4,
+        "completed": false,
+        "items": [
+         {
+          "id": 4716,
+          "name": "Dharok's helm",
+          "complete": false,
+          "obtainedBy": null
+         },
+         {
+          "id": 4718,
+          "name": "Dharok's greataxe",
+          "complete": false,
+          "obtainedBy": null
+         },
+         {
+          "id": 4720,
+          "name": "Dharok's platebody",
+          "complete": false,
+          "obtainedBy": null
+         },
+         {
+          "id": 4722,
+          "name": "Dharok's platelegs",
+          "complete": false,
+          "obtainedBy": null
+         }
+        ]
+       },
+       {
+        "group": 2,
+        "progress": 0,
+        "target": 4,
+        "completed": false,
+        "items": [
+         {
+          "id": 4753,
+          "name": "Verac's helm",
+          "complete": false,
+          "obtainedBy": null
+         },
+         {
+          "id": 4755,
+          "name": "Verac's flail",
+          "complete": false,
+          "obtainedBy": null
+         },
+         {
+          "id": 4757,
+          "name": "Verac's brassard",
+          "complete": false,
+          "obtainedBy": null
+         },
+         {
+          "id": 4759,
+          "name": "Verac's plateskirt",
+          "complete": false,
+          "obtainedBy": null
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "taskId": "654b5fd2-e2fc-4a9a-8e9f-a02d67716e11",
+      "scope": "team",
+      "contributors": [],
+      "progress": 0,
+      "target": 3,
+      "pending": false,
+      "completed": false,
+      "completedBy": null
+     },
+     {
+      "taskId": "94264e83-0d97-4942-b42a-7ab3424c8779",
+      "scope": "team",
+      "contributors": [],
+      "progress": 0,
+      "target": 1,
+      "pending": false,
+      "completed": false,
+      "completedBy": null
+     },
+     {
+      "taskId": "75f6f9af-9636-4431-bf31-f446043535b5",
+      "scope": "individual",
+      "progress": 0,
+      "target": 3,
+      "pending": false,
+      "completed": false,
+      "completedBy": null,
+      "override": false,
+      "members": [
+       {
+        "memberId": "27520e8b-9bac-4377-8867-d0470649dee5",
+        "displayName": "Spoon Feeder",
+        "progress": 0,
+        "target": 10,
+        "pending": false,
+        "completed": false
+       },
+       {
+        "memberId": "adc82fb6-0232-493c-b38e-0f111fb5b88f",
+        "displayName": "Tiny Imp",
+        "progress": 0,
+        "target": 10,
+        "pending": false,
+        "completed": false
+       },
+       {
+        "memberId": "0ecdb0df-4575-4e81-9b1f-ef143d361aba",
+        "displayName": "Rune Pouch",
+        "progress": 0,
+        "target": 10,
+        "pending": false,
+        "completed": false
+       }
+      ]
+     },
+     {
+      "taskId": "e880ea37-c64b-4e87-9f22-96203b53c773",
+      "scope": "team",
+      "contributors": [
+       {
+        "displayName": "Tiny Imp",
+        "amount": 1
+       }
+      ],
+      "progress": 1,
+      "target": 1,
+      "pending": false,
+      "completed": true,
+      "completedBy": "Tiny Imp"
+     },
+     {
+      "taskId": "968c76bd-b5ff-4063-9231-e54c0fa3ef53",
+      "scope": "team",
+      "contributors": [],
+      "progress": 0,
+      "target": 1,
+      "pending": true,
+      "completed": false,
+      "completedBy": null
+     },
+     {
+      "taskId": "499ccdcd-2635-4519-8fad-138dbba8e50f",
+      "scope": "team",
+      "contributors": [],
+      "progress": 0,
+      "target": 1,
+      "pending": false,
+      "completed": false,
+      "completedBy": null,
+      "alternatives": [
+       {
+        "group": 1,
+        "progress": 0,
+        "target": 3,
+        "completed": false,
+        "items": [
+         {
+          "id": 11832,
+          "name": "Bandos chestplate",
+          "complete": false,
+          "obtainedBy": null
+         },
+         {
+          "id": 11834,
+          "name": "Bandos tassets",
+          "complete": false,
+          "obtainedBy": null
+         },
+         {
+          "id": 11836,
+          "name": "Bandos boots",
+          "complete": false,
+          "obtainedBy": null
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "members": [
+   {
+    "id": "eff3b7a9-9376-42ea-976b-8bd554641f0e",
+    "displayName": "Crab Legs",
+    "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2"
+   },
+   {
+    "id": "01b90d8a-17e2-4f22-b3b5-90348aa38b3b",
+    "displayName": "Mossy Rock",
+    "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2"
+   },
+   {
+    "id": "35211e0d-6a00-4dd3-b947-3d49f969ca64",
+    "displayName": "Sir Gnomealot",
+    "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2"
+   },
+   {
+    "id": "eaa61ab0-2aaf-4059-8504-17a710c20882",
+    "displayName": "Tbow Tuesday",
+    "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2"
+   },
+   {
+    "id": "74f5f3a7-42bc-41df-98c3-1290f4198cfb",
+    "displayName": "Iron Fenrir",
+    "teamId": "88d53ff2-c501-4d8b-b566-29be32460b05"
+   },
+   {
+    "id": "a8e55768-07b6-432e-b410-253d07bc6171",
+    "displayName": "Karil Kid",
+    "teamId": "88d53ff2-c501-4d8b-b566-29be32460b05"
+   },
+   {
+    "id": "747ced93-094f-44ef-bf13-cc5f5de9c967",
+    "displayName": "Seers Village",
+    "teamId": "88d53ff2-c501-4d8b-b566-29be32460b05"
+   },
+   {
+    "id": "27520e8b-9bac-4377-8867-d0470649dee5",
+    "displayName": "Spoon Feeder",
+    "teamId": "d1578c18-ae4e-43ec-9bbf-4311ac03f8b1"
+   },
+   {
+    "id": "adc82fb6-0232-493c-b38e-0f111fb5b88f",
+    "displayName": "Tiny Imp",
+    "teamId": "d1578c18-ae4e-43ec-9bbf-4311ac03f8b1"
+   },
+   {
+    "id": "0ecdb0df-4575-4e81-9b1f-ef143d361aba",
+    "displayName": "Rune Pouch",
+    "teamId": "d1578c18-ae4e-43ec-9bbf-4311ac03f8b1"
+   }
+  ],
+  "claims": [
+   {
+    "id": "1efe986d-0203-49f5-a873-fefcc33fa750",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "68c47d80-a886-4ef7-8dd8-5213b6bffc0f",
+    "memberId": "eff3b7a9-9376-42ea-976b-8bd554641f0e",
+    "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+    "displayName": "Crab Legs",
+    "evidenceId": "e1",
+    "quantity": 14,
+    "evidence": {
+     "name": "Vorkath",
+     "quantity": 14,
+     "killCount": 300
+    },
+    "source": "kill",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.511Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "bfad1977-ecbb-4ab3-8353-765162b82731",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "68c47d80-a886-4ef7-8dd8-5213b6bffc0f",
+    "memberId": "01b90d8a-17e2-4f22-b3b5-90348aa38b3b",
+    "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+    "displayName": "Mossy Rock",
+    "evidenceId": "e2",
+    "quantity": 12,
+    "evidence": {
+     "name": "Vorkath",
+     "quantity": 12,
+     "killCount": 120
+    },
+    "source": "kill",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.512Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "c6dd365b-38b4-48de-8361-a79d0028e7b4",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "68c47d80-a886-4ef7-8dd8-5213b6bffc0f",
+    "memberId": "eaa61ab0-2aaf-4059-8504-17a710c20882",
+    "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+    "displayName": "Tbow Tuesday",
+    "evidenceId": "e3",
+    "quantity": 5,
+    "evidence": {
+     "name": "Vorkath",
+     "quantity": 5,
+     "killCount": 40
+    },
+    "source": "kill",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.518Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "320b6297-8b44-4711-87b6-2669b41f3c8b",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "68c47d80-a886-4ef7-8dd8-5213b6bffc0f",
+    "memberId": "74f5f3a7-42bc-41df-98c3-1290f4198cfb",
+    "teamId": "88d53ff2-c501-4d8b-b566-29be32460b05",
+    "displayName": "Iron Fenrir",
+    "evidenceId": "e4",
+    "quantity": 22,
+    "evidence": {
+     "name": "Vorkath",
+     "quantity": 22,
+     "killCount": 500
+    },
+    "source": "kill",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.519Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "9a82dffe-15af-46ee-b14b-4fc667ea8704",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "68c47d80-a886-4ef7-8dd8-5213b6bffc0f",
+    "memberId": "a8e55768-07b6-432e-b410-253d07bc6171",
+    "teamId": "88d53ff2-c501-4d8b-b566-29be32460b05",
+    "displayName": "Karil Kid",
+    "evidenceId": "e5",
+    "quantity": 8,
+    "evidence": {
+     "name": "Vorkath",
+     "quantity": 8,
+     "killCount": 90
+    },
+    "source": "kill",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.519Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "f0c3cdc6-8a3c-4fbb-9f8c-503a51ce5fbd",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "68c47d80-a886-4ef7-8dd8-5213b6bffc0f",
+    "memberId": "27520e8b-9bac-4377-8867-d0470649dee5",
+    "teamId": "d1578c18-ae4e-43ec-9bbf-4311ac03f8b1",
+    "displayName": "Spoon Feeder",
+    "evidenceId": "e6",
+    "quantity": 50,
+    "evidence": {
+     "name": "Vorkath",
+     "quantity": 50,
+     "killCount": 999
+    },
+    "source": "kill",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.520Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "89c527be-a75b-4f57-8b1e-cfed05cb540d",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "75f6f9af-9636-4431-bf31-f446043535b5",
+    "memberId": "eff3b7a9-9376-42ea-976b-8bd554641f0e",
+    "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+    "displayName": "Crab Legs",
+    "evidenceId": "e7",
+    "quantity": 10,
+    "evidence": {
+     "name": "Zulrah",
+     "quantity": 10,
+     "killCount": 100
+    },
+    "source": "kill",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.521Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "0dd6e826-3f1a-48be-80c2-3e1cf9086910",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "75f6f9af-9636-4431-bf31-f446043535b5",
+    "memberId": "01b90d8a-17e2-4f22-b3b5-90348aa38b3b",
+    "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+    "displayName": "Mossy Rock",
+    "evidenceId": "e8",
+    "quantity": 10,
+    "evidence": {
+     "name": "Zulrah",
+     "quantity": 10,
+     "killCount": 100
+    },
+    "source": "kill",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.522Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "c88084b0-18c9-4d2b-8e28-d27e3438681f",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "75f6f9af-9636-4431-bf31-f446043535b5",
+    "memberId": "35211e0d-6a00-4dd3-b947-3d49f969ca64",
+    "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+    "displayName": "Sir Gnomealot",
+    "evidenceId": "e9",
+    "quantity": 6,
+    "evidence": {
+     "name": "Zulrah",
+     "quantity": 6,
+     "killCount": 100
+    },
+    "source": "kill",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.522Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "d4c23e78-5b98-437d-acc8-da90eb8b3dc8",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "75f6f9af-9636-4431-bf31-f446043535b5",
+    "memberId": "eaa61ab0-2aaf-4059-8504-17a710c20882",
+    "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+    "displayName": "Tbow Tuesday",
+    "evidenceId": "e10",
+    "quantity": 3,
+    "evidence": {
+     "name": "Zulrah",
+     "quantity": 3,
+     "killCount": 100
+    },
+    "source": "kill",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.523Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "c5e6412d-1f39-4e96-98f0-a0e7f960b5d6",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "75f6f9af-9636-4431-bf31-f446043535b5",
+    "memberId": "74f5f3a7-42bc-41df-98c3-1290f4198cfb",
+    "teamId": "88d53ff2-c501-4d8b-b566-29be32460b05",
+    "displayName": "Iron Fenrir",
+    "evidenceId": "e11",
+    "quantity": 10,
+    "evidence": {
+     "name": "Zulrah",
+     "quantity": 10,
+     "killCount": 100
+    },
+    "source": "kill",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.523Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "615219be-35d6-4cf8-a447-5c1df670d618",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "75f6f9af-9636-4431-bf31-f446043535b5",
+    "memberId": "a8e55768-07b6-432e-b410-253d07bc6171",
+    "teamId": "88d53ff2-c501-4d8b-b566-29be32460b05",
+    "displayName": "Karil Kid",
+    "evidenceId": "e12",
+    "quantity": 10,
+    "evidence": {
+     "name": "Zulrah",
+     "quantity": 10,
+     "killCount": 100
+    },
+    "source": "kill",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.524Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "a114b59e-0b5b-4f4d-ac19-13f9b85c9d2d",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "75f6f9af-9636-4431-bf31-f446043535b5",
+    "memberId": "747ced93-094f-44ef-bf13-cc5f5de9c967",
+    "teamId": "88d53ff2-c501-4d8b-b566-29be32460b05",
+    "displayName": "Seers Village",
+    "evidenceId": "e13",
+    "quantity": 10,
+    "evidence": {
+     "name": "Zulrah",
+     "quantity": 10,
+     "killCount": 100
+    },
+    "source": "kill",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.525Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "0c7e2c5a-ed79-4fd5-a409-03046170008a",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "77e119ec-91b7-46b9-93ad-b3617f2ad939",
+    "memberId": "eff3b7a9-9376-42ea-976b-8bd554641f0e",
+    "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+    "displayName": "Crab Legs",
+    "evidenceId": "e14",
+    "quantity": 1,
+    "evidence": {
+     "name": "Dharok's helm",
+     "itemId": 4716,
+     "quantity": 1
+    },
+    "source": "drop",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.525Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "793433cb-36dc-492c-86b8-087685f57152",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "77e119ec-91b7-46b9-93ad-b3617f2ad939",
+    "memberId": "01b90d8a-17e2-4f22-b3b5-90348aa38b3b",
+    "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+    "displayName": "Mossy Rock",
+    "evidenceId": "e15",
+    "quantity": 1,
+    "evidence": {
+     "name": "Dharok's platebody",
+     "itemId": 4720,
+     "quantity": 1
+    },
+    "source": "drop",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.526Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "eb0f6539-e97c-4bae-a69e-0a7ad2bb818b",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "77e119ec-91b7-46b9-93ad-b3617f2ad939",
+    "memberId": "35211e0d-6a00-4dd3-b947-3d49f969ca64",
+    "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+    "displayName": "Sir Gnomealot",
+    "evidenceId": "e16",
+    "quantity": 1,
+    "evidence": {
+     "name": "Verac's flail",
+     "itemId": 4755,
+     "quantity": 1
+    },
+    "source": "drop",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.527Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "dc5b4c54-4d91-4986-bc38-998c5198ad7a",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "77e119ec-91b7-46b9-93ad-b3617f2ad939",
+    "memberId": "74f5f3a7-42bc-41df-98c3-1290f4198cfb",
+    "teamId": "88d53ff2-c501-4d8b-b566-29be32460b05",
+    "displayName": "Iron Fenrir",
+    "evidenceId": "e17",
+    "quantity": 1,
+    "evidence": {
+     "name": "Verac's helm",
+     "itemId": 4753,
+     "quantity": 1
+    },
+    "source": "drop",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.527Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "f02d0ecb-6b91-4f65-8e6b-72bee7c0df4d",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "77e119ec-91b7-46b9-93ad-b3617f2ad939",
+    "memberId": "74f5f3a7-42bc-41df-98c3-1290f4198cfb",
+    "teamId": "88d53ff2-c501-4d8b-b566-29be32460b05",
+    "displayName": "Iron Fenrir",
+    "evidenceId": "e18",
+    "quantity": 1,
+    "evidence": {
+     "name": "Verac's flail",
+     "itemId": 4755,
+     "quantity": 1
+    },
+    "source": "drop",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.528Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "9d2da070-8153-4ee3-b333-1ecd6ddf9805",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "77e119ec-91b7-46b9-93ad-b3617f2ad939",
+    "memberId": "a8e55768-07b6-432e-b410-253d07bc6171",
+    "teamId": "88d53ff2-c501-4d8b-b566-29be32460b05",
+    "displayName": "Karil Kid",
+    "evidenceId": "e19",
+    "quantity": 1,
+    "evidence": {
+     "name": "Verac's brassard",
+     "itemId": 4757,
+     "quantity": 1
+    },
+    "source": "drop",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.528Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "7f496d1d-5040-47cb-899b-5b85b1435e6e",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "e880ea37-c64b-4e87-9f22-96203b53c773",
+    "memberId": "01b90d8a-17e2-4f22-b3b5-90348aa38b3b",
+    "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+    "displayName": "Mossy Rock",
+    "evidenceId": "e20",
+    "quantity": 1,
+    "evidence": {
+     "name": "Jar of sand",
+     "itemId": 12885,
+     "quantity": 1
+    },
+    "source": "drop",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.529Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "c3572d6b-e36e-4296-bdb1-266c9cbc65a6",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "e880ea37-c64b-4e87-9f22-96203b53c773",
+    "memberId": "adc82fb6-0232-493c-b38e-0f111fb5b88f",
+    "teamId": "d1578c18-ae4e-43ec-9bbf-4311ac03f8b1",
+    "displayName": "Tiny Imp",
+    "evidenceId": "e21",
+    "quantity": 1,
+    "evidence": {
+     "name": "Jar of eyes",
+     "itemId": 21745,
+     "quantity": 1
+    },
+    "source": "drop",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.530Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "786a21db-228e-45cb-984e-351b53816cb3",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "499ccdcd-2635-4519-8fad-138dbba8e50f",
+    "memberId": "eaa61ab0-2aaf-4059-8504-17a710c20882",
+    "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+    "displayName": "Tbow Tuesday",
+    "evidenceId": "e22",
+    "quantity": 1,
+    "evidence": {
+     "name": "Bandos chestplate",
+     "itemId": 11832,
+     "quantity": 1
+    },
+    "source": "drop",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.531Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "056b805a-b639-40b3-8d30-24d7a90bb8e2",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "499ccdcd-2635-4519-8fad-138dbba8e50f",
+    "memberId": "eff3b7a9-9376-42ea-976b-8bd554641f0e",
+    "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+    "displayName": "Crab Legs",
+    "evidenceId": "e23",
+    "quantity": 1,
+    "evidence": {
+     "name": "Bandos tassets",
+     "itemId": 11834,
+     "quantity": 1
+    },
+    "source": "drop",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.531Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "b232d25b-405e-4cbe-b477-28dd8cc64b96",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "94264e83-0d97-4942-b42a-7ab3424c8779",
+    "memberId": "a8e55768-07b6-432e-b410-253d07bc6171",
+    "teamId": "88d53ff2-c501-4d8b-b566-29be32460b05",
+    "displayName": "Karil Kid",
+    "evidenceId": "e24",
+    "quantity": 1,
+    "evidence": {
+     "name": "Pet snakeling",
+     "itemId": 12921,
+     "quantity": 1
+    },
+    "source": "drop",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.532Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "9234d9e7-5954-493f-b357-4cb300c8cfa7",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "654b5fd2-e2fc-4a9a-8e9f-a02d67716e11",
+    "memberId": "eff3b7a9-9376-42ea-976b-8bd554641f0e",
+    "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+    "displayName": "Crab Legs",
+    "evidenceId": "e25",
+    "quantity": 1,
+    "evidence": {
+     "mode": "tob",
+     "players": [
+      "Crab Legs",
+      "Mossy Rock",
+      "Sir Gnomealot",
+      "Tbow Tuesday"
+     ],
+     "nonClanPlayers": [],
+     "raidSignature": "tob:crablegs,mossyrock,sirgnomealot,tbowtuesday"
+    },
+    "source": "raid",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.533Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "239f2b4c-ba49-4f30-a634-172e0168a2c0",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "654b5fd2-e2fc-4a9a-8e9f-a02d67716e11",
+    "memberId": "01b90d8a-17e2-4f22-b3b5-90348aa38b3b",
+    "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+    "displayName": "Mossy Rock",
+    "evidenceId": "e26",
+    "quantity": 1,
+    "evidence": {
+     "mode": "tob_hm",
+     "players": [
+      "Mossy Rock",
+      "Crab Legs",
+      "Tbow Tuesday"
+     ],
+     "nonClanPlayers": [],
+     "raidSignature": "tob_hm:crablegs,mossyrock,tbowtuesday"
+    },
+    "source": "raid",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.533Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "2d9e66d8-2924-4569-8d7e-7745e52b6444",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "654b5fd2-e2fc-4a9a-8e9f-a02d67716e11",
+    "memberId": "eaa61ab0-2aaf-4059-8504-17a710c20882",
+    "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+    "displayName": "Tbow Tuesday",
+    "evidenceId": "e27",
+    "quantity": 1,
+    "evidence": {
+     "mode": "tob",
+     "players": [
+      "Tbow Tuesday",
+      "Crab Legs",
+      "Sir Gnomealot"
+     ],
+     "nonClanPlayers": [],
+     "raidSignature": "tob:crablegs,sirgnomealot,tbowtuesday"
+    },
+    "source": "raid",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.534Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "f44d8b6a-68bd-4ec5-903e-f1bfe9615359",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "499ccdcd-2635-4519-8fad-138dbba8e50f",
+    "memberId": "35211e0d-6a00-4dd3-b947-3d49f969ca64",
+    "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+    "displayName": "Sir Gnomealot",
+    "evidenceId": "e28",
+    "quantity": 1,
+    "evidence": {
+     "name": "Bandos boots",
+     "itemId": 11836,
+     "quantity": 1
+    },
+    "source": "drop",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.534Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "5011e43c-a544-4f38-b27a-fda33db73c5a",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "654b5fd2-e2fc-4a9a-8e9f-a02d67716e11",
+    "memberId": "74f5f3a7-42bc-41df-98c3-1290f4198cfb",
+    "teamId": "88d53ff2-c501-4d8b-b566-29be32460b05",
+    "displayName": "Iron Fenrir",
+    "evidenceId": "e29",
+    "quantity": 1,
+    "evidence": {
+     "mode": "tob",
+     "players": [
+      "Iron Fenrir",
+      "Karil Kid",
+      "Seers Village"
+     ],
+     "nonClanPlayers": [],
+     "raidSignature": "tob:ironfenrir,karilkid,seersvillage"
+    },
+    "source": "raid",
+    "status": "approved",
+    "submittedAt": "2026-09-27T23:22:02.535Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "5ed4ea5f-cea7-4d9f-8fe8-48b005835d89",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "968c76bd-b5ff-4063-9231-e54c0fa3ef53",
+    "memberId": "35211e0d-6a00-4dd3-b947-3d49f969ca64",
+    "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
+    "displayName": "Sir Gnomealot",
+    "evidenceId": "e30",
+    "quantity": 0,
+    "evidence": {
+     "note": "https://imgur.com/a/tsg-ge"
+    },
+    "source": "manual",
+    "status": "pending",
+    "submittedAt": "2026-09-27T23:22:02.536Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   },
+   {
+    "id": "06b27011-87f4-4b61-a043-0c2d34486022",
+    "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "taskId": "968c76bd-b5ff-4063-9231-e54c0fa3ef53",
+    "memberId": "27520e8b-9bac-4377-8867-d0470649dee5",
+    "teamId": "d1578c18-ae4e-43ec-9bbf-4311ac03f8b1",
+    "displayName": "Spoon Feeder",
+    "evidenceId": "e31",
+    "quantity": 0,
+    "evidence": {
+     "note": "https://imgur.com/a/gnomes"
+    },
+    "source": "manual",
+    "status": "pending",
+    "submittedAt": "2026-09-27T23:22:02.536Z",
+    "reviewedAt": null,
+    "reviewerNote": ""
+   }
+  ]
+ },
+ "managed": {
+  "events": [
+   {
+    "id": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
+    "name": "Autumn Bingo 2026",
+    "clanName": "TSGaming",
+    "startDate": "2026-09-20",
+    "endDate": "2026-10-11",
+    "status": "active",
+    "type": "bingo"
+   },
+   {
+    "id": "0df1ad0f-8568-45a1-813f-8fc433ddb8f9",
+    "name": "Skill of the Week",
+    "clanName": "TSGaming",
+    "startDate": "2026-09-21",
+    "endDate": "2026-09-28",
+    "status": "active",
+    "type": "skill"
+   },
+   {
+    "id": "60eab8cc-451f-49ed-9af9-68364ec0e7e5",
+    "name": "Boss of the Week",
+    "clanName": "TSGaming",
+    "startDate": "2026-09-29",
+    "endDate": "2026-10-05",
+    "status": "scheduled",
+    "type": "boss"
+   },
+   {
+    "id": "68bae018-5dfd-4854-87a8-2839192ce00f",
+    "name": "Anniversary Drop Party",
+    "clanName": "TSGaming",
+    "startDate": "2026-10-03",
+    "endDate": "2026-10-03",
+    "status": "scheduled",
+    "type": "drop-party"
+   }
+  ]
+ },
+ "skillBoard": {
+  "event": {
+   "id": "0df1ad0f-8568-45a1-813f-8fc433ddb8f9",
+   "name": "Skill of the Week",
+   "clanName": "TSGaming",
+   "createdByName": "TSG Admin",
+   "description": "",
+   "startDate": "2026-09-21",
+   "endDate": "2026-09-28",
+   "status": "active",
+   "createdAt": "2026-09-27T23:22:02.537Z",
+   "hideScores": false,
+   "type": "skill",
+   "config": {
+    "skill": "MINING"
+   },
+   "leaderboard": [
+    {
+     "memberId": "17e3de26-240c-4510-8769-ea97480610a2",
+     "displayName": "Rune Pouch",
+     "gained": 1712345,
+     "tracking": true,
+     "rank": 1
+    },
+    {
+     "memberId": "d891aecc-90ce-4972-b69c-be9ade31fb73",
+     "displayName": "Crab Legs",
+     "gained": 827569,
+     "tracking": true,
+     "rank": 2
+    },
+    {
+     "memberId": "717f5feb-808e-4311-9846-6b707dd7bde5",
+     "displayName": "Mossy Rock",
+     "gained": 663668,
+     "tracking": true,
+     "rank": 3
+    },
+    {
+     "memberId": "aff04c53-d1d1-43e7-9f78-542b6d7dab61",
+     "displayName": "Iron Fenrir",
+     "gained": 480000,
+     "tracking": true,
+     "rank": 4
+    },
+    {
+     "memberId": "85c7a9b8-fafe-4060-a9da-7b0441676040",
+     "displayName": "Tiny Imp",
+     "gained": 362373,
+     "tracking": true,
+     "rank": 5
+    },
+    {
+     "memberId": "f7b1dca4-b621-41ef-b769-9ba70f78931b",
+     "displayName": "Karil Kid",
+     "gained": 190500,
+     "tracking": true,
+     "rank": 6
+    }
+   ],
+   "participants": 6,
+   "teams": [],
+   "tasks": [],
+   "teamScores": [],
+   "members": [
+    {
+     "id": "d891aecc-90ce-4972-b69c-be9ade31fb73",
+     "displayName": "Crab Legs",
+     "teamId": null
+    }
+   ],
+   "claims": []
+  }
+ },
+ "dropBoard": {
+  "id": "68bae018-5dfd-4854-87a8-2839192ce00f",
+  "name": "Anniversary Drop Party",
+  "clanName": "TSGaming",
+  "createdByName": "TSG Admin",
+  "description": "",
+  "startDate": "2026-10-03",
+  "endDate": "2026-10-03",
+  "status": "scheduled",
+  "createdAt": "2026-09-27T23:22:02.549Z",
+  "hideScores": false,
+  "type": "drop-party",
+  "config": {
+   "startsAt": "2026-10-03T23:00:00.000Z",
+   "world": 420,
+   "location": "Falador Party Room",
+   "host": "TSG Admin",
+   "notes": "Bring inventory space. Balloons at 7, big drop at 7:30."
+  },
+  "teams": [],
+  "tasks": [],
+  "teamScores": [],
+  "members": [],
+  "claims": []
+ }
+}
