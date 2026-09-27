@@ -1265,7 +1265,7 @@ public class TsgHubPlugin extends Plugin
 	private void submitKillCountSignals(String eventId, String message)
 	{
 		if (!message.contains("kill count") && !message.contains("kill-count")) return;
-		java.util.regex.Matcher countMatch = java.util.regex.Pattern.compile("(?:kill count|kill-count)[^0-9]*([0-9][0-9,]*)").matcher(message);
+		java.util.regex.Matcher countMatch = TsgHubCompetitionTracker.KILL_COUNT.matcher(message);
 		if (!countMatch.find()) return;
 		int count;
 		try { count = Integer.parseInt(countMatch.group(1).replace(",", "")); }
@@ -1580,9 +1580,6 @@ public class TsgHubPlugin extends Plugin
 		private final boolean chatKillCount;
 		private final boolean requireAllItems;
 		private final String itemGroup;
-		private PvmTask(String id, String type, List<String> targetNames) { this(id, type, targetNames, Collections.emptyList(), false, false, ""); }
-		private PvmTask(String id, String type, List<String> targetNames, List<Integer> targetItemIds) { this(id, type, targetNames, targetItemIds, false, false, ""); }
-		private PvmTask(String id, String type, List<String> targetNames, List<Integer> targetItemIds, boolean chatKillCount, boolean requireAllItems) { this(id, type, targetNames, targetItemIds, chatKillCount, requireAllItems, ""); }
 		private PvmTask(String id, String type, List<String> targetNames, List<Integer> targetItemIds, boolean chatKillCount, boolean requireAllItems, String itemGroup)
 		{
 			this.id = id;
