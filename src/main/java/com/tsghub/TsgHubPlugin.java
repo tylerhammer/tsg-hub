@@ -367,7 +367,6 @@ public class TsgHubPlugin extends Plugin
 		}
 		if ("shareLocation".equals(event.getKey()))
 		{
-			if (!config.shareLocation() && presence != null) presence.leave();
 			SwingUtilities.invokeLater(() -> sidebar.locationSharingChanged());
 			return;
 		}

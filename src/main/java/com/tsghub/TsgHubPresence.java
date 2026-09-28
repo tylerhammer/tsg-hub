@@ -142,13 +142,14 @@ final class TsgHubPresence
 
 	private JsonObject snapshot()
 	{
-		if (!plugin.locationSharingEnabled() || !plugin.isInHubClan() || !plugin.inClanChat()) return null;
+		if (!plugin.sharingEnabled() || !plugin.isInHubClan() || !plugin.inClanChat()) return null;
 		if (client.getGameState() != GameState.LOGGED_IN) return null;
 		Player player = client.getLocalPlayer();
 		long hash = client.getAccountHash();
 		String name = plugin.getDetectedPlayerName();
 		if (player == null || player.getLocalLocation() == null || hash == -1 || name.isEmpty()) return null;
-		WorldPoint point = WorldPoint.fromLocalInstance(client, player.getLocalLocation());
+		boolean detailed = plugin.locationSharingEnabled();
+		WorldPoint point = detailed ? WorldPoint.fromLocalInstance(client, player.getLocalLocation()) : null;
 		AreaNames.Area area = point == null ? null : AreaNames.forRegion(point.getRegionID());
 		JsonObject payload = new JsonObject();
 		payload.addProperty("clanName", plugin.getDetectedClanName());
@@ -156,7 +157,7 @@ final class TsgHubPresence
 		payload.addProperty("accountHash", Long.toString(hash));
 		payload.addProperty("world", client.getWorld());
 		payload.addProperty("area", area == null ? "" : area.name);
-		payload.addProperty("activity", activity.activity(area, System.currentTimeMillis()));
+		payload.addProperty("activity", detailed ? activity.activity(area, System.currentTimeMillis()) : "Online");
 		return payload;
 	}
 

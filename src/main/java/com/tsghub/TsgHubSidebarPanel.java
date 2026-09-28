@@ -495,7 +495,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 		else if (members.size() == 0)
 		{
-			page.add(errorPanel("Nobody online", "Clanmates show up here while they're in clan chat with location sharing on."));
+			page.add(errorPanel("Nobody online", "Clanmates show up here while they're in clan chat with TSG Hub sharing on."));
 		}
 		else
 		{
@@ -506,10 +506,12 @@ final class TsgHubSidebarPanel extends PluginPanel
 			}
 		}
 		page.add(Box.createVerticalStrut(8));
-		if (plugin.locationSharingEnabled())
-			page.add(TsgHubUi.wrapped("Shows clanmates in clan chat with location sharing on. Leave clan chat or turn off Share location and activity to hide yourself.", TsgHubUi.MUTED, small, TEXT_W));
-		else
-			page.add(TsgHubUi.wrapped("You're hidden. Turn on Share location and activity in the TSG Hub settings to appear here.", TsgHubUi.WARNING, small, TEXT_W));
+		page.add(TsgHubUi.wrapped("Shows clanmates in clan chat with TSG Hub sharing on. Leave clan chat to hide yourself.", TsgHubUi.MUTED, small, TEXT_W));
+		if (!plugin.locationSharingEnabled())
+		{
+			page.add(Box.createVerticalStrut(4));
+			page.add(TsgHubUi.wrapped("Clanmates see you as Online. Turn on Share location and activity in the TSG Hub settings to show your area and activity.", TsgHubUi.MUTED, small, TEXT_W));
+		}
 		refreshPage();
 	}
 
