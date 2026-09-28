@@ -12,10 +12,15 @@ import java.awt.GridLayout;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
@@ -38,7 +43,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private static final int CARD_TITLE_W = 150;
 	private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("h:mm a");
 
-	private enum View { LOGGED_OUT, NOT_IN_CLAN, SHARING_OFF, EVENTS, PREVIEW, BOARD, COMPETITION_PREVIEW, COMPETITION, DROP_PARTY, GROUPS }
+	private enum View { LOGGED_OUT, NOT_IN_CLAN, SHARING_OFF, HOME, EVENTS, PREVIEW, BOARD, COMPETITION_PREVIEW, COMPETITION, DROP_PARTY, GROUPS }
 
 	private final TsgHubPlugin plugin;
 	private final JButton back = TsgHubUi.iconButton(new TsgHubUi.BackIcon(), "Back to events");
@@ -79,12 +84,9 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private volatile String openCompetitionId;
 	private final JButton competitionJoinButton = TsgHubUi.primaryButton("Join");
 
-	private final JButton eventsTab = TsgHubUi.button("Events");
-	private final JButton groupsTab = TsgHubUi.button("Parties");
-	private final JPanel tabRow = new JPanel(new GridLayout(1, 2, 4, 0));
-	private final JPanel headerRow = new JPanel(new BorderLayout(4, 0));
 	private final JPanel titleRow = new JPanel(new BorderLayout(4, 0));
-	private final Color tabBackground = eventsTab.getBackground();
+	private final JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 2, 0));
+	private final List<Section> sections;
 	private final TsgHubUi.WidthTrackingPanel groupsPage = new TsgHubUi.WidthTrackingPanel();
 	private final GroupMembersPanel groupMembers;
 	private static final String OTHER_ACTIVITY = "Other...";
@@ -102,16 +104,35 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private boolean groupBusy;
 	// Browsing the full list from inside a party.
 	private boolean browsingParties;
-	// Events tab view to restore when switching back.
-	private View eventsView = View.EVENTS;
-	private String eventsTitle = "", eventsSubtitle = "";
-	private boolean eventsBack, eventsRefresh;
+
+	private static final class Section
+	{
+		private final String name;
+		private final String tooltip;
+		private final Icon icon;
+		private final Runnable open;
+		private final Supplier<String> summary;
+		private final BooleanSupplier live;
+
+		Section(String name, String tooltip, Icon icon, Runnable open, Supplier<String> summary, BooleanSupplier live)
+		{
+			this.name = name;
+			this.tooltip = tooltip;
+			this.icon = icon;
+			this.open = open;
+			this.summary = summary;
+			this.live = live;
+		}
+	}
 
 	TsgHubSidebarPanel(TsgHubPlugin plugin, GroupMembersPanel groupMembers)
 	{
 		super(false);
 		this.plugin = plugin;
 		this.groupMembers = groupMembers;
+		sections = Arrays.asList(
+			new Section("Events", "Clan events and your team's board", new TsgHubUi.CalendarIcon(), this::openEvents, this::eventsSummary, () -> liveEvents() > 0),
+			new Section("Parties", "Join a clanmate's party or start one", new TsgHubUi.PartyIcon(), this::showParties, this::partiesSummary, () -> plugin.groups().inGroup()));
 		setLayout(new BorderLayout(0, 6));
 		setBackground(TsgHubUi.BACKGROUND);
 		setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -160,14 +181,17 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private JPanel buildHeader()
 	{
 		JPanel header = new JPanel(new BorderLayout());
-		headerRow.setOpaque(false);
 		titleRow.setOpaque(false);
-		titleRow.setBorder(BorderFactory.createEmptyBorder(6, 0, 0, 0));
 		back.addActionListener(e -> {
-			if (view == View.GROUPS)
+			if (view == View.GROUPS && browsingParties && plugin.groups().inGroup())
 			{
 				browsingParties = false;
 				renderGroups();
+				return;
+			}
+			if (view == View.GROUPS || view == View.EVENTS)
+			{
+				showHome();
 				return;
 			}
 			showEventList();
@@ -178,14 +202,24 @@ final class TsgHubSidebarPanel extends PluginPanel
 		JPanel titles = TsgHubUi.stack();
 		titles.add(title);
 		titles.add(subtitle);
-		titleRow.add(titles, BorderLayout.CENTER);
+		JPanel titleSlot = new JPanel(new java.awt.GridBagLayout());
+		titleSlot.setOpaque(false);
+		java.awt.GridBagConstraints fill = new java.awt.GridBagConstraints();
+		fill.weightx = 1;
+		fill.fill = java.awt.GridBagConstraints.HORIZONTAL;
+		titleSlot.add(titles, fill);
+		titleRow.add(titleSlot, BorderLayout.CENTER);
 
-		JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 2, 0));
 		actions.setOpaque(false);
 		organizer.addActionListener(e -> plugin.openWorkspace());
 		organizer.setVisible(false);
 		refresh.addActionListener(e -> {
-			if (view == View.GROUPS) plugin.groups().refresh();
+			if (view == View.HOME)
+			{
+				plugin.loadClanEvents();
+				plugin.groups().refresh();
+			}
+			else if (view == View.GROUPS) plugin.groups().refresh();
 			else if (view == View.BOARD) plugin.refreshBoard();
 			else if (view == View.COMPETITION && competitionEvent != null) plugin.openCompetition(TsgHubUi.str(competitionEvent, "id"));
 			else plugin.loadClanEvents();
@@ -196,24 +230,13 @@ final class TsgHubSidebarPanel extends PluginPanel
 		refreshSlot.add(refresh);
 		actions.add(organizer);
 		actions.add(refreshSlot);
-
-		tabRow.setOpaque(false);
-		eventsTab.addActionListener(e -> showEventsTab());
-		groupsTab.addActionListener(e -> showGroupsTab());
-		eventsTab.setToolTipText("Clan events and your team's board");
-		groupsTab.setToolTipText("Join a clanmate's party or start one");
-		tabRow.add(eventsTab);
-		tabRow.add(groupsTab);
-		tabRow.setVisible(false);
-		headerRow.add(tabRow, BorderLayout.CENTER);
-		headerRow.add(actions, BorderLayout.EAST);
+		titleRow.add(actions, BorderLayout.EAST);
 
 		JPanel below = TsgHubUi.stack();
 		below.add(titleRow);
 		below.add(status);
 
 		header.setOpaque(false);
-		header.add(headerRow, BorderLayout.NORTH);
 		header.add(below, BorderLayout.CENTER);
 		header.setBorder(BorderFactory.createCompoundBorder(TsgHubUi.bottomRule(), BorderFactory.createEmptyBorder(0, 0, 6, 0)));
 		return header;
@@ -332,6 +355,97 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		this.events = events;
 		if (view == View.EVENTS) renderEvents();
+		else if (view == View.HOME) renderHome();
+	}
+
+	void showHome()
+	{
+		setView(View.HOME);
+		renderHome();
+		plugin.groups().refresh();
+	}
+
+	private void renderHome()
+	{
+		setHeader("TSG Hub", plugin.getDetectedPlayerName(), false, true);
+		page.removeAll();
+		for (int i = 0; i < sections.size(); i += 2)
+		{
+			boolean pair = i + 1 < sections.size();
+			JPanel row = new JPanel(new GridLayout(1, pair ? 2 : 1, 6, 0));
+			row.setOpaque(false);
+			row.add(sectionTile(sections.get(i), pair));
+			if (pair) row.add(sectionTile(sections.get(i + 1), true));
+			page.add(TsgHubUi.fitHeight(row));
+			page.add(Box.createVerticalStrut(6));
+		}
+		refreshPage();
+	}
+
+	private JPanel sectionTile(Section section, boolean half)
+	{
+		JPanel tile = new JPanel();
+		tile.setLayout(new BoxLayout(tile, BoxLayout.Y_AXIS));
+		tile.setBackground(TsgHubUi.CARD);
+		tile.setBorder(BorderFactory.createEmptyBorder(12, 6, 12, 6));
+		JLabel icon = new JLabel(section.icon);
+		JLabel name = TsgHubUi.label(section.name, TsgHubUi.TEXT, FontManager.getRunescapeBoldFont());
+		JLabel summary = TsgHubUi.label(TsgHubUi.html("<div style='text-align:center'>" + TsgHubUi.escape(section.summary.get()) + "</div>", half ? 80 : 180),
+			section.live.getAsBoolean() ? TsgHubUi.SUCCESS : TsgHubUi.MUTED, FontManager.getRunescapeSmallFont());
+		tile.add(icon);
+		tile.add(Box.createVerticalStrut(8));
+		tile.add(name);
+		tile.add(Box.createVerticalStrut(2));
+		tile.add(summary);
+		for (java.awt.Component part : tile.getComponents())
+		{
+			((javax.swing.JComponent) part).setAlignmentX(CENTER_ALIGNMENT);
+			if (part instanceof JLabel) ((JLabel) part).setHorizontalAlignment(JLabel.CENTER);
+		}
+		tile.setToolTipText(section.tooltip);
+		TsgHubUi.clickable(tile, section.open);
+		return tile;
+	}
+
+	private int liveEvents()
+	{
+		int live = 0;
+		if (events != null)
+			for (int i = 0; i < events.size(); i++)
+				if ("active".equals(TsgHubUi.str(events.get(i).getAsJsonObject(), "status"))) live++;
+		return live;
+	}
+
+	private String eventsSummary()
+	{
+		if (events == null) return "Loading...";
+		int live = liveEvents();
+		int upcoming = -live;
+		for (int i = 0; i < events.size(); i++)
+			if (!"ended".equals(TsgHubUi.str(events.get(i).getAsJsonObject(), "status"))) upcoming++;
+		if (live == 0 && upcoming == 0) return "No events right now";
+		if (upcoming == 0) return live + " live";
+		if (live == 0) return upcoming + " upcoming";
+		return live + " live, " + upcoming + " upcoming";
+	}
+
+	private String partiesSummary()
+	{
+		TsgHubGroups groups = plugin.groups();
+		if (groups.inGroup())
+		{
+			JsonObject current = groups.currentGroup();
+			return current == null ? "You're in a party" : "You're in " + TsgHubUi.str(current, "activity");
+		}
+		if (groupList == null) return "Loading...";
+		if (groupList.size() == 0) return "No parties yet";
+		return groupList.size() == 1 ? "1 party" : groupList.size() + " parties";
+	}
+
+	private void openEvents()
+	{
+		showEventList();
+		plugin.loadClanEvents();
 	}
 
 	void showEventList()
@@ -535,26 +649,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 		renderTasks();
 	}
 
-	private void showEventsTab()
+	void showParties()
 	{
-		if (view != View.GROUPS) return;
-		setView(eventsView);
-		if (eventsView == View.EVENTS)
-		{
-			renderEvents();
-			plugin.loadClanEvents();
-		}
-		else setHeader(eventsTitle, eventsSubtitle, eventsBack, eventsRefresh);
-	}
-
-	private void showGroupsTab()
-	{
-		if (view == View.GROUPS) return;
-		eventsView = view;
-		eventsTitle = plainTitle;
-		eventsSubtitle = subtitle.getText();
-		eventsBack = back.isVisible();
-		eventsRefresh = refresh.isVisible();
 		groupError.setVisible(false);
 		setView(View.GROUPS);
 		renderGroups();
@@ -571,6 +667,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		groupList = groups;
 		if (view == View.GROUPS) renderGroups();
+		else if (view == View.HOME) renderHome();
 	}
 
 	void showGroup(JsonObject group)
@@ -579,21 +676,14 @@ final class TsgHubSidebarPanel extends PluginPanel
 		browsingParties = false;
 		otherActivityField.setText("");
 		groupMembers.clear();
-		if (view != View.GROUPS)
-		{
-			eventsView = view == View.LOGGED_OUT || view == View.NOT_IN_CLAN || view == View.SHARING_OFF ? View.EVENTS : view;
-			eventsTitle = plainTitle;
-			eventsSubtitle = subtitle.getText();
-			eventsBack = back.isVisible();
-			eventsRefresh = refresh.isVisible();
-			setView(View.GROUPS);
-		}
+		if (view != View.GROUPS) setView(View.GROUPS);
 		renderGroups();
 	}
 
 	void groupRefreshed(JsonObject group)
 	{
 		if (view == View.GROUPS) renderGroups();
+		else if (view == View.HOME) renderHome();
 	}
 
 	void groupActionFailed(String message)
@@ -646,7 +736,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		Font small = FontManager.getRunescapeSmallFont();
 		int count = group == null ? 0 : TsgHubUi.array(group, "members").size();
 		setHeader(group == null ? "Your party" : TsgHubUi.str(group, "activity"),
-			count == 0 ? "" : count == 1 ? "Just you so far" : count + " members", false, true);
+			count == 0 ? "" : count == 1 ? "Just you so far" : count + " members", true, true);
 
 		groupsPage.add(groupMembers);
 		groupsPage.add(Box.createVerticalStrut(10));
@@ -680,8 +770,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private void renderGroupList(JsonObject current)
 	{
 		Font small = FontManager.getRunescapeSmallFont();
-		setHeader(current != null ? "Other parties" : "", "", current != null, true);
-		back.setToolTipText(current != null ? "Back to your party" : "Back to events");
+		setHeader(current != null ? "Other parties" : "Parties", "", true, true);
+		back.setToolTipText(current != null ? "Back to your party" : "Home");
 		if (groupList == null)
 		{
 			groupsPage.add(TsgHubUi.label("Loading parties...", TsgHubUi.MUTED, small));
@@ -798,16 +888,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 		boardShowing = next == View.BOARD;
 		if (next != View.COMPETITION) openCompetitionId = null;
 		centerLayout.show(center, next == View.BOARD ? "board" : next == View.GROUPS ? "groups" : "page");
-		if (next != View.GROUPS) back.setToolTipText("Back to events");
+		back.setToolTipText(next == View.EVENTS || next == View.GROUPS ? "Home" : "Back to events");
 		layoutHeader();
-		styleTab(groupsTab, next == View.GROUPS);
-		styleTab(eventsTab, next != View.GROUPS);
-	}
-
-	private void styleTab(JButton tab, boolean selected)
-	{
-		tab.setBackground(selected ? TsgHubUi.ACCENT.darker() : tabBackground);
-		tab.setForeground(selected ? Color.WHITE : TsgHubUi.MUTED);
 	}
 
 	private void setHeader(String titleText, String subtitleText, boolean showBack, boolean showRefresh)
@@ -823,18 +905,15 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	private void layoutHeader()
 	{
-		boolean member = view != View.LOGGED_OUT && view != View.NOT_IN_CLAN && view != View.SHARING_OFF;
-		tabRow.setVisible(member);
-		headerRow.setVisible(member || organizer.isVisible());
-		titleRow.setVisible(!plainTitle.isEmpty());
-		titleRow.setBorder(headerRow.isVisible() ? BorderFactory.createEmptyBorder(6, 0, 0, 0) : null);
+		actions.setVisible(refresh.isVisible() || organizer.isVisible());
+		titleRow.setVisible(!plainTitle.isEmpty() || actions.isVisible());
 	}
 
 	private void renderEvents()
 	{
-		setHeader("", "", false, true);
-		page.removeAll();
 		String clan = plugin.getDetectedClanName();
+		setHeader("Events", "", true, true);
+		page.removeAll();
 		if (clan.isEmpty())
 		{
 			page.add(errorPanel("No clan detected", "Join a clan in game to see its events."));
