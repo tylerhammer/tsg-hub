@@ -439,7 +439,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 		if (groupList == null) return "Loading...";
 		if (groupList.size() == 0) return "No parties yet";
-		return groupList.size() == 1 ? "1 open party" : groupList.size() + " open parties";
+		return groupList.size() == 1 ? "1 party" : groupList.size() + " parties";
 	}
 
 	private void openEvents()
