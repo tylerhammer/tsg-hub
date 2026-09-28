@@ -153,11 +153,12 @@ public class TsgHubPlugin extends Plugin
 			@Override public boolean displayPlayerWorlds() { return config.partyShowWorlds(); }
 		}, spriteManager, itemManager));
 		groups = new TsgHubGroups(this, client, partyService, executor, this::api, () -> sidebar);
-		groupTracker = new com.tsghub.group.GroupTracker(client, clientThread, partyService, wsClient, itemManager, groups::isGroupParty, config::partyShowSelf, groups);
+		groupTracker = new com.tsghub.group.GroupTracker(client, clientThread, partyService, wsClient, itemManager, groups::isGroupParty, config::partyShowSelf, this::currentArea, groups);
 		groups.setTracker(groupTracker);
 		eventBus.register(groupTracker);
 		groupTracker.start();
 		executor.scheduleAtFixedRate(groups::heartbeat, 5, TsgHubGroups.HEARTBEAT_SECONDS, TimeUnit.SECONDS);
+		executor.scheduleAtFixedRate(groups::autoRefresh, TsgHubGroups.REFRESH_SECONDS, TsgHubGroups.REFRESH_SECONDS, TimeUnit.SECONDS);
 		presence = new TsgHubPresence(this, client, clientThread, chatIconManager, executor, this::api, () -> sidebar);
 		executor.scheduleAtFixedRate(presence::autoRefresh, TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
 		boardOverlay = new TsgHubBoardOverlay(client);
@@ -254,6 +255,8 @@ public class TsgHubPlugin extends Plugin
 	boolean locationSharingEnabled() { return config.dataSharingOptIn() && config.shareLocation(); }
 	TsgHubGroups groups() { return groups; }
 	TsgHubPresence presence() { return presence; }
+
+	String currentArea() { return presence == null ? "" : presence.area(); }
 	boolean inClanChat() { return inClanChat; }
 	String getDetectedPlayerName() { return detectedPlayerName; }
 	int getDetectedClanRank() { return detectedClanRank; }
