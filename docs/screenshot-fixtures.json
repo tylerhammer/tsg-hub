@@ -2663,5 +2663,44 @@
   "teamScores": [],
   "members": [],
   "claims": []
+ },
+ "membersList": {
+  "members": [
+   {
+    "displayName": "Crab Legs",
+    "world": 416,
+    "area": "Theatre of Blood",
+    "activity": "Raiding - Theatre of Blood",
+    "rank": "Administrator"
+   },
+   {
+    "displayName": "Iron Fenrir",
+    "world": 302,
+    "area": "Nex",
+    "activity": "Bossing - Nex",
+    "rank": "Owner"
+   },
+   {
+    "displayName": "Mossy Rock",
+    "world": 330,
+    "area": "Motherlode Mine",
+    "activity": "Skilling - Mining",
+    "rank": "Sergeant"
+   },
+   {
+    "displayName": "Sir Gnomealot",
+    "world": 420,
+    "area": "",
+    "activity": "Online",
+    "rank": "Recruit"
+   },
+   {
+    "displayName": "Tbow Tuesday",
+    "world": 386,
+    "area": "",
+    "activity": "Combat",
+    "rank": "Captain"
+   }
+  ]
  }
 }

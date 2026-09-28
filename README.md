@@ -12,6 +12,7 @@ Clan events for **Type Shiii Gaming** (TSG), right in your RuneLite sidebar. Joi
 - **Skill of the Week** and **Boss of the Week** leaderboards you join with one click.
 - **Custom** events (drop parties, clan trips, anything else) announced with the time, world and location.
 - **Clan parties** for raids, bossing and skilling. Join with one click, no passphrase to type, and see your party's health, prayer, gear, inventory and skills live.
+- **Members** list showing which clanmates are online, their world, area and what they're doing.
 - **Admin tools** for Clan Administrators: create events, teams and tasks, and review proof, all without leaving the game.
 
 ## Bingo
@@ -74,6 +75,23 @@ The **Parties** section lists every open party in the clan, with its activity, w
 There's no passphrase to share. Once you're in, each member's panel shows their health, prayer, special attack, run energy, gear, inventory, skills and active prayers, live over RuneLite's party connection.
 
 A party closes when its last member leaves. Members drop out after 3 minutes without checking in, or after 30 minutes at the login screen.
+
+</td>
+</tr>
+</table>
+
+## Members
+
+<table>
+<tr>
+<td valign="top"><img src="docs/images/members.png" width="242" alt="Online clan members with their world, area and activity"></td>
+<td valign="top">
+
+The **Members** section lists clanmates who are in clan chat with sharing on. Each row shows their world, area and what they're doing, such as `Skilling - Mining`, `Bossing - Vorkath` or `Raiding - Chambers of Xeric`.
+
+Activity is detected automatically from where you are and the XP you gain. Only the area name is sent, never your exact tile.
+
+Anyone in clan chat with sharing on appears in the list. Your area and activity are only shown if you turn on **Share location and activity** under **Sharing** in the plugin settings; otherwise clanmates just see **Online** and your world, the same as clan chat shows. Leave clan chat to hide yourself, and you also drop off the list when you log out.
 
 </td>
 </tr>
