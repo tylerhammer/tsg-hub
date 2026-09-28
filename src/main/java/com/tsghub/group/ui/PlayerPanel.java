@@ -361,6 +361,6 @@ public class PlayerPanel extends JPanel
 
 	public void updateDisplayPlayerWorlds()
 	{
-		banner.updateWorld(player.getWorld(), config.displayPlayerWorlds());
+		banner.updateWorld(player, config.displayPlayerWorlds());
 	}
 }

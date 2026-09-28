@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import net.runelite.api.coords.WorldPoint;
 
 final class AreaNames
 {
@@ -31,6 +32,24 @@ final class AreaNames
 	static Area forRegion(int region)
 	{
 		return BY_REGION.get(region);
+	}
+
+	static Area at(WorldPoint point)
+	{
+		Area named = forRegion(point.getRegionID());
+		if (named != null && (named.type == Type.BOSSES || named.type == Type.RAIDS)) return named;
+		int level = wildernessLevel(point);
+		return level > 0 ? new Area("Wilderness lvl " + level, Type.REGIONS) : named;
+	}
+
+	static int wildernessLevel(WorldPoint point)
+	{
+		int x = point.getX();
+		int y = point.getY();
+		if (x < 2944 || x > 3391) return 0;
+		if (y >= 3520 && y <= 3967) return (y - 3520) / 8 + 1;
+		if (y >= 9920 && y <= 10367) return (y - 9920) / 8 + 1;
+		return 0;
 	}
 
 	private static Map<Integer, Area> load()

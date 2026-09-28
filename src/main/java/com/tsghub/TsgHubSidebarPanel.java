@@ -13,8 +13,11 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import javax.swing.BorderFactory;
@@ -80,6 +83,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private volatile boolean active;
 	private volatile boolean boardShowing;
 	private volatile boolean membersWanted;
+	private volatile boolean groupsWanted;
 	private JsonArray members;
 	private JsonObject competitionEvent;
 	private String competitionName = "";
@@ -91,16 +95,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final List<Section> sections;
 	private final TsgHubUi.WidthTrackingPanel groupsPage = new TsgHubUi.WidthTrackingPanel();
 	private final GroupMembersPanel groupMembers;
-	private static final String OTHER_ACTIVITY = "Other...";
-	private static final String[] GROUP_ACTIVITIES = {
-		"Chambers of Xeric", "Theatre of Blood", "Tombs of Amascut",
-		"Nex", "The Nightmare", "Corporeal Beast", "God Wars Dungeon", "Royal Titans", "Yama", "The Hueycoatl", "Wilderness bosses",
-		"Barbarian Assault", "Guardians of the Rift", "Tempoross", "Wintertodt", "Zalcano", "Soul Wars", "Castle Wars",
-		OTHER_ACTIVITY
-	};
-	private final javax.swing.JComboBox<String> activityPicker = new javax.swing.JComboBox<>(GROUP_ACTIVITIES);
-	private final JTextField otherActivityField = new JTextField();
-	private final JButton createGroupButton = TsgHubUi.primaryButton("Start party");
+	private static final String WILDERNESS = "Wilderness lvl ";
+	private final JButton createGroupButton = TsgHubUi.primaryButton("New party");
 	private final JLabel groupError = TsgHubUi.label("", TsgHubUi.ERROR, FontManager.getRunescapeSmallFont());
 	private JsonArray groupList;
 	private boolean groupBusy;
@@ -154,17 +150,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 		codeField.addActionListener(e -> submitJoin());
 		joinButton.addActionListener(e -> submitJoin());
 		joinError.setVisible(false);
-		activityPicker.setFocusable(false);
-		activityPicker.setToolTipText("What the party is for");
-		activityPicker.addActionListener(e -> {
-			boolean other = OTHER_ACTIVITY.equals(activityPicker.getSelectedItem());
-			otherActivityField.setVisible(other);
-			if (other) SwingUtilities.invokeLater(otherActivityField::requestFocusInWindow);
-			groupsPage.revalidate();
-		});
-		otherActivityField.putClientProperty("JTextField.placeholderText", "Activity, e.g. Clue scrolls");
-		otherActivityField.setVisible(false);
-		otherActivityField.addActionListener(e -> submitCreateGroup());
 		createGroupButton.addActionListener(e -> submitCreateGroup());
 		groupError.setVisible(false);
 
@@ -296,6 +281,11 @@ final class TsgHubSidebarPanel extends PluginPanel
 	boolean wantsMembers()
 	{
 		return active && membersWanted;
+	}
+
+	boolean wantsGroups()
+	{
+		return active && groupsWanted;
 	}
 
 	@Override
@@ -446,7 +436,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (groups.inGroup())
 		{
 			JsonObject current = groups.currentGroup();
-			return current == null ? "You're in a party" : "You're in " + TsgHubUi.str(current, "activity");
+			return current == null ? "You're in a party" : "You're in " + currentTitle(current);
 		}
 		if (groupList == null) return "Loading...";
 		if (groupList.size() == 0) return "No parties yet";
@@ -789,7 +779,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		groupBusy = false;
 		browsingParties = false;
-		otherActivityField.setText("");
 		groupMembers.clear();
 		if (view != View.GROUPS) setView(View.GROUPS);
 		renderGroups();
@@ -817,6 +806,17 @@ final class TsgHubSidebarPanel extends PluginPanel
 	void groupMemberRemoved(PartyPlayer player)
 	{
 		groupMembers.remove(player);
+		partyAreasChanged();
+	}
+
+	void partyAreasChanged()
+	{
+		TsgHubGroups groups = plugin.groups();
+		JsonObject current = groups.currentGroup();
+		if (current == null || !TsgHubUi.str(current, "activity").isEmpty()) return;
+		if (view == View.GROUPS && !browsingParties) setPartyHeader(current);
+		else if (view == View.GROUPS) renderGroups();
+		else if (view == View.HOME) renderHome();
 	}
 
 	void groupSettingsChanged(boolean expandChanged)
@@ -846,15 +846,27 @@ final class TsgHubSidebarPanel extends PluginPanel
 		groupsPage.repaint();
 	}
 
+	private void setPartyHeader(JsonObject group)
+	{
+		int count = group == null ? 0 : TsgHubUi.array(group, "members").size();
+		setHeader(group == null ? "Your party" : currentTitle(group),
+			count == 0 ? "" : count == 1 ? "Just you so far" : count + " members", true, true);
+	}
+
 	private void renderCurrentGroup(JsonObject group)
 	{
 		Font small = FontManager.getRunescapeSmallFont();
-		int count = group == null ? 0 : TsgHubUi.array(group, "members").size();
-		setHeader(group == null ? "Your party" : TsgHubUi.str(group, "activity"),
-			count == 0 ? "" : count == 1 ? "Just you so far" : count + " members", true, true);
+		setPartyHeader(group);
 
 		groupsPage.add(groupMembers);
 		groupsPage.add(Box.createVerticalStrut(10));
+
+		JButton title = TsgHubUi.button("Set title");
+		title.setToolTipText("Name the party. Leave blank to title it by location.");
+		title.setEnabled(group != null);
+		title.addActionListener(e -> promptTitle(group));
+		groupsPage.add(TsgHubUi.fitHeight(fullWidth(title)));
+		groupsPage.add(Box.createVerticalStrut(4));
 
 		String currentId = group == null ? "" : TsgHubUi.str(group, "id");
 		int others = 0;
@@ -905,14 +917,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 
 		groupsPage.add(Box.createVerticalStrut(10));
-		groupsPage.add(TsgHubUi.label(current != null ? "Start a new party" : "Start a party", TsgHubUi.TEXT, FontManager.getRunescapeBoldFont()));
-		groupsPage.add(Box.createVerticalStrut(4));
-		groupsPage.add(TsgHubUi.fitHeight(activityPicker));
-		groupsPage.add(Box.createVerticalStrut(4));
-		groupsPage.add(TsgHubUi.fitHeight(otherActivityField));
-		groupsPage.add(Box.createVerticalStrut(6));
 		createGroupButton.setEnabled(!groupBusy);
-		createGroupButton.setText(groupBusy ? "Working..." : "Start party");
+		createGroupButton.setText(groupBusy ? "Working..." : "New party");
 		groupsPage.add(TsgHubUi.fitHeight(fullWidth(createGroupButton)));
 		groupsPage.add(groupError);
 		groupsPage.add(Box.createVerticalStrut(8));
@@ -940,19 +946,22 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 		JPanel card = TsgHubUi.card();
 		JPanel text = TsgHubUi.stack();
-		text.add(TsgHubUi.label(TsgHubUi.html("<b>" + TsgHubUi.escape(TsgHubUi.str(group, "activity")) + "</b>", CARD_TITLE_W), TsgHubUi.TEXT, FontManager.getRunescapeFont()));
+		boolean mine = current != null && TsgHubUi.str(group, "id").equals(TsgHubUi.str(current, "id"));
+		String title = mine ? currentTitle(group) : partyTitle(group);
+		text.add(TsgHubUi.label(TsgHubUi.html("<b>" + TsgHubUi.escape(title) + "</b>", CARD_TITLE_W), TsgHubUi.TEXT, FontManager.getRunescapeFont()));
 		text.add(Box.createVerticalStrut(2));
-		String meta = (members.size() == 1 ? "1 member" : members.size() + " members") + (world > 0 ? " · W" + world : "") + " · " + leader;
+		Map.Entry<String, Integer> area = TsgHubUi.str(group, "activity").isEmpty() ? areaSummary(members) : null;
+		String here = area != null && area.getValue() < members.size() ? " · " + area.getValue() + " here" : "";
+		String meta = (members.size() == 1 ? "1 member" : members.size() + " members") + here + (world > 0 ? " · W" + world : "") + " · " + leader;
 		text.add(TsgHubUi.label(meta, TsgHubUi.MUTED, FontManager.getRunescapeSmallFont()));
 		text.add(TsgHubUi.wrapped(String.join(", ", names), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), CARD_TITLE_W));
 		card.add(text, BorderLayout.CENTER);
 		JPanel east = new JPanel(new BorderLayout());
 		east.setOpaque(false);
-		boolean mine = current != null && TsgHubUi.str(group, "id").equals(TsgHubUi.str(current, "id"));
 		east.add(mine ? TsgHubUi.badge("Yours", TsgHubUi.SUCCESS)
 			: TsgHubUi.label(groupBusy ? "..." : current != null ? "Switch" : "Join", TsgHubUi.ACCENT, FontManager.getRunescapeSmallFont()), BorderLayout.NORTH);
 		card.add(east, BorderLayout.EAST);
-		card.setToolTipText(mine ? "Back to your party" : (current != null ? "Switch to " : "Join ") + leader + "'s " + TsgHubUi.str(group, "activity") + " party");
+		card.setToolTipText(mine ? "Back to your party" : (current != null ? "Switch to " : "Join ") + title);
 		TsgHubUi.clickable(card, () -> {
 			if (mine)
 			{
@@ -962,7 +971,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			}
 			if (groupBusy) return;
 			if (current != null && JOptionPane.showConfirmDialog(this,
-				"Leave your " + TsgHubUi.str(current, "activity") + " party and join " + leader + "'s " + TsgHubUi.str(group, "activity") + " party?",
+				"Leave " + currentTitle(current) + " and join " + title + "?",
 				"Switch parties", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE) != JOptionPane.OK_OPTION) return;
 			groupBusy = true;
 			groupError.setVisible(false);
@@ -972,29 +981,84 @@ final class TsgHubSidebarPanel extends PluginPanel
 		return TsgHubUi.fitHeight(card);
 	}
 
+	static String partyTitle(JsonObject group)
+	{
+		String title = TsgHubUi.str(group, "activity");
+		if (!title.isEmpty()) return title;
+		Map.Entry<String, Integer> area = areaSummary(TsgHubUi.array(group, "members"));
+		if (area != null) return area.getKey();
+		String leader = TsgHubUi.str(group, "leaderName");
+		return leader.isEmpty() ? "Party" : leader + "'s party";
+	}
+
+	private String currentTitle(JsonObject group)
+	{
+		if (!TsgHubUi.str(group, "activity").isEmpty()) return partyTitle(group);
+		Map.Entry<String, Integer> live = areaSummary(plugin.groups().liveAreas());
+		return live != null ? live.getKey() : partyTitle(group);
+	}
+
+	static Map.Entry<String, Integer> areaSummary(JsonArray members)
+	{
+		List<String> areas = new ArrayList<>();
+		for (int i = 0; i < members.size(); i++) areas.add(TsgHubUi.str(members.get(i).getAsJsonObject(), "area"));
+		return areaSummary(areas);
+	}
+
+	static Map.Entry<String, Integer> areaSummary(List<String> areas)
+	{
+		Map<String, Integer> counts = new LinkedHashMap<>();
+		int low = Integer.MAX_VALUE;
+		int high = 0;
+		for (String area : areas)
+		{
+			if (area == null || area.isEmpty()) continue;
+			if (area.startsWith(WILDERNESS))
+			{
+				try
+				{
+					int level = Integer.parseInt(area.substring(WILDERNESS.length()).trim());
+					low = Math.min(low, level);
+					high = Math.max(high, level);
+					area = "Wilderness";
+				}
+				catch (NumberFormatException ignored) { }
+			}
+			counts.merge(area, 1, Integer::sum);
+		}
+		if (counts.isEmpty()) return null;
+		Map.Entry<String, Integer> top = Collections.max(counts.entrySet(), Map.Entry.comparingByValue());
+		String name = top.getKey();
+		if (name.equals("Wilderness") && high > 0) name += " lvl " + (low == high ? String.valueOf(low) : low + "-" + high);
+		return new java.util.AbstractMap.SimpleImmutableEntry<>(name, top.getValue());
+	}
+
+	private void promptTitle(JsonObject group)
+	{
+		Object input = JOptionPane.showInputDialog(this, "Party title (leave blank to title it by location)", "Set title",
+			JOptionPane.PLAIN_MESSAGE, null, null, TsgHubUi.str(group, "activity"));
+		if (input == null) return;
+		String title = input.toString().trim();
+		if (title.length() > 40)
+		{
+			groupActionFailed("Keep the title to 40 characters.");
+			return;
+		}
+		groupError.setVisible(false);
+		plugin.groups().setTitle(title);
+	}
+
 	private void submitCreateGroup()
 	{
 		if (groupBusy) return;
-		String activity = OTHER_ACTIVITY.equals(activityPicker.getSelectedItem()) ? otherActivityField.getText().trim() : String.valueOf(activityPicker.getSelectedItem());
-		if (activity.isEmpty())
-		{
-			groupActionFailed("Type the activity for your party.");
-			otherActivityField.requestFocusInWindow();
-			return;
-		}
-		if (activity.length() > 40)
-		{
-			groupActionFailed("Keep the activity to 40 characters.");
-			return;
-		}
 		JsonObject current = plugin.groups().inGroup() ? plugin.groups().currentGroup() : null;
 		if (current != null && JOptionPane.showConfirmDialog(this,
-			"Leave your " + TsgHubUi.str(current, "activity") + " party and start a " + activity + " party?",
+			"Leave " + currentTitle(current) + " and start a new party?",
 			"Start a new party", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE) != JOptionPane.OK_OPTION) return;
 		groupBusy = true;
 		groupError.setVisible(false);
 		renderGroups();
-		plugin.groups().create(activity);
+		plugin.groups().create();
 	}
 
 	private void setView(View next)
@@ -1002,6 +1066,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		view = next;
 		boardShowing = next == View.BOARD;
 		membersWanted = next == View.MEMBERS || next == View.HOME;
+		groupsWanted = next == View.GROUPS || next == View.HOME;
 		if (next != View.COMPETITION) openCompetitionId = null;
 		centerLayout.show(center, next == View.BOARD ? "board" : next == View.GROUPS ? "groups" : "page");
 		back.setToolTipText(next == View.EVENTS || next == View.GROUPS || next == View.MEMBERS ? "Home" : "Back to events");

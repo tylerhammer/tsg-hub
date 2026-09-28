@@ -87,6 +87,8 @@ public final class GroupTracker
 
 		void membersCleared();
 
+		void areasChanged();
+
 		// Runs on the event thread.
 		void partyChanged(String passphrase);
 	}
@@ -98,6 +100,7 @@ public final class GroupTracker
 	private final ItemManager itemManager;
 	private final Predicate<String> isGroupParty;
 	private final java.util.function.BooleanSupplier showSelf;
+	private final java.util.function.Supplier<String> area;
 	private final Listener listener;
 
 	private final Map<Long, PartyPlayer> partyMembers = new ConcurrentHashMap<>();
@@ -107,7 +110,8 @@ public final class GroupTracker
 	private TsgGroupUpdate currentChange = new TsgGroupUpdate();
 
 	public GroupTracker(Client client, ClientThread clientThread, PartyService partyService, WSClient wsClient,
-		ItemManager itemManager, Predicate<String> isGroupParty, java.util.function.BooleanSupplier showSelf, Listener listener)
+		ItemManager itemManager, Predicate<String> isGroupParty, java.util.function.BooleanSupplier showSelf,
+		java.util.function.Supplier<String> area, Listener listener)
 	{
 		this.client = client;
 		this.clientThread = clientThread;
@@ -116,6 +120,7 @@ public final class GroupTracker
 		this.itemManager = itemManager;
 		this.isGroupParty = isGroupParty;
 		this.showSelf = showSelf;
+		this.area = area;
 		this.listener = listener;
 	}
 
@@ -160,6 +165,15 @@ public final class GroupTracker
 			partyService.send(new UserSync());
 			sendUpdate(partyPlayerAsBatchedChange());
 		});
+	}
+
+	public List<String> areas()
+	{
+		final List<String> areas = new ArrayList<>();
+		final PartyPlayer me = myPlayer;
+		if (me != null) areas.add(me.getArea());
+		for (final PartyPlayer p : partyMembers.values()) areas.add(p.getArea());
+		return areas;
 	}
 
 	public boolean idleTooLong()
@@ -303,6 +317,14 @@ public final class GroupTracker
 		if (prayersChanged) setPrayers(currentChange);
 
 		if (myPlayer.getSpellbook() == -1) updateSpellbook();
+
+		final String currentArea = area.get();
+		if (!currentArea.equals(myPlayer.getArea()))
+		{
+			myPlayer.setArea(currentArea);
+			currentChange.getM().add(new PartyMiscChange(PartyMiscChange.PartyMisc.A, currentArea));
+			SwingUtilities.invokeLater(listener::areasChanged);
+		}
 
 		if (currentChange.isValid())
 		{
@@ -451,7 +473,12 @@ public final class GroupTracker
 		{
 			e.process(player, itemManager);
 			final boolean bannerChanged = e.hasBreakingBannerChange();
-			SwingUtilities.invokeLater(() -> listener.memberUpdated(player, bannerChanged, false));
+			final boolean areaChanged = e.hasAreaChange();
+			SwingUtilities.invokeLater(() ->
+			{
+				listener.memberUpdated(player, bannerChanged, false);
+				if (areaChanged) listener.areasChanged();
+			});
 		});
 	}
 
@@ -612,6 +639,7 @@ public final class GroupTracker
 		c.getM().add(new PartyMiscChange(PartyMiscChange.PartyMisc.D, myPlayer.getDisease()));
 		c.getM().add(new PartyMiscChange(PartyMiscChange.PartyMisc.W, myPlayer.getWorld()));
 		c.getM().add(new PartyMiscChange(PartyMiscChange.PartyMisc.SP, myPlayer.getSpellbook()));
+		c.getM().add(new PartyMiscChange(PartyMiscChange.PartyMisc.A, myPlayer.getArea()));
 
 		if (myPlayer.getPrayers() != null) setPrayers(c);
 

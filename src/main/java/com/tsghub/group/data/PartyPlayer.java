@@ -55,6 +55,7 @@ public class PartyPlayer
 	private int poison;
 	private int disease;
 	private int world;
+	private String area;
 	private GameItem[] runesInPouch;
 	private Quiver quiver;
 	// 0=Standard, 1=Ancient, 2=Lunar, 3=Arceuus
@@ -72,6 +73,7 @@ public class PartyPlayer
 		this.poison = 0;
 		this.disease = 0;
 		this.world = 0;
+		this.area = "";
 		this.runesInPouch = new GameItem[0];
 		this.quiver = new Quiver(null, false, false);
 		this.spellbook = -1;
