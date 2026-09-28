@@ -111,6 +111,7 @@ public class TsgHubPlugin extends Plugin
 	private volatile int detectedClanRank = -1;
 	private volatile boolean inClanChat;
 	private volatile boolean sidebarRouted;
+	private volatile String syncedIdentity = "";
 	private volatile boolean routedAsHubMember;
 	private volatile boolean routedClanPending;
 	private volatile String hubClanName = "TSGaming";
@@ -408,6 +409,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		attemptedXpClaims.clear();
 		syncedClanRanks.clear();
+		syncedIdentity = "";
 		if (competitions != null) competitions.clear();
 		clearTaskCache();
 		if (boardOverlay != null) boardOverlay.setVisible(false);
@@ -424,6 +426,7 @@ public class TsgHubPlugin extends Plugin
 		routedAsHubMember = isInHubClan();
 		boolean pending = clanPending();
 		routedClanPending = pending;
+		if (loggedIn && !pending && isInHubClan() && config.dataSharingOptIn()) syncIdentity();
 		SwingUtilities.invokeLater(() -> {
 			if (!loggedIn) { sidebar.showLoggedOut(); return; }
 			if (pending) { sidebar.showCheckingClan(); return; }
@@ -460,6 +463,7 @@ public class TsgHubPlugin extends Plugin
 		payload.addProperty("displayName", client.getLocalPlayer().getName());
 		payload.addProperty("clanName", detectedClanName);
 		payload.addProperty("clanRank", detectedClanRank);
+		addAccountHash(payload);
 		executor.submit(() -> {
 			try
 			{
@@ -623,6 +627,7 @@ public class TsgHubPlugin extends Plugin
 		body.addProperty("displayName", detectedPlayerName);
 		body.addProperty("clanName", detectedClanName);
 		body.addProperty("clanRank", detectedClanRank);
+		addAccountHash(body);
 		sidebarBusy(true);
 		executor.submit(() -> {
 			try
@@ -669,6 +674,56 @@ public class TsgHubPlugin extends Plugin
 			}
 			finally { sidebarBusy(false); }
 		});
+	}
+
+	private String accountHash()
+	{
+		long hash = client.getAccountHash();
+		return hash == -1 ? "" : Long.toString(hash);
+	}
+
+	private void addAccountHash(JsonObject body)
+	{
+		String hash = accountHash();
+		if (!hash.isEmpty()) body.addProperty("accountHash", hash);
+	}
+
+	private void syncIdentity()
+	{
+		String name = detectedPlayerName;
+		String hash = accountHash();
+		if (name.isEmpty() || hash.isEmpty() || detectedClanName.isEmpty()) return;
+		String identity = hash + ":" + name;
+		if (identity.equals(syncedIdentity)) return;
+		syncedIdentity = identity;
+		JsonArray memberTokens = new JsonArray();
+		JsonArray organizerTokens = new JsonArray();
+		for (String key : TsgHubSession.keysWithPrefix("memberToken:")) memberTokens.add(TsgHubSession.get(key));
+		if (!TsgHubSession.get("token").isEmpty()) memberTokens.add(TsgHubSession.get("token"));
+		for (String key : TsgHubSession.keysWithPrefix("organizerToken:")) organizerTokens.add(TsgHubSession.get(key));
+		for (String key : TsgHubSession.keysWithPrefix("memberName:")) renameStored(key, name);
+		for (String key : TsgHubSession.keysWithPrefix("organizerName:")) renameStored(key, name);
+		renameStored("displayName", name);
+		JsonObject body = new JsonObject();
+		body.addProperty("displayName", name);
+		body.addProperty("clanName", detectedClanName);
+		body.addProperty("accountHash", hash);
+		body.add("memberTokens", memberTokens);
+		body.add("organizerTokens", organizerTokens);
+		executor.submit(() -> {
+			try
+			{
+				JsonObject result = api().request("POST", "/v1/identity", null, body);
+				if (TsgHubUi.bool(result, "updated") && !TsgHubSession.get("eventId").isEmpty()) refreshBoard();
+			}
+			catch (Exception e) { syncedIdentity = ""; }
+		});
+	}
+
+	private void renameStored(String key, String name)
+	{
+		String stored = TsgHubSession.get(key);
+		if (!stored.isEmpty() && !normalizePlayerName(stored).equals(normalizePlayerName(name))) TsgHubSession.set(key, name);
 	}
 
 	void loadClanEvents()
@@ -844,6 +899,7 @@ public class TsgHubPlugin extends Plugin
 		body.addProperty("hideScores", hideScores);
 		body.addProperty("hidden", hidden);
 		body.addProperty("type", type);
+		addAccountHash(body);
 		body.add("config", typeConfig == null ? new JsonObject() : typeConfig);
 		organizerStatus("Creating event...", Tone.INFO);
 		executor.submit(() -> {
