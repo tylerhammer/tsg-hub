@@ -688,7 +688,13 @@ public class TsgHubPlugin extends Plugin
 		executor.submit(() -> {
 			try
 			{
-				JsonObject response = api().request("GET", "/v1/events?clanName=" + encodedClan, null, null);
+				String credential = null;
+				if (canUseClanAdminSession())
+				{
+					try { credential = ensureOrganizerListCredential(); }
+					catch (Exception ignored) { credential = null; }
+				}
+				JsonObject response = api().request("GET", "/v1/events?clanName=" + encodedClan, credential, null);
 				JsonArray events = response.getAsJsonArray("events");
 				for (int i = 0; i < events.size(); i++)
 				{
@@ -816,7 +822,7 @@ public class TsgHubPlugin extends Plugin
 		});
 	}
 
-	void createEvent(String name, String startDate, String endDate, boolean hideScores, String type, JsonObject typeConfig)
+	void createEvent(String name, String startDate, String endDate, boolean hideScores, boolean hidden, String type, JsonObject typeConfig)
 	{
 		if (!isInHubClan()) { eventFormFailed("TSG Hub is only for members of the " + hubClanName + " clan."); return; }
 		if (!config.dataSharingOptIn()) { eventFormFailed("Turn on sharing in the TSG Hub sidebar first."); return; }
@@ -836,6 +842,7 @@ public class TsgHubPlugin extends Plugin
 		body.addProperty("startDate", startDate.trim());
 		body.addProperty("endDate", endDate.trim());
 		body.addProperty("hideScores", hideScores);
+		body.addProperty("hidden", hidden);
 		body.addProperty("type", type);
 		body.add("config", typeConfig == null ? new JsonObject() : typeConfig);
 		organizerStatus("Creating event...", Tone.INFO);
@@ -851,18 +858,20 @@ public class TsgHubPlugin extends Plugin
 				SwingUtilities.invokeLater(() -> panel.eventCreated(result));
 				organizerStatus("Event created. Add teams next.", Tone.SUCCESS);
 				loadManagedEvents();
+				loadClanEvents();
 			}
 			catch (Exception e) { eventFormFailed(TsgHubUi.friendlyError(e)); organizerStatus("", Tone.INFO); }
 		});
 	}
 
-	void updateEvent(String eventId, String name, String startDate, String endDate, boolean hideScores, JsonObject typeConfig)
+	void updateEvent(String eventId, String name, String startDate, String endDate, boolean hideScores, boolean hidden, JsonObject typeConfig)
 	{
 		JsonObject body = new JsonObject();
 		body.addProperty("name", name.trim());
 		body.addProperty("startDate", startDate.trim());
 		body.addProperty("endDate", endDate.trim());
 		body.addProperty("hideScores", hideScores);
+		body.addProperty("hidden", hidden);
 		if (typeConfig != null) body.add("config", typeConfig);
 		String credential = organizerCredential(eventId);
 		organizerStatus("Saving...", Tone.INFO);
@@ -873,8 +882,32 @@ public class TsgHubPlugin extends Plugin
 				organizerStatus("Event saved.", Tone.SUCCESS);
 				refreshOrganizerEvent(true);
 				loadManagedEvents();
+				loadClanEvents();
 			}
 			catch (Exception e) { eventFormFailed(TsgHubUi.friendlyError(e)); organizerStatus("", Tone.INFO); }
+		});
+	}
+
+	void publishEvent(JsonObject event)
+	{
+		String eventId = TsgHubUi.str(event, "id");
+		JsonObject body = new JsonObject();
+		body.addProperty("name", TsgHubUi.str(event, "name"));
+		body.addProperty("startDate", TsgHubUi.str(event, "startDate"));
+		body.addProperty("endDate", TsgHubUi.str(event, "endDate"));
+		body.addProperty("hidden", false);
+		String credential = organizerCredential(eventId);
+		organizerStatus("Publishing...", Tone.INFO);
+		executor.submit(() -> {
+			try
+			{
+				api().request("PATCH", "/v1/events/" + eventId, credential, body);
+				organizerStatus("Event published. Players can see it now.", Tone.SUCCESS);
+				refreshOrganizerEvent(true);
+				loadManagedEvents();
+				loadClanEvents();
+			}
+			catch (Exception e) { organizerStatus("Couldn't publish. " + TsgHubUi.friendlyError(e), Tone.ERROR); }
 		});
 	}
 

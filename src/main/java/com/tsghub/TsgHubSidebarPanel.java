@@ -879,6 +879,11 @@ final class TsgHubSidebarPanel extends PluginPanel
 		meta.setOpaque(false);
 		meta.add(TsgHubUi.badge(TsgHubUi.statusLabel(state), TsgHubUi.statusColor(state)));
 		meta.add(Box.createHorizontalStrut(5));
+		if (TsgHubUi.bool(event, "hidden"))
+		{
+			meta.add(TsgHubUi.badge("Hidden", TsgHubUi.MUTED));
+			meta.add(Box.createHorizontalStrut(5));
+		}
 		boolean isParty = "drop-party".equals(TsgHubUi.str(event, "type"));
 		meta.add(TsgHubUi.label(isParty ? TsgHubUi.dropPartyTime(TsgHubUi.eventConfig(event), false) : TsgHubUi.dateRange(event), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont()));
 		text.add(Box.createVerticalStrut(3));
