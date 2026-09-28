@@ -432,7 +432,7 @@ public class TsgHubPlugin extends Plugin
 			if (pending) { sidebar.showCheckingClan(); return; }
 			if (!isInHubClan()) { sidebar.showNotInClan(hubClanName, detectedClanName); return; }
 			if (!config.dataSharingOptIn()) { sidebar.showSharingOff(); return; }
-			sidebar.showEventList();
+			sidebar.showHome();
 			loadClanEvents();
 			String eventId = TsgHubSession.get("eventId");
 			String memberName = TsgHubSession.get("memberName:" + eventId);
