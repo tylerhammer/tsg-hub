@@ -348,8 +348,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		page.add(TsgHubUi.label("Share your progress", TsgHubUi.TEXT, FontManager.getRunescapeBoldFont()));
 		page.add(Box.createVerticalStrut(6));
 		page.add(TsgHubUi.wrapped("TSG Hub tracks your boss kills, drops and raids for clan events. "
-			+ "To do that it sends your RuneScape name, clan and rank, and that progress to your clan's event service. "
-			+ "While you're in clan chat, clanmates also see your world, area and what you're doing.",
+			+ "To do that it sends your RuneScape name, clan and rank, and that progress to your clan's event service.",
 			TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), TEXT_W));
 		page.add(Box.createVerticalStrut(4));
 		page.add(TsgHubUi.wrapped("Nothing is ever posted in game chat.", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), TEXT_W));
@@ -466,6 +465,11 @@ final class TsgHubSidebarPanel extends PluginPanel
 		return members.size() + " online";
 	}
 
+	void locationSharingChanged()
+	{
+		if (view == View.MEMBERS) renderMembers();
+	}
+
 	void setMembers(JsonArray members)
 	{
 		this.members = members;
@@ -491,7 +495,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 		else if (members.size() == 0)
 		{
-			page.add(errorPanel("Nobody online", "Clanmates show up here while they're in clan chat with TSG Hub sharing on."));
+			page.add(errorPanel("Nobody online", "Clanmates show up here while they're in clan chat with location sharing on."));
 		}
 		else
 		{
@@ -502,7 +506,10 @@ final class TsgHubSidebarPanel extends PluginPanel
 			}
 		}
 		page.add(Box.createVerticalStrut(8));
-		page.add(TsgHubUi.wrapped("Shows clanmates in clan chat with TSG Hub sharing on. Leave clan chat to hide yourself.", TsgHubUi.MUTED, small, TEXT_W));
+		if (plugin.locationSharingEnabled())
+			page.add(TsgHubUi.wrapped("Shows clanmates in clan chat with location sharing on. Leave clan chat or turn off Share location and activity to hide yourself.", TsgHubUi.MUTED, small, TEXT_W));
+		else
+			page.add(TsgHubUi.wrapped("You're hidden. Turn on Share location and activity in the TSG Hub settings to appear here.", TsgHubUi.WARNING, small, TEXT_W));
 		refreshPage();
 	}
 

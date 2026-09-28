@@ -142,7 +142,7 @@ final class TsgHubPresence
 
 	private JsonObject snapshot()
 	{
-		if (!plugin.sharingEnabled() || !plugin.isInHubClan() || !plugin.inClanChat()) return null;
+		if (!plugin.locationSharingEnabled() || !plugin.isInHubClan() || !plugin.inClanChat()) return null;
 		if (client.getGameState() != GameState.LOGGED_IN) return null;
 		Player player = client.getLocalPlayer();
 		long hash = client.getAccountHash();

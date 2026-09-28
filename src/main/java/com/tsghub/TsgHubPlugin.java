@@ -251,6 +251,7 @@ public class TsgHubPlugin extends Plugin
 
 	String getDetectedClanName() { return detectedClanName; }
 	boolean sharingEnabled() { return config.dataSharingOptIn(); }
+	boolean locationSharingEnabled() { return config.dataSharingOptIn() && config.shareLocation(); }
 	TsgHubGroups groups() { return groups; }
 	TsgHubPresence presence() { return presence; }
 	boolean inClanChat() { return inClanChat; }
@@ -362,6 +363,12 @@ public class TsgHubPlugin extends Plugin
 		{
 			boolean expand = "partyExpandMembers".equals(event.getKey());
 			SwingUtilities.invokeLater(() -> sidebar.groupSettingsChanged(expand));
+			return;
+		}
+		if ("shareLocation".equals(event.getKey()))
+		{
+			if (!config.shareLocation() && presence != null) presence.leave();
+			SwingUtilities.invokeLater(() -> sidebar.locationSharingChanged());
 			return;
 		}
 		if (!"dataSharingOptIn".equals(event.getKey())) return;

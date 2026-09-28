@@ -91,7 +91,7 @@ The **Members** section lists clanmates who are in clan chat with sharing on. Ea
 
 Activity is detected automatically from where you are and the XP you gain. Only the area name is sent, never your exact tile.
 
-Leave clan chat to hide yourself. You also drop off the list when you log out or turn sharing off.
+Turn on **Share location and activity** under **Sharing** in the plugin settings to appear. It's off by default. Leave clan chat or turn it off to hide yourself, and you also drop off the list when you log out.
 
 </td>
 </tr>

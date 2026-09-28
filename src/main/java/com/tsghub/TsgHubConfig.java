@@ -8,11 +8,20 @@ import net.runelite.client.config.ConfigSection;
 @ConfigGroup("tsghub")
 public interface TsgHubConfig extends Config
 {
+	@ConfigSection(name = "Sharing", description = "What TSG Hub sends to the clan's event service.", position = 0)
+	String sharingSection = "sharing";
+
 	@ConfigSection(name = "Party", description = "How clan parties look in the TSG Hub sidebar.", position = 10)
 	String partySection = "party";
 
-	@ConfigItem(keyName = "dataSharingOptIn", position = 0, name = "Share game and clan progress", description = "Opt in to send your RuneScape name, detected clan and rank, PvM progress, loot received during events you join, submitted claims, clan chat presence, and your world, area name and current activity while you're in clan chat to the TSG Hub service. Progress and tile-completion notices are local to your chatbox; no game chat is sent.")
+	@ConfigItem(keyName = "dataSharingOptIn", position = 0, section = sharingSection, name = "Share game and clan progress", description = "Opt in to send your RuneScape name, detected clan and rank, PvM progress, loot received during events you join, submitted claims, and clan chat presence to the TSG Hub service. Progress and tile-completion notices are local to your chatbox; no game chat is sent.")
 	default boolean dataSharingOptIn()
+	{
+		return false;
+	}
+
+	@ConfigItem(keyName = "shareLocation", position = 1, section = sharingSection, name = "Share location and activity", description = "While you're in clan chat, show clanmates your world, area name and what you're doing (for example Skilling - Mining) in the Members list. Your exact tile is never sent. Requires Share game and clan progress.")
+	default boolean shareLocation()
 	{
 		return false;
 	}
