@@ -11,7 +11,11 @@ import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.Player;
 import net.runelite.api.Skill;
+import net.runelite.api.clan.ClanMember;
+import net.runelite.api.clan.ClanSettings;
+import net.runelite.api.clan.ClanTitle;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.client.callback.ClientThread;
 
 final class TsgHubPresence
 {
@@ -21,6 +25,7 @@ final class TsgHubPresence
 
 	private final TsgHubPlugin plugin;
 	private final Client client;
+	private final ClientThread clientThread;
 	private final ScheduledExecutorService executor;
 	private final Supplier<TsgHubApi> api;
 	private final Supplier<TsgHubSidebarPanel> sidebar;
@@ -28,11 +33,12 @@ final class TsgHubPresence
 	private volatile JsonObject listed;
 	private volatile long sentAt;
 
-	TsgHubPresence(TsgHubPlugin plugin, Client client, ScheduledExecutorService executor,
+	TsgHubPresence(TsgHubPlugin plugin, Client client, ClientThread clientThread, ScheduledExecutorService executor,
 		Supplier<TsgHubApi> api, Supplier<TsgHubSidebarPanel> sidebar)
 	{
 		this.plugin = plugin;
 		this.client = client;
+		this.clientThread = clientThread;
 		this.executor = executor;
 		this.api = api;
 		this.sidebar = sidebar;
@@ -88,7 +94,10 @@ final class TsgHubPresence
 			try
 			{
 				JsonArray members = api.get().request("GET", "/v1/presence?clanName=" + clan, null, null).getAsJsonArray("members");
-				ui(s -> s.setMembers(members));
+				clientThread.invokeLater(() -> {
+					addRanks(members);
+					ui(s -> s.setMembers(members));
+				});
 			}
 			catch (Exception e) { if (!quiet) ui(s -> s.setStatus("Couldn't load members. " + TsgHubUi.friendlyError(e), Tone.ERROR)); }
 			finally { if (!quiet) ui(s -> s.setBusy(false)); }
@@ -99,6 +108,20 @@ final class TsgHubPresence
 	{
 		TsgHubSidebarPanel s = sidebar.get();
 		if (s != null && s.wantsMembers()) loadMembers(true);
+	}
+
+	private void addRanks(JsonArray members)
+	{
+		ClanSettings settings = client.getClanSettings();
+		if (settings == null) return;
+		for (int i = 0; i < members.size(); i++)
+		{
+			JsonObject member = members.get(i).getAsJsonObject();
+			ClanMember found = settings.findMember(TsgHubUi.str(member, "displayName"));
+			if (found == null || found.getRank() == null) continue;
+			ClanTitle title = settings.titleForRank(found.getRank());
+			if (title != null && title.getName() != null) member.addProperty("rank", title.getName());
+		}
 	}
 
 	private JsonObject snapshot()

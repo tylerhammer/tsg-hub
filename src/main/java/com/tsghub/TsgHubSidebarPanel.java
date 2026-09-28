@@ -523,12 +523,22 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (!area.isEmpty() && !activity.endsWith(area)) where.add(area);
 		if (!where.isEmpty()) text.add(TsgHubUi.wrapped(String.join(" · ", where), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), CARD_TITLE_W));
 		card.add(text, BorderLayout.CENTER);
-		if (TsgHubUi.samePlayer(name, plugin.getDetectedPlayerName()))
+		String rank = TsgHubUi.str(member, "rank");
+		boolean self = TsgHubUi.samePlayer(name, plugin.getDetectedPlayerName());
+		if (!rank.isEmpty() || self)
 		{
-			JPanel east = new JPanel(new BorderLayout());
-			east.setOpaque(false);
-			east.add(TsgHubUi.badge("You", TsgHubUi.SUCCESS), BorderLayout.NORTH);
-			card.add(east, BorderLayout.EAST);
+			JPanel east = TsgHubUi.stack();
+			if (!rank.isEmpty()) east.add(TsgHubUi.label(rank, TsgHubUi.ACCENT, FontManager.getRunescapeSmallFont()));
+			if (self)
+			{
+				east.add(Box.createVerticalStrut(3));
+				east.add(TsgHubUi.badge("You", TsgHubUi.SUCCESS));
+			}
+			for (java.awt.Component part : east.getComponents()) ((javax.swing.JComponent) part).setAlignmentX(RIGHT_ALIGNMENT);
+			JPanel wrap = new JPanel(new BorderLayout());
+			wrap.setOpaque(false);
+			wrap.add(east, BorderLayout.NORTH);
+			card.add(wrap, BorderLayout.EAST);
 		}
 		return TsgHubUi.fitHeight(card);
 	}

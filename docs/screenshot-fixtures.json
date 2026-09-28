@@ -2670,31 +2670,36 @@
     "displayName": "Crab Legs",
     "world": 416,
     "area": "Theatre of Blood",
-    "activity": "Raiding - Theatre of Blood"
+    "activity": "Raiding - Theatre of Blood",
+    "rank": "Administrator"
    },
    {
     "displayName": "Iron Fenrir",
     "world": 302,
     "area": "Nex",
-    "activity": "Bossing - Nex"
+    "activity": "Bossing - Nex",
+    "rank": "Owner"
    },
    {
     "displayName": "Mossy Rock",
     "world": 330,
     "area": "Motherlode Mine",
-    "activity": "Skilling - Mining"
+    "activity": "Skilling - Mining",
+    "rank": "Sergeant"
    },
    {
     "displayName": "Sir Gnomealot",
     "world": 420,
     "area": "Varrock",
-    "activity": "Idle"
+    "activity": "Idle",
+    "rank": "Recruit"
    },
    {
     "displayName": "Tbow Tuesday",
     "world": 386,
     "area": "",
-    "activity": "Combat"
+    "activity": "Combat",
+    "rank": "Captain"
    }
   ]
  }
