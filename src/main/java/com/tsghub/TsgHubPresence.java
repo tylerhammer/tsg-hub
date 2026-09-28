@@ -3,6 +3,9 @@ package com.tsghub;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.tsghub.TsgHubUi.Tone;
+import java.awt.image.BufferedImage;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -16,6 +19,7 @@ import net.runelite.api.clan.ClanSettings;
 import net.runelite.api.clan.ClanTitle;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.game.ChatIconManager;
 
 final class TsgHubPresence
 {
@@ -26,6 +30,8 @@ final class TsgHubPresence
 	private final TsgHubPlugin plugin;
 	private final Client client;
 	private final ClientThread clientThread;
+	private final ChatIconManager chatIcons;
+	private final Map<Integer, BufferedImage> rankIcons = new ConcurrentHashMap<>();
 	private final ScheduledExecutorService executor;
 	private final Supplier<TsgHubApi> api;
 	private final Supplier<TsgHubSidebarPanel> sidebar;
@@ -33,12 +39,13 @@ final class TsgHubPresence
 	private volatile JsonObject listed;
 	private volatile long sentAt;
 
-	TsgHubPresence(TsgHubPlugin plugin, Client client, ClientThread clientThread, ScheduledExecutorService executor,
+	TsgHubPresence(TsgHubPlugin plugin, Client client, ClientThread clientThread, ChatIconManager chatIcons, ScheduledExecutorService executor,
 		Supplier<TsgHubApi> api, Supplier<TsgHubSidebarPanel> sidebar)
 	{
 		this.plugin = plugin;
 		this.client = client;
 		this.clientThread = clientThread;
+		this.chatIcons = chatIcons;
 		this.executor = executor;
 		this.api = api;
 		this.sidebar = sidebar;
@@ -120,8 +127,17 @@ final class TsgHubPresence
 			ClanMember found = settings.findMember(TsgHubUi.str(member, "displayName"));
 			if (found == null || found.getRank() == null) continue;
 			ClanTitle title = settings.titleForRank(found.getRank());
-			if (title != null && title.getName() != null) member.addProperty("rank", title.getName());
+			if (title == null) continue;
+			if (title.getName() != null) member.addProperty("rank", title.getName());
+			member.addProperty("rankId", title.getId());
+			BufferedImage icon = chatIcons.getRankImage(title);
+			if (icon != null) rankIcons.put(title.getId(), icon);
 		}
+	}
+
+	BufferedImage rankIcon(JsonObject member)
+	{
+		return member.has("rankId") ? rankIcons.get(TsgHubUi.integer(member, "rankId", 0)) : null;
 	}
 
 	private JsonObject snapshot()

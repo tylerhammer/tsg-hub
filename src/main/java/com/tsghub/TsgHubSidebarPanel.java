@@ -514,7 +514,16 @@ final class TsgHubSidebarPanel extends PluginPanel
 		int world = TsgHubUi.integer(member, "world", 0);
 		JPanel card = TsgHubUi.card();
 		JPanel text = TsgHubUi.stack();
-		text.add(TsgHubUi.label(TsgHubUi.html("<b>" + TsgHubUi.escape(name) + "</b>", CARD_TITLE_W), TsgHubUi.TEXT, FontManager.getRunescapeFont()));
+		String rank = TsgHubUi.str(member, "rank");
+		java.awt.image.BufferedImage rankIcon = plugin.presence().rankIcon(member);
+		JLabel nameLabel = TsgHubUi.label(TsgHubUi.html("<b>" + TsgHubUi.escape(name) + "</b>", CARD_TITLE_W - (rankIcon == null ? 0 : rankIcon.getWidth() + 4)), TsgHubUi.TEXT, FontManager.getRunescapeFont());
+		if (rankIcon != null)
+		{
+			nameLabel.setIcon(new javax.swing.ImageIcon(rankIcon));
+			nameLabel.setIconTextGap(4);
+			nameLabel.setToolTipText(rank);
+		}
+		text.add(nameLabel);
 		text.add(Box.createVerticalStrut(2));
 		if (!activity.isEmpty())
 			text.add(TsgHubUi.wrapped(activity, "Idle".equals(activity) ? TsgHubUi.MUTED : TsgHubUi.SUCCESS, FontManager.getRunescapeSmallFont(), CARD_TITLE_W));
@@ -523,15 +532,15 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (!area.isEmpty() && !activity.endsWith(area)) where.add(area);
 		if (!where.isEmpty()) text.add(TsgHubUi.wrapped(String.join(" · ", where), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), CARD_TITLE_W));
 		card.add(text, BorderLayout.CENTER);
-		String rank = TsgHubUi.str(member, "rank");
+		boolean rankText = rankIcon == null && !rank.isEmpty();
 		boolean self = TsgHubUi.samePlayer(name, plugin.getDetectedPlayerName());
-		if (!rank.isEmpty() || self)
+		if (rankText || self)
 		{
 			JPanel east = TsgHubUi.stack();
-			if (!rank.isEmpty()) east.add(TsgHubUi.label(rank, TsgHubUi.ACCENT, FontManager.getRunescapeSmallFont()));
+			if (rankText) east.add(TsgHubUi.label(rank, TsgHubUi.ACCENT, FontManager.getRunescapeSmallFont()));
 			if (self)
 			{
-				east.add(Box.createVerticalStrut(3));
+				if (rankText) east.add(Box.createVerticalStrut(3));
 				east.add(TsgHubUi.badge("You", TsgHubUi.SUCCESS));
 			}
 			for (java.awt.Component part : east.getComponents()) ((javax.swing.JComponent) part).setAlignmentX(RIGHT_ALIGNMENT);
