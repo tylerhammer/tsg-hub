@@ -98,6 +98,8 @@ final class TsgHubPanel extends JPanel
 	private final TsgHubDatePicker eventStart = new TsgHubDatePicker();
 	private final TsgHubDatePicker eventEnd = new TsgHubDatePicker();
 	private final JCheckBox eventHideScores = new JCheckBox("Hide scores from players");
+	private final JCheckBox eventHidden = new JCheckBox("Hide event from players");
+	private final JButton publishEvent = TsgHubUi.primaryButton("Publish");
 	private static final String[] EVENT_TYPES = {"bingo", "skill", "boss", "drop-party"};
 	private final JComboBox<String> eventType = new JComboBox<>(new String[] {"Bingo", "Skill of the Week", "Boss of the Week", "Custom"});
 	private final JComboBox<String> eventSkill = new JComboBox<>();
@@ -269,6 +271,12 @@ final class TsgHubPanel extends JPanel
 		hideScoresRow.add(eventHideScores);
 		hideScoresRow.add(TsgHubUi.wrapped("Players still see their own progress, but not other players' or teams' scores and ranks. You can change this any time.", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), 480));
 		form.add(hideScoresRow);
+		form.add(Box.createVerticalStrut(6));
+		eventHidden.setOpaque(false);
+		eventHidden.setForeground(TsgHubUi.TEXT);
+		eventHidden.setFocusPainted(false);
+		form.add(eventHidden);
+		form.add(TsgHubUi.wrapped("Only admins can see and join it, so you can set it up and test it first. Publish it when it's ready. Players who already joined keep access.", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), 480));
 		form.add(Box.createVerticalStrut(10));
 		eventType.addActionListener(e -> updateEventFormType());
 		placeholder(partyTime, "e.g. 19:30");
@@ -307,8 +315,11 @@ final class TsgHubPanel extends JPanel
 		edit.addActionListener(e -> beginEditEvent());
 		JButton deleteEvent = TsgHubUi.iconButton(new TsgHubUi.TrashIcon(), "Delete event");
 		deleteEvent.addActionListener(e -> confirmDeleteEvent());
+		publishEvent.setToolTipText("Let players see and join this event");
+		publishEvent.addActionListener(e -> { if (currentEvent != null) plugin.publishEvent(currentEvent); });
 		JPanel editButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
 		editButtons.setOpaque(false);
+		editButtons.add(publishEvent);
 		editButtons.add(edit);
 		editButtons.add(deleteEvent);
 		JPanel editWrap = new JPanel(new BorderLayout());
@@ -645,6 +656,11 @@ final class TsgHubPanel extends JPanel
 			meta.setOpaque(false);
 			meta.add(TsgHubUi.badge(TsgHubUi.statusLabel(state), TsgHubUi.statusColor(state)));
 			meta.add(Box.createHorizontalStrut(5));
+			if (TsgHubUi.bool(event, "hidden"))
+			{
+				meta.add(TsgHubUi.badge("Hidden", TsgHubUi.MUTED));
+				meta.add(Box.createHorizontalStrut(5));
+			}
 			meta.add(TsgHubUi.label(TsgHubUi.dateRange(event), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont()));
 			text.add(Box.createVerticalStrut(3));
 			text.add(meta);
@@ -694,7 +710,9 @@ final class TsgHubPanel extends JPanel
 			: competition ? TsgHubUi.integer(event, "participants", 0) + " taking part" : "";
 		eventMeta.setText(TsgHubUi.eventTypeLine(event) + " · " + TsgHubUi.statusLabel(state) + " · " + TsgHubUi.dateRange(event)
 			+ (counts.isEmpty() ? "" : " · " + counts)
-			+ (TsgHubUi.bool(event, "hideScores") ? " · Scores hidden from players" : ""));
+			+ (TsgHubUi.bool(event, "hideScores") ? " · Scores hidden from players" : "")
+			+ (TsgHubUi.bool(event, "hidden") ? " · Hidden from players" : ""));
+		publishEvent.setVisible(TsgHubUi.bool(event, "hidden"));
 		teamsTabButton.setVisible(bingo);
 		tasksTabButton.setVisible(bingo);
 		claimsTabButton.setVisible(bingo);
@@ -1298,6 +1316,7 @@ final class TsgHubPanel extends JPanel
 		eventStart.setDate(LocalDate.now());
 		eventEnd.setDate(LocalDate.now().plusDays(7));
 		eventHideScores.setSelected(false);
+		eventHidden.setSelected(false);
 		eventType.setEnabled(true);
 		eventType.setSelectedIndex(0);
 		eventSkill.setSelectedIndex(0);
@@ -1325,6 +1344,7 @@ final class TsgHubPanel extends JPanel
 		eventStart.setDate(parseDate(TsgHubUi.str(currentEvent, "startDate")));
 		eventEnd.setDate(parseDate(TsgHubUi.str(currentEvent, "endDate")));
 		eventHideScores.setSelected(TsgHubUi.bool(currentEvent, "hideScores"));
+		eventHidden.setSelected(TsgHubUi.bool(currentEvent, "hidden"));
 		String type = TsgHubUi.str(currentEvent, "type");
 		eventType.setSelectedIndex(Math.max(0, java.util.Arrays.asList(EVENT_TYPES).indexOf(type.isEmpty() ? "bingo" : type)));
 		eventType.setEnabled(false);
@@ -1391,8 +1411,8 @@ final class TsgHubPanel extends JPanel
 			config.addProperty("notes", partyNotes.getText().trim());
 		}
 		eventFormError.setVisible(false);
-		if (editingEvent && currentEvent != null) plugin.updateEvent(TsgHubUi.str(currentEvent, "id"), name, start.toString(), end.toString(), eventHideScores.isSelected(), "bingo".equals(type) ? null : config);
-		else plugin.createEvent(name, start.toString(), end.toString(), eventHideScores.isSelected(), type, config);
+		if (editingEvent && currentEvent != null) plugin.updateEvent(TsgHubUi.str(currentEvent, "id"), name, start.toString(), end.toString(), eventHideScores.isSelected(), eventHidden.isSelected(), "bingo".equals(type) ? null : config);
+		else plugin.createEvent(name, start.toString(), end.toString(), eventHideScores.isSelected(), eventHidden.isSelected(), type, config);
 	}
 
 	private void updateEventFormType()

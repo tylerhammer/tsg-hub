@@ -111,6 +111,7 @@ public class TsgHubPlugin extends Plugin
 	private volatile int detectedClanRank = -1;
 	private volatile boolean inClanChat;
 	private volatile boolean sidebarRouted;
+	private volatile String syncedIdentity = "";
 	private volatile boolean routedAsHubMember;
 	private volatile boolean routedClanPending;
 	private volatile String hubClanName = "TSGaming";
@@ -408,6 +409,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		attemptedXpClaims.clear();
 		syncedClanRanks.clear();
+		syncedIdentity = "";
 		if (competitions != null) competitions.clear();
 		clearTaskCache();
 		if (boardOverlay != null) boardOverlay.setVisible(false);
@@ -424,6 +426,7 @@ public class TsgHubPlugin extends Plugin
 		routedAsHubMember = isInHubClan();
 		boolean pending = clanPending();
 		routedClanPending = pending;
+		if (loggedIn && !pending && isInHubClan() && config.dataSharingOptIn()) syncIdentity();
 		SwingUtilities.invokeLater(() -> {
 			if (!loggedIn) { sidebar.showLoggedOut(); return; }
 			if (pending) { sidebar.showCheckingClan(); return; }
@@ -460,6 +463,7 @@ public class TsgHubPlugin extends Plugin
 		payload.addProperty("displayName", client.getLocalPlayer().getName());
 		payload.addProperty("clanName", detectedClanName);
 		payload.addProperty("clanRank", detectedClanRank);
+		addAccountHash(payload);
 		executor.submit(() -> {
 			try
 			{
@@ -623,6 +627,7 @@ public class TsgHubPlugin extends Plugin
 		body.addProperty("displayName", detectedPlayerName);
 		body.addProperty("clanName", detectedClanName);
 		body.addProperty("clanRank", detectedClanRank);
+		addAccountHash(body);
 		sidebarBusy(true);
 		executor.submit(() -> {
 			try
@@ -671,6 +676,56 @@ public class TsgHubPlugin extends Plugin
 		});
 	}
 
+	private String accountHash()
+	{
+		long hash = client.getAccountHash();
+		return hash == -1 ? "" : Long.toString(hash);
+	}
+
+	private void addAccountHash(JsonObject body)
+	{
+		String hash = accountHash();
+		if (!hash.isEmpty()) body.addProperty("accountHash", hash);
+	}
+
+	private void syncIdentity()
+	{
+		String name = detectedPlayerName;
+		String hash = accountHash();
+		if (name.isEmpty() || hash.isEmpty() || detectedClanName.isEmpty()) return;
+		String identity = hash + ":" + name;
+		if (identity.equals(syncedIdentity)) return;
+		syncedIdentity = identity;
+		JsonArray memberTokens = new JsonArray();
+		JsonArray organizerTokens = new JsonArray();
+		for (String key : TsgHubSession.keysWithPrefix("memberToken:")) memberTokens.add(TsgHubSession.get(key));
+		if (!TsgHubSession.get("token").isEmpty()) memberTokens.add(TsgHubSession.get("token"));
+		for (String key : TsgHubSession.keysWithPrefix("organizerToken:")) organizerTokens.add(TsgHubSession.get(key));
+		for (String key : TsgHubSession.keysWithPrefix("memberName:")) renameStored(key, name);
+		for (String key : TsgHubSession.keysWithPrefix("organizerName:")) renameStored(key, name);
+		renameStored("displayName", name);
+		JsonObject body = new JsonObject();
+		body.addProperty("displayName", name);
+		body.addProperty("clanName", detectedClanName);
+		body.addProperty("accountHash", hash);
+		body.add("memberTokens", memberTokens);
+		body.add("organizerTokens", organizerTokens);
+		executor.submit(() -> {
+			try
+			{
+				JsonObject result = api().request("POST", "/v1/identity", null, body);
+				if (TsgHubUi.bool(result, "updated") && !TsgHubSession.get("eventId").isEmpty()) refreshBoard();
+			}
+			catch (Exception e) { syncedIdentity = ""; }
+		});
+	}
+
+	private void renameStored(String key, String name)
+	{
+		String stored = TsgHubSession.get(key);
+		if (!stored.isEmpty() && !normalizePlayerName(stored).equals(normalizePlayerName(name))) TsgHubSession.set(key, name);
+	}
+
 	void loadClanEvents()
 	{
 		if (!isInHubClan()) return;
@@ -688,7 +743,13 @@ public class TsgHubPlugin extends Plugin
 		executor.submit(() -> {
 			try
 			{
-				JsonObject response = api().request("GET", "/v1/events?clanName=" + encodedClan, null, null);
+				String credential = null;
+				if (canUseClanAdminSession())
+				{
+					try { credential = ensureOrganizerListCredential(); }
+					catch (Exception ignored) { credential = null; }
+				}
+				JsonObject response = api().request("GET", "/v1/events?clanName=" + encodedClan, credential, null);
 				JsonArray events = response.getAsJsonArray("events");
 				for (int i = 0; i < events.size(); i++)
 				{
@@ -816,7 +877,7 @@ public class TsgHubPlugin extends Plugin
 		});
 	}
 
-	void createEvent(String name, String startDate, String endDate, boolean hideScores, String type, JsonObject typeConfig)
+	void createEvent(String name, String startDate, String endDate, boolean hideScores, boolean hidden, String type, JsonObject typeConfig)
 	{
 		if (!isInHubClan()) { eventFormFailed("TSG Hub is only for members of the " + hubClanName + " clan."); return; }
 		if (!config.dataSharingOptIn()) { eventFormFailed("Turn on sharing in the TSG Hub sidebar first."); return; }
@@ -836,7 +897,9 @@ public class TsgHubPlugin extends Plugin
 		body.addProperty("startDate", startDate.trim());
 		body.addProperty("endDate", endDate.trim());
 		body.addProperty("hideScores", hideScores);
+		body.addProperty("hidden", hidden);
 		body.addProperty("type", type);
+		addAccountHash(body);
 		body.add("config", typeConfig == null ? new JsonObject() : typeConfig);
 		organizerStatus("Creating event...", Tone.INFO);
 		executor.submit(() -> {
@@ -851,18 +914,20 @@ public class TsgHubPlugin extends Plugin
 				SwingUtilities.invokeLater(() -> panel.eventCreated(result));
 				organizerStatus("Event created. Add teams next.", Tone.SUCCESS);
 				loadManagedEvents();
+				loadClanEvents();
 			}
 			catch (Exception e) { eventFormFailed(TsgHubUi.friendlyError(e)); organizerStatus("", Tone.INFO); }
 		});
 	}
 
-	void updateEvent(String eventId, String name, String startDate, String endDate, boolean hideScores, JsonObject typeConfig)
+	void updateEvent(String eventId, String name, String startDate, String endDate, boolean hideScores, boolean hidden, JsonObject typeConfig)
 	{
 		JsonObject body = new JsonObject();
 		body.addProperty("name", name.trim());
 		body.addProperty("startDate", startDate.trim());
 		body.addProperty("endDate", endDate.trim());
 		body.addProperty("hideScores", hideScores);
+		body.addProperty("hidden", hidden);
 		if (typeConfig != null) body.add("config", typeConfig);
 		String credential = organizerCredential(eventId);
 		organizerStatus("Saving...", Tone.INFO);
@@ -873,8 +938,32 @@ public class TsgHubPlugin extends Plugin
 				organizerStatus("Event saved.", Tone.SUCCESS);
 				refreshOrganizerEvent(true);
 				loadManagedEvents();
+				loadClanEvents();
 			}
 			catch (Exception e) { eventFormFailed(TsgHubUi.friendlyError(e)); organizerStatus("", Tone.INFO); }
+		});
+	}
+
+	void publishEvent(JsonObject event)
+	{
+		String eventId = TsgHubUi.str(event, "id");
+		JsonObject body = new JsonObject();
+		body.addProperty("name", TsgHubUi.str(event, "name"));
+		body.addProperty("startDate", TsgHubUi.str(event, "startDate"));
+		body.addProperty("endDate", TsgHubUi.str(event, "endDate"));
+		body.addProperty("hidden", false);
+		String credential = organizerCredential(eventId);
+		organizerStatus("Publishing...", Tone.INFO);
+		executor.submit(() -> {
+			try
+			{
+				api().request("PATCH", "/v1/events/" + eventId, credential, body);
+				organizerStatus("Event published. Players can see it now.", Tone.SUCCESS);
+				refreshOrganizerEvent(true);
+				loadManagedEvents();
+				loadClanEvents();
+			}
+			catch (Exception e) { organizerStatus("Couldn't publish. " + TsgHubUi.friendlyError(e), Tone.ERROR); }
 		});
 	}
 
