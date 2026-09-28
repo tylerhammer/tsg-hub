@@ -100,6 +100,8 @@ public class TsgHubPlugin extends Plugin
 	private final Map<String, Integer> syncedClanRanks = new ConcurrentHashMap<>();
 	private static final long CLAN_ADMIN_TOKEN_MARGIN_MILLIS = 60_000;
 	private static final int PET_CHECK_TICKS = 5;
+	private static final int CLAN_CHECK_TICKS = 50;
+	private volatile int clanCheckTicks;
 	private int petCheckTicks;
 	private Set<Integer> inventoryPets = Collections.emptySet();
 	private volatile List<XpTask> xpTasks = Collections.emptyList();
@@ -109,6 +111,7 @@ public class TsgHubPlugin extends Plugin
 	private volatile boolean inClanChat;
 	private volatile boolean sidebarRouted;
 	private volatile boolean routedAsHubMember;
+	private volatile boolean routedClanPending;
 	private volatile String hubClanName = "TSGaming";
 	private volatile List<PvmTask> pvmTasks = Collections.emptyList();
 	private volatile String taskEventId = "";
@@ -254,6 +257,11 @@ public class TsgHubPlugin extends Plugin
 
 	String getHubClanName() { return hubClanName; }
 
+	private boolean clanPending()
+	{
+		return detectedClanName.isEmpty() && clanCheckTicks > 0;
+	}
+
 	boolean isInHubClan()
 	{
 		return !detectedClanName.isEmpty() && normalizePlayerName(detectedClanName).equals(normalizePlayerName(hubClanName));
@@ -296,6 +304,7 @@ public class TsgHubPlugin extends Plugin
 			clientThread.invokeLater(() -> {
 				if (client.getGameState() != GameState.LOGGED_IN) return true;
 				if (client.getLocalPlayer() == null || client.getLocalPlayer().getName() == null) return false;
+				if (detectedClanName.isEmpty()) clanCheckTicks = CLAN_CHECK_TICKS;
 				refreshDetectedClan();
 				return true;
 			});
@@ -307,6 +316,7 @@ public class TsgHubPlugin extends Plugin
 		detectedClanName = "";
 		detectedClanRank = -1;
 		inClanChat = false;
+		clanCheckTicks = 0;
 		sidebarRouted = false;
 		if (competitions != null) competitions.clear();
 		SwingUtilities.invokeLater(() -> {
@@ -368,6 +378,7 @@ public class TsgHubPlugin extends Plugin
 		detectedPlayerName = client.getLocalPlayer() == null || client.getLocalPlayer().getName() == null ? "" : client.getLocalPlayer().getName();
 		String name = settings == null ? "" : settings.getName();
 		detectedClanName = name == null ? "" : name.trim();
+		if (!detectedClanName.isEmpty()) clanCheckTicks = 0;
 		int rank = -1;
 		if (settings != null && client.getLocalPlayer() != null && client.getLocalPlayer().getName() != null)
 		{
@@ -387,7 +398,7 @@ public class TsgHubPlugin extends Plugin
 			if (!organizerAccess && hubWindow != null) hubWindow.setVisible(false);
 		});
 		if (!sidebarRouted && !detectedPlayerName.isEmpty()) routeSidebar();
-		else if (sidebarRouted && routedAsHubMember != isInHubClan()) routeSidebar();
+		else if (sidebarRouted && (routedAsHubMember != isInHubClan() || routedClanPending != clanPending())) routeSidebar();
 		else if (client.getGameState() != GameState.LOGGED_IN && !sidebarRouted) SwingUtilities.invokeLater(() -> sidebar.showLoggedOut());
 	}
 
@@ -410,8 +421,11 @@ public class TsgHubPlugin extends Plugin
 		boolean loggedIn = client.getGameState() == GameState.LOGGED_IN && !detectedPlayerName.isEmpty();
 		if (loggedIn) sidebarRouted = true;
 		routedAsHubMember = isInHubClan();
+		boolean pending = clanPending();
+		routedClanPending = pending;
 		SwingUtilities.invokeLater(() -> {
 			if (!loggedIn) { sidebar.showLoggedOut(); return; }
+			if (pending) { sidebar.showCheckingClan(); return; }
 			if (!isInHubClan()) { sidebar.showNotInClan(hubClanName, detectedClanName); return; }
 			if (!config.dataSharingOptIn()) { sidebar.showSharingOff(); return; }
 			sidebar.showEventList();
@@ -1176,6 +1190,12 @@ public class TsgHubPlugin extends Plugin
 	@net.runelite.client.eventbus.Subscribe
 	public void onGameTick(GameTick tick)
 	{
+		if (clanCheckTicks > 0)
+		{
+			clanCheckTicks--;
+			if (client.getClanSettings() != null) clanCheckTicks = 0;
+			if (clanCheckTicks == 0) refreshDetectedClan();
+		}
 		if (!hasPetTask())
 		{
 			petCheckTicks = 0;

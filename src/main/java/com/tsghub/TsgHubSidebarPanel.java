@@ -298,6 +298,15 @@ final class TsgHubSidebarPanel extends PluginPanel
 		refreshPage();
 	}
 
+	void showCheckingClan()
+	{
+		setView(View.NOT_IN_CLAN);
+		setHeader("TSG Hub", "", false, false);
+		page.removeAll();
+		page.add(TsgHubUi.label("Checking your clan...", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont()));
+		refreshPage();
+	}
+
 	void showSharingOff()
 	{
 		setView(View.SHARING_OFF);
