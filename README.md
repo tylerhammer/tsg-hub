@@ -13,6 +13,7 @@ Clan events for **Type Shiii Gaming** (TSG), right in your RuneLite sidebar. Joi
 - **Custom** events (drop parties, clan trips, anything else) announced with the time, world and location.
 - **Clan parties** for raids, bossing and skilling. Join with one click, no passphrase to type, and see your party's health, prayer, gear, inventory and skills live.
 - **Members** list showing which clanmates are online, their world, area and what they're doing.
+- **Drops** history of the clan's big drops, raid loot, pets and collection log items, so you can catch up on what you missed.
 - **Admin tools** for Clan Administrators: create events, teams and tasks, and review proof, all without leaving the game.
 
 ## Bingo
@@ -97,6 +98,21 @@ Anyone in clan chat with sharing on appears in the list. Your area and activity 
 </tr>
 </table>
 
+## Drops
+
+<table>
+<tr>
+<td valign="top"><img src="docs/images/drops.png" width="242" alt="Recent clan drops with item, player, value and time"></td>
+<td valign="top">
+
+The **Drops** section keeps a history of the clan's big drops, so you can see what clanmates got while you were offline. Each row shows the item, who got it, its value and how long ago.
+
+It's built from the clan chat broadcasts your clan already has turned on: drops over the clan's value threshold, raid loot, pets and new collection log items. Anyone online with sharing on records them, so drops from clanmates who don't use TSG Hub show up too. If several people see the same broadcast, it's only recorded once.
+
+</td>
+</tr>
+</table>
+
 ## Getting started
 
 1. Install **TSG Hub** from the Plugin Hub.
@@ -132,6 +148,7 @@ Once you opt in, it sends the following to the TSG Hub service:
 - Loot you receive while a bingo event you've joined is active, so admins can reconcile a task from earlier drops if its item list changes
 - Manual proof you submit
 - Whether you're currently in the clan chat channel, so teammates' completion alerts reach you
+- Clan chat broadcasts for drops, raid loot, pets and collection log items, for the clan's **Drops** history
 
 In a clan party, your stats, gear and inventory go to the other members through **RuneLite's party service**, not the TSG Hub service. The TSG Hub service only learns your display name, party and world.
 

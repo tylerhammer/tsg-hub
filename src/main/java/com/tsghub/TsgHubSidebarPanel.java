@@ -9,6 +9,8 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -46,7 +48,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private static final int CARD_TITLE_W = 150;
 	private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("h:mm a");
 
-	private enum View { LOGGED_OUT, NOT_IN_CLAN, SHARING_OFF, HOME, EVENTS, PREVIEW, BOARD, COMPETITION_PREVIEW, COMPETITION, DROP_PARTY, GROUPS, MEMBERS }
+	private enum View { LOGGED_OUT, NOT_IN_CLAN, SHARING_OFF, HOME, EVENTS, PREVIEW, BOARD, COMPETITION_PREVIEW, COMPETITION, DROP_PARTY, GROUPS, MEMBERS, DROPS }
 
 	private final TsgHubPlugin plugin;
 	private final JButton back = TsgHubUi.iconButton(new TsgHubUi.BackIcon(), "Back to events");
@@ -84,7 +86,9 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private volatile boolean boardShowing;
 	private volatile boolean membersWanted;
 	private volatile boolean groupsWanted;
+	private volatile boolean dropsWanted;
 	private JsonArray members;
+	private JsonArray drops;
 	private JsonObject competitionEvent;
 	private String competitionName = "";
 	private volatile String openCompetitionId;
@@ -96,6 +100,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final TsgHubUi.WidthTrackingPanel groupsPage = new TsgHubUi.WidthTrackingPanel();
 	private final GroupMembersPanel groupMembers;
 	private static final String WILDERNESS = "Wilderness lvl ";
+	private static final int DROP_ICON_W = 40;
 	private final JButton createGroupButton = TsgHubUi.primaryButton("New party");
 	private final JLabel groupError = TsgHubUi.label("", TsgHubUi.ERROR, FontManager.getRunescapeSmallFont());
 	private JsonArray groupList;
@@ -131,7 +136,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 		sections = Arrays.asList(
 			new Section("Events", "Clan events and your team's board", new TsgHubUi.CalendarIcon(), this::openEvents, this::eventsSummary, () -> liveEvents() > 0),
 			new Section("Parties", "Join a clanmate's party or start one", new TsgHubUi.PartyIcon(), this::showParties, this::partiesSummary, () -> plugin.groups().inGroup()),
-			new Section("Members", "See what clanmates are up to", new TsgHubUi.MembersIcon(), this::showMembers, this::membersSummary, () -> onlineCount() > 0));
+			new Section("Members", "See what clanmates are up to", new TsgHubUi.MembersIcon(), this::showMembers, this::membersSummary, () -> onlineCount() > 0),
+			new Section("Drops", "Recent big drops across the clan", new TsgHubUi.DropsIcon(), this::showDrops, () -> "", () -> false));
 		setLayout(new BorderLayout(0, 6));
 		setBackground(TsgHubUi.BACKGROUND);
 		setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -177,7 +183,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 				renderGroups();
 				return;
 			}
-			if (view == View.GROUPS || view == View.EVENTS || view == View.MEMBERS)
+			if (view == View.GROUPS || view == View.EVENTS || view == View.MEMBERS || view == View.DROPS)
 			{
 				showHome();
 				return;
@@ -210,6 +216,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			}
 			else if (view == View.GROUPS) plugin.groups().refresh();
 			else if (view == View.MEMBERS) plugin.presence().loadMembers(false);
+			else if (view == View.DROPS) plugin.drops().load(false);
 			else if (view == View.BOARD) plugin.refreshBoard();
 			else if (view == View.COMPETITION && competitionEvent != null) plugin.openCompetition(TsgHubUi.str(competitionEvent, "id"));
 			else plugin.loadClanEvents();
@@ -281,6 +288,11 @@ final class TsgHubSidebarPanel extends PluginPanel
 	boolean wantsMembers()
 	{
 		return active && membersWanted;
+	}
+
+	boolean wantsDrops()
+	{
+		return active && dropsWanted;
 	}
 
 	boolean wantsGroups()
@@ -545,6 +557,151 @@ final class TsgHubSidebarPanel extends PluginPanel
 			card.add(wrap, BorderLayout.EAST);
 		}
 		return TsgHubUi.fitHeight(card);
+	}
+
+	void setDrops(JsonArray drops)
+	{
+		this.drops = drops;
+		if (view == View.DROPS) renderDrops();
+	}
+
+	void showDrops()
+	{
+		setView(View.DROPS);
+		renderDrops();
+		plugin.drops().load(false);
+	}
+
+	private void renderDrops()
+	{
+		Font small = FontManager.getRunescapeSmallFont();
+		setHeader("Drops", "", true, true);
+		page.removeAll();
+		if (drops == null)
+		{
+			page.add(TsgHubUi.label("Loading drops...", TsgHubUi.MUTED, small));
+		}
+		else if (drops.size() == 0)
+		{
+			page.add(errorPanel("No drops yet", "Clan broadcasts for drops, raid loot, pets and collection log items show up here."));
+		}
+		else
+		{
+			Instant now = Instant.now();
+			for (int i = 0; i < drops.size(); i++)
+			{
+				page.add(dropCard(drops.get(i).getAsJsonObject(), now));
+				page.add(Box.createVerticalStrut(5));
+			}
+		}
+		refreshPage();
+	}
+
+	private JPanel dropCard(JsonObject drop, Instant now)
+	{
+		Font small = FontManager.getRunescapeSmallFont();
+		JPanel card = TsgHubUi.card();
+		JLabel icon = dropIcon(TsgHubUi.integer(drop, "itemId", 0));
+		int textW = CARD_TITLE_W - (icon == null ? 0 : DROP_ICON_W);
+		if (icon != null) card.add(icon, BorderLayout.WEST);
+		JPanel text = TsgHubUi.stack();
+		JLabel name = TsgHubUi.label(TsgHubUi.html("<b>" + TsgHubUi.escape(dropItem(drop)) + "</b>", textW), TsgHubUi.TEXT, FontManager.getRunescapeFont());
+		name.setToolTipText(TsgHubUi.str(drop, "item"));
+		text.add(name);
+		text.add(Box.createVerticalStrut(2));
+		text.add(TsgHubUi.wrapped(TsgHubUi.str(drop, "player"), TsgHubUi.ACCENT, small, textW));
+		List<String> meta = new ArrayList<>();
+		String value = formatGp(drop.has("value") ? drop.get("value").getAsLong() : 0);
+		if (!value.isEmpty()) meta.add(value);
+		String age = dropAge(TsgHubUi.str(drop, "receivedAt"), now);
+		if (!age.isEmpty()) meta.add(age);
+		if (!meta.isEmpty()) text.add(TsgHubUi.wrapped(String.join(" · ", meta), TsgHubUi.MUTED, small, textW));
+		card.add(text, BorderLayout.CENTER);
+		List<String> badges = dropBadges(drop);
+		if (!badges.isEmpty())
+		{
+			JPanel east = TsgHubUi.stack();
+			for (String badge : badges)
+			{
+				if (east.getComponentCount() > 0) east.add(Box.createVerticalStrut(3));
+				east.add(TsgHubUi.badge(badge, TsgHubUi.SUCCESS));
+			}
+			for (java.awt.Component part : east.getComponents()) ((javax.swing.JComponent) part).setAlignmentX(RIGHT_ALIGNMENT);
+			JPanel wrap = new JPanel(new BorderLayout());
+			wrap.setOpaque(false);
+			wrap.add(east, BorderLayout.NORTH);
+			card.add(wrap, BorderLayout.EAST);
+		}
+		return TsgHubUi.fitHeight(card);
+	}
+
+	private JLabel dropIcon(int itemId)
+	{
+		if (itemId <= 0) return null;
+		net.runelite.client.util.AsyncBufferedImage image = plugin.getItemImage(itemId);
+		if (image == null) return null;
+		JLabel label = new JLabel();
+		label.setVerticalAlignment(JLabel.TOP);
+		label.setPreferredSize(new java.awt.Dimension(DROP_ICON_W, 32));
+		image.addTo(label);
+		return label;
+	}
+
+	static List<String> dropBadges(JsonObject drop)
+	{
+		List<String> badges = new ArrayList<>();
+		String kind = dropKind(TsgHubUi.str(drop, "kind"));
+		if (!kind.isEmpty()) badges.add(kind);
+		if (TsgHubUi.bool(drop, "newLog") || "clog".equals(TsgHubUi.str(drop, "kind"))) badges.add("New log");
+		return badges;
+	}
+
+	static String dropItem(JsonObject drop)
+	{
+		int quantity = TsgHubUi.integer(drop, "quantity", 1);
+		String item = TsgHubUi.str(drop, "item").replaceAll("(\\s*\\([^)]*\\))+$", "");
+		return quantity > 1 ? quantity + " x " + item : item;
+	}
+
+	static String dropKind(String kind)
+	{
+		switch (kind)
+		{
+			case "raid": return "Raid";
+			case "pet": return "Pet";
+			case "dupe": return "Dupe pet";
+			default: return "";
+		}
+	}
+
+	static String formatGp(long value)
+	{
+		if (value <= 0) return "";
+		if (value >= 1_000_000_000L) return trimDecimal(value / 1_000_000_000.0) + "B";
+		if (value >= 1_000_000L) return trimDecimal(value / 1_000_000.0) + "M";
+		if (value >= 1_000L) return trimDecimal(value / 1_000.0) + "K";
+		return value + " gp";
+	}
+
+	private static String trimDecimal(double value)
+	{
+		String text = String.format(java.util.Locale.ROOT, "%.1f", Math.floor(value * 10) / 10);
+		return text.endsWith(".0") ? text.substring(0, text.length() - 2) : text;
+	}
+
+	static String dropAge(String iso, Instant now)
+	{
+		Instant then;
+		try { then = Instant.parse(iso); }
+		catch (Exception e) { return ""; }
+		long minutes = Math.max(0, Duration.between(then, now).toMinutes());
+		if (minutes < 1) return "just now";
+		if (minutes < 60) return minutes + "m ago";
+		long hours = minutes / 60;
+		if (hours < 24) return hours + "h ago";
+		long days = hours / 24;
+		if (days < 30) return days + "d ago";
+		return TsgHubUi.formatDate(iso.substring(0, 10), true);
 	}
 
 	private void openEvents()
@@ -1067,9 +1224,10 @@ final class TsgHubSidebarPanel extends PluginPanel
 		boardShowing = next == View.BOARD;
 		membersWanted = next == View.MEMBERS || next == View.HOME;
 		groupsWanted = next == View.GROUPS || next == View.HOME;
+		dropsWanted = next == View.DROPS;
 		if (next != View.COMPETITION) openCompetitionId = null;
 		centerLayout.show(center, next == View.BOARD ? "board" : next == View.GROUPS ? "groups" : "page");
-		back.setToolTipText(next == View.EVENTS || next == View.GROUPS || next == View.MEMBERS ? "Home" : "Back to events");
+		back.setToolTipText(next == View.EVENTS || next == View.GROUPS || next == View.MEMBERS || next == View.DROPS ? "Home" : "Back to events");
 		layoutHeader();
 	}
 
