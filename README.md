@@ -12,7 +12,7 @@ Clan events for **Type Shiii Gaming** (TSG), right in your RuneLite sidebar. Joi
 - **Skill of the Week** and **Boss of the Week** leaderboards you join with one click.
 - **Custom** events (drop parties, clan trips, anything else) announced with the time, world and location.
 - **Clan parties** for raids, bossing and skilling. Join with one click, no passphrase to type, and see your party's health, prayer, gear, inventory and skills live.
-- **Organizer tools** for Clan Administrators: create events, teams and tasks, and review proof, all without leaving the game.
+- **Admin tools** for Clan Administrators: create events, teams and tasks, and review proof, all without leaving the game.
 
 ## Bingo
 
@@ -40,10 +40,10 @@ When you make progress, a message appears in **your own chatbox only**. When you
 | **Boss kills** | The in-game kill count message, or loot drops for bosses without one |
 | **Item drops** | Any listed item from NPC loot, matched by RuneLite item ID |
 | **Item sets** | Every piece of a set, such as Barrows or Bandos. Teammates can each find different pieces |
-| **Any jar / Any boss pet** | Built-in groups, so organizers don't have to list every item |
+| **Any jar / Any boss pet** | Built-in groups, so admins don't have to list every item |
 | **Raids** | Chambers of Xeric, Theatre of Blood and Tombs of Amascut completions, per mode. Optionally clan-only |
 | **Collection log** | New collection log unlocks count toward set tasks |
-| **Manual** | Submit a screenshot link or note; an organizer reviews it |
+| **Manual** | Submit a screenshot link or note; an admin reviews it |
 
 Tasks can be **Team** (everyone's progress pools together), **Everyone** (each member reaches the target), or **Solo** (one member does it alone).
 
@@ -84,22 +84,22 @@ A party closes when its last member leaves. Members drop out after 3 minutes wit
 1. Install **TSG Hub** from the Plugin Hub.
 2. Log in to a character in the TSGaming clan and open the TSG Hub sidebar.
 3. Click **Enable sharing**. Nothing is sent until you do.
-4. Pick an event. For bingo, enter the team code your organizer gave you. Your team is fixed once you join.
+4. Pick an event. For bingo, enter the team code an admin gave you. Your team is fixed once you join.
 
 **Disconnect from event** on the **Team** tab stops tracking on this device. Your team keeps its progress, and you can rejoin with the same code.
 
-## For organizers
+## For admins
 
-![Organizer window: events on the left, the selected event's tasks on the right](docs/images/organizer-tasks.png)
+![Admin window: events on the left, the selected event's tasks on the right](docs/images/admin-tasks.png)
 
-Clan Administrators and above see an organizer button in the sidebar header. It opens a separate window with your clan's events on the left and the selected event on the right.
+Clan Administrators and above see an admin button in the sidebar header. It opens a separate window with your clan's events on the left and the selected event on the right.
 
 1. **New event**: pick bingo, Skill of the Week, Boss of the Week or a custom event, then set its name and dates. You can hide scores from players until the end.
 2. **Teams**: add teams. Each gets a permanent invite code; use **Copy code** to share it.
 3. **Tasks**: add tasks shared by every team. Item tasks have type-ahead search with icons and ready-made sets, and raid tasks let you choose each raid and mode.
 4. **Claims**: approve or reject manual submissions. The tab shows how many are waiting.
 
-![Pending manual claims awaiting review](docs/images/organizer-claims.png)
+![Pending manual claims awaiting review](docs/images/admin-claims.png)
 
 You can edit a task after the event starts. Progress the service already recorded is recalculated against the new requirements. To credit something the plugin couldn't see, open a team's **Details** and use **Mark complete** with a short note.
 
@@ -111,6 +111,7 @@ Once you opt in, it sends the following to the TSG Hub service:
 
 - Your RuneScape display name, and the clan name and rank your client detects
 - Progress for events you've joined: kill counts, drops, raid completions, collection log unlocks and skill XP
+- Loot you receive while a bingo event you've joined is active, so admins can reconcile a task from earlier drops if its item list changes
 - Manual proof you submit
 - Whether you're currently in the clan chat channel, so teammates' completion alerts reach you
 
@@ -118,7 +119,7 @@ In a clan party, your stats, gear and inventory go to the other members through 
 
 Turning sharing off, or disconnecting from an event, deletes your local token and asks the service to revoke it. Progress your team already earned stays with the clan.
 
-Clan membership, rank and progress are reported by each player's client. They're useful for convenience checks, but a modified client can fake them, so organizers should double-check high-stakes results.
+Clan membership, rank and progress are reported by each player's client. They're useful for convenience checks, but a modified client can fake them, so admins should double-check high-stakes results.
 
 ## Credits
 

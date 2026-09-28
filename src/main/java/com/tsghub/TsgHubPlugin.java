@@ -100,6 +100,9 @@ public class TsgHubPlugin extends Plugin
 	private final Map<String, Integer> syncedClanRanks = new ConcurrentHashMap<>();
 	private static final long CLAN_ADMIN_TOKEN_MARGIN_MILLIS = 60_000;
 	private static final int PET_CHECK_TICKS = 5;
+	private static final int MAX_LOOT_LOG_ITEMS = 50;
+	private static final int CLAN_CHECK_TICKS = 50;
+	private volatile int clanCheckTicks;
 	private int petCheckTicks;
 	private Set<Integer> inventoryPets = Collections.emptySet();
 	private volatile List<XpTask> xpTasks = Collections.emptyList();
@@ -109,6 +112,7 @@ public class TsgHubPlugin extends Plugin
 	private volatile boolean inClanChat;
 	private volatile boolean sidebarRouted;
 	private volatile boolean routedAsHubMember;
+	private volatile boolean routedClanPending;
 	private volatile String hubClanName = "TSGaming";
 	private volatile List<PvmTask> pvmTasks = Collections.emptyList();
 	private volatile String taskEventId = "";
@@ -191,13 +195,13 @@ public class TsgHubPlugin extends Plugin
 	{
 		if (!canManageOrganizerUi())
 		{
-			memberStatus("Organizer tools are for the event creator and Clan Administrators or higher.", Tone.ERROR);
+			memberStatus("Admin tools are for the event creator and Clan Administrators or higher.", Tone.ERROR);
 			return;
 		}
 		SwingUtilities.invokeLater(() -> {
 			if (hubWindow == null || !hubWindow.isDisplayable())
 			{
-				hubWindow = new JFrame("TSG Hub · Organizer");
+				hubWindow = new JFrame("TSG Hub · Admin");
 				hubWindow.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
 				hubWindow.setContentPane(panel);
 				hubWindow.setMinimumSize(new Dimension(680, 480));
@@ -254,6 +258,11 @@ public class TsgHubPlugin extends Plugin
 
 	String getHubClanName() { return hubClanName; }
 
+	private boolean clanPending()
+	{
+		return detectedClanName.isEmpty() && clanCheckTicks > 0;
+	}
+
 	boolean isInHubClan()
 	{
 		return !detectedClanName.isEmpty() && normalizePlayerName(detectedClanName).equals(normalizePlayerName(hubClanName));
@@ -296,6 +305,7 @@ public class TsgHubPlugin extends Plugin
 			clientThread.invokeLater(() -> {
 				if (client.getGameState() != GameState.LOGGED_IN) return true;
 				if (client.getLocalPlayer() == null || client.getLocalPlayer().getName() == null) return false;
+				if (detectedClanName.isEmpty()) clanCheckTicks = CLAN_CHECK_TICKS;
 				refreshDetectedClan();
 				return true;
 			});
@@ -307,6 +317,7 @@ public class TsgHubPlugin extends Plugin
 		detectedClanName = "";
 		detectedClanRank = -1;
 		inClanChat = false;
+		clanCheckTicks = 0;
 		sidebarRouted = false;
 		if (competitions != null) competitions.clear();
 		SwingUtilities.invokeLater(() -> {
@@ -314,7 +325,6 @@ public class TsgHubPlugin extends Plugin
 			if (sidebar != null)
 			{
 				sidebar.setOrganizerAccess(false);
-				sidebar.setIdentity("", -1);
 				sidebar.showLoggedOut();
 			}
 			if (hubWindow != null) hubWindow.setVisible(false);
@@ -369,6 +379,7 @@ public class TsgHubPlugin extends Plugin
 		detectedPlayerName = client.getLocalPlayer() == null || client.getLocalPlayer().getName() == null ? "" : client.getLocalPlayer().getName();
 		String name = settings == null ? "" : settings.getName();
 		detectedClanName = name == null ? "" : name.trim();
+		if (!detectedClanName.isEmpty()) clanCheckTicks = 0;
 		int rank = -1;
 		if (settings != null && client.getLocalPlayer() != null && client.getLocalPlayer().getName() != null)
 		{
@@ -384,12 +395,11 @@ public class TsgHubPlugin extends Plugin
 			if (sidebar != null)
 			{
 				sidebar.setOrganizerAccess(organizerAccess);
-				sidebar.setIdentity(detectedPlayerName, detectedClanRank);
 			}
 			if (!organizerAccess && hubWindow != null) hubWindow.setVisible(false);
 		});
 		if (!sidebarRouted && !detectedPlayerName.isEmpty()) routeSidebar();
-		else if (sidebarRouted && routedAsHubMember != isInHubClan()) routeSidebar();
+		else if (sidebarRouted && (routedAsHubMember != isInHubClan() || routedClanPending != clanPending())) routeSidebar();
 		else if (client.getGameState() != GameState.LOGGED_IN && !sidebarRouted) SwingUtilities.invokeLater(() -> sidebar.showLoggedOut());
 	}
 
@@ -412,8 +422,11 @@ public class TsgHubPlugin extends Plugin
 		boolean loggedIn = client.getGameState() == GameState.LOGGED_IN && !detectedPlayerName.isEmpty();
 		if (loggedIn) sidebarRouted = true;
 		routedAsHubMember = isInHubClan();
+		boolean pending = clanPending();
+		routedClanPending = pending;
 		SwingUtilities.invokeLater(() -> {
 			if (!loggedIn) { sidebar.showLoggedOut(); return; }
+			if (pending) { sidebar.showCheckingClan(); return; }
 			if (!isInHubClan()) { sidebar.showNotInClan(hubClanName, detectedClanName); return; }
 			if (!config.dataSharingOptIn()) { sidebar.showSharingOff(); return; }
 			sidebar.showEventList();
@@ -757,7 +770,7 @@ public class TsgHubPlugin extends Plugin
 			try
 			{
 				api().request("POST", "/v1/events/" + eventId + "/claims", token, body);
-				memberStatus("Sent. An organizer will review it.", Tone.SUCCESS);
+				memberStatus("Sent. An admin will review it.", Tone.SUCCESS);
 				SwingUtilities.invokeLater(() -> sidebar.manualSubmitFinished(true));
 				refreshBoard();
 			}
@@ -813,7 +826,7 @@ public class TsgHubPlugin extends Plugin
 			return;
 		}
 		if (detectedClanName.isEmpty()) { eventFormFailed("No clan detected. Log in to a character in your clan first."); return; }
-		if (client.getLocalPlayer() == null || client.getLocalPlayer().getName() == null) { eventFormFailed("Log in first so you're recorded as the organizer."); return; }
+		if (client.getLocalPlayer() == null || client.getLocalPlayer().getName() == null) { eventFormFailed("Log in first so you're recorded as the admin."); return; }
 		JsonObject body = new JsonObject();
 		String creatorName = client.getLocalPlayer().getName();
 		body.addProperty("name", name.trim());
@@ -1030,6 +1043,22 @@ public class TsgHubPlugin extends Plugin
 		adminRequest("POST", "/tasks/" + taskId + "/complete", body, "Marked complete.", result -> refreshOrganizerEvent(false), null);
 	}
 
+	void reconcileTask(String taskId, boolean dryRun)
+	{
+		JsonObject body = new JsonObject();
+		body.addProperty("dryRun", dryRun);
+		adminRequest("POST", "/tasks/" + taskId + "/reconcile", body, "", result -> {
+			if (dryRun)
+			{
+				SwingUtilities.invokeLater(() -> panel.confirmReconcile(taskId, result));
+				return;
+			}
+			int count = result.has("count") ? result.get("count").getAsInt() : 0;
+			organizerStatus("Credited " + count + (count == 1 ? " match" : " matches") + " from the loot log.", Tone.SUCCESS);
+			refreshOrganizerEvent(false);
+		}, null);
+	}
+
 	void reviewClaim(String claimId, boolean approve)
 	{
 		JsonObject body = new JsonObject();
@@ -1178,6 +1207,12 @@ public class TsgHubPlugin extends Plugin
 	@net.runelite.client.eventbus.Subscribe
 	public void onGameTick(GameTick tick)
 	{
+		if (clanCheckTicks > 0)
+		{
+			clanCheckTicks--;
+			if (client.getClanSettings() != null) clanCheckTicks = 0;
+			if (clanCheckTicks == 0) refreshDetectedClan();
+		}
 		if (!hasPetTask())
 		{
 			petCheckTicks = 0;
@@ -1355,11 +1390,13 @@ public class TsgHubPlugin extends Plugin
 			|| sourceName == null || items == null || isDuplicateLootEvent(sourceType, sourceName, items)) return;
 		String eventId = claimEventId();
 		if (eventId.isEmpty()) return;
+		String lootId = "loot-" + java.util.UUID.randomUUID();
+		submitLootLog(eventId, lootId, sourceType, sourceName, items, amount);
 		for (PvmTask task : pvmTasks)
 		{
 			if ("kill".equals(task.type) && !task.chatKillCount && "NPC".equals(sourceType) && !task.targetNames.isEmpty() && sourceName.equalsIgnoreCase(task.targetNames.get(0)))
 			{
-				submitPvmClaim(eventId, task, "kill", sourceName, Math.max(1, amount), -1);
+				submitPvmClaim(eventId, task, "kill", sourceName, Math.max(1, amount), -1, lootId);
 			}
 			else if ("drop".equals(task.type))
 			{
@@ -1376,10 +1413,38 @@ public class TsgHubPlugin extends Plugin
 						if (configuredId > 0 ? configuredId == itemId : itemName != null && itemName.equalsIgnoreCase(task.targetNames.get(i))) itemMatch = true;
 					}
 					if (itemName != null && itemMatch)
-						submitPvmClaim(eventId, task, "drop", itemName, item.getQuantity(), itemId);
+						submitPvmClaim(eventId, task, "drop", itemName, item.getQuantity(), itemId, lootId);
 				}
 			}
 		}
+	}
+
+	private void submitLootLog(String eventId, String lootId, String sourceType, String sourceName, Collection<ItemStack> items, int amount)
+	{
+		JsonArray lootItems = new JsonArray();
+		for (ItemStack item : items)
+		{
+			if (lootItems.size() >= MAX_LOOT_LOG_ITEMS) break;
+			int itemId = itemManager.canonicalize(item.getId());
+			String itemName = client.getItemDefinition(itemId).getName();
+			if (itemName == null || item.getQuantity() < 1) continue;
+			JsonObject entry = new JsonObject();
+			entry.addProperty("itemId", itemId);
+			entry.addProperty("name", itemName);
+			entry.addProperty("quantity", item.getQuantity());
+			lootItems.add(entry);
+		}
+		if (lootItems.size() == 0) return;
+		JsonObject loot = new JsonObject();
+		loot.addProperty("lootId", lootId);
+		loot.addProperty("sourceType", sourceType);
+		loot.addProperty("sourceName", sourceName);
+		loot.addProperty("kills", Math.max(1, amount));
+		loot.add("items", lootItems);
+		executor.submit(() -> {
+			try { api().request("POST", "/v1/events/" + eventId + "/loot", claimToken(eventId), loot); }
+			catch (Exception ignored) { }
+		});
 	}
 
 	private boolean isDuplicateLootEvent(String sourceType, String sourceName, Collection<ItemStack> items)
@@ -1416,6 +1481,11 @@ public class TsgHubPlugin extends Plugin
 
 	private void submitPvmClaim(String eventId, PvmTask task, String source, String name, int quantity, int itemId)
 	{
+		submitPvmClaim(eventId, task, source, name, quantity, itemId, null);
+	}
+
+	private void submitPvmClaim(String eventId, PvmTask task, String source, String name, int quantity, int itemId, String lootId)
+	{
 		JsonObject claim = new JsonObject();
 		claim.addProperty("taskId", task.id);
 		claim.addProperty("evidenceId", source + "-" + java.util.UUID.randomUUID());
@@ -1424,6 +1494,7 @@ public class TsgHubPlugin extends Plugin
 		evidence.addProperty("name", name);
 		evidence.addProperty("quantity", quantity);
 		if (itemId > 0) evidence.addProperty("itemId", itemId);
+		if (lootId != null) evidence.addProperty("lootId", lootId);
 		claim.add("evidence", evidence);
 		executor.submit(() -> {
 			try

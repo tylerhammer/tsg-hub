@@ -11,7 +11,7 @@ public interface TsgHubConfig extends Config
 	@ConfigSection(name = "Party", description = "How clan parties look in the TSG Hub sidebar.", position = 10)
 	String partySection = "party";
 
-	@ConfigItem(keyName = "dataSharingOptIn", position = 0, name = "Share game and clan progress", description = "Opt in to send your RuneScape name, detected clan and rank, PvM progress, submitted claims, and clan chat presence to the TSG Hub service. Progress and tile-completion notices are local to your chatbox; no game chat is sent.")
+	@ConfigItem(keyName = "dataSharingOptIn", position = 0, name = "Share game and clan progress", description = "Opt in to send your RuneScape name, detected clan and rank, PvM progress, loot received during events you join, submitted claims, and clan chat presence to the TSG Hub service. Progress and tile-completion notices are local to your chatbox; no game chat is sent.")
 	default boolean dataSharingOptIn()
 	{
 		return false;

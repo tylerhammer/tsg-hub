@@ -62,7 +62,6 @@ public class ReadmeScreenshots
 		set(plugin, "groups", new TsgHubGroups(plugin, null, (PartyService) unsafe().allocateInstance(PartyService.class), null, null, null));
 
 		TsgHubSidebarPanel sidebar = new TsgHubSidebarPanel(plugin, new GroupMembersPanel(new GroupViewSettings() {}, null, null));
-		sidebar.setIdentity("Crab Legs", 50);
 
 		sidebar.showSharingOff();
 		shoot(sidebar, SIDEBAR_W, 210, "sharing");
@@ -95,11 +94,11 @@ public class ReadmeScreenshots
 		TsgHubPanel organizer = new TsgHubPanel(plugin);
 		organizer.setManagedEvents(data.getAsJsonObject("managed").getAsJsonArray("events"));
 		organizer.openOrganizerEvent(data.getAsJsonObject("organizer"));
-		shoot(organizer, 860, 300, "organizer-teams");
+		shoot(organizer, 860, 300, "admin-teams");
 		selectTab(organizer, "Tasks");
-		shoot(organizer, 860, 580, "organizer-tasks");
+		shoot(organizer, 860, 580, "admin-tasks");
 		selectTab(organizer, "Claims");
-		shoot(organizer, 860, 240, "organizer-claims");
+		shoot(organizer, 860, 240, "admin-claims");
 
 		hero(480, eventList, board, parties);
 	}

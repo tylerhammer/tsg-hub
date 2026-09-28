@@ -47,11 +47,10 @@ tasks.register('run', JavaExec) {
 	systemProperty 'tsghub.clanName', System.getenv('TSGHUB_CLAN') ?: ''
 }
 
-// Regenerates the README screenshots from fixture JSON: ./gradlew readmeScreenshots -Pfixtures=<file>
+// Regenerates the README screenshots from fixture JSON: ./gradlew readmeScreenshots [-Pfixtures=<file>]
 tasks.register('readmeScreenshots', JavaExec) {
 	classpath = sourceSets.test.runtimeClasspath
 	mainClass = 'com.tsghub.ReadmeScreenshots'
 	jvmArgs '-Duser.timezone=America/New_York'
-	doFirst { if (!project.hasProperty('fixtures')) throw new GradleException('Pass -Pfixtures=<file>') }
-	args project.findProperty('fixtures') ?: '', 'docs/images'
+	args project.findProperty('fixtures') ?: 'docs/screenshot-fixtures.json', 'docs/images'
 }
