@@ -506,12 +506,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 			}
 		}
 		page.add(Box.createVerticalStrut(8));
-		page.add(TsgHubUi.wrapped("Shows clanmates in clan chat with TSG Hub sharing on. Leave clan chat to hide yourself.", TsgHubUi.MUTED, small, TEXT_W));
-		if (!plugin.locationSharingEnabled())
-		{
-			page.add(Box.createVerticalStrut(4));
-			page.add(TsgHubUi.wrapped("Clanmates see you as Online. Turn on Share location and activity in the TSG Hub settings to show your area and activity.", TsgHubUi.MUTED, small, TEXT_W));
-		}
+		page.add(TsgHubUi.wrapped(plugin.locationSharingEnabled() ? "Leave clan chat to hide yourself."
+			: "You show as Online. Turn on location sharing in settings to show what you're doing.", TsgHubUi.MUTED, small, TEXT_W));
 		refreshPage();
 	}
 

@@ -99,7 +99,7 @@ public class ReadmeScreenshots
 
 		sharing = true;
 		sidebar.showMembers();
-		shoot(sidebar, SIDEBAR_W, 440, "members");
+		shoot(sidebar, SIDEBAR_W, 400, "members");
 
 		TsgHubPanel organizer = new TsgHubPanel(plugin);
 		organizer.setManagedEvents(data.getAsJsonObject("managed").getAsJsonArray("events"));
