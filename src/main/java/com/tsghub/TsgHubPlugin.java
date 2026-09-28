@@ -120,6 +120,7 @@ public class TsgHubPlugin extends Plugin
 	private volatile TsgHubApi api;
 	private TsgHubCompetitionTracker competitions;
 	private TsgHubGroups groups;
+	private TsgHubPresence presence;
 	private com.tsghub.group.GroupTracker groupTracker;
 
 	@Override
@@ -156,6 +157,8 @@ public class TsgHubPlugin extends Plugin
 		eventBus.register(groupTracker);
 		groupTracker.start();
 		executor.scheduleAtFixedRate(groups::heartbeat, 5, TsgHubGroups.HEARTBEAT_SECONDS, TimeUnit.SECONDS);
+		presence = new TsgHubPresence(this, client, executor, this::api, () -> sidebar);
+		executor.scheduleAtFixedRate(presence::autoRefresh, TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
 		boardOverlay = new TsgHubBoardOverlay(client);
 		overlayManager.add(boardOverlay);
 		mouseManager.registerMouseListener(boardOverlay);
@@ -188,6 +191,7 @@ public class TsgHubPlugin extends Plugin
 			mouseManager.unregisterMouseListener(boardOverlay);
 		}
 		if (hubWindow != null) SwingUtilities.invokeLater(hubWindow::dispose);
+		if (presence != null) presence.shutDown();
 		if (executor != null) executor.shutdownNow();
 		if (itemSearchExecutor != null) itemSearchExecutor.shutdownNow();
 	}
@@ -247,6 +251,8 @@ public class TsgHubPlugin extends Plugin
 	String getDetectedClanName() { return detectedClanName; }
 	boolean sharingEnabled() { return config.dataSharingOptIn(); }
 	TsgHubGroups groups() { return groups; }
+	TsgHubPresence presence() { return presence; }
+	boolean inClanChat() { return inClanChat; }
 	String getDetectedPlayerName() { return detectedPlayerName; }
 	int getDetectedClanRank() { return detectedClanRank; }
 	String getCurrentEventId() { return TsgHubSession.get("eventId"); }
@@ -314,6 +320,7 @@ public class TsgHubPlugin extends Plugin
 		}
 		// Loading screens and world hops aren't logouts.
 		if (state != GameState.LOGIN_SCREEN && state != GameState.LOGIN_SCREEN_AUTHENTICATOR) return;
+		if (presence != null) presence.onLoggedOut();
 		detectedPlayerName = "";
 		detectedClanName = "";
 		detectedClanRank = -1;
@@ -360,6 +367,7 @@ public class TsgHubPlugin extends Plugin
 		if (!config.dataSharingOptIn())
 		{
 			if (groups != null) groups.onSharingDisabled();
+			if (presence != null) presence.leave();
 			clearAllSessions();
 			SwingUtilities.invokeLater(() -> {
 				if (hubWindow != null) hubWindow.setVisible(false);
@@ -1224,6 +1232,7 @@ public class TsgHubPlugin extends Plugin
 	@net.runelite.client.eventbus.Subscribe
 	public void onStatChanged(StatChanged event)
 	{
+		if (presence != null) presence.onXp(event.getSkill(), event.getXp());
 		if (!isInHubClan()) return;
 		if (config.dataSharingOptIn() && competitions != null) competitions.onXp(event.getSkill(), event.getXp());
 		if (!config.dataSharingOptIn() || client.getLocalPlayer() == null) return;
@@ -1296,6 +1305,7 @@ public class TsgHubPlugin extends Plugin
 	@net.runelite.client.eventbus.Subscribe
 	public void onGameTick(GameTick tick)
 	{
+		if (presence != null) presence.onGameTick();
 		if (clanCheckTicks > 0)
 		{
 			clanCheckTicks--;
