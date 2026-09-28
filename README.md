@@ -111,6 +111,7 @@ Once you opt in, it sends the following to the TSG Hub service:
 
 - Your RuneScape display name, and the clan name and rank your client detects
 - Progress for events you've joined: kill counts, drops, raid completions, collection log unlocks and skill XP
+- Loot you receive while a bingo event you've joined is active, so admins can reconcile a task from earlier drops if its item list changes
 - Manual proof you submit
 - Whether you're currently in the clan chat channel, so teammates' completion alerts reach you
 

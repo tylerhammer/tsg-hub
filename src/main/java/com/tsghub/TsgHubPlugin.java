@@ -100,6 +100,7 @@ public class TsgHubPlugin extends Plugin
 	private final Map<String, Integer> syncedClanRanks = new ConcurrentHashMap<>();
 	private static final long CLAN_ADMIN_TOKEN_MARGIN_MILLIS = 60_000;
 	private static final int PET_CHECK_TICKS = 5;
+	private static final int MAX_LOOT_LOG_ITEMS = 50;
 	private static final int CLAN_CHECK_TICKS = 50;
 	private volatile int clanCheckTicks;
 	private int petCheckTicks;
@@ -1042,6 +1043,22 @@ public class TsgHubPlugin extends Plugin
 		adminRequest("POST", "/tasks/" + taskId + "/complete", body, "Marked complete.", result -> refreshOrganizerEvent(false), null);
 	}
 
+	void reconcileTask(String taskId, boolean dryRun)
+	{
+		JsonObject body = new JsonObject();
+		body.addProperty("dryRun", dryRun);
+		adminRequest("POST", "/tasks/" + taskId + "/reconcile", body, "", result -> {
+			if (dryRun)
+			{
+				SwingUtilities.invokeLater(() -> panel.confirmReconcile(taskId, result));
+				return;
+			}
+			int count = result.has("count") ? result.get("count").getAsInt() : 0;
+			organizerStatus("Credited " + count + (count == 1 ? " match" : " matches") + " from the loot log.", Tone.SUCCESS);
+			refreshOrganizerEvent(false);
+		}, null);
+	}
+
 	void reviewClaim(String claimId, boolean approve)
 	{
 		JsonObject body = new JsonObject();
@@ -1373,11 +1390,13 @@ public class TsgHubPlugin extends Plugin
 			|| sourceName == null || items == null || isDuplicateLootEvent(sourceType, sourceName, items)) return;
 		String eventId = claimEventId();
 		if (eventId.isEmpty()) return;
+		String lootId = "loot-" + java.util.UUID.randomUUID();
+		submitLootLog(eventId, lootId, sourceType, sourceName, items, amount);
 		for (PvmTask task : pvmTasks)
 		{
 			if ("kill".equals(task.type) && !task.chatKillCount && "NPC".equals(sourceType) && !task.targetNames.isEmpty() && sourceName.equalsIgnoreCase(task.targetNames.get(0)))
 			{
-				submitPvmClaim(eventId, task, "kill", sourceName, Math.max(1, amount), -1);
+				submitPvmClaim(eventId, task, "kill", sourceName, Math.max(1, amount), -1, lootId);
 			}
 			else if ("drop".equals(task.type))
 			{
@@ -1394,10 +1413,38 @@ public class TsgHubPlugin extends Plugin
 						if (configuredId > 0 ? configuredId == itemId : itemName != null && itemName.equalsIgnoreCase(task.targetNames.get(i))) itemMatch = true;
 					}
 					if (itemName != null && itemMatch)
-						submitPvmClaim(eventId, task, "drop", itemName, item.getQuantity(), itemId);
+						submitPvmClaim(eventId, task, "drop", itemName, item.getQuantity(), itemId, lootId);
 				}
 			}
 		}
+	}
+
+	private void submitLootLog(String eventId, String lootId, String sourceType, String sourceName, Collection<ItemStack> items, int amount)
+	{
+		JsonArray lootItems = new JsonArray();
+		for (ItemStack item : items)
+		{
+			if (lootItems.size() >= MAX_LOOT_LOG_ITEMS) break;
+			int itemId = itemManager.canonicalize(item.getId());
+			String itemName = client.getItemDefinition(itemId).getName();
+			if (itemName == null || item.getQuantity() < 1) continue;
+			JsonObject entry = new JsonObject();
+			entry.addProperty("itemId", itemId);
+			entry.addProperty("name", itemName);
+			entry.addProperty("quantity", item.getQuantity());
+			lootItems.add(entry);
+		}
+		if (lootItems.size() == 0) return;
+		JsonObject loot = new JsonObject();
+		loot.addProperty("lootId", lootId);
+		loot.addProperty("sourceType", sourceType);
+		loot.addProperty("sourceName", sourceName);
+		loot.addProperty("kills", Math.max(1, amount));
+		loot.add("items", lootItems);
+		executor.submit(() -> {
+			try { api().request("POST", "/v1/events/" + eventId + "/loot", claimToken(eventId), loot); }
+			catch (Exception ignored) { }
+		});
 	}
 
 	private boolean isDuplicateLootEvent(String sourceType, String sourceName, Collection<ItemStack> items)
@@ -1434,6 +1481,11 @@ public class TsgHubPlugin extends Plugin
 
 	private void submitPvmClaim(String eventId, PvmTask task, String source, String name, int quantity, int itemId)
 	{
+		submitPvmClaim(eventId, task, source, name, quantity, itemId, null);
+	}
+
+	private void submitPvmClaim(String eventId, PvmTask task, String source, String name, int quantity, int itemId, String lootId)
+	{
 		JsonObject claim = new JsonObject();
 		claim.addProperty("taskId", task.id);
 		claim.addProperty("evidenceId", source + "-" + java.util.UUID.randomUUID());
@@ -1442,6 +1494,7 @@ public class TsgHubPlugin extends Plugin
 		evidence.addProperty("name", name);
 		evidence.addProperty("quantity", quantity);
 		if (itemId > 0) evidence.addProperty("itemId", itemId);
+		if (lootId != null) evidence.addProperty("lootId", lootId);
 		claim.add("evidence", evidence);
 		executor.submit(() -> {
 			try

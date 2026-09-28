@@ -48,6 +48,7 @@ final class TsgHubPanel extends JPanel
 {
 	private static final int LIST_W = 230;
 	private static final int DETAIL_TEXT_W = 500;
+	private static final int MAX_RECONCILE_LINES = 10;
 
 	// Order matches the index TsgHubPlugin#saveTask expects.
 	private enum TaskType
@@ -766,6 +767,34 @@ final class TsgHubPanel extends JPanel
 		if (TsgHubUi.confirmDelete(this, "Delete team", message, "Delete team")) plugin.deleteTeam(TsgHubUi.str(team, "id"));
 	}
 
+	private static boolean reconcilable(JsonObject task)
+	{
+		JsonObject config = task.has("config") && task.get("config").isJsonObject() ? task.getAsJsonObject("config") : new JsonObject();
+		String type = TsgHubUi.str(task, "type");
+		return "drop".equals(type) || "kill".equals(type) && !"chat".equals(TsgHubUi.str(config, "signal"));
+	}
+
+	void confirmReconcile(String taskId, JsonObject preview)
+	{
+		JsonArray claims = TsgHubUi.array(preview, "claims");
+		if (claims.size() == 0)
+		{
+			JOptionPane.showMessageDialog(this, "No logged loot to credit for this task.", "Reconcile", JOptionPane.INFORMATION_MESSAGE);
+			return;
+		}
+		StringBuilder message = new StringBuilder("Credit " + claims.size() + (claims.size() == 1 ? " match" : " matches") + " from the loot log to this task?\n\n");
+		int shown = Math.min(claims.size(), MAX_RECONCILE_LINES);
+		for (int i = 0; i < shown; i++)
+		{
+			JsonObject claim = claims.get(i).getAsJsonObject();
+			message.append(TsgHubUi.str(claim, "displayName")).append(" (").append(TsgHubUi.str(claim, "teamName")).append("): ")
+				.append(TsgHubUi.str(claim, "name")).append(" x").append(TsgHubUi.integer(claim, "quantity", 1)).append("\n");
+		}
+		if (claims.size() > shown) message.append("...and ").append(claims.size() - shown).append(" more\n");
+		int choice = JOptionPane.showConfirmDialog(this, message.toString(), "Reconcile", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+		if (choice == JOptionPane.OK_OPTION) plugin.reconcileTask(taskId, false);
+	}
+
 	private void confirmDeleteTask(JsonObject task)
 	{
 		String message = "Delete task \"" + TsgHubUi.str(task, "title") + "\"?\n\n"
@@ -1154,6 +1183,13 @@ final class TsgHubPanel extends JPanel
 			delete.addActionListener(e -> confirmDeleteTask(task));
 			JPanel taskButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
 			taskButtons.setOpaque(false);
+			if (reconcilable(task))
+			{
+				JButton reconcile = TsgHubUi.button("Reconcile");
+				reconcile.setToolTipText("Credit matching loot players received earlier in this event");
+				reconcile.addActionListener(e -> plugin.reconcileTask(TsgHubUi.str(task, "id"), true));
+				taskButtons.add(reconcile);
+			}
 			taskButtons.add(edit);
 			taskButtons.add(delete);
 			JPanel wrap = new JPanel(new BorderLayout());
