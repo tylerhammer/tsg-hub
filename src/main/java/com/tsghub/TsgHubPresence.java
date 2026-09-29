@@ -35,14 +35,16 @@ final class TsgHubPresence
 	private final ScheduledExecutorService executor;
 	private final Supplier<TsgHubApi> api;
 	private final Supplier<TsgHubSidebarPanel> sidebar;
+	private final TsgHubSocket socket;
 	private final ActivityDetector activity = new ActivityDetector();
 	private volatile JsonObject listed;
 	private volatile long sentAt;
 	private volatile AreaNames.Area area;
 
 	TsgHubPresence(TsgHubPlugin plugin, Client client, ClientThread clientThread, ChatIconManager chatIcons, ScheduledExecutorService executor,
-		Supplier<TsgHubApi> api, Supplier<TsgHubSidebarPanel> sidebar)
+		Supplier<TsgHubApi> api, Supplier<TsgHubSidebarPanel> sidebar, TsgHubSocket socket)
 	{
+		this.socket = socket;
 		this.plugin = plugin;
 		this.client = client;
 		this.clientThread = clientThread;
@@ -69,7 +71,8 @@ final class TsgHubPresence
 		long now = System.currentTimeMillis();
 		JsonObject current = listed;
 		boolean changed = current == null || !next.equals(current);
-		if ((changed && now - sentAt >= MIN_GAP_MILLIS) || now - sentAt >= HEARTBEAT_MILLIS) send(next, now);
+		boolean due = !socket.isLive() && now - sentAt >= HEARTBEAT_MILLIS;
+		if ((changed && now - sentAt >= MIN_GAP_MILLIS) || due) send(next, now);
 	}
 
 	void onLoggedOut()
@@ -81,7 +84,7 @@ final class TsgHubPresence
 	void leave()
 	{
 		JsonObject body = leaveBody();
-		if (body == null || executor.isShutdown()) return;
+		if (body == null || socket.presence(null) || executor.isShutdown()) return;
 		executor.submit(() -> post("/v1/presence/leave", body));
 	}
 
@@ -180,7 +183,7 @@ final class TsgHubPresence
 	{
 		listed = payload;
 		sentAt = now;
-		if (!executor.isShutdown()) executor.submit(() -> post("/v1/presence", payload));
+		if (!socket.presence(payload) && !executor.isShutdown()) executor.submit(() -> post("/v1/presence", payload));
 	}
 
 	private JsonObject leaveBody()
