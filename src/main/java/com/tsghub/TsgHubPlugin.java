@@ -1276,7 +1276,7 @@ public class TsgHubPlugin extends Plugin
 	public void onLootReceived(LootReceived event)
 	{
 		if (!isInHubClan()) return;
-		if (event.getType() == null || "PLAYER".equals(event.getType().name())) return;
+		if (event.getType() == null || "PLAYER".equals(event.getType().name()) || "NPC".equals(event.getType().name())) return;
 		processLoot(event.getType().name(), event.getName(), event.getItems(), event.getAmount());
 	}
 
