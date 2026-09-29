@@ -69,6 +69,7 @@ final class TsgHubSocket
 	private final Map<String, Subscription> subscriptions = new HashMap<>();
 	private final Map<String, String> rejectedTokens = new HashMap<>();
 	private WebSocket socket;
+	private JsonObject presence;
 	private ScheduledFuture<?> retry;
 	private String clanName = "";
 	private String rejectedClan = "";
@@ -105,6 +106,7 @@ final class TsgHubSocket
 		rejectedClan = "";
 		subscriptions.clear();
 		rejectedTokens.clear();
+		presence = null;
 	}
 
 	synchronized void sync(Map<String, String> tokens, boolean inClanChat)
@@ -121,6 +123,27 @@ final class TsgHubSocket
 			subscriptions.put(entry.getKey(), wanted);
 			send("subscribe", entry.getKey(), wanted.token, wanted.inClanChat);
 		}
+	}
+
+	synchronized boolean presence(JsonObject payload)
+	{
+		boolean live = ready && socket != null;
+		if (payload == null)
+		{
+			if (live && presence != null) socket.send("{\"type\":\"presence.leave\"}");
+			presence = null;
+			return live;
+		}
+		presence = payload;
+		if (live) sendPresence();
+		return live;
+	}
+
+	private void sendPresence()
+	{
+		JsonObject message = presence.deepCopy();
+		message.addProperty("type", "presence");
+		socket.send(message.toString());
 	}
 
 	private void open()
@@ -162,6 +185,7 @@ final class TsgHubSocket
 		{
 			send("subscribe", entry.getKey(), entry.getValue().token, entry.getValue().inClanChat);
 		}
+		if (presence != null) sendPresence();
 		executor.execute(listener::onReady);
 	}
 
