@@ -46,7 +46,7 @@ import net.runelite.client.chat.ChatColorType;
 import net.runelite.client.chat.ChatMessageBuilder;
 import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.chat.QueuedMessage;
-import net.runelite.client.events.NpcLootReceived;
+import net.runelite.client.events.ServerNpcLoot;
 import net.runelite.client.plugins.loottracker.LootReceived;
 import net.runelite.client.game.ItemStack;
 import net.runelite.client.game.ItemManager;
@@ -62,6 +62,7 @@ import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.AsyncBufferedImage;
 import net.runelite.client.util.ImageUtil;
+import net.runelite.client.util.Text;
 import com.tsghub.TsgHubUi.Tone;
 
 @PluginDescriptor(name = "TSG Hub", description = "Type Shiii Gaming clan events and progress tracking", tags = {"tsg", "clan", "bingo", "events"})
@@ -1264,19 +1265,20 @@ public class TsgHubPlugin extends Plugin
 	}
 
 	@net.runelite.client.eventbus.Subscribe
-	public void onNpcLootReceived(NpcLootReceived event)
+	public void onServerNpcLoot(ServerNpcLoot event)
 	{
 		if (!isInHubClan()) return;
-		if (event.getNpc() == null) return;
-		if (config.dataSharingOptIn() && competitions != null) competitions.onNpcLoot(event.getNpc().getName(), client.getTickCount());
-		processLoot("NPC", event.getNpc().getName(), event.getItems(), 1);
+		if (event.getComposition() == null) return;
+		String name = Text.removeTags(event.getComposition().getName());
+		if (config.dataSharingOptIn() && competitions != null) competitions.onNpcLoot(name, client.getTickCount());
+		processLoot("NPC", name, event.getItems(), 1);
 	}
 
 	@net.runelite.client.eventbus.Subscribe
 	public void onLootReceived(LootReceived event)
 	{
 		if (!isInHubClan()) return;
-		if (event.getType() == null || "PLAYER".equals(event.getType().name())) return;
+		if (event.getType() == null || "PLAYER".equals(event.getType().name()) || "NPC".equals(event.getType().name())) return;
 		processLoot(event.getType().name(), event.getName(), event.getItems(), event.getAmount());
 	}
 
