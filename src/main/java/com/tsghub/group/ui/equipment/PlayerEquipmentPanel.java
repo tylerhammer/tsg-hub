@@ -40,7 +40,7 @@ import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
 import lombok.Getter;
 import net.runelite.api.EquipmentInventorySlot;
-import net.runelite.api.SpriteID;
+import net.runelite.api.gameval.SpriteID;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.SpriteManager;
 import net.runelite.client.ui.PluginPanel;
@@ -56,17 +56,17 @@ public class PlayerEquipmentPanel extends JPanel
 	static
 	{
 		final ImmutableMap.Builder<EquipmentInventorySlot, Integer> sprites = new ImmutableMap.Builder<>();
-		sprites.put(EquipmentInventorySlot.HEAD, SpriteID.EQUIPMENT_SLOT_HEAD);
-		sprites.put(EquipmentInventorySlot.CAPE, SpriteID.EQUIPMENT_SLOT_CAPE);
-		sprites.put(EquipmentInventorySlot.AMULET, SpriteID.EQUIPMENT_SLOT_NECK);
-		sprites.put(EquipmentInventorySlot.WEAPON, SpriteID.EQUIPMENT_SLOT_WEAPON);
-		sprites.put(EquipmentInventorySlot.RING, SpriteID.EQUIPMENT_SLOT_RING);
-		sprites.put(EquipmentInventorySlot.BODY, SpriteID.EQUIPMENT_SLOT_TORSO);
-		sprites.put(EquipmentInventorySlot.SHIELD, SpriteID.EQUIPMENT_SLOT_SHIELD);
-		sprites.put(EquipmentInventorySlot.LEGS, SpriteID.EQUIPMENT_SLOT_LEGS);
-		sprites.put(EquipmentInventorySlot.GLOVES, SpriteID.EQUIPMENT_SLOT_HANDS);
-		sprites.put(EquipmentInventorySlot.BOOTS, SpriteID.EQUIPMENT_SLOT_FEET);
-		sprites.put(EquipmentInventorySlot.AMMO, SpriteID.EQUIPMENT_SLOT_AMMUNITION);
+		sprites.put(EquipmentInventorySlot.HEAD, SpriteID.Wornicons.HEAD);
+		sprites.put(EquipmentInventorySlot.CAPE, SpriteID.Wornicons.CAPE);
+		sprites.put(EquipmentInventorySlot.AMULET, SpriteID.Wornicons.NECK);
+		sprites.put(EquipmentInventorySlot.WEAPON, SpriteID.Wornicons.WEAPON);
+		sprites.put(EquipmentInventorySlot.RING, SpriteID.Wornicons.RING);
+		sprites.put(EquipmentInventorySlot.BODY, SpriteID.Wornicons.TORSO);
+		sprites.put(EquipmentInventorySlot.SHIELD, SpriteID.Wornicons.SHIELD);
+		sprites.put(EquipmentInventorySlot.LEGS, SpriteID.Wornicons.LEGS);
+		sprites.put(EquipmentInventorySlot.GLOVES, SpriteID.Wornicons.HANDS);
+		sprites.put(EquipmentInventorySlot.BOOTS, SpriteID.Wornicons.FEET);
+		sprites.put(EquipmentInventorySlot.AMMO, SpriteID.Wornicons.AMMUNITION);
 
 		EQUIPMENT_SLOT_SPRITE_MAP = sprites.build();
 	}
@@ -99,7 +99,7 @@ public class PlayerEquipmentPanel extends JPanel
 		this.setLayout(new GridBagLayout());
 		this.setBackground(new Color(62, 53, 41));
 
-		spriteManager.getSpriteAsync(SpriteID.EQUIPMENT_SLOT_TILE, 0, img -> SwingUtilities.invokeLater(() -> createPanel(items, img)));
+		spriteManager.getSpriteAsync(SpriteID.Miscgraphics.EQUIPMENT_SLOT_TILE, 0, img -> SwingUtilities.invokeLater(() -> createPanel(items, img)));
 	}
 
 	@Override

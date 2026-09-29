@@ -31,7 +31,7 @@ import net.runelite.api.Client;
 import net.runelite.api.EnumComposition;
 import net.runelite.api.EnumID;
 import net.runelite.api.Prayer;
-import net.runelite.api.Varbits;
+import net.runelite.api.gameval.VarbitID;
 import com.tsghub.group.ui.prayer.PrayerSprites;
 
 public class Prayers
@@ -80,7 +80,7 @@ public class Prayers
 		{
 			client.runScript(PRAYER_IS_AVAILABLE, prayerIds[p.getScriptIndex()]);
 			available = client.getIntStack()[0] > 0;
-			enabled = client.isPrayerActive(p.getPrayer());
+			enabled = client.getVarbitValue(p.getPrayer().getVarbit()) == 1;
 			unlocked = true;
 		}
 		else
@@ -114,8 +114,8 @@ public class Prayers
 
 	private EnumComposition getPrayerEnum(Client client)
 	{
-		boolean deadeye = client.getVarbitValue(Varbits.PRAYER_DEADEYE_UNLOCKED) != 0;
-		boolean vigour = client.getVarbitValue(Varbits.PRAYER_MYSTIC_VIGOUR_UNLOCKED) != 0;
+		boolean deadeye = client.getVarbitValue(VarbitID.PRAYER_DEADEYE_UNLOCKED) != 0;
+		boolean vigour = client.getVarbitValue(VarbitID.PRAYER_MYSTIC_VIGOUR_UNLOCKED) != 0;
 
 		if (deadeye && vigour)
 		{
