@@ -180,7 +180,7 @@ public class TsgHubPlugin extends Plugin
 		groupTracker.start();
 		executor.scheduleAtFixedRate(groups::heartbeat, 5, TsgHubGroups.HEARTBEAT_SECONDS, TimeUnit.SECONDS);
 		executor.scheduleAtFixedRate(unlessLive(groups::autoRefresh), TsgHubGroups.REFRESH_SECONDS, TsgHubGroups.REFRESH_SECONDS, TimeUnit.SECONDS);
-		presence = new TsgHubPresence(this, client, clientThread, chatIconManager, executor, this::api, () -> sidebar);
+		presence = new TsgHubPresence(this, client, clientThread, chatIconManager, executor, this::api, () -> sidebar, socket);
 		executor.scheduleAtFixedRate(unlessLive(presence::autoRefresh), TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
 		drops = new TsgHubDrops(this, client, clientThread, executor, this::api, () -> sidebar);
 		executor.scheduleAtFixedRate(unlessLive(drops::autoRefresh), TsgHubDrops.REFRESH_SECONDS, TsgHubDrops.REFRESH_SECONDS, TimeUnit.SECONDS);
@@ -358,6 +358,7 @@ public class TsgHubPlugin extends Plugin
 		inClanChat = false;
 		clanCheckTicks = 0;
 		sidebarRouted = false;
+		syncSocketNow();
 		if (competitions != null) competitions.clear();
 		SwingUtilities.invokeLater(() -> {
 			if (panel != null) panel.setDetectedClanName("", -1);
@@ -409,6 +410,7 @@ public class TsgHubPlugin extends Plugin
 				if (hubWindow != null) hubWindow.setVisible(false);
 			});
 		}
+		syncSocketNow();
 		sidebarRouted = false;
 		routeSidebar();
 	}
@@ -435,6 +437,7 @@ public class TsgHubPlugin extends Plugin
 		ClanChannel channel = client.getClanChannel();
 		inClanChat = channel != null && channel.getName() != null && channel.getName().trim().equalsIgnoreCase(detectedClanName);
 		boolean organizerAccess = canManageOrganizerUi();
+		syncSocketNow();
 		SwingUtilities.invokeLater(() -> {
 			if (panel != null) panel.setDetectedClanName(detectedClanName, detectedClanRank);
 			if (sidebar != null)
@@ -457,6 +460,7 @@ public class TsgHubPlugin extends Plugin
 		if (competitions != null) competitions.clear();
 		clearTaskCache();
 		if (boardOverlay != null) boardOverlay.setVisible(false);
+		syncSocketNow();
 		if (detectedPlayerName.isEmpty()) return;
 		sidebarRouted = false;
 		routeSidebar();
@@ -661,6 +665,13 @@ public class TsgHubPlugin extends Plugin
 		return () -> {
 			if (!socket.isLive()) poll.run();
 		};
+	}
+
+	private void syncSocketNow()
+	{
+		ScheduledExecutorService e = executor;
+		if (socket == null || e == null || e.isShutdown()) return;
+		e.execute(this::socketTick);
 	}
 
 	private void socketTick()
