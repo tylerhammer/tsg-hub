@@ -671,7 +671,7 @@ public class TsgHubPlugin extends Plugin
 		openCompetition(eventId, false);
 	}
 
-	private void openCompetition(String eventId, boolean open)
+	void openCompetition(String eventId, boolean open)
 	{
 		String token = TsgHubSession.get("memberToken:" + eventId);
 		if (token.isEmpty()) return;
