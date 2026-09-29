@@ -60,6 +60,12 @@ final class TsgHubGroups implements GroupTracker.Listener
 		return group;
 	}
 
+	boolean isLeader()
+	{
+		JsonObject current = group;
+		return inGroup() && current != null && TsgHubUi.samePlayer(TsgHubUi.str(current, "leaderName"), TsgHubSession.get("groupPlayer"));
+	}
+
 	boolean inOtherParty()
 	{
 		return partyService.isInParty() && !isGroupParty(partyService.getPartyPassphrase());
@@ -79,6 +85,10 @@ final class TsgHubGroups implements GroupTracker.Listener
 			try
 			{
 				JsonArray groups = api.get().request("GET", "/v1/groups?clanName=" + clan, null, null).getAsJsonArray("groups");
+				JsonObject current = group;
+				if (current != null && inGroup())
+					for (int i = 0; i < groups.size(); i++)
+						if (TsgHubUi.str(groups.get(i).getAsJsonObject(), "id").equals(TsgHubUi.str(current, "id"))) group = groups.get(i).getAsJsonObject();
 				ui(s -> s.setGroups(groups));
 			}
 			catch (Exception e) { if (!quiet) status("Couldn't load parties. " + TsgHubUi.friendlyError(e), Tone.ERROR); }
@@ -100,14 +110,35 @@ final class TsgHubGroups implements GroupTracker.Listener
 
 	void setTitle(String title)
 	{
-		String token = TsgHubSession.get("groupToken");
-		if (token.isEmpty() || executor.isShutdown()) return;
 		JsonObject payload = new JsonObject();
 		payload.addProperty("activity", title.trim());
+		update("/v1/groups/title", payload);
+	}
+
+	void setLocked(boolean locked)
+	{
+		JsonObject payload = new JsonObject();
+		payload.addProperty("locked", locked);
+		update("/v1/groups/lock", payload);
+	}
+
+	void reorder(List<String> names)
+	{
+		JsonArray order = new JsonArray();
+		names.forEach(order::add);
+		JsonObject payload = new JsonObject();
+		payload.add("order", order);
+		update("/v1/groups/order", payload);
+	}
+
+	private void update(String path, JsonObject payload)
+	{
+		String token = TsgHubSession.get("groupToken");
+		if (token.isEmpty() || executor.isShutdown()) return;
 		executor.submit(() -> {
 			try
 			{
-				JsonObject joined = api.get().request("POST", "/v1/groups/title", token, payload).getAsJsonObject("group");
+				JsonObject joined = api.get().request("POST", path, token, payload).getAsJsonObject("group");
 				group = joined;
 				ui(s -> s.groupRefreshed(joined));
 				loadGroups(true);

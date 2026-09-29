@@ -87,6 +87,7 @@ public class TsgHubPlugin extends Plugin
 	@Inject private net.runelite.client.party.PartyService partyService;
 	@Inject private net.runelite.client.party.WSClient wsClient;
 	@Inject private net.runelite.client.game.SpriteManager spriteManager;
+	@Inject private net.runelite.client.game.WorldService worldService;
 	@Inject private net.runelite.client.eventbus.EventBus eventBus;
 	@Inject @Named("developerMode") private boolean developerMode;
 	private TsgHubPanel panel;
@@ -122,6 +123,7 @@ public class TsgHubPlugin extends Plugin
 	private volatile TsgHubApi api;
 	private TsgHubCompetitionTracker competitions;
 	private TsgHubGroups groups;
+	private TsgHubWorldHopper worldHopper;
 	private TsgHubPresence presence;
 	private TsgHubDrops drops;
 	private com.tsghub.group.GroupTracker groupTracker;
@@ -148,13 +150,23 @@ public class TsgHubPlugin extends Plugin
 			return thread;
 		});
 		panel = new TsgHubPanel(this);
-		sidebar = new TsgHubSidebarPanel(this, new com.tsghub.group.GroupMembersPanel(new com.tsghub.group.GroupViewSettings()
+		com.tsghub.group.GroupMembersPanel groupMembers = new com.tsghub.group.GroupMembersPanel(new com.tsghub.group.GroupViewSettings()
 		{
 			@Override public boolean autoExpandMembers() { return config.partyExpandMembers(); }
 			@Override public boolean displayVirtualLevels() { return config.partyVirtualLevels(); }
 			@Override public boolean displayPlayerWorlds() { return config.partyShowWorlds(); }
-		}, spriteManager, itemManager));
+		}, spriteManager, itemManager);
+		sidebar = new TsgHubSidebarPanel(this, groupMembers);
 		groups = new TsgHubGroups(this, client, partyService, executor, this::api, () -> sidebar);
+		worldHopper = new TsgHubWorldHopper(client, clientThread, worldService);
+		eventBus.register(worldHopper);
+		groupMembers.setActions(new com.tsghub.group.GroupMembersPanel.Actions()
+		{
+			@Override public int currentWorld() { return client.getGameState() == GameState.LOGGED_IN ? client.getWorld() : 0; }
+			@Override public boolean isLeader() { return groups.isLeader(); }
+			@Override public void hop(int world) { worldHopper.hop(world); }
+			@Override public void reorder(java.util.List<String> names) { groups.reorder(names); }
+		});
 		groupTracker = new com.tsghub.group.GroupTracker(client, clientThread, partyService, wsClient, itemManager, groups::isGroupParty, config::partyShowSelf, this::currentArea, groups);
 		groups.setTracker(groupTracker);
 		eventBus.register(groupTracker);
@@ -183,6 +195,7 @@ public class TsgHubPlugin extends Plugin
 	protected void shutDown()
 	{
 		if (navigationButton != null) clientToolbar.removeNavigation(navigationButton);
+		if (worldHopper != null) eventBus.unregister(worldHopper);
 		if (groupTracker != null)
 		{
 			groupTracker.stop();
