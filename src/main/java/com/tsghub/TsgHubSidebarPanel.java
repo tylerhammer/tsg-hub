@@ -1322,7 +1322,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		TsgHubUi.clickable(card, () -> {
 			String id = TsgHubUi.str(event, "id");
 			if (dropParty) showDropParty(event);
-			else if (competition && joined) plugin.openCompetition(id);
+			else if (competition && joined && !TsgHubSession.get("memberToken:" + id).isEmpty()) plugin.openCompetition(id, true);
 			else if (competition) showCompetitionPreview(event);
 			else if (joined) plugin.activateEvent(id);
 			else showPreview(event);
