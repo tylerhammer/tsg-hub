@@ -29,7 +29,7 @@ import java.awt.image.BufferedImage;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import lombok.Getter;
-import net.runelite.api.SpriteID;
+import net.runelite.api.gameval.SpriteID;
 import net.runelite.client.game.SpriteManager;
 import net.runelite.client.util.Text;
 import com.tsghub.group.ImgUtil;
@@ -58,7 +58,7 @@ public class PrayerSlot extends JLabel
 			updateActivatedImage();
 		});
 
-		spriteManager.getSpriteAsync(SpriteID.ACTIVATED_PRAYER_BACKGROUND, 0, img ->
+		spriteManager.getSpriteAsync(SpriteID.Prayerglow.ACTIVATED, 0, img ->
 		{
 			activatedImage = img;
 			updateActivatedImage();
