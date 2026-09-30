@@ -82,6 +82,7 @@ public class TsgHubPlugin extends Plugin
 	@Inject private MouseManager mouseManager;
 	@Inject private okhttp3.OkHttpClient okHttpClient;
 	@Inject private ChatMessageManager chatMessageManager;
+	@Inject private net.runelite.client.game.ChatIconManager chatIconManager;
 	@Inject private net.runelite.client.party.PartyService partyService;
 	@Inject private net.runelite.client.party.WSClient wsClient;
 	@Inject private net.runelite.client.game.SpriteManager spriteManager;
@@ -157,7 +158,7 @@ public class TsgHubPlugin extends Plugin
 		eventBus.register(groupTracker);
 		groupTracker.start();
 		executor.scheduleAtFixedRate(groups::heartbeat, 5, TsgHubGroups.HEARTBEAT_SECONDS, TimeUnit.SECONDS);
-		presence = new TsgHubPresence(this, client, executor, this::api, () -> sidebar);
+		presence = new TsgHubPresence(this, client, clientThread, chatIconManager, executor, this::api, () -> sidebar);
 		executor.scheduleAtFixedRate(presence::autoRefresh, TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
 		boardOverlay = new TsgHubBoardOverlay(client);
 		overlayManager.add(boardOverlay);
@@ -250,6 +251,7 @@ public class TsgHubPlugin extends Plugin
 
 	String getDetectedClanName() { return detectedClanName; }
 	boolean sharingEnabled() { return config.dataSharingOptIn(); }
+	boolean locationSharingEnabled() { return config.dataSharingOptIn() && config.shareLocation(); }
 	TsgHubGroups groups() { return groups; }
 	TsgHubPresence presence() { return presence; }
 	boolean inClanChat() { return inClanChat; }
@@ -361,6 +363,11 @@ public class TsgHubPlugin extends Plugin
 		{
 			boolean expand = "partyExpandMembers".equals(event.getKey());
 			SwingUtilities.invokeLater(() -> sidebar.groupSettingsChanged(expand));
+			return;
+		}
+		if ("shareLocation".equals(event.getKey()))
+		{
+			SwingUtilities.invokeLater(() -> sidebar.locationSharingChanged());
 			return;
 		}
 		if (!"dataSharingOptIn".equals(event.getKey())) return;

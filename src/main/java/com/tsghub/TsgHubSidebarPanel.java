@@ -348,8 +348,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		page.add(TsgHubUi.label("Share your progress", TsgHubUi.TEXT, FontManager.getRunescapeBoldFont()));
 		page.add(Box.createVerticalStrut(6));
 		page.add(TsgHubUi.wrapped("TSG Hub tracks your boss kills, drops and raids for clan events. "
-			+ "To do that it sends your RuneScape name, clan and rank, and that progress to your clan's event service. "
-			+ "While you're in clan chat, clanmates also see your world, area and what you're doing.",
+			+ "To do that it sends your RuneScape name, clan and rank, and that progress to your clan's event service.",
 			TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), TEXT_W));
 		page.add(Box.createVerticalStrut(4));
 		page.add(TsgHubUi.wrapped("Nothing is ever posted in game chat.", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), TEXT_W));
@@ -466,6 +465,11 @@ final class TsgHubSidebarPanel extends PluginPanel
 		return members.size() + " online";
 	}
 
+	void locationSharingChanged()
+	{
+		if (view == View.MEMBERS) renderMembers();
+	}
+
 	void setMembers(JsonArray members)
 	{
 		this.members = members;
@@ -502,7 +506,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 			}
 		}
 		page.add(Box.createVerticalStrut(8));
-		page.add(TsgHubUi.wrapped("Shows clanmates in clan chat with TSG Hub sharing on. Leave clan chat to hide yourself.", TsgHubUi.MUTED, small, TEXT_W));
+		page.add(TsgHubUi.wrapped(plugin.locationSharingEnabled() ? "Leave clan chat to hide yourself."
+			: "You show as Online. Turn on location sharing in settings to show what you're doing.", TsgHubUi.MUTED, small, TEXT_W));
 		refreshPage();
 	}
 
@@ -514,7 +519,16 @@ final class TsgHubSidebarPanel extends PluginPanel
 		int world = TsgHubUi.integer(member, "world", 0);
 		JPanel card = TsgHubUi.card();
 		JPanel text = TsgHubUi.stack();
-		text.add(TsgHubUi.label(TsgHubUi.html("<b>" + TsgHubUi.escape(name) + "</b>", CARD_TITLE_W), TsgHubUi.TEXT, FontManager.getRunescapeFont()));
+		String rank = TsgHubUi.str(member, "rank");
+		java.awt.image.BufferedImage rankIcon = plugin.presence().rankIcon(member);
+		JLabel nameLabel = TsgHubUi.label(TsgHubUi.html("<b>" + TsgHubUi.escape(name) + "</b>", CARD_TITLE_W - (rankIcon == null ? 0 : rankIcon.getWidth() + 4)), TsgHubUi.TEXT, FontManager.getRunescapeFont());
+		if (rankIcon != null)
+		{
+			nameLabel.setIcon(new javax.swing.ImageIcon(rankIcon));
+			nameLabel.setIconTextGap(4);
+			nameLabel.setToolTipText(rank);
+		}
+		text.add(nameLabel);
 		text.add(Box.createVerticalStrut(2));
 		if (!activity.isEmpty())
 			text.add(TsgHubUi.wrapped(activity, "Idle".equals(activity) ? TsgHubUi.MUTED : TsgHubUi.SUCCESS, FontManager.getRunescapeSmallFont(), CARD_TITLE_W));
@@ -523,12 +537,22 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (!area.isEmpty() && !activity.endsWith(area)) where.add(area);
 		if (!where.isEmpty()) text.add(TsgHubUi.wrapped(String.join(" · ", where), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), CARD_TITLE_W));
 		card.add(text, BorderLayout.CENTER);
-		if (TsgHubUi.samePlayer(name, plugin.getDetectedPlayerName()))
+		boolean rankText = rankIcon == null && !rank.isEmpty();
+		boolean self = TsgHubUi.samePlayer(name, plugin.getDetectedPlayerName());
+		if (rankText || self)
 		{
-			JPanel east = new JPanel(new BorderLayout());
-			east.setOpaque(false);
-			east.add(TsgHubUi.badge("You", TsgHubUi.SUCCESS), BorderLayout.NORTH);
-			card.add(east, BorderLayout.EAST);
+			JPanel east = TsgHubUi.stack();
+			if (rankText) east.add(TsgHubUi.label(rank, TsgHubUi.ACCENT, FontManager.getRunescapeSmallFont()));
+			if (self)
+			{
+				if (rankText) east.add(Box.createVerticalStrut(3));
+				east.add(TsgHubUi.badge("You", TsgHubUi.SUCCESS));
+			}
+			for (java.awt.Component part : east.getComponents()) ((javax.swing.JComponent) part).setAlignmentX(RIGHT_ALIGNMENT);
+			JPanel wrap = new JPanel(new BorderLayout());
+			wrap.setOpaque(false);
+			wrap.add(east, BorderLayout.NORTH);
+			card.add(wrap, BorderLayout.EAST);
 		}
 		return TsgHubUi.fitHeight(card);
 	}
