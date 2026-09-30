@@ -122,6 +122,7 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubCompetitionTracker competitions;
 	private TsgHubGroups groups;
 	private TsgHubPresence presence;
+	private TsgHubDrops drops;
 	private com.tsghub.group.GroupTracker groupTracker;
 
 	@Override
@@ -161,6 +162,7 @@ public class TsgHubPlugin extends Plugin
 		executor.scheduleAtFixedRate(groups::autoRefresh, TsgHubGroups.REFRESH_SECONDS, TsgHubGroups.REFRESH_SECONDS, TimeUnit.SECONDS);
 		presence = new TsgHubPresence(this, client, clientThread, chatIconManager, executor, this::api, () -> sidebar);
 		executor.scheduleAtFixedRate(presence::autoRefresh, TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
+		drops = new TsgHubDrops(this, client, executor, this::api);
 		boardOverlay = new TsgHubBoardOverlay(client);
 		overlayManager.add(boardOverlay);
 		mouseManager.registerMouseListener(boardOverlay);
@@ -1281,6 +1283,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		if (!isInHubClan()) return;
 		if (event == null || event.getMessage() == null || client.getLocalPlayer() == null) return;
+		if (drops != null) drops.onChatMessage(event);
 		if (event.getType() != ChatMessageType.GAMEMESSAGE && event.getType() != ChatMessageType.SPAM) return;
 		String message = event.getMessage().replaceAll("<[^>]*>", "").toLowerCase(java.util.Locale.ROOT);
 		if (config.dataSharingOptIn() && competitions != null) competitions.onChat(message);
