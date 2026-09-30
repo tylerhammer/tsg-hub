@@ -122,15 +122,6 @@ final class TsgHubGroups implements GroupTracker.Listener
 		update("/v1/groups/lock", payload);
 	}
 
-	void reorder(List<String> names)
-	{
-		JsonArray order = new JsonArray();
-		names.forEach(order::add);
-		JsonObject payload = new JsonObject();
-		payload.add("order", order);
-		update("/v1/groups/order", payload);
-	}
-
 	private void update(String path, JsonObject payload)
 	{
 		String token = TsgHubSession.get("groupToken");

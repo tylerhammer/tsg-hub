@@ -170,9 +170,7 @@ public class TsgHubPlugin extends Plugin
 		groupMembers.setActions(new com.tsghub.group.GroupMembersPanel.Actions()
 		{
 			@Override public int currentWorld() { return client.getGameState() == GameState.LOGGED_IN ? client.getWorld() : 0; }
-			@Override public boolean isLeader() { return groups.isLeader(); }
 			@Override public void hop(int world) { worldHopper.hop(world); }
-			@Override public void reorder(java.util.List<String> names) { groups.reorder(names); }
 		});
 		groupTracker = new com.tsghub.group.GroupTracker(client, clientThread, partyService, wsClient, itemManager, groups::isGroupParty, config::partyShowSelf, this::currentArea, groups);
 		groups.setTracker(groupTracker);

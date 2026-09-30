@@ -34,9 +34,7 @@ public final class GroupMembersPanel extends JPanel
 	public interface Actions
 	{
 		int currentWorld();
-		boolean isLeader();
 		void hop(int world);
-		void reorder(List<String> names);
 	}
 
 	private final Map<Long, PlayerPanel> panels = new HashMap<>();
@@ -47,7 +45,7 @@ public final class GroupMembersPanel extends JPanel
 	private final JLabel empty = new JLabel("No one else has connected yet.");
 	private long selfId = -1;
 	private List<String> order = Collections.emptyList();
-	private List<String> names = Collections.emptyList();
+	private List<String> preferred = Collections.emptyList();
 	private Actions actions;
 
 	public GroupMembersPanel(GroupViewSettings settings, SpriteManager spriteManager, ItemManager itemManager)
@@ -69,8 +67,8 @@ public final class GroupMembersPanel extends JPanel
 
 	public void setOrder(List<String> names)
 	{
-		List<String> keys = names.stream().map(GroupMembersPanel::key).collect(Collectors.toList());
-		this.names = new ArrayList<>(names);
+		List<String> keys = preferred.stream().filter(k -> names.stream().anyMatch(n -> key(n).equals(k))).collect(Collectors.toList());
+		names.stream().map(GroupMembersPanel::key).filter(k -> !keys.contains(k)).forEach(keys::add);
 		if (keys.equals(order)) return;
 		order = keys;
 		rebuild();
@@ -131,7 +129,7 @@ public final class GroupMembersPanel extends JPanel
 		panels.clear();
 		selfId = -1;
 		order = Collections.emptyList();
-		names = Collections.emptyList();
+		preferred = Collections.emptyList();
 		rebuild();
 	}
 
@@ -206,7 +204,7 @@ public final class GroupMembersPanel extends JPanel
 			menu.add(hop);
 		}
 		int index = Strings.isNullOrEmpty(player.getUsername()) ? -1 : order.indexOf(key(player.getUsername()));
-		if (actions.isLeader() && index >= 0 && order.size() > 1)
+		if (index >= 0 && order.size() > 1)
 		{
 			if (menu.getComponentCount() > 0) menu.addSeparator();
 			JMenuItem up = new JMenuItem("Move up");
@@ -226,11 +224,8 @@ public final class GroupMembersPanel extends JPanel
 		List<String> next = new ArrayList<>(order);
 		Collections.swap(next, from, to);
 		order = next;
-		List<String> nextNames = new ArrayList<>(names);
-		Collections.swap(nextNames, from, to);
-		names = nextNames;
+		preferred = next;
 		rebuild();
-		actions.reorder(nextNames);
 	}
 
 	private static String name(PartyPlayer player)
