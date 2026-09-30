@@ -11,9 +11,12 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 import javax.swing.JLabel;
@@ -41,6 +44,8 @@ public final class GroupMembersPanel extends JPanel
 	private final ItemManager itemManager;
 	private final JLabel empty = new JLabel("No one else has connected yet.");
 	private long selfId = -1;
+	private List<String> order = Collections.emptyList();
+	private List<String> preferred = Collections.emptyList();
 	private Actions actions;
 
 	public GroupMembersPanel(GroupViewSettings settings, SpriteManager spriteManager, ItemManager itemManager)
@@ -58,6 +63,15 @@ public final class GroupMembersPanel extends JPanel
 	public void setActions(Actions actions)
 	{
 		this.actions = actions;
+	}
+
+	public void setOrder(List<String> names)
+	{
+		List<String> keys = preferred.stream().filter(k -> names.stream().anyMatch(n -> key(n).equals(k))).collect(Collectors.toList());
+		names.stream().map(GroupMembersPanel::key).filter(k -> !keys.contains(k)).forEach(keys::add);
+		if (keys.equals(order)) return;
+		order = keys;
+		rebuild();
 	}
 
 	public void update(PartyPlayer player, boolean bannerChanged, boolean self)
@@ -114,6 +128,8 @@ public final class GroupMembersPanel extends JPanel
 		players.clear();
 		panels.clear();
 		selfId = -1;
+		order = Collections.emptyList();
+		preferred = Collections.emptyList();
 		rebuild();
 	}
 
@@ -132,12 +148,14 @@ public final class GroupMembersPanel extends JPanel
 	private void rebuild()
 	{
 		removeAll();
-		final List<Long> order = players.values().stream()
-			.sorted(Comparator.comparing((PartyPlayer p) -> p.getMember().getMemberId() != selfId)
-				.thenComparing(p -> (Strings.isNullOrEmpty(p.getUsername()) ? p.getMember().getDisplayName() : p.getUsername()).toLowerCase()))
+		Comparator<PartyPlayer> sort = order.isEmpty()
+			? Comparator.comparing((PartyPlayer p) -> p.getMember().getMemberId() != selfId)
+			: Comparator.comparingInt(this::position);
+		final List<Long> ids = players.values().stream()
+			.sorted(sort.thenComparing(p -> name(p).toLowerCase()))
 			.map(p -> p.getMember().getMemberId())
 			.collect(Collectors.toList());
-		for (Long id : order)
+		for (Long id : ids)
 		{
 			final PlayerPanel panel = panels.get(id);
 			if (panel != null) add(panel);
@@ -145,6 +163,12 @@ public final class GroupMembersPanel extends JPanel
 		if (panels.size() - (panels.containsKey(selfId) ? 1 : 0) == 0) add(empty);
 		revalidate();
 		repaint();
+	}
+
+	private int position(PartyPlayer player)
+	{
+		int index = Strings.isNullOrEmpty(player.getUsername()) ? -1 : order.indexOf(key(player.getUsername()));
+		return index < 0 ? Integer.MAX_VALUE : index;
 	}
 
 	private void addMenu(PlayerPanel panel, long id)
@@ -171,12 +195,46 @@ public final class GroupMembersPanel extends JPanel
 	{
 		PartyPlayer player = players.get(id);
 		if (player == null || actions == null) return;
-		int world = player.getWorld();
-		if (id == selfId || world <= 0 || world == actions.currentWorld()) return;
 		JPopupMenu menu = new JPopupMenu();
-		JMenuItem hop = new JMenuItem("Hop to world " + world);
-		hop.addActionListener(a -> actions.hop(world));
-		menu.add(hop);
-		menu.show(e.getComponent(), e.getX(), e.getY());
+		int world = player.getWorld();
+		if (id != selfId && world > 0 && world != actions.currentWorld())
+		{
+			JMenuItem hop = new JMenuItem("Hop to world " + world);
+			hop.addActionListener(a -> actions.hop(world));
+			menu.add(hop);
+		}
+		int index = Strings.isNullOrEmpty(player.getUsername()) ? -1 : order.indexOf(key(player.getUsername()));
+		if (index >= 0 && order.size() > 1)
+		{
+			if (menu.getComponentCount() > 0) menu.addSeparator();
+			JMenuItem up = new JMenuItem("Move up");
+			up.setEnabled(index > 0);
+			up.addActionListener(a -> moveMember(index, index - 1));
+			JMenuItem down = new JMenuItem("Move down");
+			down.setEnabled(index < order.size() - 1);
+			down.addActionListener(a -> moveMember(index, index + 1));
+			menu.add(up);
+			menu.add(down);
+		}
+		if (menu.getComponentCount() > 0) menu.show(e.getComponent(), e.getX(), e.getY());
+	}
+
+	private void moveMember(int from, int to)
+	{
+		List<String> next = new ArrayList<>(order);
+		Collections.swap(next, from, to);
+		order = next;
+		preferred = next;
+		rebuild();
+	}
+
+	private static String name(PartyPlayer player)
+	{
+		return Strings.isNullOrEmpty(player.getUsername()) ? player.getMember().getDisplayName() : player.getUsername();
+	}
+
+	private static String key(String name)
+	{
+		return name == null ? "" : name.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
 	}
 }

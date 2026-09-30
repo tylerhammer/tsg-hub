@@ -928,6 +928,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	void setGroups(JsonArray groups)
 	{
 		groupList = groups;
+		applyMemberOrder(plugin.groups().currentGroup());
 		if (view == View.GROUPS) renderGroups();
 		else if (view == View.HOME) renderHome();
 	}
@@ -937,12 +938,14 @@ final class TsgHubSidebarPanel extends PluginPanel
 		groupBusy = false;
 		browsingParties = false;
 		groupMembers.clear();
+		applyMemberOrder(group);
 		if (view != View.GROUPS) setView(View.GROUPS);
 		renderGroups();
 	}
 
 	void groupRefreshed(JsonObject group)
 	{
+		applyMemberOrder(group);
 		if (view == View.GROUPS) renderGroups();
 		else if (view == View.HOME) renderHome();
 	}
@@ -989,6 +992,15 @@ final class TsgHubSidebarPanel extends PluginPanel
 	void groupMembersCleared()
 	{
 		groupMembers.clear();
+	}
+
+	private void applyMemberOrder(JsonObject group)
+	{
+		if (group == null) return;
+		JsonArray members = TsgHubUi.array(group, "members");
+		List<String> names = new ArrayList<>();
+		for (int i = 0; i < members.size(); i++) names.add(TsgHubUi.str(members.get(i).getAsJsonObject(), "displayName"));
+		groupMembers.setOrder(names);
 	}
 
 	private void renderGroups()
