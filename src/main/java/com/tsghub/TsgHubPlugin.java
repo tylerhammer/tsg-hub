@@ -148,9 +148,8 @@ public class TsgHubPlugin extends Plugin
 			@Override public void onReady() { resyncLiveViews(); }
 			@Override public void onChanged(String topic, String eventId) { liveChange(topic, eventId); }
 		});
-		executor.scheduleAtFixedRate(this::pollTeamNotifications, 10, 5, TimeUnit.SECONDS);
 		executor.scheduleAtFixedRate(this::socketTick, 2, 5, TimeUnit.SECONDS);
-		executor.scheduleAtFixedRate(this::autoRefreshBoard, BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
+		executor.scheduleAtFixedRate(unlessLive(this::autoRefreshBoard), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
 		competitions = new TsgHubCompetitionTracker(this::api, executor, client, clientThread);
 		itemSearchExecutor = Executors.newFixedThreadPool(2, r -> {
 			Thread thread = new Thread(r, "tsg-hub-item-search");
@@ -670,10 +669,21 @@ public class TsgHubPlugin extends Plugin
 			return;
 		}
 		socket.connect(detectedClanName);
+		Map<String, String> tokens = new java.util.HashMap<>();
+		String eventId = TsgHubSession.get("eventId");
+		String token = TsgHubSession.get("token");
+		if (!eventId.isEmpty() && !token.isEmpty()) tokens.put(eventId, token);
+		String competitionId = sidebar == null ? null : sidebar.openCompetitionId();
+		String memberToken = competitionId == null ? "" : TsgHubSession.get("memberToken:" + competitionId);
+		if (!memberToken.isEmpty()) tokens.putIfAbsent(competitionId, memberToken);
+		socket.sync(tokens, inClanChat);
+		if (!socket.isLive()) pollTeamNotifications();
 	}
 
 	private void resyncLiveViews()
 	{
+		pollTeamNotifications();
+		autoRefreshBoard();
 		groups.autoRefresh();
 		presence.autoRefresh();
 		drops.autoRefresh();
@@ -691,6 +701,14 @@ public class TsgHubPlugin extends Plugin
 				break;
 			case "drops":
 				drops.autoRefresh();
+				break;
+			case "notifications":
+				if (eventId.equals(TsgHubSession.get("eventId"))) pollTeamNotifications();
+				break;
+			case "event":
+				if (sidebar == null) break;
+				if (eventId.equals(TsgHubSession.get("eventId")) && sidebar.wantsAutoRefresh()) refreshBoard();
+				if (eventId.equals(sidebar.openCompetitionId())) openCompetition(eventId);
 				break;
 			default:
 		}
