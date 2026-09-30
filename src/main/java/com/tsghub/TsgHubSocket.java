@@ -3,6 +3,9 @@ package com.tsghub;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
@@ -33,10 +36,38 @@ final class TsgHubSocket
 	private static final long RESTART_MIN_MILLIS = 2_000;
 	private static final long RESTART_SPREAD_MILLIS = 8_000;
 
+	private static final class Subscription
+	{
+		final String token;
+		final boolean inClanChat;
+
+		Subscription(String token, boolean inClanChat)
+		{
+			this.token = token;
+			this.inClanChat = inClanChat;
+		}
+
+		@Override
+		public boolean equals(Object other)
+		{
+			if (!(other instanceof Subscription)) return false;
+			Subscription that = (Subscription) other;
+			return inClanChat == that.inClanChat && token.equals(that.token);
+		}
+
+		@Override
+		public int hashCode()
+		{
+			return Objects.hash(token, inClanChat);
+		}
+	}
+
 	private final OkHttpClient http;
 	private final HttpUrl url;
 	private final ScheduledExecutorService executor;
 	private final Listener listener;
+	private final Map<String, Subscription> subscriptions = new HashMap<>();
+	private final Map<String, String> rejectedTokens = new HashMap<>();
 	private WebSocket socket;
 	private ScheduledFuture<?> retry;
 	private String clanName = "";
@@ -72,6 +103,24 @@ final class TsgHubSocket
 		close();
 		clanName = "";
 		rejectedClan = "";
+		subscriptions.clear();
+		rejectedTokens.clear();
+	}
+
+	synchronized void sync(Map<String, String> tokens, boolean inClanChat)
+	{
+		subscriptions.keySet().removeIf(eventId -> {
+			if (tokens.containsKey(eventId)) return false;
+			send("unsubscribe", eventId, null, false);
+			return true;
+		});
+		for (Map.Entry<String, String> entry : tokens.entrySet())
+		{
+			Subscription wanted = new Subscription(entry.getValue(), inClanChat);
+			if (wanted.equals(subscriptions.get(entry.getKey())) || wanted.token.equals(rejectedTokens.get(entry.getKey()))) continue;
+			subscriptions.put(entry.getKey(), wanted);
+			send("subscribe", entry.getKey(), wanted.token, wanted.inClanChat);
+		}
 	}
 
 	private void open()
@@ -90,12 +139,37 @@ final class TsgHubSocket
 		ready = false;
 	}
 
+	private void send(String type, String eventId, String token, boolean inClanChat)
+	{
+		if (!ready || socket == null) return;
+		JsonObject message = new JsonObject();
+		message.addProperty("type", type);
+		message.addProperty("eventId", eventId);
+		if (token != null)
+		{
+			message.addProperty("token", token);
+			message.addProperty("inClanChat", inClanChat);
+		}
+		socket.send(message.toString());
+	}
+
 	private synchronized void opened(WebSocket ws)
 	{
 		if (ws != socket) return;
 		ready = true;
 		attempts = 0;
+		for (Map.Entry<String, Subscription> entry : subscriptions.entrySet())
+		{
+			send("subscribe", entry.getKey(), entry.getValue().token, entry.getValue().inClanChat);
+		}
 		executor.execute(listener::onReady);
+	}
+
+	private synchronized void rejected(WebSocket ws, String eventId)
+	{
+		if (ws != socket) return;
+		Subscription subscription = subscriptions.remove(eventId);
+		if (subscription != null) rejectedTokens.put(eventId, subscription.token);
 	}
 
 	private synchronized void dropped(WebSocket ws, int code, int status)
@@ -156,6 +230,7 @@ final class TsgHubSocket
 					executor.execute(() -> listener.onChanged(topic, eventId));
 					break;
 				case "error":
+					if (!eventId.isEmpty()) rejected(ws, eventId);
 					log.debug("TSG Hub socket error: {}", string(message, "message"));
 					break;
 				default:
