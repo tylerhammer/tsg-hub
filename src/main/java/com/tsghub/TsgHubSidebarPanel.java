@@ -1006,8 +1006,9 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private void setPartyHeader(JsonObject group)
 	{
 		int count = group == null ? 0 : TsgHubUi.array(group, "members").size();
-		setHeader(group == null ? "Your party" : currentTitle(group),
-			count == 0 ? "" : count == 1 ? "Just you so far" : count + " members", true, true);
+		String members = count == 0 ? "" : count == 1 ? "Just you so far" : count + " members";
+		if (group != null && TsgHubUi.bool(group, "locked")) members = members.isEmpty() ? "Locked" : members + " · Locked";
+		setHeader(group == null ? "Your party" : currentTitle(group), members, true, true);
 	}
 
 	private void renderCurrentGroup(JsonObject group)
@@ -1022,7 +1023,22 @@ final class TsgHubSidebarPanel extends PluginPanel
 		title.setToolTipText("Name the party. Leave blank to title it by location.");
 		title.setEnabled(group != null);
 		title.addActionListener(e -> promptTitle(group));
-		groupsPage.add(TsgHubUi.fitHeight(fullWidth(title)));
+		if (plugin.groups().isLeader())
+		{
+			boolean locked = TsgHubUi.bool(group, "locked");
+			JButton lock = TsgHubUi.button(locked ? "Unlock party" : "Lock party");
+			lock.setToolTipText(locked ? "Let clanmates join again" : "Stop anyone else from joining");
+			lock.addActionListener(e -> {
+				lock.setEnabled(false);
+				plugin.groups().setLocked(!locked);
+			});
+			JPanel leaderActions = new JPanel(new GridLayout(1, 2, 4, 0));
+			leaderActions.setOpaque(false);
+			leaderActions.add(title);
+			leaderActions.add(lock);
+			groupsPage.add(TsgHubUi.fitHeight(fullWidth(leaderActions)));
+		}
+		else groupsPage.add(TsgHubUi.fitHeight(fullWidth(title)));
 		groupsPage.add(Box.createVerticalStrut(4));
 
 		String currentId = group == null ? "" : TsgHubUi.str(group, "id");
@@ -1104,8 +1120,16 @@ final class TsgHubSidebarPanel extends PluginPanel
 		JPanel card = TsgHubUi.card();
 		JPanel text = TsgHubUi.stack();
 		boolean mine = current != null && TsgHubUi.str(group, "id").equals(TsgHubUi.str(current, "id"));
+		boolean locked = !mine && TsgHubUi.bool(group, "locked");
 		String title = mine ? currentTitle(group) : partyTitle(group);
-		text.add(TsgHubUi.label(TsgHubUi.html("<b>" + TsgHubUi.escape(title) + "</b>", CARD_TITLE_W), TsgHubUi.TEXT, FontManager.getRunescapeFont()));
+		boolean showLock = TsgHubUi.bool(group, "locked");
+		JLabel heading = TsgHubUi.label(TsgHubUi.html("<b>" + TsgHubUi.escape(title) + "</b>", CARD_TITLE_W - (showLock ? 15 : 0)), TsgHubUi.TEXT, FontManager.getRunescapeFont());
+		if (showLock)
+		{
+			heading.setIcon(new TsgHubUi.LockIcon());
+			heading.setIconTextGap(5);
+		}
+		text.add(heading);
 		text.add(Box.createVerticalStrut(2));
 		Map.Entry<String, Integer> area = TsgHubUi.str(group, "activity").isEmpty() ? areaSummary(members) : null;
 		String here = area != null && area.getValue() < members.size() ? " · " + area.getValue() + " here" : "";
@@ -1116,8 +1140,14 @@ final class TsgHubSidebarPanel extends PluginPanel
 		JPanel east = new JPanel(new BorderLayout());
 		east.setOpaque(false);
 		east.add(mine ? TsgHubUi.badge("Yours", TsgHubUi.SUCCESS)
+			: locked ? new JLabel()
 			: TsgHubUi.label(groupBusy ? "..." : current != null ? "Switch" : "Join", TsgHubUi.ACCENT, FontManager.getRunescapeSmallFont()), BorderLayout.NORTH);
 		card.add(east, BorderLayout.EAST);
+		if (locked)
+		{
+			card.setToolTipText("The leader has locked this party");
+			return TsgHubUi.fitHeight(card);
+		}
 		card.setToolTipText(mine ? "Back to your party" : (current != null ? "Switch to " : "Join ") + title);
 		TsgHubUi.clickable(card, () -> {
 			if (mine)
