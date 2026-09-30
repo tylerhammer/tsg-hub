@@ -9,6 +9,8 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -545,6 +547,63 @@ final class TsgHubSidebarPanel extends PluginPanel
 			card.add(wrap, BorderLayout.EAST);
 		}
 		return TsgHubUi.fitHeight(card);
+	}
+
+	static List<String> dropBadges(JsonObject drop)
+	{
+		List<String> badges = new ArrayList<>();
+		String kind = dropKind(TsgHubUi.str(drop, "kind"));
+		if (!kind.isEmpty()) badges.add(kind);
+		if (TsgHubUi.bool(drop, "newLog") || "clog".equals(TsgHubUi.str(drop, "kind"))) badges.add("New log");
+		return badges;
+	}
+
+	static String dropItem(JsonObject drop)
+	{
+		int quantity = TsgHubUi.integer(drop, "quantity", 1);
+		String item = TsgHubUi.str(drop, "item").replaceAll("(\\s*\\([^)]*\\))+$", "");
+		return quantity > 1 ? quantity + " x " + item : item;
+	}
+
+	static String dropKind(String kind)
+	{
+		switch (kind)
+		{
+			case "raid": return "Raid";
+			case "pet": return "Pet";
+			case "dupe": return "Dupe pet";
+			default: return "";
+		}
+	}
+
+	static String formatGp(long value)
+	{
+		if (value <= 0) return "";
+		if (value >= 1_000_000_000L) return trimDecimal(value / 1_000_000_000.0) + "B";
+		if (value >= 1_000_000L) return trimDecimal(value / 1_000_000.0) + "M";
+		if (value >= 1_000L) return trimDecimal(value / 1_000.0) + "K";
+		return value + " gp";
+	}
+
+	private static String trimDecimal(double value)
+	{
+		String text = String.format(java.util.Locale.ROOT, "%.1f", Math.floor(value * 10) / 10);
+		return text.endsWith(".0") ? text.substring(0, text.length() - 2) : text;
+	}
+
+	static String dropAge(String iso, Instant now)
+	{
+		Instant then;
+		try { then = Instant.parse(iso); }
+		catch (Exception e) { return ""; }
+		long minutes = Math.max(0, Duration.between(then, now).toMinutes());
+		if (minutes < 1) return "just now";
+		if (minutes < 60) return minutes + "m ago";
+		long hours = minutes / 60;
+		if (hours < 24) return hours + "h ago";
+		long days = hours / 24;
+		if (days < 30) return days + "d ago";
+		return TsgHubUi.formatDate(iso.substring(0, 10), true);
 	}
 
 	private void openEvents()
