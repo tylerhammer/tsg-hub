@@ -158,6 +158,7 @@ final class TsgHubGroups implements GroupTracker.Listener
 		if (!name.isEmpty() && !TsgHubUi.samePlayer(name, TsgHubSession.get("groupPlayer"))) { leave(); return; }
 		JsonObject payload = new JsonObject();
 		if (client.getGameState() == GameState.LOGGED_IN) payload.addProperty("world", client.getWorld());
+		payload.addProperty("area", plugin.currentArea());
 		try
 		{
 			JsonObject joined = api.get().request("POST", "/v1/groups/heartbeat", token, payload).getAsJsonObject("group");
@@ -211,6 +212,11 @@ final class TsgHubGroups implements GroupTracker.Listener
 	}
 
 	@Override
+	public void areasChanged()
+	{
+	}
+
+	@Override
 	public void membersCleared()
 	{
 		TsgHubSidebarPanel s = sidebar.get();
@@ -235,6 +241,7 @@ final class TsgHubGroups implements GroupTracker.Listener
 		payload.addProperty("displayName", plugin.getDetectedPlayerName());
 		payload.addProperty("clanName", plugin.getDetectedClanName());
 		payload.addProperty("world", client.getWorld());
+		payload.addProperty("area", plugin.currentArea());
 		return payload;
 	}
 

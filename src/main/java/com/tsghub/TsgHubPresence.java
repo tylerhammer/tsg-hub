@@ -38,6 +38,7 @@ final class TsgHubPresence
 	private final ActivityDetector activity = new ActivityDetector();
 	private volatile JsonObject listed;
 	private volatile long sentAt;
+	private volatile AreaNames.Area area;
 
 	TsgHubPresence(TsgHubPlugin plugin, Client client, ClientThread clientThread, ChatIconManager chatIcons, ScheduledExecutorService executor,
 		Supplier<TsgHubApi> api, Supplier<TsgHubSidebarPanel> sidebar)
@@ -58,6 +59,7 @@ final class TsgHubPresence
 
 	void onGameTick()
 	{
+		area = locate();
 		JsonObject next = snapshot();
 		if (next == null)
 		{
@@ -149,8 +151,7 @@ final class TsgHubPresence
 		String name = plugin.getDetectedPlayerName();
 		if (player == null || player.getLocalLocation() == null || hash == -1 || name.isEmpty()) return null;
 		boolean detailed = plugin.locationSharingEnabled();
-		WorldPoint point = detailed ? WorldPoint.fromLocalInstance(client, player.getLocalLocation()) : null;
-		AreaNames.Area area = point == null ? null : AreaNames.forRegion(point.getRegionID());
+		AreaNames.Area area = this.area;
 		JsonObject payload = new JsonObject();
 		payload.addProperty("clanName", plugin.getDetectedClanName());
 		payload.addProperty("displayName", name);
@@ -159,6 +160,20 @@ final class TsgHubPresence
 		payload.addProperty("area", area == null ? "" : area.name);
 		payload.addProperty("activity", detailed ? activity.activity(area, System.currentTimeMillis()) : "Online");
 		return payload;
+	}
+
+	String area()
+	{
+		AreaNames.Area current = area;
+		return current == null ? "" : current.name;
+	}
+
+	private AreaNames.Area locate()
+	{
+		if (!plugin.locationSharingEnabled() || client.getGameState() != GameState.LOGGED_IN) return null;
+		Player player = client.getLocalPlayer();
+		if (player == null || player.getLocalLocation() == null) return null;
+		return AreaNames.at(WorldPoint.fromLocalInstance(client, player.getLocalLocation()));
 	}
 
 	private void send(JsonObject payload, long now)
