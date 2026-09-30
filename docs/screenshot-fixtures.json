@@ -2702,5 +2702,50 @@
     "rank": "Captain"
    }
   ]
+ },
+ "dropsList": {
+  "drops": [
+   {
+    "player": "Crab Legs",
+    "kind": "raid",
+    "item": "Twisted bow",
+    "quantity": 1,
+    "value": 0,
+    "newLog": true,
+    "minutesAgo": 12
+   },
+   {
+    "player": "Iron Mo",
+    "kind": "drop",
+    "item": "Abyssal whip",
+    "quantity": 1,
+    "value": 1512345,
+    "minutesAgo": 47
+   },
+   {
+    "player": "Zulrah Andy",
+    "kind": "pet",
+    "item": "Pet snakeling",
+    "quantity": 1,
+    "value": 0,
+    "minutesAgo": 190
+   },
+   {
+    "player": "Sandy Cheeks",
+    "kind": "drop",
+    "item": "Dragon bones",
+    "quantity": 250,
+    "value": 687500,
+    "minutesAgo": 420
+   },
+   {
+    "player": "Iron Mo",
+    "kind": "clog",
+    "item": "Dragon warhammer",
+    "quantity": 1,
+    "value": 0,
+    "minutesAgo": 2900
+   }
+  ]
  }
 }
