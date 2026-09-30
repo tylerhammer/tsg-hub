@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import com.tsghub.TsgHubUi.Tone;
 import com.tsghub.group.GroupTracker;
 import com.tsghub.group.data.PartyPlayer;
+import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Supplier;
 import javax.swing.SwingUtilities;
@@ -16,6 +17,7 @@ final class TsgHubGroups implements GroupTracker.Listener
 {
 	// The service drops members after 3 minutes without a check-in.
 	static final int HEARTBEAT_SECONDS = 60;
+	static final int REFRESH_SECONDS = 30;
 
 	private final TsgHubPlugin plugin;
 	private final Client client;
@@ -90,21 +92,38 @@ final class TsgHubGroups implements GroupTracker.Listener
 		loadGroups();
 	}
 
-	void create(String activity)
+	void create()
 	{
 		if (!canUse()) { ui(s -> s.groupActionFailed("Log in to a " + plugin.getHubClanName() + " character first.")); return; }
-		JsonObject payload = identity();
-		payload.addProperty("activity", activity.trim());
-		enter("POST", "/v1/groups", payload, "Created");
+		enter("POST", "/v1/groups", identity(), true);
+	}
+
+	void setTitle(String title)
+	{
+		String token = TsgHubSession.get("groupToken");
+		if (token.isEmpty() || executor.isShutdown()) return;
+		JsonObject payload = new JsonObject();
+		payload.addProperty("activity", title.trim());
+		executor.submit(() -> {
+			try
+			{
+				JsonObject joined = api.get().request("POST", "/v1/groups/title", token, payload).getAsJsonObject("group");
+				group = joined;
+				ui(s -> s.groupRefreshed(joined));
+				loadGroups(true);
+			}
+			catch (TsgHubApi.HttpError e) { when404(e); }
+			catch (Exception e) { ui(s -> s.groupActionFailed(TsgHubUi.friendlyError(e))); }
+		});
 	}
 
 	void join(String groupId)
 	{
 		if (!canUse()) { ui(s -> s.groupActionFailed("Log in to a " + plugin.getHubClanName() + " character first.")); return; }
-		enter("POST", "/v1/groups/" + groupId + "/join", identity(), "Joined");
+		enter("POST", "/v1/groups/" + groupId + "/join", identity(), false);
 	}
 
-	private void enter(String method, String path, JsonObject payload, String verb)
+	private void enter(String method, String path, JsonObject payload, boolean created)
 	{
 		String previousToken = TsgHubSession.get("groupToken");
 		executor.submit(() -> {
@@ -121,7 +140,7 @@ final class TsgHubGroups implements GroupTracker.Listener
 				TsgHubSession.set("groupPlayer", plugin.getDetectedPlayerName());
 				group = joined;
 				partyService.changeParty(passphrase);
-				status(verb + " " + TsgHubUi.str(joined, "activity") + " party.", Tone.SUCCESS);
+				status(created ? "Started a party." : "Joined " + TsgHubSidebarPanel.partyTitle(joined) + ".", Tone.SUCCESS);
 				ui(s -> s.showGroup(joined));
 				loadGroups(true);
 			}
@@ -211,9 +230,23 @@ final class TsgHubGroups implements GroupTracker.Listener
 		if (s != null) s.groupMemberRemoved(player);
 	}
 
+	List<String> liveAreas()
+	{
+		GroupTracker t = tracker;
+		return t == null ? java.util.Collections.emptyList() : t.areas();
+	}
+
+	void autoRefresh()
+	{
+		TsgHubSidebarPanel s = sidebar.get();
+		if (s != null && s.wantsGroups()) loadGroups(true);
+	}
+
 	@Override
 	public void areasChanged()
 	{
+		TsgHubSidebarPanel s = sidebar.get();
+		if (s != null) s.partyAreasChanged();
 	}
 
 	@Override
