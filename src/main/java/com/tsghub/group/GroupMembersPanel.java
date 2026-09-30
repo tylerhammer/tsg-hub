@@ -8,13 +8,18 @@ import com.google.common.base.Strings;
 import com.tsghub.group.data.PartyPlayer;
 import com.tsghub.group.ui.PlayerPanel;
 import java.awt.Color;
+import java.awt.Component;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.SpriteManager;
 import net.runelite.client.ui.DynamicGridLayout;
@@ -23,6 +28,12 @@ import net.runelite.client.ui.FontManager;
 // Swing thread only.
 public final class GroupMembersPanel extends JPanel
 {
+	public interface Actions
+	{
+		int currentWorld();
+		void hop(int world);
+	}
+
 	private final Map<Long, PlayerPanel> panels = new HashMap<>();
 	private final Map<Long, PartyPlayer> players = new HashMap<>();
 	private final GroupViewSettings settings;
@@ -30,6 +41,7 @@ public final class GroupMembersPanel extends JPanel
 	private final ItemManager itemManager;
 	private final JLabel empty = new JLabel("No one else has connected yet.");
 	private long selfId = -1;
+	private Actions actions;
 
 	public GroupMembersPanel(GroupViewSettings settings, SpriteManager spriteManager, ItemManager itemManager)
 	{
@@ -41,6 +53,11 @@ public final class GroupMembersPanel extends JPanel
 		empty.setForeground(new Color(0x8f8f8f));
 		empty.setFont(FontManager.getRunescapeSmallFont());
 		add(empty);
+	}
+
+	public void setActions(Actions actions)
+	{
+		this.actions = actions;
 	}
 
 	public void update(PartyPlayer player, boolean bannerChanged, boolean self)
@@ -56,6 +73,7 @@ public final class GroupMembersPanel extends JPanel
 		}
 		final PlayerPanel panel = new PlayerPanel(player, settings, spriteManager, itemManager);
 		panel.updatePlayerData(player, true);
+		addMenu(panel, id);
 		panels.put(id, panel);
 		rebuild();
 	}
@@ -127,5 +145,38 @@ public final class GroupMembersPanel extends JPanel
 		if (panels.size() - (panels.containsKey(selfId) ? 1 : 0) == 0) add(empty);
 		revalidate();
 		repaint();
+	}
+
+	private void addMenu(PlayerPanel panel, long id)
+	{
+		MouseAdapter listener = new MouseAdapter()
+		{
+			@Override
+			public void mousePressed(MouseEvent e)
+			{
+				if (e.isPopupTrigger()) showMenu(e, id);
+			}
+
+			@Override
+			public void mouseReleased(MouseEvent e)
+			{
+				if (e.isPopupTrigger()) showMenu(e, id);
+			}
+		};
+		panel.getBanner().addMouseListener(listener);
+		for (Component c : panel.getBanner().getStatsPanel().getComponents()) c.addMouseListener(listener);
+	}
+
+	private void showMenu(MouseEvent e, long id)
+	{
+		PartyPlayer player = players.get(id);
+		if (player == null || actions == null) return;
+		int world = player.getWorld();
+		if (id == selfId || world <= 0 || world == actions.currentWorld()) return;
+		JPopupMenu menu = new JPopupMenu();
+		JMenuItem hop = new JMenuItem("Hop to world " + world);
+		hop.addActionListener(a -> actions.hop(world));
+		menu.add(hop);
+		menu.show(e.getComponent(), e.getX(), e.getY());
 	}
 }
