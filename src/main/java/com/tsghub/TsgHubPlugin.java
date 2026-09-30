@@ -162,7 +162,8 @@ public class TsgHubPlugin extends Plugin
 		executor.scheduleAtFixedRate(groups::autoRefresh, TsgHubGroups.REFRESH_SECONDS, TsgHubGroups.REFRESH_SECONDS, TimeUnit.SECONDS);
 		presence = new TsgHubPresence(this, client, clientThread, chatIconManager, executor, this::api, () -> sidebar);
 		executor.scheduleAtFixedRate(presence::autoRefresh, TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
-		drops = new TsgHubDrops(this, client, executor, this::api);
+		drops = new TsgHubDrops(this, client, clientThread, executor, this::api, () -> sidebar);
+		executor.scheduleAtFixedRate(drops::autoRefresh, TsgHubDrops.REFRESH_SECONDS, TsgHubDrops.REFRESH_SECONDS, TimeUnit.SECONDS);
 		boardOverlay = new TsgHubBoardOverlay(client);
 		overlayManager.add(boardOverlay);
 		mouseManager.registerMouseListener(boardOverlay);
@@ -257,6 +258,7 @@ public class TsgHubPlugin extends Plugin
 	boolean locationSharingEnabled() { return config.dataSharingOptIn() && config.shareLocation(); }
 	TsgHubGroups groups() { return groups; }
 	TsgHubPresence presence() { return presence; }
+	TsgHubDrops drops() { return drops; }
 
 	String currentArea() { return presence == null ? "" : presence.area(); }
 	boolean inClanChat() { return inClanChat; }

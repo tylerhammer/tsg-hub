@@ -796,6 +796,18 @@ final class TsgHubUi
 		}
 	}
 
+	static final class DropsIcon extends TileIcon
+	{
+		@Override void paint(Graphics2D g)
+		{
+			g.drawRoundRect(2, 6, 12, 8, 2, 2);
+			g.drawLine(2, 9, 14, 9);
+			g.drawLine(8, 1, 8, 5);
+			g.drawLine(6, 3, 8, 5);
+			g.drawLine(10, 3, 8, 5);
+		}
+	}
+
 	static final class CheckIcon implements Icon
 	{
 		@Override public int getIconWidth() { return 14; }
