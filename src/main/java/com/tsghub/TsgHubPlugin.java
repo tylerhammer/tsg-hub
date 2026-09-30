@@ -157,7 +157,8 @@ public class TsgHubPlugin extends Plugin
 		eventBus.register(groupTracker);
 		groupTracker.start();
 		executor.scheduleAtFixedRate(groups::heartbeat, 5, TsgHubGroups.HEARTBEAT_SECONDS, TimeUnit.SECONDS);
-		presence = new TsgHubPresence(this, client, executor, this::api);
+		presence = new TsgHubPresence(this, client, executor, this::api, () -> sidebar);
+		executor.scheduleAtFixedRate(presence::autoRefresh, TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
 		boardOverlay = new TsgHubBoardOverlay(client);
 		overlayManager.add(boardOverlay);
 		mouseManager.registerMouseListener(boardOverlay);
@@ -250,6 +251,7 @@ public class TsgHubPlugin extends Plugin
 	String getDetectedClanName() { return detectedClanName; }
 	boolean sharingEnabled() { return config.dataSharingOptIn(); }
 	TsgHubGroups groups() { return groups; }
+	TsgHubPresence presence() { return presence; }
 	boolean inClanChat() { return inClanChat; }
 	String getDetectedPlayerName() { return detectedPlayerName; }
 	int getDetectedClanRank() { return detectedClanRank; }
