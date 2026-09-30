@@ -784,6 +784,18 @@ final class TsgHubUi
 		}
 	}
 
+	static final class MembersIcon extends TileIcon
+	{
+		@Override void paint(Graphics2D g)
+		{
+			for (int y = 3; y <= 13; y += 5)
+			{
+				g.fillOval(1, y - 1, 3, 3);
+				g.drawLine(7, y, 15, y);
+			}
+		}
+	}
+
 	static final class CheckIcon implements Icon
 	{
 		@Override public int getIconWidth() { return 14; }

@@ -1,8 +1,12 @@
 package com.tsghub;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.tsghub.TsgHubUi.Tone;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
+import javax.swing.SwingUtilities;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.Player;
@@ -11,6 +15,7 @@ import net.runelite.api.coords.WorldPoint;
 
 final class TsgHubPresence
 {
+	static final int REFRESH_SECONDS = 30;
 	private static final long HEARTBEAT_MILLIS = 30_000;
 	private static final long MIN_GAP_MILLIS = 5_000;
 
@@ -18,16 +23,19 @@ final class TsgHubPresence
 	private final Client client;
 	private final ScheduledExecutorService executor;
 	private final Supplier<TsgHubApi> api;
+	private final Supplier<TsgHubSidebarPanel> sidebar;
 	private final ActivityDetector activity = new ActivityDetector();
 	private volatile JsonObject listed;
 	private volatile long sentAt;
 
-	TsgHubPresence(TsgHubPlugin plugin, Client client, ScheduledExecutorService executor, Supplier<TsgHubApi> api)
+	TsgHubPresence(TsgHubPlugin plugin, Client client, ScheduledExecutorService executor,
+		Supplier<TsgHubApi> api, Supplier<TsgHubSidebarPanel> sidebar)
 	{
 		this.plugin = plugin;
 		this.client = client;
 		this.executor = executor;
 		this.api = api;
+		this.sidebar = sidebar;
 	}
 
 	void onXp(Skill skill, int xp)
@@ -69,6 +77,28 @@ final class TsgHubPresence
 		Thread thread = new Thread(() -> post("/v1/presence/leave", body), "tsg-hub-presence-leave");
 		thread.setDaemon(true);
 		thread.start();
+	}
+
+	void loadMembers(boolean quiet)
+	{
+		if (!canUse() || executor.isShutdown()) return;
+		String clan = encode(plugin.getDetectedClanName());
+		if (!quiet) ui(s -> s.setBusy(true));
+		executor.submit(() -> {
+			try
+			{
+				JsonArray members = api.get().request("GET", "/v1/presence?clanName=" + clan, null, null).getAsJsonArray("members");
+				ui(s -> s.setMembers(members));
+			}
+			catch (Exception e) { if (!quiet) ui(s -> s.setStatus("Couldn't load members. " + TsgHubUi.friendlyError(e), Tone.ERROR)); }
+			finally { if (!quiet) ui(s -> s.setBusy(false)); }
+		});
+	}
+
+	void autoRefresh()
+	{
+		TsgHubSidebarPanel s = sidebar.get();
+		if (s != null && s.wantsMembers()) loadMembers(true);
 	}
 
 	private JsonObject snapshot()
@@ -116,4 +146,22 @@ final class TsgHubPresence
 		catch (Exception ignored) { }
 	}
 
+	private boolean canUse()
+	{
+		return plugin.isInHubClan() && plugin.sharingEnabled() && !plugin.getDetectedPlayerName().isEmpty();
+	}
+
+	private static String encode(String value)
+	{
+		try { return java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8.name()); }
+		catch (java.io.UnsupportedEncodingException e) { return ""; }
+	}
+
+	private void ui(Consumer<TsgHubSidebarPanel> action)
+	{
+		SwingUtilities.invokeLater(() -> {
+			TsgHubSidebarPanel s = sidebar.get();
+			if (s != null) action.accept(s);
+		});
+	}
 }

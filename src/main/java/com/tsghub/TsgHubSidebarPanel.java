@@ -43,7 +43,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private static final int CARD_TITLE_W = 150;
 	private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("h:mm a");
 
-	private enum View { LOGGED_OUT, NOT_IN_CLAN, SHARING_OFF, HOME, EVENTS, PREVIEW, BOARD, COMPETITION_PREVIEW, COMPETITION, DROP_PARTY, GROUPS }
+	private enum View { LOGGED_OUT, NOT_IN_CLAN, SHARING_OFF, HOME, EVENTS, PREVIEW, BOARD, COMPETITION_PREVIEW, COMPETITION, DROP_PARTY, GROUPS, MEMBERS }
 
 	private final TsgHubPlugin plugin;
 	private final JButton back = TsgHubUi.iconButton(new TsgHubUi.BackIcon(), "Back to events");
@@ -79,6 +79,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private int busy;
 	private volatile boolean active;
 	private volatile boolean boardShowing;
+	private volatile boolean membersWanted;
+	private JsonArray members;
 	private JsonObject competitionEvent;
 	private String competitionName = "";
 	private volatile String openCompetitionId;
@@ -132,7 +134,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 		this.groupMembers = groupMembers;
 		sections = Arrays.asList(
 			new Section("Events", "Clan events and your team's board", new TsgHubUi.CalendarIcon(), this::openEvents, this::eventsSummary, () -> liveEvents() > 0),
-			new Section("Parties", "Join a clanmate's party or start one", new TsgHubUi.PartyIcon(), this::showParties, this::partiesSummary, () -> plugin.groups().inGroup()));
+			new Section("Parties", "Join a clanmate's party or start one", new TsgHubUi.PartyIcon(), this::showParties, this::partiesSummary, () -> plugin.groups().inGroup()),
+			new Section("Members", "See what clanmates are up to", new TsgHubUi.MembersIcon(), this::showMembers, this::membersSummary, () -> onlineCount() > 0));
 		setLayout(new BorderLayout(0, 6));
 		setBackground(TsgHubUi.BACKGROUND);
 		setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -189,7 +192,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 				renderGroups();
 				return;
 			}
-			if (view == View.GROUPS || view == View.EVENTS)
+			if (view == View.GROUPS || view == View.EVENTS || view == View.MEMBERS)
 			{
 				showHome();
 				return;
@@ -218,8 +221,10 @@ final class TsgHubSidebarPanel extends PluginPanel
 			{
 				plugin.loadClanEvents();
 				plugin.groups().refresh();
+				plugin.presence().loadMembers(false);
 			}
 			else if (view == View.GROUPS) plugin.groups().refresh();
+			else if (view == View.MEMBERS) plugin.presence().loadMembers(false);
 			else if (view == View.BOARD) plugin.refreshBoard();
 			else if (view == View.COMPETITION && competitionEvent != null) plugin.openCompetition(TsgHubUi.str(competitionEvent, "id"));
 			else plugin.loadClanEvents();
@@ -288,6 +293,11 @@ final class TsgHubSidebarPanel extends PluginPanel
 		return active && boardShowing;
 	}
 
+	boolean wantsMembers()
+	{
+		return active && membersWanted;
+	}
+
 	@Override
 	public void onActivate()
 	{
@@ -338,7 +348,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 		page.add(TsgHubUi.label("Share your progress", TsgHubUi.TEXT, FontManager.getRunescapeBoldFont()));
 		page.add(Box.createVerticalStrut(6));
 		page.add(TsgHubUi.wrapped("TSG Hub tracks your boss kills, drops and raids for clan events. "
-			+ "To do that it sends your RuneScape name, clan and rank, and that progress to your clan's event service.",
+			+ "To do that it sends your RuneScape name, clan and rank, and that progress to your clan's event service. "
+			+ "While you're in clan chat, clanmates also see your world, area and what you're doing.",
 			TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), TEXT_W));
 		page.add(Box.createVerticalStrut(4));
 		page.add(TsgHubUi.wrapped("Nothing is ever posted in game chat.", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), TEXT_W));
@@ -363,6 +374,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		setView(View.HOME);
 		renderHome();
 		plugin.groups().refresh();
+		plugin.presence().loadMembers(true);
 	}
 
 	private void renderHome()
@@ -440,6 +452,85 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (groupList == null) return "Loading...";
 		if (groupList.size() == 0) return "No parties yet";
 		return groupList.size() == 1 ? "1 party" : groupList.size() + " parties";
+	}
+
+	private int onlineCount()
+	{
+		return members == null ? 0 : members.size();
+	}
+
+	private String membersSummary()
+	{
+		if (members == null) return "Loading...";
+		if (members.size() == 0) return "Nobody online";
+		return members.size() + " online";
+	}
+
+	void setMembers(JsonArray members)
+	{
+		this.members = members;
+		if (view == View.MEMBERS) renderMembers();
+		else if (view == View.HOME) renderHome();
+	}
+
+	void showMembers()
+	{
+		setView(View.MEMBERS);
+		renderMembers();
+		plugin.presence().loadMembers(false);
+	}
+
+	private void renderMembers()
+	{
+		Font small = FontManager.getRunescapeSmallFont();
+		setHeader("Members", "", true, true);
+		page.removeAll();
+		if (members == null)
+		{
+			page.add(TsgHubUi.label("Loading members...", TsgHubUi.MUTED, small));
+		}
+		else if (members.size() == 0)
+		{
+			page.add(errorPanel("Nobody online", "Clanmates show up here while they're in clan chat with TSG Hub sharing on."));
+		}
+		else
+		{
+			for (int i = 0; i < members.size(); i++)
+			{
+				page.add(memberCard(members.get(i).getAsJsonObject()));
+				page.add(Box.createVerticalStrut(5));
+			}
+		}
+		page.add(Box.createVerticalStrut(8));
+		page.add(TsgHubUi.wrapped("Shows clanmates in clan chat with TSG Hub sharing on. Leave clan chat to hide yourself.", TsgHubUi.MUTED, small, TEXT_W));
+		refreshPage();
+	}
+
+	private JPanel memberCard(JsonObject member)
+	{
+		String name = TsgHubUi.str(member, "displayName");
+		String activity = TsgHubUi.str(member, "activity");
+		String area = TsgHubUi.str(member, "area");
+		int world = TsgHubUi.integer(member, "world", 0);
+		JPanel card = TsgHubUi.card();
+		JPanel text = TsgHubUi.stack();
+		text.add(TsgHubUi.label(TsgHubUi.html("<b>" + TsgHubUi.escape(name) + "</b>", CARD_TITLE_W), TsgHubUi.TEXT, FontManager.getRunescapeFont()));
+		text.add(Box.createVerticalStrut(2));
+		if (!activity.isEmpty())
+			text.add(TsgHubUi.wrapped(activity, "Idle".equals(activity) ? TsgHubUi.MUTED : TsgHubUi.SUCCESS, FontManager.getRunescapeSmallFont(), CARD_TITLE_W));
+		List<String> where = new ArrayList<>();
+		if (world > 0) where.add("W" + world);
+		if (!area.isEmpty() && !activity.endsWith(area)) where.add(area);
+		if (!where.isEmpty()) text.add(TsgHubUi.wrapped(String.join(" · ", where), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), CARD_TITLE_W));
+		card.add(text, BorderLayout.CENTER);
+		if (TsgHubUi.samePlayer(name, plugin.getDetectedPlayerName()))
+		{
+			JPanel east = new JPanel(new BorderLayout());
+			east.setOpaque(false);
+			east.add(TsgHubUi.badge("You", TsgHubUi.SUCCESS), BorderLayout.NORTH);
+			card.add(east, BorderLayout.EAST);
+		}
+		return TsgHubUi.fitHeight(card);
 	}
 
 	private void openEvents()
@@ -886,9 +977,10 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		view = next;
 		boardShowing = next == View.BOARD;
+		membersWanted = next == View.MEMBERS || next == View.HOME;
 		if (next != View.COMPETITION) openCompetitionId = null;
 		centerLayout.show(center, next == View.BOARD ? "board" : next == View.GROUPS ? "groups" : "page");
-		back.setToolTipText(next == View.EVENTS || next == View.GROUPS ? "Home" : "Back to events");
+		back.setToolTipText(next == View.EVENTS || next == View.GROUPS || next == View.MEMBERS ? "Home" : "Back to events");
 		layoutHeader();
 	}
 

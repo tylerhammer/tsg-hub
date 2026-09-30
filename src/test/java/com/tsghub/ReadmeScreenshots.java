@@ -61,11 +61,12 @@ public class ReadmeScreenshots
 		set(plugin, "detectedClanRank", 100);
 		set(plugin, "detectedPlayerName", "Crab Legs");
 		set(plugin, "groups", new TsgHubGroups(plugin, null, (PartyService) unsafe().allocateInstance(PartyService.class), null, null, null));
+		set(plugin, "presence", new TsgHubPresence(plugin, null, null, null, null));
 
 		TsgHubSidebarPanel sidebar = new TsgHubSidebarPanel(plugin, new GroupMembersPanel(new GroupViewSettings() {}, null, null));
 
 		sidebar.showSharingOff();
-		shoot(sidebar, SIDEBAR_W, 210, "sharing");
+		shoot(sidebar, SIDEBAR_W, 250, "sharing");
 
 		JsonArray events = data.getAsJsonObject("eventList").getAsJsonArray("events");
 		for (int i = 0; i < events.size(); i++)
@@ -76,8 +77,9 @@ public class ReadmeScreenshots
 		}
 		sidebar.setEvents(events);
 		sidebar.setGroups(data.getAsJsonObject("groupsList").getAsJsonArray("groups"));
+		sidebar.setMembers(data.getAsJsonObject("membersList").getAsJsonArray("members"));
 		sidebar.showHome();
-		shoot(sidebar, SIDEBAR_W, 240, "home");
+		shoot(sidebar, SIDEBAR_W, 262, "home");
 		sidebar.showEventList();
 		BufferedImage eventList = shoot(sidebar, SIDEBAR_W, 480, "events");
 
@@ -93,6 +95,9 @@ public class ReadmeScreenshots
 
 		sidebar.showParties();
 		BufferedImage parties = shoot(sidebar, SIDEBAR_W, 480, "parties");
+
+		sidebar.showMembers();
+		shoot(sidebar, SIDEBAR_W, 420, "members");
 
 		TsgHubPanel organizer = new TsgHubPanel(plugin);
 		organizer.setManagedEvents(data.getAsJsonObject("managed").getAsJsonArray("events"));
