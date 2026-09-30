@@ -830,6 +830,25 @@ final class TsgHubUi
 		}
 	}
 
+	static final class LockIcon implements Icon
+	{
+		@Override public int getIconWidth() { return 10; }
+		@Override public int getIconHeight() { return 12; }
+		@Override public void paintIcon(Component component, Graphics graphics, int x, int y)
+		{
+			Graphics2D g = (Graphics2D) graphics.create();
+			g.translate(x, y);
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			g.setColor(MUTED);
+			g.setStroke(new BasicStroke(1.5f));
+			g.drawArc(2, 1, 6, 8, 0, 180);
+			g.drawLine(2, 5, 2, 6);
+			g.drawLine(8, 5, 8, 6);
+			g.fillRoundRect(0, 6, 10, 6, 2, 2);
+			g.dispose();
+		}
+	}
+
 	static Border bottomRule()
 	{
 		return BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER);
