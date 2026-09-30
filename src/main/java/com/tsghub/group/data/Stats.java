@@ -31,7 +31,7 @@ import lombok.Setter;
 import net.runelite.api.Client;
 import net.runelite.api.Experience;
 import net.runelite.api.Skill;
-import net.runelite.api.VarPlayer;
+import net.runelite.api.gameval.VarPlayerID;
 import com.tsghub.group.data.events.PartyStatChange;
 
 @Getter
@@ -75,7 +75,7 @@ public class Stats
 
 		recalculateCombatLevel();
 
-		specialPercent = client.getVarpValue(VarPlayer.SPECIAL_ATTACK_PERCENT) / 10;
+		specialPercent = client.getVarpValue(VarPlayerID.SA_ENERGY) / 10;
 		totalLevel = client.getTotalLevel();
 		runEnergy = client.getEnergy();
 	}

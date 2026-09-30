@@ -37,7 +37,7 @@ import javax.swing.border.EmptyBorder;
 import lombok.Getter;
 import net.runelite.api.Prayer;
 import net.runelite.api.Skill;
-import net.runelite.api.SpriteID;
+import net.runelite.api.gameval.SpriteID;
 import net.runelite.client.game.SpriteManager;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
@@ -115,7 +115,7 @@ public class PlayerPrayerPanel extends JPanel
 
 		final JLabel iconLabel = new JLabel();
 		iconLabel.setOpaque(false);
-		spriteManager.addSpriteTo(iconLabel, SpriteID.UNKNOWN_PRAYER_ICON, 0);
+		spriteManager.addSpriteTo(iconLabel, SpriteID.OptionsIconsSmall.PRAYER, 0);
 		iconLabel.setHorizontalAlignment(JLabel.RIGHT);
 
 		remainingLabel.setFont(FontManager.getRunescapeSmallFont());
