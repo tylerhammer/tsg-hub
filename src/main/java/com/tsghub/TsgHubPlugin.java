@@ -121,6 +121,7 @@ public class TsgHubPlugin extends Plugin
 	private volatile List<PvmTask> pvmTasks = Collections.emptyList();
 	private volatile String taskEventId = "";
 	private volatile TsgHubApi api;
+	private TsgHubSocket socket;
 	private TsgHubCompetitionTracker competitions;
 	private TsgHubGroups groups;
 	private TsgHubWorldHopper worldHopper;
@@ -135,13 +136,20 @@ public class TsgHubPlugin extends Plugin
 		String clanOverride = System.getProperty("tsghub.clanName", "").trim();
 		hubClanName = developerMode && !clanOverride.isEmpty() ? clanOverride : "TSGaming";
 		String serviceOverride = System.getProperty("tsghub.serviceUrl", "").trim();
-		api = new TsgHubApi(okHttpClient, developerMode && !serviceOverride.isEmpty() ? serviceOverride : SERVICE_URL);
+		String serviceUrl = developerMode && !serviceOverride.isEmpty() ? serviceOverride : SERVICE_URL;
+		api = new TsgHubApi(okHttpClient, serviceUrl);
 		executor = Executors.newSingleThreadScheduledExecutor(r -> {
 			Thread thread = new Thread(r, "tsg-hub-api");
 			thread.setDaemon(true);
 			return thread;
 		});
+		socket = new TsgHubSocket(okHttpClient, serviceUrl, executor, new TsgHubSocket.Listener()
+		{
+			@Override public void onReady() { resyncLiveViews(); }
+			@Override public void onChanged(String topic, String eventId) { liveChange(topic, eventId); }
+		});
 		executor.scheduleAtFixedRate(this::pollTeamNotifications, 10, 5, TimeUnit.SECONDS);
+		executor.scheduleAtFixedRate(this::socketTick, 2, 5, TimeUnit.SECONDS);
 		executor.scheduleAtFixedRate(this::autoRefreshBoard, BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
 		competitions = new TsgHubCompetitionTracker(this::api, executor, client, clientThread);
 		itemSearchExecutor = Executors.newFixedThreadPool(2, r -> {
@@ -170,11 +178,11 @@ public class TsgHubPlugin extends Plugin
 		eventBus.register(groupTracker);
 		groupTracker.start();
 		executor.scheduleAtFixedRate(groups::heartbeat, 5, TsgHubGroups.HEARTBEAT_SECONDS, TimeUnit.SECONDS);
-		executor.scheduleAtFixedRate(groups::autoRefresh, TsgHubGroups.REFRESH_SECONDS, TsgHubGroups.REFRESH_SECONDS, TimeUnit.SECONDS);
+		executor.scheduleAtFixedRate(unlessLive(groups::autoRefresh), TsgHubGroups.REFRESH_SECONDS, TsgHubGroups.REFRESH_SECONDS, TimeUnit.SECONDS);
 		presence = new TsgHubPresence(this, client, clientThread, chatIconManager, executor, this::api, () -> sidebar);
-		executor.scheduleAtFixedRate(presence::autoRefresh, TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
+		executor.scheduleAtFixedRate(unlessLive(presence::autoRefresh), TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
 		drops = new TsgHubDrops(this, client, clientThread, executor, this::api, () -> sidebar);
-		executor.scheduleAtFixedRate(drops::autoRefresh, TsgHubDrops.REFRESH_SECONDS, TsgHubDrops.REFRESH_SECONDS, TimeUnit.SECONDS);
+		executor.scheduleAtFixedRate(unlessLive(drops::autoRefresh), TsgHubDrops.REFRESH_SECONDS, TsgHubDrops.REFRESH_SECONDS, TimeUnit.SECONDS);
 		boardOverlay = new TsgHubBoardOverlay(client);
 		overlayManager.add(boardOverlay);
 		mouseManager.registerMouseListener(boardOverlay);
@@ -209,6 +217,7 @@ public class TsgHubPlugin extends Plugin
 		}
 		if (hubWindow != null) SwingUtilities.invokeLater(hubWindow::dispose);
 		if (presence != null) presence.shutDown();
+		if (socket != null) socket.disconnect();
 		if (executor != null) executor.shutdownNow();
 		if (itemSearchExecutor != null) itemSearchExecutor.shutdownNow();
 	}
@@ -644,6 +653,47 @@ public class TsgHubPlugin extends Plugin
 			}
 			finally { sidebarBusy(false); }
 		});
+	}
+
+	private Runnable unlessLive(Runnable poll)
+	{
+		return () -> {
+			if (!socket.isLive()) poll.run();
+		};
+	}
+
+	private void socketTick()
+	{
+		if (!isInHubClan() || !config.dataSharingOptIn())
+		{
+			socket.disconnect();
+			return;
+		}
+		socket.connect(detectedClanName);
+	}
+
+	private void resyncLiveViews()
+	{
+		groups.autoRefresh();
+		presence.autoRefresh();
+		drops.autoRefresh();
+	}
+
+	private void liveChange(String topic, String eventId)
+	{
+		switch (topic)
+		{
+			case "groups":
+				groups.autoRefresh();
+				break;
+			case "presence":
+				presence.autoRefresh();
+				break;
+			case "drops":
+				drops.autoRefresh();
+				break;
+			default:
+		}
 	}
 
 	private void autoRefreshBoard()
