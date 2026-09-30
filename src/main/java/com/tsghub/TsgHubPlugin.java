@@ -356,6 +356,7 @@ public class TsgHubPlugin extends Plugin
 		inClanChat = false;
 		clanCheckTicks = 0;
 		sidebarRouted = false;
+		syncSocketNow();
 		if (competitions != null) competitions.clear();
 		SwingUtilities.invokeLater(() -> {
 			if (panel != null) panel.setDetectedClanName("", -1);
@@ -407,6 +408,7 @@ public class TsgHubPlugin extends Plugin
 				if (hubWindow != null) hubWindow.setVisible(false);
 			});
 		}
+		syncSocketNow();
 		sidebarRouted = false;
 		routeSidebar();
 	}
@@ -433,6 +435,7 @@ public class TsgHubPlugin extends Plugin
 		ClanChannel channel = client.getClanChannel();
 		inClanChat = channel != null && channel.getName() != null && channel.getName().trim().equalsIgnoreCase(detectedClanName);
 		boolean organizerAccess = canManageOrganizerUi();
+		syncSocketNow();
 		SwingUtilities.invokeLater(() -> {
 			if (panel != null) panel.setDetectedClanName(detectedClanName, detectedClanRank);
 			if (sidebar != null)
@@ -455,6 +458,7 @@ public class TsgHubPlugin extends Plugin
 		if (competitions != null) competitions.clear();
 		clearTaskCache();
 		if (boardOverlay != null) boardOverlay.setVisible(false);
+		syncSocketNow();
 		if (detectedPlayerName.isEmpty()) return;
 		sidebarRouted = false;
 		routeSidebar();
@@ -659,6 +663,13 @@ public class TsgHubPlugin extends Plugin
 		return () -> {
 			if (!socket.isLive()) poll.run();
 		};
+	}
+
+	private void syncSocketNow()
+	{
+		ScheduledExecutorService e = executor;
+		if (socket == null || e == null || e.isShutdown()) return;
+		e.execute(this::socketTick);
 	}
 
 	private void socketTick()
