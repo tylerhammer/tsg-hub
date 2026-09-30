@@ -172,6 +172,11 @@ public class TsgGroupUpdate extends PartyMemberMessage
 		}
 	}
 
+	public boolean hasAreaChange()
+	{
+		return m != null && m.stream().anyMatch(e -> e.t == PartyMiscChange.PartyMisc.A);
+	}
+
 	public boolean hasBreakingBannerChange()
 	{
 		return m != null
@@ -184,6 +189,7 @@ public class TsgGroupUpdate extends PartyMemberMessage
 						case W:
 						case U:
 						case SP:
+						case A:
 							return true;
 					}
 

@@ -81,11 +81,13 @@ public class PlayerBanner extends JPanel
 
 	private BufferedImage currentHeart = null;
 	private boolean usingStamIcon;
+	private boolean displayWorld;
 
 	public PlayerBanner(final PartyPlayer player, boolean expanded, boolean displayWorld, SpriteManager spriteManager)
 	{
 		super();
 		this.player = player;
+		this.displayWorld = displayWorld;
 
 		this.setLayout(new GridBagLayout());
 		this.setPreferredSize(new Dimension(PluginPanel.PANEL_WIDTH - 14, 75));
@@ -108,7 +110,6 @@ public class PlayerBanner extends JPanel
 		}
 
 		worldLabel.setHorizontalTextPosition(JLabel.LEFT);
-		worldLabel.setVisible(displayWorld);
 
 		usingStamIcon = player.getStamina() > 0;
 		statsPanel.add(createIconPanel(spriteManager, SpriteID.Staticons.HITPOINTS, Skill.HITPOINTS.getName(), String.valueOf(player.getSkillBoostedLevel(Skill.HITPOINTS))));
@@ -180,16 +181,7 @@ public class PlayerBanner extends JPanel
 			usernameLabel.setText(player.getUsername() + levelText);
 		}
 
-		worldLabel.setText("Not logged in");
-		if (Strings.isNullOrEmpty(player.getUsername()))
-		{
-			worldLabel.setText("");
-		}
-		else if (player.getWorld() > 0)
-		{
-
-			worldLabel.setText("World " + player.getWorld());
-		}
+		updateWorld(player, displayWorld);
 
 		final JPanel topRow = new JPanel(new BorderLayout());
 		topRow.setOpaque(false);
@@ -334,10 +326,18 @@ public class PlayerBanner extends JPanel
 		statsPanel.repaint();
 	}
 
-	public void updateWorld(int world, boolean displayWorlds)
+	public void updateWorld(PartyPlayer player, boolean displayWorlds)
 	{
-		worldLabel.setVisible(displayWorlds);
-		worldLabel.setText("World " + world);
+		displayWorld = displayWorlds;
+		String area = Strings.nullToEmpty(player.getArea());
+		String text;
+		if (Strings.isNullOrEmpty(player.getUsername())) text = "";
+		else if (player.getWorld() <= 0) text = displayWorlds ? "Not logged in" : "";
+		else if (!displayWorlds) text = area;
+		else text = area.isEmpty() ? "World " + player.getWorld() : "W" + player.getWorld() + " · " + area;
+		worldLabel.setVisible(!text.isEmpty());
+		worldLabel.setText(text);
+		worldLabel.setToolTipText(area.isEmpty() ? null : area);
 	}
 
 	void updateSpellbookIcon(int spellbook, SpriteManager spriteManager)

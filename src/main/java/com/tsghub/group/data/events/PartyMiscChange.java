@@ -48,6 +48,7 @@ public class PartyMiscChange implements PartyProcess
 		W, // World
 		U, // Username
 		SP, // Spellbook
+		A, // Area
 	}
 
 	public PartyMiscChange(PartyMisc t, Integer v)
@@ -98,6 +99,9 @@ public class PartyMiscChange implements PartyProcess
 				break;
 			case SP:
 				p.setSpellbook(v);
+				break;
+			case A:
+				p.setArea(s == null ? "" : s);
 				break;
 			default:
 				log.warn("Unhandled misc change type for event: {}", this);
