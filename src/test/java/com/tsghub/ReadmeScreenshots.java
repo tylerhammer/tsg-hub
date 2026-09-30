@@ -59,6 +59,7 @@ public class ReadmeScreenshots
 		set(plugin, "config", stub(TsgHubConfig.class));
 		set(plugin, "detectedClanName", "TSGaming");
 		set(plugin, "detectedClanRank", 100);
+		set(plugin, "detectedPlayerName", "Crab Legs");
 		set(plugin, "groups", new TsgHubGroups(plugin, null, (PartyService) unsafe().allocateInstance(PartyService.class), null, null, null));
 
 		TsgHubSidebarPanel sidebar = new TsgHubSidebarPanel(plugin, new GroupMembersPanel(new GroupViewSettings() {}, null, null));
@@ -74,6 +75,9 @@ public class ReadmeScreenshots
 			event.addProperty("joined", id.equals(str("bingo")) || id.equals(str("skill")));
 		}
 		sidebar.setEvents(events);
+		sidebar.setGroups(data.getAsJsonObject("groupsList").getAsJsonArray("groups"));
+		sidebar.showHome();
+		shoot(sidebar, SIDEBAR_W, 240, "home");
 		sidebar.showEventList();
 		BufferedImage eventList = shoot(sidebar, SIDEBAR_W, 480, "events");
 
@@ -87,8 +91,7 @@ public class ReadmeScreenshots
 		sidebar.showCompetition(data.getAsJsonObject("skillBoard").getAsJsonObject("event"), "Crab Legs", true);
 		shoot(sidebar, SIDEBAR_W, 400, "competition");
 
-		sidebar.setGroups(data.getAsJsonObject("groupsList").getAsJsonArray("groups"));
-		click(sidebar, "Parties");
+		sidebar.showParties();
 		BufferedImage parties = shoot(sidebar, SIDEBAR_W, 480, "parties");
 
 		TsgHubPanel organizer = new TsgHubPanel(plugin);
@@ -173,13 +176,6 @@ public class ReadmeScreenshots
 		Component tab = find(root, text, MaterialTab.class);
 		if (tab == null) throw new IllegalStateException("No tab " + text);
 		((MaterialTabGroup) tab.getParent()).select((MaterialTab) tab);
-	}
-
-	private static void click(Container root, String text)
-	{
-		Component button = find(root, text, AbstractButton.class);
-		if (button == null) throw new IllegalStateException("No button " + text);
-		((AbstractButton) button).doClick();
 	}
 
 	private static Component find(Container root, String text, Class<?> type)

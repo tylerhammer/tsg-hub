@@ -739,6 +739,51 @@ final class TsgHubUi
 		}
 	}
 
+	abstract static class TileIcon implements Icon
+	{
+		@Override public int getIconWidth() { return 24; }
+		@Override public int getIconHeight() { return 24; }
+
+		@Override
+		public final void paintIcon(Component component, Graphics graphics, int x, int y)
+		{
+			Graphics2D g = (Graphics2D) graphics.create();
+			g.translate(x, y);
+			g.scale(1.5, 1.5);
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			g.setColor(ACCENT);
+			g.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+			paint(g);
+			g.dispose();
+		}
+
+		abstract void paint(Graphics2D g);
+	}
+
+	static final class CalendarIcon extends TileIcon
+	{
+		@Override void paint(Graphics2D g)
+		{
+			g.drawRoundRect(2, 3, 12, 11, 2, 2);
+			g.drawLine(2, 7, 14, 7);
+			g.drawLine(5, 1, 5, 4);
+			g.drawLine(11, 1, 11, 4);
+			g.fillRect(5, 9, 2, 2);
+			g.fillRect(9, 9, 2, 2);
+		}
+	}
+
+	static final class PartyIcon extends TileIcon
+	{
+		@Override void paint(Graphics2D g)
+		{
+			g.drawOval(3, 2, 5, 5);
+			g.drawArc(0, 9, 11, 10, 0, 180);
+			g.drawOval(10, 3, 4, 4);
+			g.drawArc(9, 9, 7, 8, 20, 160);
+		}
+	}
+
 	static final class CheckIcon implements Icon
 	{
 		@Override public int getIconWidth() { return 14; }

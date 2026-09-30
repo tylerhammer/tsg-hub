@@ -69,7 +69,7 @@ Tasks can be **Team** (everyone's progress pools together), **Everyone** (each m
 <td valign="top"><img src="docs/images/parties.png" width="242" alt="Clan party list"></td>
 <td valign="top">
 
-The **Parties** tab lists every open party in the clan, with its activity, world and members. Click one to join, or start your own: pick a raid, a group boss, a minigame, or type your own activity.
+The **Parties** section lists every open party in the clan, with its activity, world and members. Click one to join, or start your own: pick a raid, a group boss, a minigame, or type your own activity.
 
 There's no passphrase to share. Once you're in, each member's panel shows their health, prayer, special attack, run energy, gear, inventory, skills and active prayers, live over RuneLite's party connection.
 
