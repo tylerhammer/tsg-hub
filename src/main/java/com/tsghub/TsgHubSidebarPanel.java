@@ -716,6 +716,11 @@ final class TsgHubSidebarPanel extends PluginPanel
 		renderEvents();
 	}
 
+	void closeBoard()
+	{
+		if (view == View.BOARD) showEventList();
+	}
+
 	void showBoard(JsonObject event, String displayName, boolean open)
 	{
 		// Background refreshes must not pull the user off another screen.
