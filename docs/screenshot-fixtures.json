@@ -2725,7 +2725,8 @@
     "quantity": 1,
     "value": 0,
     "newLog": true,
-    "minutesAgo": 12
+    "minutesAgo": 12,
+    "itemId": 20997
    },
    {
     "player": "Iron Mo",
@@ -2733,7 +2734,8 @@
     "item": "Abyssal whip",
     "quantity": 1,
     "value": 1512345,
-    "minutesAgo": 47
+    "minutesAgo": 47,
+    "itemId": 4151
    },
    {
     "player": "Zulrah Andy",
@@ -2741,7 +2743,8 @@
     "item": "Pet snakeling",
     "quantity": 1,
     "value": 0,
-    "minutesAgo": 190
+    "minutesAgo": 190,
+    "itemId": 12921
    },
    {
     "player": "Sandy Cheeks",
@@ -2749,7 +2752,8 @@
     "item": "Dragon bones",
     "quantity": 250,
     "value": 687500,
-    "minutesAgo": 420
+    "minutesAgo": 420,
+    "itemId": 536
    },
    {
     "player": "Iron Mo",
@@ -2757,7 +2761,8 @@
     "item": "Dragon warhammer",
     "quantity": 1,
     "value": 0,
-    "minutesAgo": 2900
+    "minutesAgo": 2900,
+    "itemId": 13576
    }
   ]
  }

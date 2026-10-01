@@ -25,6 +25,7 @@ import net.runelite.client.party.PartyService;
 import net.runelite.client.ui.components.materialtabs.MaterialTab;
 import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
 import net.runelite.client.ui.laf.RuneLiteLAF;
+import net.runelite.client.util.AsyncBufferedImage;
 
 // Renders the plugin's panels from fixture JSON into README screenshots: ./gradlew readmeScreenshots
 public class ReadmeScreenshots
@@ -56,7 +57,14 @@ public class ReadmeScreenshots
 	private static void run() throws Exception
 	{
 		RuneLiteLAF.setup();
-		TsgHubPlugin plugin = new TsgHubPlugin();
+		TsgHubPlugin plugin = new TsgHubPlugin()
+		{
+			@Override
+			AsyncBufferedImage getItemImage(int itemId)
+			{
+				return itemIcon(itemId);
+			}
+		};
 		set(plugin, "config", stub(TsgHubConfig.class));
 		set(plugin, "detectedClanName", "TSGaming");
 		set(plugin, "detectedClanRank", 100);
@@ -233,9 +241,31 @@ public class ReadmeScreenshots
 		});
 	}
 
+	// Item icons come from RuneLite's static cache, since there's no ItemManager here.
+	private static AsyncBufferedImage itemIcon(int itemId)
+	{
+		try
+		{
+			BufferedImage icon = ImageIO.read(new java.net.URL("https://static.runelite.net/cache/item/icon/" + itemId + ".png"));
+			if (icon == null) return null;
+			AsyncBufferedImage image = new AsyncBufferedImage(null, icon.getWidth(), icon.getHeight(), BufferedImage.TYPE_INT_ARGB);
+			Graphics2D g = image.createGraphics();
+			g.drawImage(icon, 0, 0, null);
+			g.dispose();
+			image.loaded();
+			return image;
+		}
+		catch (java.io.IOException e)
+		{
+			return null;
+		}
+	}
+
 	private static void set(Object target, String field, Object value) throws Exception
 	{
-		Field f = target.getClass().getDeclaredField(field);
+		Class<?> type = target.getClass();
+		while (type.getSuperclass() != null && java.util.Arrays.stream(type.getDeclaredFields()).noneMatch(f -> f.getName().equals(field))) type = type.getSuperclass();
+		Field f = type.getDeclaredField(field);
 		f.setAccessible(true);
 		f.set(target, value);
 	}
