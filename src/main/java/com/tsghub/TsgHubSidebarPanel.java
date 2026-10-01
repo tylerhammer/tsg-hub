@@ -937,7 +937,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		groupBusy = false;
 		browsingParties = false;
-		groupMembers.clear();
 		applyMemberOrder(group);
 		if (view != View.GROUPS) setView(View.GROUPS);
 		renderGroups();

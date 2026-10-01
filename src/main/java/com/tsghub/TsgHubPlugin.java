@@ -177,6 +177,7 @@ public class TsgHubPlugin extends Plugin
 		eventBus.register(groupTracker);
 		groupTracker.start();
 		executor.scheduleAtFixedRate(groups::heartbeat, 5, TsgHubGroups.HEARTBEAT_SECONDS, TimeUnit.SECONDS);
+		executor.scheduleAtFixedRate(groupTracker::keepAlive, com.tsghub.group.GroupTracker.KEEPALIVE_SECONDS, com.tsghub.group.GroupTracker.KEEPALIVE_SECONDS, TimeUnit.SECONDS);
 		executor.scheduleAtFixedRate(unlessLive(groups::autoRefresh), TsgHubGroups.REFRESH_SECONDS, TsgHubGroups.REFRESH_SECONDS, TimeUnit.SECONDS);
 		presence = new TsgHubPresence(this, client, clientThread, chatIconManager, executor, this::api, () -> sidebar, socket);
 		executor.scheduleAtFixedRate(unlessLive(presence::autoRefresh), TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
