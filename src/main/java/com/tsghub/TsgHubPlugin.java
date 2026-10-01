@@ -486,7 +486,7 @@ public class TsgHubPlugin extends Plugin
 			if (memberName.isEmpty()) memberName = TsgHubSession.get("displayName");
 			if (!eventId.isEmpty() && !TsgHubSession.get("token").isEmpty()
 				&& normalizePlayerName(memberName).equals(normalizePlayerName(detectedPlayerName)))
-				activateEvent(eventId);
+				activateEvent(eventId, false);
 		});
 	}
 
@@ -891,6 +891,11 @@ public class TsgHubPlugin extends Plugin
 
 	void activateEvent(String eventId)
 	{
+		activateEvent(eventId, true);
+	}
+
+	private void activateEvent(String eventId, boolean open)
+	{
 		String token = TsgHubSession.get("memberToken:" + eventId);
 		if (token.isEmpty() && eventId.equals(TsgHubSession.get("eventId"))) token = TsgHubSession.get("token");
 		if (token.isEmpty())
@@ -905,7 +910,7 @@ public class TsgHubPlugin extends Plugin
 		TsgHubSession.set("eventId", eventId);
 		TsgHubSession.set("displayName", displayName);
 		attemptedXpClaims.clear();
-		refreshBoard(true);
+		refreshBoard(open);
 	}
 
 	private void syncClanRank(String eventId, String token, JsonObject event)
@@ -1235,7 +1240,7 @@ public class TsgHubPlugin extends Plugin
 			TsgHubSession.set("token", "");
 			TsgHubSession.set("eventId", "");
 			clearTaskCache();
-			SwingUtilities.invokeLater(() -> sidebar.showEventList());
+			SwingUtilities.invokeLater(() -> sidebar.closeBoard());
 		}
 	}
 
