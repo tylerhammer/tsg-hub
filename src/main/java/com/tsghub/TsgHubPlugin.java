@@ -120,6 +120,7 @@ public class TsgHubPlugin extends Plugin
 	private volatile String hubClanName = "TSGaming";
 	private volatile List<PvmTask> pvmTasks = Collections.emptyList();
 	private volatile String taskEventId = "";
+	private volatile String staleClanAdminToken = "";
 	private volatile TsgHubApi api;
 	private TsgHubSocket socket;
 	private TsgHubCompetitionTracker competitions;
@@ -863,7 +864,7 @@ public class TsgHubPlugin extends Plugin
 					try { credential = ensureOrganizerListCredential(); }
 					catch (Exception ignored) { credential = null; }
 				}
-				JsonObject response = api().request("GET", "/v1/events?clanName=" + encodedClan, credential, null);
+				JsonObject response = organizerRequest("GET", "/v1/events?clanName=" + encodedClan, credential, null);
 				JsonArray events = response.getAsJsonArray("events");
 				for (int i = 0; i < events.size(); i++)
 				{
@@ -971,7 +972,7 @@ public class TsgHubPlugin extends Plugin
 			try
 			{
 				String credential = canUseClanAdminSession() ? ensureOrganizerListCredential() : organizerCredential(eventId.trim());
-				JsonObject event = api().request("GET", "/v1/events/" + eventId.trim() + "/organizer", credential, null);
+				JsonObject event = organizerRequest("GET", "/v1/events/" + eventId.trim() + "/organizer", credential, null);
 				SwingUtilities.invokeLater(() -> panel.openOrganizerEvent(event));
 				organizerStatus("", Tone.INFO);
 			}
@@ -989,7 +990,7 @@ public class TsgHubPlugin extends Plugin
 			{
 				String credential = ensureOrganizerListCredential();
 				if (credential.isEmpty()) throw new IllegalStateException("Join or create an event first");
-				JsonObject response = api().request("GET", "/v1/managed-events", credential, null);
+				JsonObject response = organizerRequest("GET", "/v1/managed-events", credential, null);
 				SwingUtilities.invokeLater(() -> panel.setManagedEvents(response.getAsJsonArray("events")));
 			}
 			catch (Exception e) { organizerStatus("Couldn't load events. " + TsgHubUi.friendlyError(e), Tone.ERROR); }
@@ -1053,7 +1054,7 @@ public class TsgHubPlugin extends Plugin
 		executor.submit(() -> {
 			try
 			{
-				api().request("PATCH", "/v1/events/" + eventId, credential, body);
+				organizerRequest("PATCH", "/v1/events/" + eventId, credential, body);
 				organizerStatus("Event saved.", Tone.SUCCESS);
 				refreshOrganizerEvent(true);
 				loadManagedEvents();
@@ -1076,7 +1077,7 @@ public class TsgHubPlugin extends Plugin
 		executor.submit(() -> {
 			try
 			{
-				api().request("PATCH", "/v1/events/" + eventId, credential, body);
+				organizerRequest("PATCH", "/v1/events/" + eventId, credential, body);
 				organizerStatus("Event published. Players can see it now.", Tone.SUCCESS);
 				refreshOrganizerEvent(true);
 				loadManagedEvents();
@@ -1217,7 +1218,7 @@ public class TsgHubPlugin extends Plugin
 		executor.submit(() -> {
 			try
 			{
-				api().request("DELETE", "/v1/events/" + eventId, credential, null);
+				organizerRequest("DELETE", "/v1/events/" + eventId, credential, null);
 				forgetEvent(eventId);
 				SwingUtilities.invokeLater(() -> panel.eventDeleted(eventId));
 				organizerStatus("Event deleted.", Tone.SUCCESS);
@@ -1281,7 +1282,7 @@ public class TsgHubPlugin extends Plugin
 		executor.submit(() -> {
 			try
 			{
-				JsonObject event = api().request("GET", "/v1/events/" + eventId + "/organizer", organizerCredential(eventId), null);
+				JsonObject event = organizerRequest("GET", "/v1/events/" + eventId + "/organizer", organizerCredential(eventId), null);
 				SwingUtilities.invokeLater(() -> {
 					if (open) panel.openOrganizerEvent(event);
 					else panel.showEvent(event);
@@ -1903,7 +1904,7 @@ public class TsgHubPlugin extends Plugin
 		executor.submit(() -> {
 			try
 			{
-				JsonObject result = api().request(method, "/v1/events/" + eventId + suffix, credential, payload);
+				JsonObject result = organizerRequest(method, "/v1/events/" + eventId + suffix, credential, payload);
 				organizerStatus(success, Tone.SUCCESS);
 				callback.accept(result);
 			}
@@ -1913,6 +1914,32 @@ public class TsgHubPlugin extends Plugin
 				else organizerStatus(TsgHubUi.friendlyError(e), Tone.ERROR);
 			}
 		});
+	}
+
+	private JsonObject organizerRequest(String method, String path, String credential, JsonObject payload) throws Exception
+	{
+		try { return api().request(method, path, credential, payload); }
+		catch (TsgHubApi.HttpError e)
+		{
+			if (e.status != 401 && e.status != 403) throw e;
+			String fresh = refreshClanAdminToken(credential);
+			if (fresh.isEmpty()) throw e;
+			return api().request(method, path, fresh, payload);
+		}
+	}
+
+	private synchronized String refreshClanAdminToken(String staleToken) throws Exception
+	{
+		if (staleToken == null || staleToken.isEmpty()) return "";
+		if (!staleToken.equals(staleClanAdminToken))
+		{
+			String clanKey = normalizePlayerName(detectedClanName);
+			if (clanKey.isEmpty() || !staleToken.equals(TsgHubSession.get("clanAdminToken:" + clanKey))) return "";
+			TsgHubSession.set("clanAdminToken:" + clanKey, "");
+			TsgHubSession.set("clanAdminExpiresAt:" + clanKey, "");
+			staleClanAdminToken = staleToken;
+		}
+		return ensureOrganizerListCredential();
 	}
 
 	private String organizerCredential(String eventId)
