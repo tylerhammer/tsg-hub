@@ -77,7 +77,12 @@ public final class GroupMembersPanel extends JPanel
 	public void update(PartyPlayer player, boolean bannerChanged, boolean self)
 	{
 		final long id = player.getMember().getMemberId();
-		if (self) selfId = id;
+		if (self && selfId != id)
+		{
+			players.remove(selfId);
+			panels.remove(selfId);
+			selfId = id;
+		}
 		players.put(id, player);
 		final PlayerPanel existing = panels.get(id);
 		if (existing != null)

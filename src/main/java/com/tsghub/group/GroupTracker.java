@@ -77,6 +77,7 @@ public final class GroupTracker
 		.addAll(ItemVariationMapping.getVariations(ItemVariationMapping.map(ItemID.SKILLCAPE_MAX_DIZANAS)))
 		.build();
 	private static final long IDLE_MINUTES = 30;
+	public static final int KEEPALIVE_SECONDS = 30;
 
 	// Member callbacks run on the Swing thread.
 	public interface Listener
@@ -104,8 +105,8 @@ public final class GroupTracker
 	private final Listener listener;
 
 	private final Map<Long, PartyPlayer> partyMembers = new ConcurrentHashMap<>();
-	private PartyPlayer myPlayer;
-	private PartyPlayer selfView;
+	private volatile PartyPlayer myPlayer;
+	private volatile PartyPlayer selfView;
 	private volatile Instant lastLogout = Instant.now();
 	private TsgGroupUpdate currentChange = new TsgGroupUpdate();
 
@@ -165,6 +166,15 @@ public final class GroupTracker
 			partyService.send(new UserSync());
 			sendUpdate(partyPlayerAsBatchedChange());
 		});
+	}
+
+	public void keepAlive()
+	{
+		final PartyPlayer me = myPlayer;
+		if (!isSharing() || me == null) return;
+		final TsgGroupUpdate c = new TsgGroupUpdate();
+		c.getM().add(new PartyMiscChange(PartyMiscChange.PartyMisc.W, me.getWorld()));
+		partyService.send(c);
 	}
 
 	public List<String> areas()
@@ -476,6 +486,7 @@ public final class GroupTracker
 			final boolean areaChanged = e.hasAreaChange();
 			SwingUtilities.invokeLater(() ->
 			{
+				if (partyMembers.get(e.getMemberId()) != player) return;
 				listener.memberUpdated(player, bannerChanged, false);
 				if (areaChanged) listener.areasChanged();
 			});
@@ -488,7 +499,7 @@ public final class GroupTracker
 		final PartyPlayer player = partyMembers.get(e.getMemberId());
 		if (isLocalPlayer(e.getMemberId()) || player == null) return;
 		player.getMember().setAvatar(e.getImage());
-		SwingUtilities.invokeLater(() -> listener.memberUpdated(player, true, false));
+		SwingUtilities.invokeLater(() -> { if (partyMembers.get(e.getMemberId()) == player) listener.memberUpdated(player, true, false); });
 	}
 
 	private void sendUpdate(final TsgGroupUpdate update)
@@ -518,7 +529,7 @@ public final class GroupTracker
 		{
 			update.process(self, itemManager);
 			final boolean bannerChanged = update.hasBreakingBannerChange();
-			SwingUtilities.invokeLater(() -> listener.memberUpdated(self, bannerChanged, true));
+			SwingUtilities.invokeLater(() -> { if (selfView == self && showSelf.getAsBoolean()) listener.memberUpdated(self, bannerChanged, true); });
 		});
 	}
 
