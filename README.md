@@ -18,22 +18,16 @@ Clan events for **Type Shiii Gaming** (TSG), right in your RuneLite sidebar. Joi
 
 ## Bingo
 
-<table>
-<tr>
-<td valign="top"><img src="docs/images/board-tasks.png" width="242" alt="A team's bingo board with progress on each task"></td>
-<td valign="top">
-
 Your team's board opens straight from the sidebar. Every task shows its points, a progress bar, and who contributed what. Open tasks sort first; tick **Hide completed** to focus on what's left.
 
-**Scores** ranks every team, and **Team** lists your teammates. The board refreshes itself every minute while it's open.
+**Scores** ranks every team, and **Team** lists your teammates. The board updates live while it's open.
 
 When you make progress, a message appears in **your own chatbox only**. When your team finishes a tile, teammates who are online in clan chat get a local alert too. TSG Hub never posts to public or clan chat.
 
-<img src="docs/images/board-scores.png" width="242" alt="Team scoreboard">
-
-</td>
-</tr>
-</table>
+<p>
+<img src="docs/images/board-tasks.png" width="320" alt="A team's bingo board with progress on each task">
+<img src="docs/images/board-scores.png" width="320" alt="Team scoreboard">
+</p>
 
 ### What gets tracked
 
@@ -51,42 +45,27 @@ Tasks can be **Team** (everyone's progress pools together), **Everyone** (each m
 
 ## Competitions and custom events
 
-<table>
-<tr>
-<td valign="top"><img src="docs/images/competition.png" width="242" alt="Skill of the Week leaderboard"></td>
-<td valign="top">
-
 **Skill of the Week** tracks the XP you gain in one skill. **Boss of the Week** counts kills of one boss. Click the event, press join, and play: your gain and rank update as you go.
 
 **Custom events**, like drop parties, show when and where they happen, in your own time zone, along with the host and any notes.
 
-</td>
-</tr>
-</table>
+<p>
+<img src="docs/images/competition.png" width="320" alt="Skill of the Week leaderboard">
+</p>
 
 ## Clan parties
 
-<table>
-<tr>
-<td valign="top"><img src="docs/images/parties.png" width="242" alt="Clan party list"></td>
-<td valign="top">
+The **Parties** section lists every open party in the clan, with its title, world and members. Click one to join, or start your own. A new party is titled by where its members are, like `Theatre of Blood` or `Wilderness lvl 40-42`, until a title is set. The leader can use **Lock party** to stop anyone else joining.
 
-The **Parties** section lists every open party in the clan, with its activity, world and members. Click one to join, or start your own: pick a raid, a group boss, a minigame, or type your own activity.
-
-There's no passphrase to share. Once you're in, each member's panel shows their health, prayer, special attack, run energy, gear, inventory, skills and active prayers, live over RuneLite's party connection.
+There's no passphrase to share. Once you're in, each member's panel shows their health, prayer, special attack, run energy, gear, inventory, skills and active prayers, live over RuneLite's party connection. Right-click a member to hop to their world, or to move them up or down your list.
 
 A party closes when its last member leaves. Members drop out after 3 minutes without checking in, or after 30 minutes at the login screen.
 
-</td>
-</tr>
-</table>
+<p>
+<img src="docs/images/parties.png" width="320" alt="Clan party list">
+</p>
 
 ## Members
-
-<table>
-<tr>
-<td valign="top"><img src="docs/images/members.png" width="242" alt="Online clan members with their world, area and activity"></td>
-<td valign="top">
 
 The **Members** section lists clanmates who are in clan chat with sharing on. Each row shows their world, area and what they're doing, such as `Skilling - Mining`, `Bossing - Vorkath` or `Raiding - Chambers of Xeric`.
 
@@ -94,24 +73,19 @@ Activity is detected automatically from where you are and the XP you gain. Only 
 
 Anyone in clan chat with sharing on appears in the list. Your area and activity are only shown if you turn on **Share location and activity** under **Sharing** in the plugin settings; otherwise clanmates just see **Online** and your world, the same as clan chat shows. Leave clan chat to hide yourself, and you also drop off the list when you log out.
 
-</td>
-</tr>
-</table>
+<p>
+<img src="docs/images/members.png" width="320" alt="Online clan members with their world, area and activity">
+</p>
 
 ## Drops
-
-<table>
-<tr>
-<td valign="top"><img src="docs/images/drops.png" width="242" alt="Recent clan drops with item, player, value and time"></td>
-<td valign="top">
 
 The **Drops** section keeps a history of the clan's big drops, so you can see what clanmates got while you were offline. Each row shows the item, who got it, its value and how long ago.
 
 It's built from the clan chat broadcasts your clan already has turned on: drops over the clan's value threshold, raid loot, pets and new collection log items. Anyone online with sharing on records them, so drops from clanmates who don't use TSG Hub show up too. If several people see the same broadcast, it's only recorded once.
 
-</td>
-</tr>
-</table>
+<p>
+<img src="docs/images/drops.png" width="320" alt="Recent clan drops with item, player, value and time">
+</p>
 
 ## Getting started
 
@@ -119,6 +93,10 @@ It's built from the clan chat broadcasts your clan already has turned on: drops 
 2. Log in to a character in the TSGaming clan and open the TSG Hub sidebar.
 3. Click **Enable sharing**. Nothing is sent until you do.
 4. Pick an event. For bingo, enter the team code an admin gave you. Your team is fixed once you join.
+
+<p>
+<img src="docs/images/home.png" width="320" alt="TSG Hub home with Events, Parties, Members and Drops tiles">
+</p>
 
 **Disconnect from event** on the **Team** tab stops tracking on this device. Your team keeps its progress, and you can rejoin with the same code.
 
@@ -147,10 +125,11 @@ Once you opt in, it sends the following to the TSG Hub service:
 - Progress for events you've joined: kill counts, drops, raid completions, collection log unlocks and skill XP
 - Loot you receive while a bingo event you've joined is active, so admins can reconcile a task from earlier drops if its item list changes
 - Manual proof you submit
-- Whether you're currently in the clan chat channel, so teammates' completion alerts reach you
+- Whether you're currently in the clan chat channel and your world, so teammates' completion alerts reach you and clanmates see you as online
+- With **Share location and activity** on, your area name and current activity (never your exact tile)
 - Clan chat broadcasts for drops, raid loot, pets and collection log items, for the clan's **Drops** history
 
-In a clan party, your stats, gear and inventory go to the other members through **RuneLite's party service**, not the TSG Hub service. The TSG Hub service only learns your display name, party and world.
+In a clan party, your stats, gear and inventory go to the other members through **RuneLite's party service**, not the TSG Hub service. The TSG Hub service only learns your display name, party and world, plus your area name if location sharing is on.
 
 Turning sharing off, or disconnecting from an event, deletes your local token and asks the service to revoke it. Progress your team already earned stays with the clan.
 
