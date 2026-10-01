@@ -57,7 +57,7 @@ Tasks can be **Team** (everyone's progress pools together), **Everyone** (each m
 
 The **Parties** section lists every open party in the clan, with its title, world and members. Click one to join, or start your own. A new party is titled by where its members are, like `Theatre of Blood` or `Wilderness lvl 40-42`, until a title is set. The leader can use **Lock party** to stop anyone else joining.
 
-There's no passphrase to share. Once you're in, each member's panel shows their health, prayer, special attack, run energy, gear, inventory, skills and active prayers, live over RuneLite's party connection. Right-click a member to hop to their world, or to move them up or down your list.
+There's no passphrase to share. Once you're in, each member's panel shows their health, prayer, special attack, run energy, gear, inventory, skills and active prayers, live over RuneLite's party connection. Right-click a member to move them up or down your list.
 
 A party closes when its last member leaves. Members drop out after 3 minutes without checking in, or after 30 minutes at the login screen.
 
