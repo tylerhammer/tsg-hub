@@ -6,21 +6,24 @@
   "groups": [
    {
     "id": "d007b83c-8298-47f8-9f89-84d66c247a15",
-    "activity": "Theatre of Blood",
+    "activity": "",
     "leaderName": "Mossy Rock",
     "createdAt": "2026-09-27T23:22:02.551Z",
     "members": [
      {
       "displayName": "Mossy Rock",
-      "world": 416
+      "world": 416,
+      "area": "Theatre of Blood"
      },
      {
       "displayName": "Tbow Tuesday",
-      "world": 416
+      "world": 416,
+      "area": "Theatre of Blood"
      },
      {
       "displayName": "Sir Gnomealot",
-      "world": 416
+      "world": 416,
+      "area": "Theatre of Blood"
      }
     ]
    },
@@ -32,23 +35,32 @@
     "members": [
      {
       "displayName": "Iron Fenrir",
-      "world": 302
+      "world": 302,
+      "area": "Nex"
      },
      {
       "displayName": "Karil Kid",
-      "world": 302
+      "world": 302,
+      "area": "Nex"
      }
-    ]
+    ],
+    "locked": true
    },
    {
     "id": "3b2cf296-cb15-48df-a15e-640f18847ca8",
-    "activity": "Wintertodt",
+    "activity": "",
     "leaderName": "Tiny Imp",
     "createdAt": "2026-09-27T23:22:02.554Z",
     "members": [
      {
       "displayName": "Tiny Imp",
-      "world": 307
+      "world": 330,
+      "area": "Wilderness lvl 42"
+     },
+     {
+      "displayName": "Zammy Zack",
+      "world": 330,
+      "area": "Wilderness lvl 40"
      }
     ]
    },
@@ -60,7 +72,8 @@
     "members": [
      {
       "displayName": "Spoon Feeder",
-      "world": 330
+      "world": 330,
+      "area": "Varrock"
      }
     ]
    }
