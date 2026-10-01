@@ -31,12 +31,6 @@ import net.runelite.client.ui.FontManager;
 // Swing thread only.
 public final class GroupMembersPanel extends JPanel
 {
-	public interface Actions
-	{
-		int currentWorld();
-		void hop(int world);
-	}
-
 	private final Map<Long, PlayerPanel> panels = new HashMap<>();
 	private final Map<Long, PartyPlayer> players = new HashMap<>();
 	private final GroupViewSettings settings;
@@ -46,7 +40,6 @@ public final class GroupMembersPanel extends JPanel
 	private long selfId = -1;
 	private List<String> order = Collections.emptyList();
 	private List<String> preferred = Collections.emptyList();
-	private Actions actions;
 
 	public GroupMembersPanel(GroupViewSettings settings, SpriteManager spriteManager, ItemManager itemManager)
 	{
@@ -58,11 +51,6 @@ public final class GroupMembersPanel extends JPanel
 		empty.setForeground(new Color(0x8f8f8f));
 		empty.setFont(FontManager.getRunescapeSmallFont());
 		add(empty);
-	}
-
-	public void setActions(Actions actions)
-	{
-		this.actions = actions;
 	}
 
 	public void setOrder(List<String> names)
@@ -199,29 +187,19 @@ public final class GroupMembersPanel extends JPanel
 	private void showMenu(MouseEvent e, long id)
 	{
 		PartyPlayer player = players.get(id);
-		if (player == null || actions == null) return;
-		JPopupMenu menu = new JPopupMenu();
-		int world = player.getWorld();
-		if (id != selfId && world > 0 && world != actions.currentWorld())
-		{
-			JMenuItem hop = new JMenuItem("Hop to world " + world);
-			hop.addActionListener(a -> actions.hop(world));
-			menu.add(hop);
-		}
+		if (player == null) return;
 		int index = Strings.isNullOrEmpty(player.getUsername()) ? -1 : order.indexOf(key(player.getUsername()));
-		if (index >= 0 && order.size() > 1)
-		{
-			if (menu.getComponentCount() > 0) menu.addSeparator();
-			JMenuItem up = new JMenuItem("Move up");
-			up.setEnabled(index > 0);
-			up.addActionListener(a -> moveMember(index, index - 1));
-			JMenuItem down = new JMenuItem("Move down");
-			down.setEnabled(index < order.size() - 1);
-			down.addActionListener(a -> moveMember(index, index + 1));
-			menu.add(up);
-			menu.add(down);
-		}
-		if (menu.getComponentCount() > 0) menu.show(e.getComponent(), e.getX(), e.getY());
+		if (index < 0 || order.size() < 2) return;
+		JPopupMenu menu = new JPopupMenu();
+		JMenuItem up = new JMenuItem("Move up");
+		up.setEnabled(index > 0);
+		up.addActionListener(a -> moveMember(index, index - 1));
+		JMenuItem down = new JMenuItem("Move down");
+		down.setEnabled(index < order.size() - 1);
+		down.addActionListener(a -> moveMember(index, index + 1));
+		menu.add(up);
+		menu.add(down);
+		menu.show(e.getComponent(), e.getX(), e.getY());
 	}
 
 	private void moveMember(int from, int to)
