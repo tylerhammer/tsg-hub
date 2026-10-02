@@ -11,8 +11,11 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.swing.SwingUtilities;
 import net.runelite.api.Client;
+import net.runelite.api.Actor;
 import net.runelite.api.GameState;
+import net.runelite.api.NPC;
 import net.runelite.api.Player;
+import net.runelite.api.WorldView;
 import net.runelite.api.Skill;
 import net.runelite.api.clan.ClanMember;
 import net.runelite.api.clan.ClanSettings;
@@ -62,6 +65,7 @@ final class TsgHubPresence
 	void onGameTick()
 	{
 		area = locate();
+		trackOpponents();
 		JsonObject next = snapshot();
 		if (next == null)
 		{
@@ -177,6 +181,22 @@ final class TsgHubPresence
 		Player player = client.getLocalPlayer();
 		if (player == null || player.getLocalLocation() == null) return null;
 		return AreaNames.at(WorldPoint.fromLocalInstance(client, player.getLocalLocation()));
+	}
+
+	private void trackOpponents()
+	{
+		if (!plugin.locationSharingEnabled() || client.getGameState() != GameState.LOGGED_IN) return;
+		Player player = client.getLocalPlayer();
+		if (player == null) return;
+		long now = System.currentTimeMillis();
+		Actor target = player.getInteracting();
+		if (target instanceof NPC) activity.onOpponent(target.getName(), now);
+		WorldView worldView = client.getTopLevelWorldView();
+		if (worldView == null) return;
+		for (NPC npc : worldView.npcs())
+		{
+			if (npc != null && npc.getInteracting() == player) activity.onOpponent(npc.getName(), now);
+		}
 	}
 
 	private void send(JsonObject payload, long now)
