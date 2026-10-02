@@ -14,7 +14,7 @@ Clan events for **Type Shiii Gaming** (TSG), right in your RuneLite sidebar. Joi
 - **Clan parties** for raids, bossing and skilling. Join with one click, no passphrase to type, and see your party's health, prayer, gear, inventory and skills live.
 - **Members** list showing which clanmates are online, their world, area and what they're doing.
 - **Drops** history of the clan's big drops, raid loot, pets and collection log items, so you can catch up on what you missed.
-- **Admin tools** for Clan Administrators: create events, teams and tasks, and review proof, all without leaving the game.
+- **Admin tools** for clan admins: create events, teams and tasks, and review proof, all without leaving the game.
 
 ## Bingo
 
@@ -104,7 +104,14 @@ It's built from the clan chat broadcasts your clan already has turned on: drops 
 
 ![Admin window: events on the left, the selected event's tasks on the right](docs/images/admin-tasks.png)
 
-Clan Administrators and above see an admin button in the sidebar header. It opens a separate window with your clan's events on the left and the selected event on the right.
+Admin tools need an admin key from the clan Discord:
+
+1. Run `/hub key` in the clan Discord. The bot replies with a key that starts with `tsgadm_`.
+2. Paste it into **Admin key** under **Admin** in the TSG Hub plugin settings.
+
+Once the key checks out, an admin button appears in the sidebar header. It opens a separate window with your clan's events on the left and the selected event on the right. Admins also see and can join hidden events. The key renews itself while you use it. If it stops working, or you lose it, run `/hub key` again for a new one.
+
+Your in-game clan rank doesn't grant admin access.
 
 1. **New event**: pick bingo, Skill of the Week, Boss of the Week or a custom event, then set its name and dates. You can hide scores from players until the end.
 2. **Teams**: add teams. Each gets a permanent invite code; use **Copy code** to share it.
@@ -122,6 +129,7 @@ TSG Hub is **opt-in**. Until you click **Enable sharing** (or turn on **Share ga
 Once you opt in, it sends the following to the TSG Hub service:
 
 - Your RuneScape display name, and the clan name and rank your client detects
+- If you've set an admin key, the key with your display name when the plugin checks it, so admins can see which character uses each key
 - Progress for events you've joined: kill counts, drops, raid completions, collection log unlocks and skill XP
 - Loot you receive while a bingo event you've joined is active, so admins can reconcile a task from earlier drops if its item list changes
 - Manual proof you submit
@@ -133,7 +141,7 @@ In a clan party, your stats, gear and inventory go to the other members through 
 
 Turning sharing off, or disconnecting from an event, deletes your local token and asks the service to revoke it. Progress your team already earned stays with the clan.
 
-Clan membership, rank and progress are reported by each player's client. They're useful for convenience checks, but a modified client can fake them, so admins should double-check high-stakes results.
+Clan membership, rank and progress are reported by each player's client. They're useful for convenience checks, but a modified client can fake them, so admins should double-check high-stakes results. Admin access comes only from Discord-issued admin keys, never from the reported rank.
 
 ## Credits
 

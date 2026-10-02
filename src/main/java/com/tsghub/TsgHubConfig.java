@@ -14,6 +14,9 @@ public interface TsgHubConfig extends Config
 	@ConfigSection(name = "Party", description = "How clan parties look in the TSG Hub sidebar.", position = 10)
 	String partySection = "party";
 
+	@ConfigSection(name = "Admin", description = "Access to TSG Hub admin tools.", position = 20)
+	String adminSection = "admin";
+
 	@ConfigItem(keyName = "dataSharingOptIn", position = 0, section = sharingSection, name = "Share game and clan progress", description = "Opt in to send your RuneScape name, detected clan and rank, PvM progress, loot received during events you join, submitted claims, and clan chat presence and world (so clanmates see you as online in the Members list), and clan drop, pet and collection log broadcasts to the TSG Hub service. Progress and tile-completion notices are local to your chatbox; no other game chat is sent.")
 	default boolean dataSharingOptIn()
 	{
@@ -48,5 +51,11 @@ public interface TsgHubConfig extends Config
 	default boolean partyShowWorlds()
 	{
 		return true;
+	}
+
+	@ConfigItem(keyName = "adminKey", position = 0, section = adminSection, secret = true, name = "Admin key", description = "Your admin key from /hub key in the clan Discord. Unlocks the admin tools. Leave blank if you're not an admin.")
+	default String adminKey()
+	{
+		return "";
 	}
 }
