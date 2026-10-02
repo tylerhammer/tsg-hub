@@ -32,7 +32,6 @@ import net.runelite.api.GameState;
 import net.runelite.api.clan.ClanChannel;
 import net.runelite.api.clan.ClanSettings;
 import net.runelite.api.clan.ClanMember;
-import net.runelite.api.clan.ClanRank;
 import net.runelite.api.events.ClanChannelChanged;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.StatChanged;
@@ -68,8 +67,6 @@ import com.tsghub.TsgHubUi.Tone;
 @PluginDescriptor(name = "TSG Hub", description = "Type Shiii Gaming clan events and progress tracking", tags = {"tsg", "clan", "bingo", "events"})
 public class TsgHubPlugin extends Plugin
 {
-	// Dev mode only; must match the server's TEST_MANAGER_NAMES.
-	private static final java.util.Set<String> DEV_TEST_MANAGER_NAMES = parseNames(System.getProperty("tsghub.testManagers", ""));
 	private static final String SERVICE_URL = "https://api.typeshiigaming.com";
 	private static final long BOARD_AUTO_REFRESH_SECONDS = 15;
 	private static final Set<Integer> PVM_PET_ITEM_IDS = Set.of(11995, 12643, 12644, 12645, 12646, 12647, 12648, 12649, 12650, 12651, 12652, 12654, 12655, 12703, 12816, 12921, 12939, 12940, 13178, 13179, 13180, 13181, 13182, 13225, 13247, 13262, 20693, 20851, 21273, 21291, 21748, 21992, 22318, 22319, 22376, 22378, 22380, 22382, 22384, 22473, 22663, 22746, 22748, 22750, 22752, 23495, 23757, 23759, 23760, 24491, 25748, 25749, 25750, 25751, 25752, 25836, 25842, 25843, 26348, 27352, 27386, 27590, 27592, 27593, 27649, 27650, 27651, 28246, 28248, 28250, 28252, 28801, 28960, 29836, 30152, 30154, 30622, 30888, 31130, 31285, 31287);
@@ -100,7 +97,6 @@ public class TsgHubPlugin extends Plugin
 	private final Set<String> attemptedKillCountClaims = ConcurrentHashMap.newKeySet();
 	private final Map<String, Integer> recentLootEvents = new ConcurrentHashMap<>();
 	private final Map<String, Integer> syncedClanRanks = new ConcurrentHashMap<>();
-	private static final long CLAN_ADMIN_TOKEN_MARGIN_MILLIS = 60_000;
 	private static final int PET_CHECK_TICKS = 5;
 	private static final int MAX_LOOT_LOG_ITEMS = 50;
 	private static final int CLAN_CHECK_TICKS = 50;
@@ -119,7 +115,9 @@ public class TsgHubPlugin extends Plugin
 	private volatile String hubClanName = "TSGaming";
 	private volatile List<PvmTask> pvmTasks = Collections.emptyList();
 	private volatile String taskEventId = "";
-	private volatile String staleClanAdminToken = "";
+	private volatile boolean adminVerified;
+	private volatile String checkedAdminIdentity = "";
+	private volatile String rejectedAdminKey = "";
 	private volatile TsgHubApi api;
 	private TsgHubSocket socket;
 	private TsgHubCompetitionTracker competitions;
@@ -217,7 +215,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		if (!canManageOrganizerUi())
 		{
-			memberStatus("Admin tools are for the event creator and Clan Administrators or higher.", Tone.ERROR);
+			memberStatus("Admin tools need an admin key. Run /hub key in the clan Discord and paste it in the plugin settings.", Tone.ERROR);
 			return;
 		}
 		SwingUtilities.invokeLater(() -> {
@@ -298,24 +296,73 @@ public class TsgHubPlugin extends Plugin
 
 	boolean canManageOrganizerUi()
 	{
-		if (!isInHubClan()) return false;
-		return detectedClanRank >= ClanRank.ADMINISTRATOR.getRank() || isDevTestManager();
+		return isInHubClan() && adminVerified;
 	}
 
-	private boolean isDevTestManager()
+	private String configuredAdminKey()
 	{
-		return developerMode && DEV_TEST_MANAGER_NAMES.contains(normalizePlayerName(detectedPlayerName));
+		String key = config.adminKey();
+		return key == null ? "" : key.trim();
 	}
 
-	private static java.util.Set<String> parseNames(String csv)
+	private String adminKey()
 	{
-		java.util.Set<String> names = new java.util.HashSet<>();
-		for (String name : csv.split(","))
+		return adminVerified ? configuredAdminKey() : "";
+	}
+
+	private void checkAdminKey()
+	{
+		String key = configuredAdminKey();
+		String name = detectedPlayerName;
+		if (key.isEmpty())
 		{
-			String normalized = name.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]", "");
-			if (!normalized.isEmpty()) names.add(normalized);
+			checkedAdminIdentity = "";
+			if (adminVerified) setAdminVerified(false);
+			return;
 		}
-		return names;
+		if (name.isEmpty() || !isInHubClan() || !config.dataSharingOptIn()) return;
+		String identity = key + "\n" + name;
+		if (identity.equals(checkedAdminIdentity) || key.equals(rejectedAdminKey) || executor == null || executor.isShutdown()) return;
+		checkedAdminIdentity = identity;
+		executor.submit(() -> {
+			try
+			{
+				verifyAdminKey(key, name);
+				if (!identity.equals(checkedAdminIdentity)) return;
+				setAdminVerified(true);
+				loadClanEvents();
+			}
+			catch (TsgHubApi.HttpError e)
+			{
+				if (e.status == 401) adminKeyRejected(key);
+				else checkedAdminIdentity = "";
+			}
+			catch (Exception e) { checkedAdminIdentity = ""; }
+		});
+	}
+
+	private void verifyAdminKey(String key, String name) throws Exception
+	{
+		String encodedName = java.net.URLEncoder.encode(name, java.nio.charset.StandardCharsets.UTF_8.name());
+		api().request("GET", "/v1/me?displayName=" + encodedName, key, null);
+	}
+
+	private void adminKeyRejected(String key)
+	{
+		if (!key.equals(configuredAdminKey())) return;
+		rejectedAdminKey = key;
+		setAdminVerified(false);
+		memberStatus("Your admin key wasn't accepted. It may have expired or been revoked. Run /hub key in the clan Discord and paste the new key in the plugin settings.", Tone.ERROR);
+	}
+
+	private void setAdminVerified(boolean verified)
+	{
+		adminVerified = verified;
+		boolean access = canManageOrganizerUi();
+		SwingUtilities.invokeLater(() -> {
+			if (sidebar != null) sidebar.setOrganizerAccess(access);
+			if (!access && hubWindow != null) hubWindow.setVisible(false);
+		});
 	}
 
 	private String normalizePlayerName(String name)
@@ -348,6 +395,8 @@ public class TsgHubPlugin extends Plugin
 		inClanChat = false;
 		clanCheckTicks = 0;
 		sidebarRouted = false;
+		adminVerified = false;
+		checkedAdminIdentity = "";
 		syncSocketNow();
 		if (competitions != null) competitions.clear();
 		SwingUtilities.invokeLater(() -> {
@@ -388,6 +437,14 @@ public class TsgHubPlugin extends Plugin
 		if ("shareLocation".equals(event.getKey()))
 		{
 			SwingUtilities.invokeLater(() -> sidebar.locationSharingChanged());
+			return;
+		}
+		if ("adminKey".equals(event.getKey()))
+		{
+			checkedAdminIdentity = "";
+			rejectedAdminKey = "";
+			if (adminVerified) setAdminVerified(false);
+			checkAdminKey();
 			return;
 		}
 		if (!"dataSharingOptIn".equals(event.getKey())) return;
@@ -439,6 +496,7 @@ public class TsgHubPlugin extends Plugin
 		if (!sidebarRouted && !detectedPlayerName.isEmpty()) routeSidebar();
 		else if (sidebarRouted && (routedAsHubMember != isInHubClan() || routedClanPending != clanPending())) routeSidebar();
 		else if (client.getGameState() != GameState.LOGGED_IN && !sidebarRouted) SwingUtilities.invokeLater(() -> sidebar.showLoggedOut());
+		checkAdminKey();
 	}
 
 	@net.runelite.client.eventbus.Subscribe
@@ -464,7 +522,11 @@ public class TsgHubPlugin extends Plugin
 		routedAsHubMember = isInHubClan();
 		boolean pending = clanPending();
 		routedClanPending = pending;
-		if (loggedIn && !pending && isInHubClan() && config.dataSharingOptIn()) syncIdentity();
+		if (loggedIn && !pending && isInHubClan() && config.dataSharingOptIn())
+		{
+			syncIdentity();
+			checkAdminKey();
+		}
 		SwingUtilities.invokeLater(() -> {
 			if (!loggedIn) { sidebar.showLoggedOut(); return; }
 			if (pending) { sidebar.showCheckingClan(); return; }
@@ -505,7 +567,7 @@ public class TsgHubPlugin extends Plugin
 		executor.submit(() -> {
 			try
 			{
-				JsonObject result = api().request("POST", "/v1/join", null, payload);
+				JsonObject result = api().request("POST", "/v1/join", adminKey(), payload);
 				String joinedEventId = result.getAsJsonObject("member").get("eventId").getAsString();
 				String memberToken = result.get("token").getAsString();
 				String memberName = result.getAsJsonObject("member").get("displayName").getAsString();
@@ -564,13 +626,13 @@ public class TsgHubPlugin extends Plugin
 		TsgHubSession.set("organizerEventId", "");
 		TsgHubSession.removePrefix("memberToken:");
 		TsgHubSession.removePrefix("memberName:");
-		TsgHubSession.removePrefix("clanAdminToken:");
-		TsgHubSession.removePrefix("clanAdminExpiresAt:");
 		TsgHubSession.removePrefix("organizerToken:");
 		TsgHubSession.removePrefix("organizerName:");
 		attemptedXpClaims.clear();
 		syncedClanRanks.clear();
 		clearTaskCache();
+		checkedAdminIdentity = "";
+		if (adminVerified) setAdminVerified(false);
 		if (boardOverlay != null) boardOverlay.setVisible(false);
 	}
 
@@ -578,8 +640,6 @@ public class TsgHubPlugin extends Plugin
 	{
 		if (executor == null || executor.isShutdown()) return;
 		java.util.Map<String, String> sessions = new java.util.HashMap<>();
-		List<String> organizerSessions = new ArrayList<>();
-		for (String key : TsgHubSession.keysWithPrefix("clanAdminToken:")) organizerSessions.add(TsgHubSession.get(key));
 		for (String key : TsgHubSession.keysWithPrefix("memberToken:"))
 		{
 			String eventId = key.substring("memberToken:".length());
@@ -588,16 +648,11 @@ public class TsgHubPlugin extends Plugin
 		String activeEventId = TsgHubSession.get("eventId");
 		String activeToken = TsgHubSession.get("token");
 		if (!activeEventId.isEmpty() && !activeToken.isEmpty()) sessions.putIfAbsent(activeEventId, activeToken);
-		if (sessions.isEmpty() && organizerSessions.isEmpty()) return;
+		if (sessions.isEmpty()) return;
 		executor.submit(() -> {
 			for (java.util.Map.Entry<String, String> session : sessions.entrySet())
 			{
 				try { api().request("POST", "/v1/events/" + session.getKey() + "/disconnect", session.getValue(), new JsonObject()); }
-				catch (Exception e) { /* Local disconnect still succeeds while the service is unavailable. */ }
-			}
-			for (String token : organizerSessions)
-			{
-				try { api().request("POST", "/v1/organizer-session/disconnect", token, new JsonObject()); }
 				catch (Exception e) { /* Local disconnect still succeeds while the service is unavailable. */ }
 			}
 		});
@@ -737,7 +792,7 @@ public class TsgHubPlugin extends Plugin
 		executor.submit(() -> {
 			try
 			{
-				JsonObject result = api().request("POST", "/v1/events/" + eventId + "/participate", null, body);
+				JsonObject result = api().request("POST", "/v1/events/" + eventId + "/participate", adminKey(), body);
 				TsgHubSession.set("memberToken:" + eventId, result.get("token").getAsString());
 				TsgHubSession.set("memberName:" + eventId, result.getAsJsonObject("member").get("displayName").getAsString());
 				memberStatus("You're in! Your progress counts from now.", Tone.SUCCESS);
@@ -848,13 +903,7 @@ public class TsgHubPlugin extends Plugin
 		executor.submit(() -> {
 			try
 			{
-				String credential = null;
-				if (canUseClanAdminSession())
-				{
-					try { credential = ensureOrganizerListCredential(); }
-					catch (Exception ignored) { credential = null; }
-				}
-				JsonObject response = organizerRequest("GET", "/v1/events?clanName=" + encodedClan, credential, null);
+				JsonObject response = api().request("GET", "/v1/events?clanName=" + encodedClan, adminKey(), null);
 				JsonArray events = response.getAsJsonArray("events");
 				for (int i = 0; i < events.size(); i++)
 				{
@@ -961,8 +1010,7 @@ public class TsgHubPlugin extends Plugin
 		executor.submit(() -> {
 			try
 			{
-				String credential = canUseClanAdminSession() ? ensureOrganizerListCredential() : organizerCredential(eventId.trim());
-				JsonObject event = organizerRequest("GET", "/v1/events/" + eventId.trim() + "/organizer", credential, null);
+				JsonObject event = organizerRequest("GET", "/v1/events/" + eventId.trim() + "/organizer", organizerCredential(eventId.trim()), null);
 				SwingUtilities.invokeLater(() -> panel.openOrganizerEvent(event));
 				organizerStatus("", Tone.INFO);
 			}
@@ -978,7 +1026,7 @@ public class TsgHubPlugin extends Plugin
 		executor.submit(() -> {
 			try
 			{
-				String credential = ensureOrganizerListCredential();
+				String credential = organizerListCredential();
 				if (credential.isEmpty()) throw new IllegalStateException("Join or create an event first");
 				JsonObject response = organizerRequest("GET", "/v1/managed-events", credential, null);
 				SwingUtilities.invokeLater(() -> panel.setManagedEvents(response.getAsJsonArray("events")));
@@ -991,9 +1039,10 @@ public class TsgHubPlugin extends Plugin
 	{
 		if (!isInHubClan()) { eventFormFailed("TSG Hub is only for members of the " + hubClanName + " clan."); return; }
 		if (!config.dataSharingOptIn()) { eventFormFailed("Turn on sharing in the TSG Hub sidebar first."); return; }
-		if (detectedClanRank < ClanRank.ADMINISTRATOR.getRank() && !isDevTestManager())
+		String credential = adminKey();
+		if (credential.isEmpty())
 		{
-			eventFormFailed("Creating events requires Clan Administrator rank or higher.");
+			eventFormFailed("Creating events needs an admin key from /hub key in the clan Discord.");
 			return;
 		}
 		if (detectedClanName.isEmpty()) { eventFormFailed("No clan detected. Log in to a character in your clan first."); return; }
@@ -1015,7 +1064,7 @@ public class TsgHubPlugin extends Plugin
 		executor.submit(() -> {
 			try
 			{
-				JsonObject response = api().request("POST", "/v1/events", null, body);
+				JsonObject response = organizerRequest("POST", "/v1/events", credential, body);
 				JsonObject result = response.getAsJsonObject("event");
 				String id = result.get("id").getAsString();
 				TsgHubSession.set("organizerEventId", id);
@@ -1911,25 +1960,17 @@ public class TsgHubPlugin extends Plugin
 		try { return api().request(method, path, credential, payload); }
 		catch (TsgHubApi.HttpError e)
 		{
-			if (e.status != 401 && e.status != 403) throw e;
-			String fresh = refreshClanAdminToken(credential);
-			if (fresh.isEmpty()) throw e;
-			return api().request(method, path, fresh, payload);
+			// A revoked key gets 401 or 403 depending on the route, so confirm before dropping admin access.
+			if ((e.status == 401 || e.status == 403) && !credential.isEmpty() && credential.equals(adminKey())) recheckAdminKey(credential);
+			throw e;
 		}
 	}
 
-	private synchronized String refreshClanAdminToken(String staleToken) throws Exception
+	private void recheckAdminKey(String key)
 	{
-		if (staleToken == null || staleToken.isEmpty()) return "";
-		if (!staleToken.equals(staleClanAdminToken))
-		{
-			String clanKey = normalizePlayerName(detectedClanName);
-			if (clanKey.isEmpty() || !staleToken.equals(TsgHubSession.get("clanAdminToken:" + clanKey))) return "";
-			TsgHubSession.set("clanAdminToken:" + clanKey, "");
-			TsgHubSession.set("clanAdminExpiresAt:" + clanKey, "");
-			staleClanAdminToken = staleToken;
-		}
-		return ensureOrganizerListCredential();
+		try { verifyAdminKey(key, detectedPlayerName); }
+		catch (TsgHubApi.HttpError e) { if (e.status == 401) adminKeyRejected(key); }
+		catch (Exception ignored) { /* Keep admin access while the service is unavailable. */ }
 	}
 
 	private String organizerCredential(String eventId)
@@ -1937,14 +1978,14 @@ public class TsgHubPlugin extends Plugin
 		String ownerToken = TsgHubSession.get("organizerToken:" + eventId);
 		String creatorName = TsgHubSession.get("organizerName:" + eventId);
 		if (!ownerToken.isEmpty() && !creatorName.isEmpty() && creatorName.equalsIgnoreCase(detectedPlayerName)) return ownerToken;
-		String adminToken = savedClanAdminToken();
+		String adminToken = adminKey();
 		if (!adminToken.isEmpty()) return adminToken;
 		return TsgHubSession.get("token");
 	}
 
 	private String organizerListCredential()
 	{
-		String adminToken = savedClanAdminToken();
+		String adminToken = adminKey();
 		if (!adminToken.isEmpty()) return adminToken;
 		String eventId = getOrganizerEventId();
 		if (!eventId.isEmpty())
@@ -1961,52 +2002,5 @@ public class TsgHubPlugin extends Plugin
 			if (!creator.isEmpty() && creator.equalsIgnoreCase(detectedPlayerName)) return TsgHubSession.get(key);
 		}
 		return "";
-	}
-
-	private String ensureOrganizerListCredential() throws Exception
-	{
-		String existing = organizerListCredential();
-		if (!canUseClanAdminSession()) return existing;
-		String clanKey = normalizePlayerName(detectedClanName);
-		if (clanKey.isEmpty()) return existing;
-		String tokenKey = "clanAdminToken:" + clanKey;
-		String expiresKey = "clanAdminExpiresAt:" + clanKey;
-		String previousToken = TsgHubSession.get(tokenKey);
-		if (!previousToken.isEmpty() && clanAdminExpiresAt(clanKey) > System.currentTimeMillis() + CLAN_ADMIN_TOKEN_MARGIN_MILLIS) return previousToken;
-		if (!previousToken.isEmpty())
-		{
-			try { api().request("POST", "/v1/organizer-session/disconnect", previousToken, new JsonObject()); }
-			catch (Exception ignored) { /* A restarted service has already forgotten the previous temporary token. */ }
-		}
-		JsonObject body = new JsonObject();
-		body.addProperty("displayName", detectedPlayerName);
-		body.addProperty("clanName", detectedClanName);
-		body.addProperty("clanRank", detectedClanRank);
-		JsonObject session = api().request("POST", "/v1/organizer-session", null, body);
-		String token = session.get("token").getAsString();
-		long validUntil = java.time.Instant.parse(session.get("expiresAt").getAsString()).toEpochMilli();
-		TsgHubSession.set(tokenKey, token);
-		TsgHubSession.set(expiresKey, Long.toString(validUntil));
-		return token;
-	}
-
-	private String savedClanAdminToken()
-	{
-		if (!canUseClanAdminSession()) return "";
-		String clanKey = normalizePlayerName(detectedClanName);
-		if (clanKey.isEmpty()) return "";
-		return clanAdminExpiresAt(clanKey) > System.currentTimeMillis() ? TsgHubSession.get("clanAdminToken:" + clanKey) : "";
-	}
-
-	private long clanAdminExpiresAt(String clanKey)
-	{
-		try { return Long.parseLong(TsgHubSession.get("clanAdminExpiresAt:" + clanKey)); }
-		catch (NumberFormatException ignored) { return 0; }
-	}
-
-	private boolean canUseClanAdminSession()
-	{
-		return isDevTestManager()
-			|| detectedClanRank >= ClanRank.ADMINISTRATOR.getRank();
 	}
 }

@@ -41,8 +41,6 @@ tasks.register('run', JavaExec) {
 	}
 	args '--developer-mode', '--debug'
 	systemProperty 'tsghub.serviceUrl', System.getenv('TSGHUB_URL') ?: 'http://127.0.0.1:8787'
-	// Local test organizers (developer mode only); should match the server's TEST_MANAGER_NAMES.
-	systemProperty 'tsghub.testManagers', System.getenv('TSGHUB_TEST_MANAGERS') ?: ''
 	// Test with another clan (developer mode only); should match the server's CLAN_NAME.
 	systemProperty 'tsghub.clanName', System.getenv('TSGHUB_CLAN') ?: ''
 }

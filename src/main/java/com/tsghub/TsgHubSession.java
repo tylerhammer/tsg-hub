@@ -17,15 +17,23 @@ final class TsgHubSession
 	static void init(ConfigManager manager)
 	{
 		configManager = manager;
-		clearLegacyGlobalKeys(manager);
+		clearLegacyKeys(manager);
 	}
 
-	private static void clearLegacyGlobalKeys(ConfigManager manager)
+	private static void clearLegacyKeys(ConfigManager manager)
 	{
 		for (String key : manager.getConfigurationKeys(GROUP + "."))
 		{
-			if (key.startsWith(PROFILE_PREFIX)) continue;
-			manager.unsetConfiguration(GROUP, key.substring(GROUP.length() + 1));
+			if (!key.startsWith(PROFILE_PREFIX))
+			{
+				manager.unsetConfiguration(GROUP, key.substring(GROUP.length() + 1));
+				continue;
+			}
+			int split = key.indexOf('.', PROFILE_PREFIX.length());
+			if (split < 0) continue;
+			String name = key.substring(split + 1);
+			if (name.startsWith(encode("clanAdminToken:")) || name.startsWith(encode("clanAdminExpiresAt:")))
+				manager.unsetConfiguration(GROUP, key.substring(GROUP.length() + 1, split), name);
 		}
 	}
 
