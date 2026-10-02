@@ -26,6 +26,8 @@ final class TsgHubSocket
 		void onReady();
 
 		void onChanged(String topic, String eventId);
+
+		void onAdminRevoked(String token);
 	}
 
 	private static final int CLOSE_NORMAL = 1000;
@@ -70,6 +72,7 @@ final class TsgHubSocket
 	private final Map<String, String> rejectedTokens = new HashMap<>();
 	private WebSocket socket;
 	private JsonObject presence;
+	private String adminToken = "";
 	private ScheduledFuture<?> retry;
 	private String clanName = "";
 	private String rejectedClan = "";
@@ -107,6 +110,7 @@ final class TsgHubSocket
 		subscriptions.clear();
 		rejectedTokens.clear();
 		presence = null;
+		adminToken = "";
 	}
 
 	synchronized void sync(Map<String, String> tokens, boolean inClanChat)
@@ -137,6 +141,22 @@ final class TsgHubSocket
 		presence = payload;
 		if (live) sendPresence();
 		return live;
+	}
+
+	synchronized void admin(String token)
+	{
+		String wanted = token == null ? "" : token;
+		if (wanted.equals(adminToken)) return;
+		adminToken = wanted;
+		if (ready && socket != null && !adminToken.isEmpty()) sendAdmin();
+	}
+
+	private void sendAdmin()
+	{
+		JsonObject message = new JsonObject();
+		message.addProperty("type", "admin");
+		message.addProperty("token", adminToken);
+		socket.send(message.toString());
 	}
 
 	private void sendPresence()
@@ -186,6 +206,7 @@ final class TsgHubSocket
 			send("subscribe", entry.getKey(), entry.getValue().token, entry.getValue().inClanChat);
 		}
 		if (presence != null) sendPresence();
+		if (!adminToken.isEmpty()) sendAdmin();
 		executor.execute(listener::onReady);
 	}
 
@@ -194,6 +215,14 @@ final class TsgHubSocket
 		if (ws != socket) return;
 		Subscription subscription = subscriptions.remove(eventId);
 		if (subscription != null) rejectedTokens.put(eventId, subscription.token);
+	}
+
+	private synchronized void adminRevoked(WebSocket ws)
+	{
+		if (ws != socket || adminToken.isEmpty()) return;
+		String token = adminToken;
+		adminToken = "";
+		executor.execute(() -> listener.onAdminRevoked(token));
 	}
 
 	private synchronized void dropped(WebSocket ws, int code, int status)
@@ -253,8 +282,12 @@ final class TsgHubSocket
 					String topic = string(message, "topic");
 					executor.execute(() -> listener.onChanged(topic, eventId));
 					break;
+				case "admin.revoked":
+					adminRevoked(ws);
+					break;
 				case "error":
 					if (!eventId.isEmpty()) rejected(ws, eventId);
+					else if ("admin".equals(string(message, "topic")) && "401".equals(string(message, "status"))) adminRevoked(ws);
 					log.debug("TSG Hub socket error: {}", string(message, "message"));
 					break;
 				default:

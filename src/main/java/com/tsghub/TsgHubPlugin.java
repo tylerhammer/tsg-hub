@@ -144,6 +144,7 @@ public class TsgHubPlugin extends Plugin
 		{
 			@Override public void onReady() { resyncLiveViews(); }
 			@Override public void onChanged(String topic, String eventId) { liveChange(topic, eventId); }
+			@Override public void onAdminRevoked(String token) { adminKeyRejected(token); }
 		});
 		executor.scheduleAtFixedRate(this::socketTick, 2, 5, TimeUnit.SECONDS);
 		executor.scheduleAtFixedRate(unlessLive(this::autoRefreshBoard), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
@@ -327,7 +328,8 @@ public class TsgHubPlugin extends Plugin
 		executor.submit(() -> {
 			try
 			{
-				verifyAdminKey(key, name);
+				String encodedName = java.net.URLEncoder.encode(name, java.nio.charset.StandardCharsets.UTF_8.name());
+				api().request("GET", "/v1/me?displayName=" + encodedName, key, null);
 				if (!identity.equals(checkedAdminIdentity)) return;
 				setAdminVerified(true);
 				loadClanEvents();
@@ -341,12 +343,6 @@ public class TsgHubPlugin extends Plugin
 		});
 	}
 
-	private void verifyAdminKey(String key, String name) throws Exception
-	{
-		String encodedName = java.net.URLEncoder.encode(name, java.nio.charset.StandardCharsets.UTF_8.name());
-		api().request("GET", "/v1/me?displayName=" + encodedName, key, null);
-	}
-
 	private void adminKeyRejected(String key)
 	{
 		if (!key.equals(configuredAdminKey())) return;
@@ -358,6 +354,7 @@ public class TsgHubPlugin extends Plugin
 	private void setAdminVerified(boolean verified)
 	{
 		adminVerified = verified;
+		syncSocketNow();
 		boolean access = canManageOrganizerUi();
 		SwingUtilities.invokeLater(() -> {
 			if (sidebar != null) sidebar.setOrganizerAccess(access);
@@ -735,6 +732,7 @@ public class TsgHubPlugin extends Plugin
 		String memberToken = competitionId == null ? "" : TsgHubSession.get("memberToken:" + competitionId);
 		if (!memberToken.isEmpty()) tokens.putIfAbsent(competitionId, memberToken);
 		socket.sync(tokens, inClanChat);
+		socket.admin(adminKey());
 		if (!socket.isLive()) pollTeamNotifications();
 	}
 
@@ -1960,17 +1958,9 @@ public class TsgHubPlugin extends Plugin
 		try { return api().request(method, path, credential, payload); }
 		catch (TsgHubApi.HttpError e)
 		{
-			// A revoked key gets 401 or 403 depending on the route, so confirm before dropping admin access.
-			if ((e.status == 401 || e.status == 403) && !credential.isEmpty() && credential.equals(adminKey())) recheckAdminKey(credential);
+			if (e.status == 401 && !credential.isEmpty() && credential.equals(adminKey())) adminKeyRejected(credential);
 			throw e;
 		}
-	}
-
-	private void recheckAdminKey(String key)
-	{
-		try { verifyAdminKey(key, detectedPlayerName); }
-		catch (TsgHubApi.HttpError e) { if (e.status == 401) adminKeyRejected(key); }
-		catch (Exception ignored) { /* Keep admin access while the service is unavailable. */ }
 	}
 
 	private String organizerCredential(String eventId)
