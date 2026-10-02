@@ -100,6 +100,8 @@ public class TsgHubPlugin extends Plugin
 	private static final int PET_CHECK_TICKS = 5;
 	private static final int MAX_LOOT_LOG_ITEMS = 50;
 	private static final int CLAN_CHECK_TICKS = 50;
+	private static final long ADMIN_CHECK_RETRY_SECONDS = 15;
+	private static final long ADMIN_CHECK_MAX_RETRY_SECONDS = 300;
 	private volatile int clanCheckTicks;
 	private int petCheckTicks;
 	private Set<Integer> inventoryPets = Collections.emptySet();
@@ -118,6 +120,7 @@ public class TsgHubPlugin extends Plugin
 	private volatile boolean adminVerified;
 	private volatile String checkedAdminIdentity = "";
 	private volatile String rejectedAdminKey = "";
+	private volatile int adminCheckAttempts;
 	private volatile TsgHubApi api;
 	private TsgHubSocket socket;
 	private TsgHubCompetitionTracker competitions;
@@ -331,16 +334,25 @@ public class TsgHubPlugin extends Plugin
 				String encodedName = java.net.URLEncoder.encode(name, java.nio.charset.StandardCharsets.UTF_8.name());
 				api().request("GET", "/v1/me?displayName=" + encodedName, key, null);
 				if (!identity.equals(checkedAdminIdentity)) return;
+				adminCheckAttempts = 0;
 				setAdminVerified(true);
 				loadClanEvents();
 			}
 			catch (TsgHubApi.HttpError e)
 			{
 				if (e.status == 401) adminKeyRejected(key);
-				else checkedAdminIdentity = "";
+				else retryAdminCheck(identity);
 			}
-			catch (Exception e) { checkedAdminIdentity = ""; }
+			catch (Exception e) { retryAdminCheck(identity); }
 		});
+	}
+
+	private void retryAdminCheck(String identity)
+	{
+		if (!identity.equals(checkedAdminIdentity)) return;
+		checkedAdminIdentity = "";
+		long delay = Math.min(ADMIN_CHECK_MAX_RETRY_SECONDS, ADMIN_CHECK_RETRY_SECONDS << Math.min(adminCheckAttempts++, 5));
+		if (executor != null && !executor.isShutdown()) executor.schedule(this::checkAdminKey, delay, TimeUnit.SECONDS);
 	}
 
 	private void adminKeyRejected(String key)
@@ -440,6 +452,7 @@ public class TsgHubPlugin extends Plugin
 		{
 			checkedAdminIdentity = "";
 			rejectedAdminKey = "";
+			adminCheckAttempts = 0;
 			if (adminVerified) setAdminVerified(false);
 			checkAdminKey();
 			return;
