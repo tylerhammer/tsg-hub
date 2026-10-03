@@ -57,6 +57,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final TsgHubUi.RefreshIcon refreshIcon = new TsgHubUi.RefreshIcon();
 	private final JButton refresh = TsgHubUi.iconButton(refreshIcon, "Refresh");
 	private final JButton organizer = TsgHubUi.iconButton(new TsgHubUi.OrganizerIcon(), "Admin tools");
+	private final JButton settings = TsgHubUi.iconButton(new TsgHubUi.CogIcon(), "Plugin settings");
+	private final JPanel footer = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
 	private final TsgHubUi.StatusLine status = new TsgHubUi.StatusLine(TEXT_W);
 
 	private final CardLayout centerLayout = new CardLayout();
@@ -75,7 +77,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final JLabel joinError = TsgHubUi.label("", TsgHubUi.ERROR, FontManager.getRunescapeSmallFont());
 
 	private View view = View.LOGGED_OUT;
-	private String plainTitle = "TSG Hub";
 	private JsonArray events;
 	private JsonObject previewEvent;
 	private JsonObject boardEvent;
@@ -149,6 +150,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		center.add(buildBoard(), "board");
 		center.add(TsgHubUi.scroll(groupsPage), "groups");
 		add(center, BorderLayout.CENTER);
+		add(buildFooter(), BorderLayout.SOUTH);
 
 		codeField.setToolTipText("Team code from an admin");
 		codeField.putClientProperty("JTextField.placeholderText", "Team code, e.g. DRGN42");
@@ -225,8 +227,10 @@ final class TsgHubSidebarPanel extends PluginPanel
 		refreshSlot.setOpaque(false);
 		refreshSlot.setPreferredSize(refresh.getPreferredSize());
 		refreshSlot.add(refresh);
+		settings.addActionListener(e -> plugin.openSettings());
 		actions.add(organizer);
 		actions.add(refreshSlot);
+		actions.add(settings);
 		titleRow.add(actions, BorderLayout.EAST);
 
 		JPanel below = TsgHubUi.stack();
@@ -266,7 +270,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 	void setOrganizerAccess(boolean allowed)
 	{
 		organizer.setVisible(allowed);
-		layoutHeader();
 	}
 
 	void setStatus(String message, TsgHubUi.Tone tone)
@@ -1273,25 +1276,30 @@ final class TsgHubSidebarPanel extends PluginPanel
 		dropsWanted = next == View.DROPS;
 		if (next != View.COMPETITION) openCompetitionId = null;
 		centerLayout.show(center, next == View.BOARD ? "board" : next == View.GROUPS ? "groups" : "page");
+		footer.setVisible(next == View.HOME);
 		back.setToolTipText(next == View.EVENTS || next == View.GROUPS || next == View.MEMBERS || next == View.DROPS ? "Home" : "Back to events");
-		layoutHeader();
+	}
+
+	private JPanel buildFooter()
+	{
+		JButton discord = TsgHubUi.iconButton(new TsgHubUi.DiscordIcon(), "Copy an invite to the clan Discord");
+		discord.addActionListener(e -> {
+			discord.setEnabled(false);
+			plugin.copyDiscordInvite(() -> discord.setEnabled(true));
+		});
+		footer.setOpaque(false);
+		footer.add(discord);
+		footer.setVisible(false);
+		return footer;
 	}
 
 	private void setHeader(String titleText, String subtitleText, boolean showBack, boolean showRefresh)
 	{
-		plainTitle = titleText;
 		title.setText(TsgHubUi.html(TsgHubUi.escape(titleText), 150));
 		subtitle.setText(subtitleText);
 		subtitle.setVisible(!subtitleText.isEmpty());
 		back.setVisible(showBack);
 		refresh.setVisible(showRefresh);
-		layoutHeader();
-	}
-
-	private void layoutHeader()
-	{
-		actions.setVisible(refresh.isVisible() || organizer.isVisible());
-		titleRow.setVisible(!plainTitle.isEmpty() || actions.isVisible());
 	}
 
 	private void renderEvents()

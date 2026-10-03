@@ -17,6 +17,8 @@ import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.geom.Area;
+import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
@@ -805,6 +807,48 @@ final class TsgHubUi
 			g.drawLine(8, 1, 8, 5);
 			g.drawLine(6, 3, 8, 5);
 			g.drawLine(10, 3, 8, 5);
+		}
+	}
+
+	static final class CogIcon extends HoverIcon
+	{
+		CogIcon() { super(16); }
+		@Override void paint(Graphics2D g, Component c)
+		{
+			g.drawOval(3, 3, 10, 10);
+			g.drawOval(6, 6, 4, 4);
+			g.setStroke(new BasicStroke(2.6f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND));
+			for (int i = 0; i < 8; i++)
+			{
+				double a = Math.PI / 4 * i;
+				g.draw(new java.awt.geom.Line2D.Double(8 + 5 * Math.cos(a), 8 + 5 * Math.sin(a), 8 + 7.5 * Math.cos(a), 8 + 7.5 * Math.sin(a)));
+			}
+		}
+	}
+
+	static final class DiscordIcon extends HoverIcon
+	{
+		private static final Color BLURPLE = new Color(88, 101, 242);
+
+		DiscordIcon() { super(20); }
+		@Override Color hoverColor() { return BLURPLE; }
+		@Override void paint(Graphics2D g, Component c)
+		{
+			Path2D body = new Path2D.Double();
+			body.moveTo(5, 3.5);
+			body.quadTo(10, 2.5, 15, 3.5);
+			body.curveTo(18, 7, 19.5, 11, 19, 15);
+			body.quadTo(17, 17, 14.5, 17.5);
+			body.lineTo(13.5, 15.5);
+			body.quadTo(10, 16.8, 6.5, 15.5);
+			body.lineTo(5.5, 17.5);
+			body.quadTo(3, 17, 1, 15);
+			body.curveTo(0.5, 11, 2, 7, 5, 3.5);
+			body.closePath();
+			Area face = new Area(body);
+			face.subtract(new Area(new Ellipse2D.Double(5.5, 8.5, 3, 3.5)));
+			face.subtract(new Area(new Ellipse2D.Double(11.5, 8.5, 3, 3.5)));
+			g.fill(face);
 		}
 	}
 
