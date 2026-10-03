@@ -76,7 +76,7 @@ public class ReadmeScreenshots
 		TsgHubSidebarPanel sidebar = new TsgHubSidebarPanel(plugin, new GroupMembersPanel(new GroupViewSettings() {}, null, null));
 
 		sidebar.showSharingOff();
-		shoot(sidebar, SIDEBAR_W, 210, "sharing");
+		shoot(sidebar, SIDEBAR_W, 220, "sharing");
 
 		JsonArray events = data.getAsJsonObject("eventList").getAsJsonArray("events");
 		for (int i = 0; i < events.size(); i++)
@@ -96,7 +96,7 @@ public class ReadmeScreenshots
 		}
 		sidebar.setDrops(drops);
 		sidebar.showHome();
-		shoot(sidebar, SIDEBAR_W, 274, "home");
+		shoot(sidebar, SIDEBAR_W, 300, "home");
 		sidebar.showEventList();
 		BufferedImage eventList = shoot(sidebar, SIDEBAR_W, 480, "events");
 
