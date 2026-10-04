@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Component;
+import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
@@ -38,6 +39,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.text.JTextComponent;
 import net.runelite.api.clan.ClanRank;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.components.materialtabs.MaterialTab;
@@ -704,8 +706,20 @@ final class TsgHubPanel extends JPanel
 
 	boolean editingText()
 	{
-		Component owner = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-		return owner instanceof javax.swing.text.JTextComponent && SwingUtilities.isDescendingFrom(owner, this);
+		return hasFocusedTextComponent(this);
+	}
+
+	private boolean hasFocusedTextComponent(Component component)
+	{
+		if (component instanceof JTextComponent && component.isFocusOwner()) return true;
+		if (component instanceof Container)
+		{
+			for (Component child : ((Container) component).getComponents())
+			{
+				if (hasFocusedTextComponent(child)) return true;
+			}
+		}
+		return false;
 	}
 
 	void showEvent(JsonObject event)
