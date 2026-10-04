@@ -100,6 +100,7 @@ final class TsgHubPanel extends JPanel
 	private final JCheckBox eventHideScores = new JCheckBox("Hide scores from players");
 	private final JCheckBox eventHidden = new JCheckBox("Hide event from players");
 	private final JButton publishEvent = TsgHubUi.primaryButton("Publish");
+	private final JButton endEvent = TsgHubUi.button("End event");
 	private static final String[] EVENT_TYPES = {"bingo", "skill", "boss", "drop-party"};
 	private final JComboBox<String> eventType = new JComboBox<>(new String[] {"Bingo", "Skill of the Week", "Boss of the Week", "Custom"});
 	private final JComboBox<String> eventSkill = new JComboBox<>();
@@ -319,7 +320,10 @@ final class TsgHubPanel extends JPanel
 		publishEvent.addActionListener(e -> { if (currentEvent != null) plugin.publishEvent(currentEvent); });
 		JPanel editButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
 		editButtons.setOpaque(false);
+		endEvent.setToolTipText("Mark this event as finished and let the clan know");
+		endEvent.addActionListener(e -> confirmEndEvent());
 		editButtons.add(publishEvent);
+		editButtons.add(endEvent);
 		editButtons.add(edit);
 		editButtons.add(deleteEvent);
 		JPanel editWrap = new JPanel(new BorderLayout());
@@ -719,6 +723,7 @@ final class TsgHubPanel extends JPanel
 			+ (TsgHubUi.bool(event, "hideScores") ? " · Scores hidden from players" : "")
 			+ (TsgHubUi.bool(event, "hidden") ? " · Hidden from players" : ""));
 		publishEvent.setVisible(TsgHubUi.bool(event, "hidden"));
+		endEvent.setVisible("drop-party".equals(type) && !"ended".equals(state));
 		teamsTabButton.setVisible(bingo);
 		tasksTabButton.setVisible(bingo);
 		claimsTabButton.setVisible(bingo);
@@ -767,6 +772,14 @@ final class TsgHubPanel extends JPanel
 			viewedTeamId = "";
 			detailLayout.show(detail, "empty");
 		}
+	}
+
+	private void confirmEndEvent()
+	{
+		if (currentEvent == null) return;
+		String message = "End \"" + TsgHubUi.str(currentEvent, "name") + "\" now?\n\n"
+			+ "It moves to ended and online clanmates get an announcement that it's over.";
+		if (TsgHubUi.confirmDelete(this, "End event", message, "End event")) plugin.endEvent(TsgHubUi.str(currentEvent, "id"));
 	}
 
 	private void confirmDeleteEvent()

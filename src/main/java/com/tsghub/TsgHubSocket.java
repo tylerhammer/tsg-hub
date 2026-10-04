@@ -28,6 +28,8 @@ final class TsgHubSocket
 		void onChanged(String topic, String eventId);
 
 		void onAdminRevoked(String token);
+
+		void onAnnouncement(String text);
 	}
 
 	private static final int CLOSE_NORMAL = 1000;
@@ -284,6 +286,10 @@ final class TsgHubSocket
 					break;
 				case "admin.revoked":
 					adminRevoked(ws);
+					break;
+				case "announcement":
+					String announcement = string(message, "text");
+					if (!announcement.isEmpty()) executor.execute(() -> listener.onAnnouncement(announcement));
 					break;
 				case "error":
 					if (!eventId.isEmpty()) rejected(ws, eventId);

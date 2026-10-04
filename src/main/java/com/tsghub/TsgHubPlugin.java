@@ -153,6 +153,7 @@ public class TsgHubPlugin extends Plugin
 			@Override public void onReady() { resyncLiveViews(); }
 			@Override public void onChanged(String topic, String eventId) { liveChange(topic, eventId); }
 			@Override public void onAdminRevoked(String token) { adminKeyRejected(token); }
+			@Override public void onAnnouncement(String text) { announce(text); }
 		});
 		executor.scheduleAtFixedRate(this::socketTick, 2, 5, TimeUnit.SECONDS);
 		executor.scheduleAtFixedRate(unlessLive(this::autoRefreshBoard), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
@@ -1192,6 +1193,23 @@ public class TsgHubPlugin extends Plugin
 		});
 	}
 
+	void endEvent(String eventId)
+	{
+		String credential = organizerCredential(eventId);
+		organizerStatus("Ending event...", Tone.INFO);
+		executor.submit(() -> {
+			try
+			{
+				organizerRequest("POST", "/v1/events/" + eventId + "/end", credential, null);
+				organizerStatus("Event ended.", Tone.SUCCESS);
+				refreshOrganizerEvent(true);
+				loadManagedEvents();
+				loadClanEvents();
+			}
+			catch (Exception e) { organizerStatus("Couldn't end the event. " + TsgHubUi.friendlyError(e), Tone.ERROR); }
+		});
+	}
+
 	private void eventFormFailed(String message)
 	{
 		SwingUtilities.invokeLater(() -> panel.eventFormFailed(message));
@@ -1899,6 +1917,12 @@ public class TsgHubPlugin extends Plugin
 				.append(ChatColorType.NORMAL).append(": " + count);
 		}
 		showLocalChatMessage(message);
+	}
+
+	private void announce(String text)
+	{
+		if (!config.eventAnnouncements()) return;
+		showLocalChatMessage(new ChatMessageBuilder().append(ChatColorType.HIGHLIGHT).append(Text.escapeJagex(text)));
 	}
 
 	private void showLocalChatMessage(ChatMessageBuilder body)
