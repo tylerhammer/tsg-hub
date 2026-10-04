@@ -171,7 +171,7 @@ final class TsgHubSocket
 	private void open()
 	{
 		retry = null;
-		Request request = new Request.Builder().url(url.newBuilder().addQueryParameter("clanName", clanName).build()).build();
+		Request request = new Request.Builder().url(url.newBuilder().addQueryParameter("clanName", clanName).addQueryParameter("version", TsgHubVersion.VERSION).build()).build();
 		socket = http.newWebSocket(request, new Handler());
 	}
 
