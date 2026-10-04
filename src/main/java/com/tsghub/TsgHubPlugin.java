@@ -127,6 +127,7 @@ public class TsgHubPlugin extends Plugin
 	private volatile int adminCheckAttempts;
 	private volatile TsgHubApi api;
 	private TsgHubSocket socket;
+	private volatile boolean organizerRefreshPending;
 	private TsgHubCompetitionTracker competitions;
 	private TsgHubGroups groups;
 	private TsgHubPresence presence;
@@ -241,6 +242,7 @@ public class TsgHubPlugin extends Plugin
 			hubWindow.setVisible(true);
 			hubWindow.toFront();
 			loadManagedEvents();
+			syncSocketNow();
 		});
 	}
 
@@ -748,6 +750,10 @@ public class TsgHubPlugin extends Plugin
 		String competitionId = sidebar == null ? null : sidebar.openCompetitionId();
 		String memberToken = competitionId == null ? "" : TsgHubSession.get("memberToken:" + competitionId);
 		if (!memberToken.isEmpty()) tokens.putIfAbsent(competitionId, memberToken);
+		String organizerEventId = adminWindowOpen() ? getOrganizerEventId() : "";
+		String organizerToken = organizerEventId.isEmpty() ? "" : organizerCredential(organizerEventId);
+		if (!organizerToken.isEmpty()) tokens.putIfAbsent(organizerEventId, organizerToken);
+		if (organizerRefreshPending && adminWindowOpen()) liveRefreshOrganizerEvent();
 		socket.sync(tokens, inClanChat);
 		socket.admin(adminKey());
 		if (!socket.isLive()) pollTeamNotifications();
@@ -760,6 +766,18 @@ public class TsgHubPlugin extends Plugin
 		groups.autoRefresh();
 		presence.autoRefresh();
 		drops.autoRefresh();
+		loadClanEvents();
+		if (adminWindowOpen())
+		{
+			loadManagedEvents();
+			liveRefreshOrganizerEvent();
+		}
+	}
+
+	private boolean adminWindowOpen()
+	{
+		JFrame window = hubWindow;
+		return window != null && window.isVisible();
 	}
 
 	private void liveChange(String topic, String eventId)
@@ -779,9 +797,14 @@ public class TsgHubPlugin extends Plugin
 				if (eventId.equals(TsgHubSession.get("eventId"))) pollTeamNotifications();
 				break;
 			case "event":
+				if (adminWindowOpen() && eventId.equals(getOrganizerEventId())) liveRefreshOrganizerEvent();
 				if (sidebar == null) break;
 				if (eventId.equals(TsgHubSession.get("eventId")) && sidebar.wantsAutoRefresh()) refreshBoard();
 				if (eventId.equals(sidebar.openCompetitionId())) openCompetition(eventId);
+				break;
+			case "events":
+				loadClanEvents();
+				if (adminWindowOpen()) loadManagedEvents();
 				break;
 			default:
 		}
@@ -1048,6 +1071,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		if (eventId.trim().isEmpty()) return;
 		TsgHubSession.set("organizerEventId", eventId.trim());
+		syncSocketNow();
 		organizerStatus("Loading event...", Tone.INFO);
 		executor.submit(() -> {
 			try
@@ -1370,6 +1394,25 @@ public class TsgHubPlugin extends Plugin
 				});
 			}
 			catch (Exception e) { organizerStatus("Couldn't refresh the event. " + TsgHubUi.friendlyError(e), Tone.ERROR); }
+		});
+	}
+
+	private void liveRefreshOrganizerEvent()
+	{
+		organizerRefreshPending = false;
+		String eventId = getOrganizerEventId();
+		if (eventId.isEmpty() || executor == null || executor.isShutdown()) return;
+		executor.submit(() -> {
+			try
+			{
+				JsonObject event = organizerRequest("GET", "/v1/events/" + eventId + "/organizer", organizerCredential(eventId), null);
+				SwingUtilities.invokeLater(() -> {
+					if (!eventId.equals(getOrganizerEventId())) return;
+					if (panel.editingText()) organizerRefreshPending = true;
+					else panel.showEvent(event);
+				});
+			}
+			catch (Exception ignored) { }
 		});
 	}
 
