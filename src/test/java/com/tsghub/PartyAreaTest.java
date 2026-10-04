@@ -22,6 +22,32 @@ public class PartyAreaTest
 	}
 
 	@Test
+	public void areaTypes()
+	{
+		assertEquals(AreaNames.Type.BOSSES, AreaNames.forRegion(7768).type);
+		assertEquals(AreaNames.Type.BOSSES, AreaNames.forRegion(9043).type);
+		assertEquals(AreaNames.Type.BOSSES, AreaNames.forRegion(14131).type);
+		assertEquals("The Hueycoatl", AreaNames.forRegion(5939).name);
+		assertEquals("Aldarin", AreaNames.forRegion(5421).name);
+		assertEquals("Scorpia", AreaNames.at(new WorldPoint(3233, 10341, 0)).name);
+	}
+
+	@Test
+	public void bossOpponents()
+	{
+		assertEquals("Callisto", ActivityDetector.bossFor("Callisto"));
+		assertEquals("Dagannoth Kings", ActivityDetector.bossFor("Dagannoth Rex"));
+		assertEquals("Barrows", ActivityDetector.bossFor("<col=ffff00>Karil the Tainted</col>"));
+		assertEquals(null, ActivityDetector.bossFor("Goblin"));
+		assertEquals(null, ActivityDetector.bossFor(null));
+
+		ActivityDetector activity = new ActivityDetector();
+		activity.onOpponent("King Black Dragon", 1_000);
+		assertEquals("Bossing - King Black Dragon", activity.activity(AreaNames.forRegion(9033), 2_000));
+		assertEquals("Minigame - Nightmare Zone", activity.activity(AreaNames.forRegion(9033), 1_000 + ActivityDetector.RECENT_MILLIS));
+	}
+
+	@Test
 	public void partyTitle()
 	{
 		assertEquals("Alice's party", TsgHubSidebarPanel.partyTitle(group("", "", "")));
