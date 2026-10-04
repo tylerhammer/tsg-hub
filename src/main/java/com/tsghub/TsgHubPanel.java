@@ -698,6 +698,12 @@ final class TsgHubPanel extends JPanel
 		setManagedEvents(managedEvents);
 	}
 
+	boolean editingText()
+	{
+		Component owner = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+		return owner instanceof javax.swing.text.JTextComponent && SwingUtilities.isDescendingFrom(owner, this);
+	}
+
 	void showEvent(JsonObject event)
 	{
 		currentEvent = event.deepCopy();
