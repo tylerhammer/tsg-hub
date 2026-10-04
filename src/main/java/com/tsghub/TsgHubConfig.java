@@ -11,6 +11,9 @@ public interface TsgHubConfig extends Config
 	@ConfigSection(name = "Sharing", description = "What TSG Hub sends to the clan's event service.", position = 0)
 	String sharingSection = "sharing";
 
+	@ConfigSection(name = "Chat", description = "TSG Hub messages in your chatbox.", position = 5)
+	String chatSection = "chat";
+
 	@ConfigSection(name = "Party", description = "How clan parties look in the TSG Hub sidebar.", position = 10)
 	String partySection = "party";
 
@@ -27,6 +30,12 @@ public interface TsgHubConfig extends Config
 	default boolean shareLocation()
 	{
 		return false;
+	}
+
+	@ConfigItem(keyName = "eventAnnouncements", position = 0, section = chatSection, name = "Event announcements", description = "Show clan event announcements in your chatbox, such as a custom event starting soon, or an event starting or ending.")
+	default boolean eventAnnouncements()
+	{
+		return true;
 	}
 
 	@ConfigItem(keyName = "partyShowSelf", name = "Show yourself", description = "Show your own health, gear, inventory and skills at the top of your party, exactly as your party members see them.", section = partySection, position = 0)
