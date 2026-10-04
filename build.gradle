@@ -24,7 +24,7 @@ dependencies {
 }
 
 group = 'com.tsghub'
-version = '0.1.0'
+version = (file('src/main/java/com/tsghub/TsgHubVersion.java').text =~ /VERSION = "([^"]+)"/)[0][1]
 
 tasks.withType(JavaCompile).configureEach {
 	options.encoding = 'UTF-8'

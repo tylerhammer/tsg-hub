@@ -42,7 +42,8 @@ final class TsgHubApi
 	{
 		Request.Builder builder = new Request.Builder()
 			.url(baseUrl + path)
-			.header("Accept", "application/json");
+			.header("Accept", "application/json")
+			.header(TsgHubVersion.HEADER, TsgHubVersion.VERSION);
 		if (token != null && !token.isEmpty()) builder.header("Authorization", "Bearer " + token);
 		RequestBody body = payload == null ? null : RequestBody.create(JSON, payload.toString());
 		// OkHttp requires a body for POST/PATCH/PUT.
