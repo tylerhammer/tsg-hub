@@ -29,6 +29,7 @@ import net.runelite.api.ChatMessageType;
 import net.runelite.api.Player;
 import net.runelite.api.WorldView;
 import net.runelite.api.GameState;
+import net.runelite.api.MenuAction;
 import net.runelite.api.clan.ClanChannel;
 import net.runelite.api.clan.ClanSettings;
 import net.runelite.api.clan.ClanMember;
@@ -53,12 +54,15 @@ import net.runelite.http.api.item.ItemPrice;
 import net.runelite.client.input.MouseManager;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.events.OverlayMenuClicked;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
+import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.ui.overlay.OverlayMenuEntry;
 import net.runelite.client.util.AsyncBufferedImage;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
@@ -844,6 +848,33 @@ public class TsgHubPlugin extends Plugin
 				else memberStatus("Couldn't load the leaderboard. " + TsgHubUi.friendlyError(e), Tone.ERROR);
 			}
 			finally { sidebarBusy(false); }
+		});
+	}
+
+	void openSettings()
+	{
+		Overlay owner = new Overlay(this)
+		{
+			@Override public Dimension render(Graphics2D graphics) { return null; }
+		};
+		eventBus.post(new OverlayMenuClicked(new OverlayMenuEntry(MenuAction.RUNELITE_OVERLAY_CONFIG, "", ""), owner));
+	}
+
+	void copyDiscordInvite(Runnable done)
+	{
+		JsonObject body = new JsonObject();
+		body.addProperty("displayName", detectedPlayerName);
+		body.addProperty("clanName", detectedClanName);
+		addAccountHash(body);
+		executor.submit(() -> {
+			try
+			{
+				String url = api().request("POST", "/v1/discord/invite", null, body).get("url").getAsString();
+				SwingUtilities.invokeLater(() -> TsgHubUi.copyToClipboard(url));
+				memberStatus("Discord invite copied. Paste it in your browser to join.", Tone.SUCCESS);
+			}
+			catch (Exception e) { memberStatus(TsgHubUi.friendlyError(e), Tone.ERROR); }
+			finally { SwingUtilities.invokeLater(done); }
 		});
 	}
 
