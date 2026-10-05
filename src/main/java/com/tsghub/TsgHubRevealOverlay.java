@@ -53,6 +53,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	private final Queue<Held> queue = new ConcurrentLinkedQueue<>();
 	private volatile TsgHubReveals.Reveal current;
 	private volatile long startedAt;
+	private volatile long pausedAt;
 	private volatile Rectangle cardBounds = new Rectangle();
 
 	private static final class Held
@@ -92,10 +93,11 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	public Dimension render(Graphics2D graphics)
 	{
 		long now = System.currentTimeMillis();
-		if (dangerous())
+		if (paused(now)) return null;
+		if (pausedAt != 0)
 		{
-			current = null;
-			return null;
+			startedAt += now - pausedAt;
+			pausedAt = 0;
 		}
 		TsgHubReveals.Reveal reveal = current;
 		if (reveal == null || now - startedAt >= END_MS)
@@ -118,9 +120,24 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 		return null;
 	}
 
+	private boolean paused(long now)
+	{
+		GameState state = client.getGameState();
+		if (state == GameState.LOADING || state == GameState.HOPPING || state == GameState.CONNECTION_LOST)
+		{
+			if (pausedAt == 0) pausedAt = now;
+			return true;
+		}
+		if (state == GameState.LOGGED_IN && !dangerous()) return false;
+		TsgHubReveals.Reveal playing = current;
+		if (playing != null) queue.add(new Held(playing, now));
+		current = null;
+		pausedAt = 0;
+		return true;
+	}
+
 	private boolean dangerous()
 	{
-		if (client.getGameState() != GameState.LOGGED_IN) return true;
 		if (client.getVarbitValue(VarbitID.INSIDE_WILDERNESS) == 1 || client.getVarbitValue(VarbitID.PVP_AREA_CLIENT) == 1) return true;
 		for (WorldType type : client.getWorldType()) if (PVP_WORLDS.contains(type)) return true;
 		return false;

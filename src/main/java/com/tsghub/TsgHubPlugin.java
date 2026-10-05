@@ -222,12 +222,15 @@ public class TsgHubPlugin extends Plugin
 		{
 			boardOverlay.setVisible(false);
 			overlayManager.remove(boardOverlay);
+			boardOverlay = null;
 		}
+		tileIcons = null;
 		if (revealOverlay != null)
 		{
 			revealOverlay.clear();
 			overlayManager.remove(revealOverlay);
 			mouseManager.unregisterMouseListener(revealOverlay);
+			revealOverlay = null;
 		}
 		if (hubWindow != null) SwingUtilities.invokeLater(hubWindow::dispose);
 		if (presence != null) presence.shutDown();
@@ -756,14 +759,13 @@ public class TsgHubPlugin extends Plugin
 				JsonObject result = api().request("GET", "/v1/events/" + eventId, token, null);
 				JsonObject event = result.getAsJsonObject("event");
 				syncClanRank(eventId, token, event);
-				if (eventId.equals(TsgHubSession.get("eventId")))
-				{
-					cacheXpTasks(event);
-					cachePvmTasks(event);
-					taskEventId = eventId;
-				}
+				if (!eventId.equals(TsgHubSession.get("eventId"))) return;
+				cacheXpTasks(event);
+				cachePvmTasks(event);
+				taskEventId = eventId;
 				primedBoardEventId = eventId;
 				SwingUtilities.invokeLater(() -> {
+					if (!eventId.equals(TsgHubSession.get("eventId"))) return;
 					String displayName = TsgHubSession.get("displayName");
 					setBoardOverlayData(event, displayName);
 					sidebar.showBoard(event, displayName, open);
