@@ -224,6 +224,7 @@ public class TsgHubPlugin extends Plugin
 		}
 		if (hubWindow != null) SwingUtilities.invokeLater(hubWindow::dispose);
 		if (presence != null) presence.shutDown();
+		if (ranks != null) ranks.shutDown();
 		if (socket != null) socket.disconnect();
 		if (executor != null) executor.shutdownNow();
 		if (itemSearchExecutor != null) itemSearchExecutor.shutdownNow();

@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import net.runelite.api.Client;
@@ -58,7 +59,7 @@ final class TsgHubRanks
 	private volatile int ownRank = LEFT_CLAN;
 	private volatile boolean refused;
 	private volatile long retryAt;
-	private boolean flushScheduled;
+	private ScheduledFuture<?> flushTask;
 	private int ticks;
 
 	TsgHubRanks(TsgHubPlugin plugin, Client client, ScheduledExecutorService executor, Supplier<TsgHubApi> api, Supplier<String> key)
@@ -88,7 +89,7 @@ final class TsgHubRanks
 			return;
 		}
 		ticks++;
-		if (known == null || ticks % INTERFACE_SCAN_TICKS == 0 && client.getWidget(InterfaceID.CLANS_MEMBERS, 0) != null) scan();
+		if (known == null || ticks % INTERFACE_SCAN_TICKS == 0 && client.getWidget(InterfaceID.ClansMembers.UNIVERSE) != null) scan();
 	}
 
 	void reset()
@@ -97,6 +98,16 @@ final class TsgHubRanks
 		refused = false;
 		retryAt = 0;
 		synchronized (pending) { pending.clear(); }
+	}
+
+	void shutDown()
+	{
+		synchronized (pending)
+		{
+			if (flushTask != null) flushTask.cancel(false);
+			flushTask = null;
+			pending.clear();
+		}
 	}
 
 	private boolean allowed()
@@ -188,10 +199,9 @@ final class TsgHubRanks
 		synchronized (pending)
 		{
 			merge(pending, changes);
-			if (flushScheduled || pending.isEmpty() || executor.isShutdown()) return;
-			flushScheduled = true;
+			if (flushTask != null || pending.isEmpty() || executor.isShutdown()) return;
+			flushTask = executor.schedule(this::flush, DEBOUNCE_SECONDS, TimeUnit.SECONDS);
 		}
-		executor.schedule(this::flush, DEBOUNCE_SECONDS, TimeUnit.SECONDS);
 	}
 
 	private void flush()
@@ -199,7 +209,7 @@ final class TsgHubRanks
 		List<Change> changes;
 		synchronized (pending)
 		{
-			flushScheduled = false;
+			flushTask = null;
 			changes = new ArrayList<>(pending.values());
 			pending.clear();
 		}
