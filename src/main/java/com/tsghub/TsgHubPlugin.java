@@ -192,6 +192,7 @@ public class TsgHubPlugin extends Plugin
 		boardOverlay = new TsgHubBoardOverlay(tileIcons());
 		boardOverlay.setVisible(config.bingoOverlay());
 		overlayManager.add(boardOverlay);
+		mouseManager.registerMouseListener(boardOverlay);
 		revealOverlay = new TsgHubRevealOverlay(client, tileIcons());
 		overlayManager.add(revealOverlay);
 		mouseManager.registerMouseListener(revealOverlay);
@@ -221,6 +222,7 @@ public class TsgHubPlugin extends Plugin
 		{
 			boardOverlay.setVisible(false);
 			overlayManager.remove(boardOverlay);
+			mouseManager.unregisterMouseListener(boardOverlay);
 			boardOverlay = null;
 		}
 		tileIcons = null;

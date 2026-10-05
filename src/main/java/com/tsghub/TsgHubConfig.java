@@ -41,7 +41,7 @@ public interface TsgHubConfig extends Config
 		return true;
 	}
 
-	@ConfigItem(keyName = "bingoOverlay", position = 1, section = bingoSection, name = "Show board on screen", description = "Show your team's bingo board as an on-screen overlay. Hold Alt and drag it to move it.")
+	@ConfigItem(keyName = "bingoOverlay", position = 1, section = bingoSection, name = "Show board on screen", description = "Show your team's bingo board as an on-screen overlay. Click a tile to flip it over and see its task. Hold Alt and drag it to move it.")
 	default boolean bingoOverlay()
 	{
 		return false;
