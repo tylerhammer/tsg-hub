@@ -49,6 +49,6 @@ tasks.register('run', JavaExec) {
 tasks.register('readmeScreenshots', JavaExec) {
 	classpath = sourceSets.test.runtimeClasspath
 	mainClass = 'com.tsghub.ReadmeScreenshots'
-	jvmArgs '-Duser.timezone=America/New_York'
+	jvmArgs '-Duser.timezone=Australia/Sydney'
 	args project.findProperty('fixtures') ?: 'docs/screenshot-fixtures.json', 'docs/images'
 }

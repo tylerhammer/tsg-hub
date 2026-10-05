@@ -16,6 +16,9 @@ import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import javax.imageio.ImageIO;
 import javax.swing.AbstractButton;
 import javax.swing.JComponent;
@@ -57,6 +60,8 @@ public class ReadmeScreenshots
 	private static void run() throws Exception
 	{
 		RuneLiteLAF.setup();
+		Instant now = Instant.parse(str("now"));
+		TsgHubUi.clock = Clock.fixed(now, ZoneOffset.UTC);
 		TsgHubPlugin plugin = new TsgHubPlugin()
 		{
 			@Override
@@ -92,7 +97,7 @@ public class ReadmeScreenshots
 		for (int i = 0; i < drops.size(); i++)
 		{
 			JsonObject drop = drops.get(i).getAsJsonObject();
-			drop.addProperty("receivedAt", java.time.Instant.now().minusSeconds(drop.remove("minutesAgo").getAsLong() * 60).toString());
+			drop.addProperty("receivedAt", now.minusSeconds(drop.remove("minutesAgo").getAsLong() * 60).toString());
 		}
 		sidebar.setDrops(drops);
 		sidebar.showHome();

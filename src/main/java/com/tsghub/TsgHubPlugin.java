@@ -7,6 +7,7 @@ import java.util.Set;
 import java.awt.image.BufferedImage;
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -1104,7 +1105,7 @@ public class TsgHubPlugin extends Plugin
 		});
 	}
 
-	void createEvent(String name, String startDate, String endDate, boolean hideScores, boolean hidden, String type, JsonObject typeConfig)
+	void createEvent(String name, Instant startsAt, Instant endsAt, boolean hideScores, boolean hidden, String type, JsonObject typeConfig)
 	{
 		if (!isInHubClan()) { eventFormFailed("TSG Hub is only for members of the " + hubClanName + " clan."); return; }
 		if (!config.dataSharingOptIn()) { eventFormFailed("Turn on sharing in the TSG Hub sidebar first."); return; }
@@ -1122,8 +1123,7 @@ public class TsgHubPlugin extends Plugin
 		body.addProperty("clanName", detectedClanName);
 		body.addProperty("createdByName", creatorName);
 		body.addProperty("clanRank", detectedClanRank);
-		body.addProperty("startDate", startDate.trim());
-		body.addProperty("endDate", endDate.trim());
+		addEventTimes(body, startsAt, endsAt);
 		body.addProperty("hideScores", hideScores);
 		body.addProperty("hidden", hidden);
 		body.addProperty("type", type);
@@ -1148,12 +1148,17 @@ public class TsgHubPlugin extends Plugin
 		});
 	}
 
-	void updateEvent(String eventId, String name, String startDate, String endDate, boolean hideScores, boolean hidden, JsonObject typeConfig)
+	private static void addEventTimes(JsonObject body, Instant startsAt, Instant endsAt)
+	{
+		body.addProperty("startsAt", startsAt.toString());
+		if (endsAt != null) body.addProperty("endsAt", endsAt.toString());
+	}
+
+	void updateEvent(String eventId, String name, Instant startsAt, Instant endsAt, boolean hideScores, boolean hidden, JsonObject typeConfig)
 	{
 		JsonObject body = new JsonObject();
 		body.addProperty("name", name.trim());
-		body.addProperty("startDate", startDate.trim());
-		body.addProperty("endDate", endDate.trim());
+		addEventTimes(body, startsAt, endsAt);
 		body.addProperty("hideScores", hideScores);
 		body.addProperty("hidden", hidden);
 		if (typeConfig != null) body.add("config", typeConfig);
@@ -1177,8 +1182,9 @@ public class TsgHubPlugin extends Plugin
 		String eventId = TsgHubUi.str(event, "id");
 		JsonObject body = new JsonObject();
 		body.addProperty("name", TsgHubUi.str(event, "name"));
-		body.addProperty("startDate", TsgHubUi.str(event, "startDate"));
-		body.addProperty("endDate", TsgHubUi.str(event, "endDate"));
+		Instant startsAt = TsgHubUi.eventStart(event);
+		if (startsAt == null) { organizerStatus("Couldn't publish. The event has no start time.", Tone.ERROR); return; }
+		addEventTimes(body, startsAt, TsgHubUi.eventEnd(event));
 		body.addProperty("hidden", false);
 		String credential = organizerCredential(eventId);
 		organizerStatus("Publishing...", Tone.INFO);

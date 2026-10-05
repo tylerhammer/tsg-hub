@@ -605,7 +605,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 		else
 		{
-			Instant now = Instant.now();
+			Instant now = TsgHubUi.clock.instant();
 			for (int i = 0; i < drops.size(); i++)
 			{
 				page.add(dropCard(drops.get(i).getAsJsonObject(), now));
@@ -719,7 +719,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (hours < 24) return hours + "h ago";
 		long days = hours / 24;
 		if (days < 30) return days + "d ago";
-		return TsgHubUi.formatDate(iso.substring(0, 10), true);
+		return TsgHubUi.localDate(then, java.time.ZoneId.systemDefault());
 	}
 
 	private void openEvents()
@@ -766,7 +766,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		competitionEvent = event;
 		setView(View.COMPETITION_PREVIEW);
-		setHeader(TsgHubUi.str(event, "name"), TsgHubUi.statusLabel(TsgHubUi.str(event, "status")) + " · " + TsgHubUi.dateRange(event), true, false);
+		setHeader(TsgHubUi.str(event, "name"), TsgHubUi.statusLabel(TsgHubUi.str(event, "status")) + " · " + TsgHubUi.eventSchedule(event), true, false);
 		page.removeAll();
 		Font small = FontManager.getRunescapeSmallFont();
 		JsonObject config = TsgHubUi.eventConfig(event);
@@ -774,7 +774,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		String what = skill ? "Gain the most " + TsgHubUi.skillName(TsgHubUi.str(config, "skill")) + " XP" : "Get the most " + TsgHubUi.str(config, "npcName") + " kills";
 		page.add(TsgHubUi.label(TsgHubUi.eventTypeLabel(event), TsgHubUi.ACCENT, FontManager.getRunescapeBoldFont()));
 		page.add(Box.createVerticalStrut(4));
-		page.add(TsgHubUi.wrapped(what + " from " + TsgHubUi.dateRange(event) + ".", TsgHubUi.TEXT, FontManager.getRunescapeFont(), TEXT_W));
+		page.add(TsgHubUi.wrapped(what + " from " + TsgHubUi.eventWhen(event) + ".", TsgHubUi.TEXT, FontManager.getRunescapeFont(), TEXT_W));
 		String description = TsgHubUi.str(event, "description").trim();
 		if (!description.isEmpty()) { page.add(Box.createVerticalStrut(4)); page.add(TsgHubUi.wrapped(description, TsgHubUi.MUTED, small, TEXT_W)); }
 		page.add(Box.createVerticalStrut(10));
@@ -815,7 +815,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		setView(View.COMPETITION);
 		openCompetitionId = TsgHubUi.str(event, "id");
 		refresh.setToolTipText("Refresh (updated " + LocalTime.now().format(TIME) + ")");
-		setHeader(TsgHubUi.str(event, "name"), TsgHubUi.statusLabel(TsgHubUi.str(event, "status")) + " · " + TsgHubUi.dateRange(event), true, true);
+		setHeader(TsgHubUi.str(event, "name"), TsgHubUi.statusLabel(TsgHubUi.str(event, "status")) + " · " + TsgHubUi.eventSchedule(event), true, true);
 		page.removeAll();
 		Font small = FontManager.getRunescapeSmallFont();
 		JsonObject config = TsgHubUi.eventConfig(event);
@@ -889,10 +889,10 @@ final class TsgHubSidebarPanel extends PluginPanel
 		Font small = FontManager.getRunescapeSmallFont();
 		JPanel card = TsgHubUi.card();
 		JPanel lines = TsgHubUi.stack();
-		String countdown = TsgHubUi.dropPartyCountdown(config);
-		if (!countdown.isEmpty()) lines.add(TsgHubUi.label(countdown, "Finished".equals(countdown) ? TsgHubUi.MUTED : TsgHubUi.SUCCESS, FontManager.getRunescapeBoldFont()));
+		String countdown = TsgHubUi.capitalize(TsgHubUi.eventRelative(event));
+		if (!countdown.isEmpty()) lines.add(TsgHubUi.label(countdown, "Ended".equals(countdown) ? TsgHubUi.MUTED : TsgHubUi.SUCCESS, FontManager.getRunescapeBoldFont()));
 		lines.add(Box.createVerticalStrut(4));
-		lines.add(detail("When", TsgHubUi.dropPartyTime(config, true) + " (your time)"));
+		lines.add(detail("When", TsgHubUi.eventWhen(event)));
 		if (TsgHubUi.integer(config, "world", 0) > 0) lines.add(detail("World", String.valueOf(TsgHubUi.integer(config, "world", 0))));
 		if (!TsgHubUi.str(config, "location").isEmpty()) lines.add(detail("Where", TsgHubUi.str(config, "location")));
 		if (!TsgHubUi.str(config, "host").isEmpty()) lines.add(detail("Host", TsgHubUi.str(config, "host")));
@@ -1311,7 +1311,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private void setHeader(String titleText, String subtitleText, boolean showBack, boolean showRefresh)
 	{
 		title.setText(TsgHubUi.html(TsgHubUi.escape(titleText), 150));
-		subtitle.setText(subtitleText);
+		subtitle.setText(subtitleText.isEmpty() ? "" : TsgHubUi.html(TsgHubUi.escape(subtitleText), 150));
 		subtitle.setVisible(!subtitleText.isEmpty());
 		back.setVisible(showBack);
 		refresh.setVisible(showRefresh);
@@ -1341,7 +1341,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			visible.sort(Comparator
 				.comparing((JsonObject e) -> !TsgHubUi.bool(e, "joined"))
 				.thenComparing(e -> !"active".equals(TsgHubUi.str(e, "status")))
-				.thenComparing(e -> TsgHubUi.str(e, "startDate")));
+				.thenComparing(TsgHubUi::eventStart, Comparator.nullsLast(Comparator.naturalOrder())));
 			if (visible.isEmpty())
 			{
 				page.add(errorPanel("No events yet", "When an admin creates an event, it will show up here."));
@@ -1371,10 +1371,11 @@ final class TsgHubSidebarPanel extends PluginPanel
 			meta.add(TsgHubUi.badge("Hidden", TsgHubUi.MUTED));
 			meta.add(Box.createHorizontalStrut(5));
 		}
-		boolean isParty = "drop-party".equals(TsgHubUi.str(event, "type"));
-		meta.add(TsgHubUi.label(isParty ? TsgHubUi.dropPartyTime(TsgHubUi.eventConfig(event), false) : TsgHubUi.dateRange(event), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont()));
+		meta.add(TsgHubUi.label(TsgHubUi.capitalize(TsgHubUi.eventRelative(event)), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont()));
 		text.add(Box.createVerticalStrut(3));
 		text.add(meta);
+		text.add(Box.createVerticalStrut(2));
+		text.add(TsgHubUi.wrapped(TsgHubUi.eventWhen(event), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), CARD_TITLE_W));
 		text.add(Box.createVerticalStrut(2));
 		text.add(TsgHubUi.wrapped(TsgHubUi.eventTypeLine(event), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), CARD_TITLE_W));
 		card.add(text, BorderLayout.CENTER);
@@ -1403,7 +1404,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		previewEvent = event;
 		setView(View.PREVIEW);
-		setHeader(TsgHubUi.str(event, "name"), TsgHubUi.statusLabel(TsgHubUi.str(event, "status")) + " · " + TsgHubUi.dateRange(event), true, false);
+		setHeader(TsgHubUi.str(event, "name"), TsgHubUi.statusLabel(TsgHubUi.str(event, "status")) + " · " + TsgHubUi.eventSchedule(event), true, false);
 		page.removeAll();
 		page.add(TsgHubUi.wrapped("Enter the team code an admin gave you.", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), TEXT_W));
 		page.add(Box.createVerticalStrut(6));
@@ -1438,7 +1439,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private void renderBoard()
 	{
 		JsonObject event = boardEvent;
-		setHeader(TsgHubUi.str(event, "name"), TsgHubUi.statusLabel(TsgHubUi.str(event, "status")) + " · " + TsgHubUi.dateRange(event), true, true);
+		setHeader(TsgHubUi.str(event, "name"), TsgHubUi.statusLabel(TsgHubUi.str(event, "status")) + " · " + TsgHubUi.eventSchedule(event), true, true);
 		renderSummary();
 		renderTasks();
 		renderScoreboard();
