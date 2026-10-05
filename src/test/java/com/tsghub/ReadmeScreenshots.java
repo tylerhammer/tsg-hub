@@ -106,13 +106,11 @@ public class ReadmeScreenshots
 		BufferedImage eventList = shoot(sidebar, SIDEBAR_W, 480, "events");
 
 		JsonObject boardEvent = data.getAsJsonObject("board").getAsJsonObject("event");
-		set(sidebar, "boardView", "list");
+		sidebar.setBoardView("list");
 		sidebar.showBoard(boardEvent, "Crab Legs", true);
 		shoot(sidebar, SIDEBAR_W, 712, "board-tasks");
-		set(sidebar, "boardView", "grid");
-		TsgHubBoardGrid grid = (TsgHubBoardGrid) get(sidebar, "boardGrid");
-		grid.setSelectedTask(TsgHubUi.str(boardEvent.getAsJsonArray("tasks").get(0).getAsJsonObject(), "id"));
-		sidebar.showBoard(boardEvent, "Crab Legs", true);
+		sidebar.setBoardView("grid");
+		sidebar.selectTile(TsgHubUi.str(boardEvent.getAsJsonArray("tasks").get(0).getAsJsonObject(), "id"));
 		BufferedImage board = shoot(sidebar, SIDEBAR_W, 560, "board-grid");
 		selectTab(sidebar, "Scores");
 		shoot(sidebar, SIDEBAR_W, 330, "board-scores");
@@ -291,13 +289,6 @@ public class ReadmeScreenshots
 		{
 			return null;
 		}
-	}
-
-	private static Object get(Object target, String field) throws Exception
-	{
-		Field f = target.getClass().getDeclaredField(field);
-		f.setAccessible(true);
-		return f.get(target);
 	}
 
 	private static void set(Object target, String field, Object value) throws Exception

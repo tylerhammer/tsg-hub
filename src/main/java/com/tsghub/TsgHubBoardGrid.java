@@ -309,7 +309,7 @@ final class TsgHubBoardGrid extends JComponent
 		int cell = cell();
 		int left = offsetX();
 		long now = System.currentTimeMillis();
-		Set<String> inLines = cellsInLines(board, lines);
+		Set<Integer> inLines = cellsInLines(board, lines);
 		Font font = FontManager.getRunescapeSmallFont();
 		boolean names = cell >= 56;
 		for (int row = 0; row < board.size; row++)
@@ -329,7 +329,7 @@ final class TsgHubBoardGrid extends JComponent
 				JsonObject task = tasks.get(id);
 				JsonObject taskProgress = progress.get(id);
 				boolean complete = done.contains(id);
-				Tile tile = new Tile(task, taskProgress, complete, inLines.contains(row + ":" + col), id.equals(selectedTask) || isPicked, hovered, icon(task));
+				Tile tile = new Tile(task, taskProgress, complete, inLines.contains(row * board.size + col), id.equals(selectedTask) || isPicked, hovered, icon(task));
 				Long flip = flips.get(id);
 				if (flip == null || now < flip)
 				{
@@ -403,15 +403,15 @@ final class TsgHubBoardGrid extends JComponent
 		}
 	}
 
-	static Set<String> cellsInLines(TsgHubBingoBoard board, List<TsgHubBingoBoard.Line> lines)
+	static Set<Integer> cellsInLines(TsgHubBingoBoard board, List<TsgHubBingoBoard.Line> lines)
 	{
-		Set<String> cells = new HashSet<>();
+		Set<Integer> cells = new HashSet<>();
 		for (TsgHubBingoBoard.Line line : lines)
 		{
 			for (int i = 0; i < board.size; i++)
 			{
 				int[] at = line.cell(i, board.size);
-				cells.add(at[0] + ":" + at[1]);
+				cells.add(at[0] * board.size + at[1]);
 			}
 		}
 		return cells;

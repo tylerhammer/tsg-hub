@@ -5,7 +5,6 @@ import com.google.gson.JsonObject;
 import com.google.inject.Provides;
 import java.util.Set;
 import java.awt.image.BufferedImage;
-import java.awt.Color;
 import java.awt.Graphics2D;
 import java.time.Instant;
 import java.util.ArrayList;

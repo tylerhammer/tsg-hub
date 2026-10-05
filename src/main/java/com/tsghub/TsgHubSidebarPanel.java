@@ -1584,12 +1584,18 @@ final class TsgHubSidebarPanel extends PluginPanel
 		return toggle;
 	}
 
+	void selectTile(String taskId)
+	{
+		boardGrid.setSelectedTask(taskId);
+		renderTasks();
+	}
+
 	void boardOverlayChanged()
 	{
 		if (view == View.BOARD) renderTasks();
 	}
 
-	private void setBoardView(String view)
+	void setBoardView(String view)
 	{
 		boardView = view;
 		TsgHubSession.set("boardView", view);

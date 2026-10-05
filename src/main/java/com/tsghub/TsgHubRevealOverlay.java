@@ -92,6 +92,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	@Override
 	public Dimension render(Graphics2D graphics)
 	{
+		if (current == null && queue.isEmpty()) return null;
 		long now = System.currentTimeMillis();
 		if (paused(now)) return null;
 		if (pausedAt != 0)

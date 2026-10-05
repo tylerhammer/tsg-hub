@@ -39,10 +39,12 @@ final class TsgHubBoardOverlay extends Overlay
 		final Map<String, JsonObject> progress;
 		final Set<String> done;
 		final List<TsgHubBingoBoard.Line> lines;
+		final Set<Integer> inLines;
 		final int points;
 
 		Snapshot(String key, String name, TsgHubBingoBoard board, Map<String, JsonObject> tasks, Map<String, JsonObject> progress, Set<String> done, List<TsgHubBingoBoard.Line> lines, int points)
 		{
+			this.inLines = TsgHubBoardGrid.cellsInLines(board, lines);
 			this.key = key;
 			this.name = name;
 			this.board = board;
@@ -147,7 +149,6 @@ final class TsgHubBoardOverlay extends Overlay
 		g.drawString(name, PAD, PAD + metrics.getAscent() - 2);
 
 		long now = System.currentTimeMillis();
-		Set<String> inLines = TsgHubBoardGrid.cellsInLines(board, data.lines);
 		Font small = FontManager.getRunescapeSmallFont();
 		int top = PAD + HEADER;
 		boolean flipping = false;
@@ -164,7 +165,7 @@ final class TsgHubBoardOverlay extends Overlay
 					continue;
 				}
 				JsonObject task = data.tasks.get(id);
-				TsgHubBoardGrid.Tile tile = new TsgHubBoardGrid.Tile(task, data.progress.get(id), data.done.contains(id), inLines.contains(row + ":" + col), false, false, icons.icon(task));
+				TsgHubBoardGrid.Tile tile = new TsgHubBoardGrid.Tile(task, data.progress.get(id), data.done.contains(id), data.inLines.contains(row * n + col), false, false, icons.icon(task));
 				Long flip = flips.get(id);
 				if (flip == null)
 				{

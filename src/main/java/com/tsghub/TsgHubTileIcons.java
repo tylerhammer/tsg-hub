@@ -13,14 +13,13 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.IntFunction;
 import javax.swing.JLabel;
 import javax.swing.SwingUtilities;
+import net.runelite.api.gameval.ItemID;
 import net.runelite.client.game.SpriteManager;
 import net.runelite.client.hiscore.HiscoreSkill;
 import net.runelite.client.util.AsyncBufferedImage;
 
 final class TsgHubTileIcons
 {
-	private static final int PET_ICON = 12646;
-	private static final int JAR_ICON = 12936;
 	private static final Map<String, Integer> SPRITES = sprites();
 
 	private final IntFunction<AsyncBufferedImage> items;
@@ -90,8 +89,8 @@ final class TsgHubTileIcons
 		JsonArray groups = TsgHubUi.array(config, "itemGroups");
 		if (groups.size() > 0 && groups.get(0).isJsonArray() && groups.get(0).getAsJsonArray().size() > 0)
 			return TsgHubUi.integer(groups.get(0).getAsJsonArray().get(0).getAsJsonObject(), "id", 0);
-		if ("pet".equals(TsgHubUi.str(config, "itemGroup"))) return PET_ICON;
-		if ("jar".equals(TsgHubUi.str(config, "itemGroup"))) return JAR_ICON;
+		if ("pet".equals(TsgHubUi.str(config, "itemGroup"))) return ItemID.MOLEPET;
+		if ("jar".equals(TsgHubUi.str(config, "itemGroup"))) return ItemID.JAR_OF_SWAMP;
 		JsonArray ids = TsgHubUi.array(config, "itemIds");
 		for (int i = 0; i < ids.size(); i++) if (ids.get(i).isJsonPrimitive() && ids.get(i).getAsInt() > 0) return ids.get(i).getAsInt();
 		return 0;
