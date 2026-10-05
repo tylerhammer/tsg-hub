@@ -364,9 +364,11 @@ public class TsgHubPlugin extends Plugin
 				if (admin != adminVerified) setAdminVerified(admin);
 				if (admin) loadClanEvents();
 				String linkError = TsgHubUi.str(result, "linkError");
+				boolean linked = TsgHubUi.bool(result, "linked");
 				if (!linkError.isEmpty()) memberStatus(linkError, Tone.ERROR);
-				else if (announceKey) memberStatus(admin ? "Hub key accepted. Your Discord account is linked and admin tools are unlocked." : "Hub key accepted. Your Discord account is linked.", Tone.SUCCESS);
-				announceKey = false;
+				else if (announceKey && linked) memberStatus(admin ? "Hub key accepted. Your Discord account is linked and admin tools are unlocked." : "Hub key accepted. Your Discord account is linked.", Tone.SUCCESS);
+				if (linked || !linkError.isEmpty()) announceKey = false;
+				if (!linked && hash.isEmpty()) retryKeyCheck(identity);
 			}
 			catch (TsgHubApi.HttpError e)
 			{

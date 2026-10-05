@@ -71,4 +71,13 @@ public class RankDiffTest
 		assertTrue(TsgHubPlugin.grantsAdmin(admin));
 		assertTrue(TsgHubPlugin.grantsAdmin(new JsonObject()));
 	}
+
+	@Test
+	public void clientErrorsStopReporting()
+	{
+		assertTrue(TsgHubRanks.permanent(400));
+		assertTrue(TsgHubRanks.permanent(403));
+		assertFalse(TsgHubRanks.permanent(429));
+		assertFalse(TsgHubRanks.permanent(503));
+	}
 }

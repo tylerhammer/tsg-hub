@@ -55,6 +55,7 @@ final class TsgHubRanks
 	private final Map<String, Change> pending = new LinkedHashMap<>();
 	private final Map<Integer, String> titles = new HashMap<>();
 	private volatile Map<String, Integer> known;
+	private volatile int ownRank = LEFT_CLAN;
 	private volatile boolean refused;
 	private volatile long retryAt;
 	private boolean flushScheduled;
@@ -127,6 +128,7 @@ final class TsgHubRanks
 		}
 		Integer own = current.get(Text.toJagexName(plugin.getDetectedPlayerName()));
 		if (!mayReport(own)) return;
+		ownRank = own;
 		synchronized (titles)
 		{
 			titles.clear();
@@ -138,11 +140,16 @@ final class TsgHubRanks
 		{
 			List<Change> all = new ArrayList<>();
 			for (Map.Entry<String, Integer> entry : current.entrySet()) all.add(new Change(entry.getKey(), entry.getValue(), entry.getValue()));
-			send(all, true, own);
+			send(all, true);
 			return;
 		}
 		List<Change> changes = diff(before, current);
-		if (!changes.isEmpty()) queue(changes, own);
+		if (!changes.isEmpty()) queue(changes);
+	}
+
+	static boolean permanent(int status)
+	{
+		return status >= 400 && status < 500 && status != 429;
 	}
 
 	static boolean mayReport(Integer ownRank)
@@ -176,7 +183,7 @@ final class TsgHubRanks
 		}
 	}
 
-	private void queue(List<Change> changes, int own)
+	private void queue(List<Change> changes)
 	{
 		synchronized (pending)
 		{
@@ -184,10 +191,10 @@ final class TsgHubRanks
 			if (flushScheduled || pending.isEmpty() || executor.isShutdown()) return;
 			flushScheduled = true;
 		}
-		executor.schedule(() -> flush(own), DEBOUNCE_SECONDS, TimeUnit.SECONDS);
+		executor.schedule(this::flush, DEBOUNCE_SECONDS, TimeUnit.SECONDS);
 	}
 
-	private void flush(int own)
+	private void flush()
 	{
 		List<Change> changes;
 		synchronized (pending)
@@ -196,16 +203,16 @@ final class TsgHubRanks
 			changes = new ArrayList<>(pending.values());
 			pending.clear();
 		}
-		if (!changes.isEmpty()) post(changes, false, own);
+		if (!changes.isEmpty()) post(changes, false);
 	}
 
-	private void send(List<Change> changes, boolean snapshot, int own)
+	private void send(List<Change> changes, boolean snapshot)
 	{
 		if (executor.isShutdown()) return;
-		executor.submit(() -> post(changes, snapshot, own));
+		executor.submit(() -> post(changes, snapshot));
 	}
 
-	private void post(List<Change> changes, boolean snapshot, int own)
+	private void post(List<Change> changes, boolean snapshot)
 	{
 		String token = key.get();
 		if (token.isEmpty() || !plugin.sharingEnabled()) return;
@@ -224,13 +231,13 @@ final class TsgHubRanks
 		JsonObject body = new JsonObject();
 		body.addProperty("clanName", plugin.getDetectedClanName());
 		body.addProperty("displayName", plugin.getDetectedPlayerName());
-		body.addProperty("clanRank", own);
+		body.addProperty("clanRank", ownRank);
 		body.addProperty("snapshot", snapshot);
 		body.add("members", members);
 		try { api.get().request("POST", "/v1/clan/ranks", token, body); }
 		catch (TsgHubApi.HttpError e)
 		{
-			if (e.status == 401 || e.status == 403) refused = true;
+			if (permanent(e.status)) refused = true;
 			else retry();
 		}
 		catch (Exception e) { retry(); }
