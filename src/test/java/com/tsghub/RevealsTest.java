@@ -94,6 +94,9 @@ public class RevealsTest
 		assertEquals(Collections.singletonList("t0"), moment.tiles);
 		assertEquals(new HashSet<>(Arrays.asList("t1", "t2")), moment.before);
 		assertEquals("ROW:0", moment.lines.get(0).key());
+		assertTrue(TsgHubRevealOverlay.lineAt(moment, 0) >= TsgHubRevealOverlay.strikesAt(moment));
+		assertTrue(TsgHubRevealOverlay.strikeAt(moment, 0) > TsgHubRevealOverlay.lineAt(moment, 0));
+		assertTrue(TsgHubRevealOverlay.stampAt(moment) > TsgHubRevealOverlay.strikeAt(moment, 0));
 		assertTrue(TsgHubRevealOverlay.duration(moment) > TsgHubRevealOverlay.stampAt(moment));
 	}
 

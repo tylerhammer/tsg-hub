@@ -11,10 +11,12 @@ import java.awt.GradientPaint;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.Shape;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Area;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
+import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
 import java.util.EnumSet;
@@ -45,6 +47,8 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	static final int RING_MS = 380;
 	static final int FLOAT_MS = 900;
 	static final int STRIKE_MS = 420;
+	static final int WAVE_STEP_MS = 110;
+	static final int WAVE_POP_MS = 300;
 	static final int STAMP_MS = 240;
 	static final int STAMP_HOLD_MS = 1600;
 	static final int HOLD_MS = 900;
@@ -104,9 +108,24 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 		return FIRST_TILE_MS + moment.tiles.size() * TILE_MS;
 	}
 
+	static int lineMs(TsgHubReveals.Moment moment)
+	{
+		return (moment.board.size - 1) * WAVE_STEP_MS + WAVE_POP_MS / 2 + STRIKE_MS;
+	}
+
+	static int lineAt(TsgHubReveals.Moment moment, int line)
+	{
+		return strikesAt(moment) + line * lineMs(moment);
+	}
+
+	static int strikeAt(TsgHubReveals.Moment moment, int line)
+	{
+		return lineAt(moment, line) + (moment.board.size - 1) * WAVE_STEP_MS + WAVE_POP_MS / 2;
+	}
+
 	static int stampAt(TsgHubReveals.Moment moment)
 	{
-		return strikesAt(moment) + moment.lines.size() * STRIKE_MS;
+		return strikesAt(moment) + moment.lines.size() * lineMs(moment);
 	}
 
 	static int exitAt(TsgHubReveals.Moment moment)
@@ -240,10 +259,13 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 				TsgHubBoardGrid.Tile tile = new TsgHubBoardGrid.Tile(task, daubed ? null : moment.progress.get(id), false, false, false, false, icons == null ? null : icons.icon(task));
 				double cx = x + cell / 2.0;
 				double cy = y + cell / 2.0;
+				long wave = wave(moment, row, col, t);
+				double pop = 1;
+				if (since >= 0 && since < POP_MS) pop *= 1 + 0.14 * Math.sin(Math.PI * since / (double) POP_MS);
+				if (wave >= 0 && wave < WAVE_POP_MS) pop *= 1 + 0.16 * Math.sin(Math.PI * wave / (double) WAVE_POP_MS);
 				Graphics2D s = (Graphics2D) g.create();
-				if (since >= 0 && since < POP_MS)
+				if (pop != 1)
 				{
-					double pop = 1 + 0.14 * Math.sin(Math.PI * since / (double) POP_MS);
 					s.translate(cx, cy);
 					s.scale(pop, pop);
 					s.translate(-cx, -cy);
@@ -255,6 +277,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 					s.setColor(new Color(255, 255, 255, (int) (190 * (1 - since / (double) FLASH_MS))));
 					s.fill(new RoundRectangle2D.Double(x, y, cell, cell, 6, 6));
 				}
+				if (wave >= 0) paintCelebrated(s, x, y, cell, wave);
 				s.dispose();
 			}
 		}
@@ -271,10 +294,9 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 			if (since < FLOAT_MS) paintFloat(g, cx, cy, cell, since / (double) FLOAT_MS, TsgHubUi.integer(moment.tasks.get(moment.tiles.get(i)), "points", 1));
 		}
 
-		int strikesAt = strikesAt(moment);
 		for (int i = 0; i < moment.lines.size(); i++)
 		{
-			long start = strikesAt + (long) i * STRIKE_MS;
+			long start = strikeAt(moment, i);
 			if (t < start) break;
 			paintStrike(g, left, top, cell, n, moment.lines.get(i), Math.min(1, (t - start) / (double) STRIKE_MS));
 		}
@@ -291,6 +313,64 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 		paintCaption(g, moment, t, panelW, panelH);
 		int stampAt = stampAt(moment);
 		if (!moment.lines.isEmpty() && t >= stampAt) paintStamp(g, moment, Math.min(1, (t - stampAt) / (double) STAMP_MS), panelW / 2.0, top + gridW / 2.0, cell);
+	}
+
+	private static long wave(TsgHubReveals.Moment moment, int row, int col, long t)
+	{
+		int n = moment.board.size;
+		long best = -1;
+		for (int i = 0; i < moment.lines.size(); i++)
+		{
+			TsgHubBingoBoard.Line line = moment.lines.get(i);
+			for (int k = 0; k < n; k++)
+			{
+				int[] at = line.cell(k, n);
+				if (at[0] != row || at[1] != col) continue;
+				long since = t - (lineAt(moment, i) + (long) k * WAVE_STEP_MS);
+				if (since >= 0 && (best < 0 || since < best)) best = since;
+			}
+		}
+		return best;
+	}
+
+	private static void paintCelebrated(Graphics2D g, int x, int y, int cell, long wave)
+	{
+		Color gold = TsgHubBoardGrid.GOLD;
+		if (wave < WAVE_POP_MS)
+		{
+			double p = wave / (double) WAVE_POP_MS;
+			double glow = Math.sin(Math.PI * p);
+			for (int i = 3; i >= 1; i--)
+			{
+				g.setColor(new Color(gold.getRed(), gold.getGreen(), gold.getBlue(), (int) (60 * glow / i)));
+				g.setStroke(new BasicStroke(i * 3f));
+				g.draw(new RoundRectangle2D.Double(x - i, y - i, cell + i * 2, cell + i * 2, 8, 8));
+			}
+			g.setColor(new Color(255, 245, 210, (int) (110 * glow)));
+			g.fill(new RoundRectangle2D.Double(x, y, cell, cell, 6, 6));
+			g.setColor(new Color(255, 240, 200, (int) (230 * (1 - p))));
+			double spread = cell * (0.5 + 0.35 * p);
+			double size = cell * 0.05 * (1 - p * 0.5);
+			for (int i = 0; i < 4; i++)
+			{
+				double a = Math.PI / 4 + i * Math.PI / 2;
+				g.fill(spark(x + cell / 2.0 + Math.cos(a) * spread, y + cell / 2.0 + Math.sin(a) * spread, size));
+			}
+		}
+		g.setColor(gold);
+		g.setStroke(new BasicStroke(2.5f));
+		g.draw(new RoundRectangle2D.Double(x + 1, y + 1, cell - 2, cell - 2, 6, 6));
+	}
+
+	private static Shape spark(double x, double y, double r)
+	{
+		Path2D star = new Path2D.Double();
+		star.moveTo(x, y - r * 2);
+		star.quadTo(x, y, x + r * 2, y);
+		star.quadTo(x, y, x, y + r * 2);
+		star.quadTo(x, y, x - r * 2, y);
+		star.quadTo(x, y, x, y - r * 2);
+		return star;
 	}
 
 	private static double shake(TsgHubReveals.Moment moment, long t)
