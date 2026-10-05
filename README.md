@@ -49,7 +49,7 @@ Tasks can be **Team** (everyone's progress pools together), **Everyone** (each m
 
 **Custom events**, like drop parties, show when and where they happen, along with the host and any notes.
 
-Every event shows its start and end in your own time zone, with the zone name (for example "Mon Oct 5, 7:00 PM AEDT") and how long until it starts or ends. Competitions count gains made between those exact times, wherever you are.
+Every event shows its start and end in your own time zone, with the zone name (for example "Mon 5 Oct, 7pm AEDT") and how long until it starts or ends. Competitions count gains made between those exact times, wherever you are.
 
 <p>
 <img src="docs/images/competition.png" width="320" alt="Skill of the Week leaderboard">

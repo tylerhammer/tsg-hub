@@ -24,10 +24,10 @@ public class EventTimesTest
 	{
 		Instant start = Instant.parse("2026-10-05T08:00:00Z");
 		Instant end = Instant.parse("2026-10-05T10:30:00Z");
-		assertEquals("Mon Oct 5, 4:00 PM to 6:30 PM AWST", TsgHubUi.timeRange(start, end, PERTH, NOW));
-		assertEquals("Mon Oct 5, 6:30 PM to 9:00 PM ACDT", TsgHubUi.timeRange(start, end, ADELAIDE, NOW));
-		assertEquals("Mon Oct 5, 6:00 PM to 8:30 PM AEST", TsgHubUi.timeRange(start, end, BRISBANE, NOW));
-		assertEquals("Mon Oct 5, 7:00 PM to 9:30 PM AEDT", TsgHubUi.timeRange(start, end, SYDNEY, NOW));
+		assertEquals("Mon 5 Oct, 4-6:30pm AWST", TsgHubUi.timeRange(start, end, PERTH, NOW));
+		assertEquals("Mon 5 Oct, 6:30-9pm ACDT", TsgHubUi.timeRange(start, end, ADELAIDE, NOW));
+		assertEquals("Mon 5 Oct, 6-8:30pm AEST", TsgHubUi.timeRange(start, end, BRISBANE, NOW));
+		assertEquals("Mon 5 Oct, 7-9:30pm AEDT", TsgHubUi.timeRange(start, end, SYDNEY, NOW));
 	}
 
 	@Test
@@ -35,16 +35,17 @@ public class EventTimesTest
 	{
 		Instant start = Instant.parse("2026-09-20T09:00:00Z");
 		Instant end = Instant.parse("2026-10-11T08:00:00Z");
-		assertEquals("Sun Sep 20, 7:00 PM AEST to Sun Oct 11, 7:00 PM AEDT", TsgHubUi.timeRange(start, end, SYDNEY, NOW));
-		assertEquals("Sun Sep 20, 7:00 PM to Sun Oct 11, 6:00 PM AEST", TsgHubUi.timeRange(start, end, BRISBANE, NOW));
+		assertEquals("Sun 20 Sep, 7pm AEST to Sun 11 Oct, 7pm AEDT", TsgHubUi.timeRange(start, end, SYDNEY, NOW));
+		assertEquals("Sun 20 Sep, 7pm to Sun 11 Oct, 6pm AEST", TsgHubUi.timeRange(start, end, BRISBANE, NOW));
 	}
 
 	@Test
 	public void openEndedAndOtherYears()
 	{
 		Instant start = Instant.parse("2027-01-02T09:00:00Z");
-		assertEquals("Sat Jan 2 2027, 8:00 PM AEDT", TsgHubUi.timeRange(start, null, SYDNEY, NOW));
+		assertEquals("Sat 2 Jan 2027, 8pm AEDT", TsgHubUi.timeRange(start, null, SYDNEY, NOW));
 		assertEquals("Time TBD", TsgHubUi.timeRange(null, null, SYDNEY, NOW));
+		assertEquals("Mon 5 Oct, 11:30am-1pm AEDT", TsgHubUi.timeRange(Instant.parse("2026-10-05T00:30:00Z"), Instant.parse("2026-10-05T02:00:00Z"), SYDNEY, NOW));
 	}
 
 	@Test

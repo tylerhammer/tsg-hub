@@ -62,10 +62,11 @@ final class TsgHubUi
 	static final Color SUCCESS = ColorScheme.PROGRESS_COMPLETE_COLOR;
 	static final Color ERROR = ColorScheme.PROGRESS_ERROR_COLOR;
 	static final Color WARNING = new Color(230, 180, 60);
-	private static final DateTimeFormatter DATE_WITH_YEAR = DateTimeFormatter.ofPattern("MMM d, yyyy", java.util.Locale.US);
-	private static final DateTimeFormatter WHEN = DateTimeFormatter.ofPattern("EEE MMM d, h:mm a", java.util.Locale.US);
-	private static final DateTimeFormatter WHEN_WITH_YEAR = DateTimeFormatter.ofPattern("EEE MMM d yyyy, h:mm a", java.util.Locale.US);
-	private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("h:mm a", java.util.Locale.US);
+	private static final DateTimeFormatter DATE_WITH_YEAR = DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale.US);
+	private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("EEE d MMM", java.util.Locale.US);
+	private static final DateTimeFormatter DAY_WITH_YEAR = DateTimeFormatter.ofPattern("EEE d MMM yyyy", java.util.Locale.US);
+	private static final DateTimeFormatter HOUR = DateTimeFormatter.ofPattern("h", java.util.Locale.US);
+	private static final DateTimeFormatter HOUR_MINUTE = DateTimeFormatter.ofPattern("h:mm", java.util.Locale.US);
 	private static final DateTimeFormatter ZONE = DateTimeFormatter.ofPattern("zzz", java.util.Locale.US);
 	private static final ZoneId CLAN_ZONE = ZoneId.of("Australia/Sydney");
 	static Clock clock = Clock.systemUTC();
@@ -420,20 +421,34 @@ final class TsgHubUi
 		return when.atZone(zone).format(DATE_WITH_YEAR);
 	}
 
+	private static String clock(ZonedDateTime time, boolean meridiem)
+	{
+		String text = time.format(time.getMinute() == 0 ? HOUR : HOUR_MINUTE);
+		return meridiem ? text + (time.getHour() < 12 ? "am" : "pm") : text;
+	}
+
 	private static String day(ZonedDateTime time, Instant now)
 	{
-		return time.format(time.getYear() == now.atZone(time.getZone()).getYear() ? WHEN : WHEN_WITH_YEAR);
+		return time.format(time.getYear() == now.atZone(time.getZone()).getYear() ? DAY : DAY_WITH_YEAR);
+	}
+
+	private static String when(ZonedDateTime time, Instant now)
+	{
+		return day(time, now) + ", " + clock(time, true);
 	}
 
 	static String timeRange(Instant start, Instant end, ZoneId zone, Instant now)
 	{
 		if (start == null) return "Time TBD";
 		ZonedDateTime from = start.atZone(zone);
-		if (end == null) return day(from, now) + " " + zoneName(from);
+		if (end == null) return when(from, now) + " " + zoneName(from);
 		ZonedDateTime to = end.atZone(zone);
 		boolean sameZone = zoneName(from).equals(zoneName(to));
-		String until = from.toLocalDate().equals(to.toLocalDate()) ? to.format(CLOCK) : day(to, now);
-		return day(from, now) + (sameZone ? "" : " " + zoneName(from)) + " to " + until + " " + zoneName(to);
+		boolean sameDay = from.toLocalDate().equals(to.toLocalDate());
+		if (sameDay && sameZone)
+			return day(from, now) + ", " + clock(from, from.getHour() < 12 != to.getHour() < 12) + "-" + clock(to, true) + " " + zoneName(to);
+		String until = sameDay ? clock(to, true) : when(to, now);
+		return when(from, now) + (sameZone ? "" : " " + zoneName(from)) + " to " + until + " " + zoneName(to);
 	}
 
 	static String span(Duration duration)

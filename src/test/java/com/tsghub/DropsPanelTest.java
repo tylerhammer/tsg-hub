@@ -58,7 +58,7 @@ public class DropsPanelTest
 		assertEquals("5m ago", TsgHubSidebarPanel.dropAge("2026-09-28T11:54:59.500Z", now));
 		assertEquals("3h ago", TsgHubSidebarPanel.dropAge("2026-09-28T09:00:00Z", now));
 		assertEquals("2d ago", TsgHubSidebarPanel.dropAge("2026-09-26T12:00:00Z", now));
-		assertEquals("Jul 1, 2026", TsgHubSidebarPanel.dropAge("2026-07-01T12:00:00Z", now));
+		assertEquals("1 Jul 2026", TsgHubSidebarPanel.dropAge("2026-07-01T12:00:00Z", now));
 		assertEquals("", TsgHubSidebarPanel.dropAge("", now));
 	}
 
