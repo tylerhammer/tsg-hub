@@ -38,7 +38,12 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	static final int TILE_MS = 950;
 	static final int DROP_MS = 260;
 	static final int LIFT_MS = 300;
-	static final int SPLAT_MS = 140;
+	static final int SPLAT_MS = 120;
+	static final int POP_MS = 280;
+	static final int FLASH_MS = 130;
+	static final int SPRAY_MS = 300;
+	static final int RING_MS = 380;
+	static final int FLOAT_MS = 900;
 	static final int STRIKE_MS = 420;
 	static final int STAMP_MS = 240;
 	static final int STAMP_HOLD_MS = 1600;
@@ -51,7 +56,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	private static final int HEADER = 28;
 	private static final int FOOTER = 34;
 	private static final Set<WorldType> PVP_WORLDS = EnumSet.of(WorldType.DEADMAN, WorldType.PVP_ARENA, WorldType.LAST_MAN_STANDING);
-	private static final Color INK = new Color(205, 35, 120);
+	private static final Color INK = new Color(200, 28, 36);
 	private static final Color STAMP = new Color(214, 44, 58);
 
 	private static final class Held
@@ -230,22 +235,40 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 				}
 				JsonObject task = moment.tasks.get(id);
 				int index = moment.tiles.indexOf(id);
-				long impact = index < 0 ? -1 : FIRST_TILE_MS + (long) index * TILE_MS + DROP_MS;
-				boolean complete = moment.before.contains(id) || index >= 0 && t >= impact;
-				TsgHubBoardGrid.Tile tile = new TsgHubBoardGrid.Tile(task, moment.progress.get(id), complete, false, false, false, icons == null ? null : icons.icon(task));
-				if (index >= 0 && t >= impact && t < impact + 180)
+				long since = index >= 0 && t >= FIRST_TILE_MS + (long) index * TILE_MS + DROP_MS ? t - (FIRST_TILE_MS + (long) index * TILE_MS + DROP_MS) : -1;
+				boolean daubed = moment.before.contains(id) || since >= 0;
+				TsgHubBoardGrid.Tile tile = new TsgHubBoardGrid.Tile(task, daubed ? null : moment.progress.get(id), false, false, false, false, icons == null ? null : icons.icon(task));
+				double cx = x + cell / 2.0;
+				double cy = y + cell / 2.0;
+				Graphics2D s = (Graphics2D) g.create();
+				if (since >= 0 && since < POP_MS)
 				{
-					double squash = 1 - 0.1 * Math.sin(Math.PI * (t - impact) / 180.0);
-					Graphics2D s = (Graphics2D) g.create();
-					s.translate(x + cell / 2.0, y + cell / 2.0);
-					s.scale(squash, squash);
-					s.translate(-(x + cell / 2.0), -(y + cell / 2.0));
-					TsgHubBoardGrid.paintTile(s, x, y, cell, tile, small, names);
-					s.dispose();
+					double pop = 1 + 0.14 * Math.sin(Math.PI * since / (double) POP_MS);
+					s.translate(cx, cy);
+					s.scale(pop, pop);
+					s.translate(-cx, -cy);
 				}
-				else TsgHubBoardGrid.paintTile(g, x, y, cell, tile, small, names);
-				if (index >= 0 && t >= impact) paintSplat(g, x + cell / 2.0, y + cell / 2.0, cell, Math.min(1, (t - impact) / (double) SPLAT_MS), id.hashCode());
+				TsgHubBoardGrid.paintTile(s, x, y, cell, tile, small, names);
+				if (daubed) paintDot(s, cx, cy, cell, since < 0 ? 1 : Math.min(1, since / (double) SPLAT_MS), id.hashCode());
+				if (since >= 0 && since < FLASH_MS)
+				{
+					s.setColor(new Color(255, 255, 255, (int) (190 * (1 - since / (double) FLASH_MS))));
+					s.fill(new RoundRectangle2D.Double(x, y, cell, cell, 6, 6));
+				}
+				s.dispose();
 			}
+		}
+
+		for (int i = 0; i < moment.tiles.size(); i++)
+		{
+			long since = t - (FIRST_TILE_MS + (long) i * TILE_MS + DROP_MS);
+			int[] at = find(board, moment.tiles.get(i));
+			if (since < 0 || at == null) continue;
+			double cx = left + at[1] * (cell + GAP) + cell / 2.0;
+			double cy = top + at[0] * (cell + GAP) + cell / 2.0;
+			paintSpray(g, cx, cy, cell, since, moment.tiles.get(i).hashCode());
+			if (since < RING_MS) paintRing(g, cx, cy, cell, since / (double) RING_MS);
+			if (since < FLOAT_MS) paintFloat(g, cx, cy, cell, since / (double) FLOAT_MS, TsgHubUi.integer(moment.tasks.get(moment.tiles.get(i)), "points", 1));
 		}
 
 		int strikesAt = strikesAt(moment);
@@ -275,7 +298,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 		for (int i = 0; i < moment.tiles.size(); i++)
 		{
 			long impact = FIRST_TILE_MS + (long) i * TILE_MS + DROP_MS;
-			if (t >= impact && t < impact + 160) return Math.sin((t - impact) / 12.0) * 3 * (1 - (t - impact) / 160.0);
+			if (t >= impact && t < impact + 180) return Math.sin((t - impact) / 11.0) * 5 * (1 - (t - impact) / 180.0);
 		}
 		long stamp = stampAt(moment) + STAMP_MS / 2;
 		if (!moment.lines.isEmpty() && t >= stamp && t < stamp + 200) return Math.sin((t - stamp) / 12.0) * 5 * (1 - (t - stamp) / 200.0);
@@ -332,28 +355,56 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 		d.dispose();
 	}
 
-	private static void paintSplat(Graphics2D g, double cx, double cy, double cell, double grow, int seed)
+	private static void paintDot(Graphics2D g, double cx, double cy, double cell, double grow, int seed)
 	{
-		double r = cell * 0.27 * (0.4 + 0.6 * easeOutCubic(grow));
+		double r = cell * 0.34 * (0.35 + 0.65 * easeOutBack(grow));
 		Area ink = new Area(new Ellipse2D.Double(cx - r, cy - r, r * 2, r * 2));
-		for (int i = 0; i < 8; i++)
+		for (int i = 0; i < 9; i++)
 		{
 			double variance = ((seed >>> (i * 3)) & 7) / 7.0;
-			double a = i * Math.PI / 4 + variance * 0.5;
-			double d = r * (0.72 + 0.12 * variance);
-			double lobe = r * (0.26 + 0.16 * variance);
+			double a = i * Math.PI * 2 / 9 + variance * 0.4;
+			double d = r * (0.8 + 0.1 * variance);
+			double lobe = r * (0.22 + 0.14 * variance);
 			ink.add(new Area(new Ellipse2D.Double(cx + Math.cos(a) * d - lobe, cy + Math.sin(a) * d - lobe, lobe * 2, lobe * 2)));
 		}
-		for (int i = 0; i < 5; i++)
-		{
-			double variance = ((seed >>> (i * 5 + 2)) & 7) / 7.0;
-			double a = i * Math.PI * 2 / 5 + variance;
-			double d = r * (1.3 + 0.35 * variance) * grow;
-			double drop = cell * (0.022 + 0.022 * variance);
-			ink.add(new Area(new Ellipse2D.Double(cx + Math.cos(a) * d - drop, cy + Math.sin(a) * d - drop, drop * 2, drop * 2)));
-		}
-		g.setColor(new Color(INK.getRed(), INK.getGreen(), INK.getBlue(), 120));
+		g.setColor(new Color(INK.getRed(), INK.getGreen(), INK.getBlue(), 175));
 		g.fill(ink);
+		g.setColor(new Color(255, 120, 110, 70));
+		g.fill(new Ellipse2D.Double(cx - r * 0.55, cy - r * 0.62, r * 0.6, r * 0.4));
+	}
+
+	private static void paintSpray(Graphics2D g, double cx, double cy, double cell, long since, int seed)
+	{
+		double p = easeOutCubic(Math.min(1, since / (double) SPRAY_MS));
+		g.setColor(new Color(INK.getRed(), INK.getGreen(), INK.getBlue(), 175));
+		for (int i = 0; i < 9; i++)
+		{
+			double variance = ((seed >>> (i * 3 + 1)) & 7) / 7.0;
+			double a = i * Math.PI * 2 / 9 + variance;
+			double d = cell * (0.42 + 0.22 * variance) * p;
+			double size = cell * (0.03 + 0.03 * variance) * (1.4 - 0.4 * p);
+			g.fill(new Ellipse2D.Double(cx + Math.cos(a) * d - size, cy + Math.sin(a) * d - size, size * 2, size * 2));
+		}
+	}
+
+	private static void paintRing(Graphics2D g, double cx, double cy, double cell, double p)
+	{
+		double r = cell * (0.35 + 0.55 * easeOutCubic(p));
+		Color gold = TsgHubBoardGrid.GOLD;
+		g.setColor(new Color(gold.getRed(), gold.getGreen(), gold.getBlue(), (int) (220 * (1 - p))));
+		g.setStroke(new BasicStroke((float) (1 + 3 * (1 - p))));
+		g.draw(new Ellipse2D.Double(cx - r, cy - r, r * 2, r * 2));
+	}
+
+	private static void paintFloat(Graphics2D g, double cx, double cy, double cell, double p, int points)
+	{
+		Graphics2D f = (Graphics2D) g.create();
+		f.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, (float) (p < 0.6 ? 1 : 1 - (p - 0.6) / 0.4)));
+		double scale = p < 0.15 ? 0.6 + 0.4 * easeOutBack(p / 0.15) : 1;
+		f.translate(cx, cy - cell * 0.35 - easeOutCubic(p) * cell * 0.45);
+		f.scale(scale, scale);
+		centered(f, "+" + points, FontManager.getRunescapeBoldFont().deriveFont((float) Math.max(18, cell * 0.36)), TsgHubBoardGrid.GOLD, 0, 0);
+		f.dispose();
 	}
 
 	private static void paintStrike(Graphics2D g, int left, int top, int cell, int n, TsgHubBingoBoard.Line line, double p)

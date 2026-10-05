@@ -20,7 +20,7 @@ Clan events for **Type Shiii Gaming** (TSG), right in your RuneLite sidebar. Joi
 
 Your team's board opens straight from the sidebar as a bingo card. Each tile shows the task's item icon, boss or raid icon, or name, a progress strip, and a tick once it's done.
 
-When you complete a tile, your board pops up in the middle of the game screen and a bingo dauber stamps the tile with a splash of ink. If that tile finishes a line, a gold strike runs across it and a **BINGO!** stamp lands with the line bonus. Only the player who completed the tile sees it, so teammates aren't interrupted mid-fight. It never plays in the Wilderness, a PvP area or a PvP world; it waits until you're back somewhere safe. Click the board to skip it, or turn it off with **Tile reveal animation** under **Bingo** in the plugin settings.
+When you complete a tile, your board pops up in the middle of the game screen and a bingo dauber slams a red ink dot onto the tile, with a splash, a flash and its points floating up. If that tile finishes a line, a gold strike runs across it and a **BINGO!** stamp lands with the line bonus. Only the player who completed the tile sees it, so teammates aren't interrupted mid-fight. It never plays in the Wilderness, a PvP area or a PvP world; it waits until you're back somewhere safe. Click the board to skip it, or turn it off with **Tile reveal animation** under **Bingo** in the plugin settings.
 
 **Show board on screen** puts your team's board in the game view (hold Alt and drag to move it). Tiles there flip over as they complete too. Finished rows, columns and diagonals light up gold, and the line count shows above the card. If the admins set line bonuses, each finished line also adds bonus points to your team's score: a fixed bonus, a hidden random one revealed when you finish the line, or both. The rule shows under the card. Click a tile to see its task details, submit proof, or check who contributed.
 
@@ -30,7 +30,7 @@ Switch to **List** to see every task as a card instead. Open tasks sort first; t
 
 When you make progress, a message appears in **your own chatbox only**. When your team finishes a tile, teammates who are online in clan chat get a local alert too. TSG Hub never posts to public or clan chat.
 
-![A dauber stamping a completed tile and a BINGO! stamp on the board](docs/images/reveal.png)
+![Daubed tiles and a BINGO! stamp on the board](docs/images/reveal.png)
 
 <p>
 <img src="docs/images/board-grid.png" width="320" alt="A team's bingo card with a completed row and a selected tile">

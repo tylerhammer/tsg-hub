@@ -35,7 +35,7 @@ public interface TsgHubConfig extends Config
 		return false;
 	}
 
-	@ConfigItem(keyName = "bingoReveal", position = 0, section = bingoSection, name = "Tile reveal animation", description = "When you complete a bingo tile, show your board in the middle of the screen and stamp the tile with a bingo dauber, with a BINGO! stamp when it finishes a line. Never plays in the Wilderness or PvP areas. Click the board to skip it.")
+	@ConfigItem(keyName = "bingoReveal", position = 0, section = bingoSection, name = "Tile reveal animation", description = "When you complete a bingo tile, show your board in the middle of the screen and daub the tile with a bingo dauber, with a BINGO! stamp when it finishes a line. Never plays in the Wilderness or PvP areas. Click the board to skip it.")
 	default boolean bingoReveal()
 	{
 		return true;
