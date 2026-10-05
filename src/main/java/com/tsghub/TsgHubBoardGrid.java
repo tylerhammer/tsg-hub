@@ -39,6 +39,7 @@ final class TsgHubBoardGrid extends JComponent
 
 	static final Color GOLD = new Color(232, 183, 91);
 	private static final int GAP = 3;
+	private static final int MIN_TEXT_CELL = 36;
 	private static final int FLIP_MS = 520;
 	private static final int SHINE_MS = 420;
 	private static final int STAGGER_MS = 140;
@@ -455,7 +456,7 @@ final class TsgHubBoardGrid extends JComponent
 			int h = (int) Math.round(tile.image.getHeight() * scale);
 			content.drawImage(tile.image, x + (cell - w) / 2, y + (cell - h) / 2 - 1, w, h, null);
 		}
-		else
+		else if (tile.image != null || cell >= MIN_TEXT_CELL)
 		{
 			int w = 0;
 			int h = 0;
