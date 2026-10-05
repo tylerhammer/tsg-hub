@@ -10,7 +10,11 @@ import java.awt.RenderingHints;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import net.runelite.client.input.MouseListener;
 import net.runelite.api.Client;
 import net.runelite.client.ui.overlay.Overlay;
@@ -27,6 +31,8 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 	private volatile boolean visible;
 	private volatile java.awt.Rectangle closeButton = new java.awt.Rectangle();
 	private final Client client;
+	private JsonObject boardSource;
+	private TsgHubBingoBoard cachedBoard;
 
 	TsgHubBoardOverlay(Client client)
 	{
@@ -106,15 +112,24 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 			g.setColor(MUTED);
 			String scoreText = score.has("points")
 				? TsgHubUi.integer(score, "points", 0) + " pts     " + TsgHubUi.integer(score, "completedTasks", 0) + "/" + tasks.size() + " tasks"
+					+ (TsgHubUi.integer(score, "lines", 0) > 0 ? "     " + TsgHubUi.integer(score, "lines", 0) + (TsgHubUi.integer(score, "lines", 0) == 1 ? " line" : " lines") : "")
 				: "Hidden";
 			int scoreWidth = g.getFontMetrics().stringWidth(scoreText);
 			g.drawString(scoreText, x + width - scoreWidth - 38, rowY + 3);
 			rowY += 42;
 		}
+		JsonArray ownTasks = TsgHubUi.array(TsgHubUi.scoreFor(scores, memberTeamId), "tasks");
+		TsgHubBingoBoard board = board(snapshot);
 		g.setColor(GOLD);
 		g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
+		if (!board.auto && tasks.size() > 0)
+		{
+			g.drawString("YOUR TEAM BOARD", x + 26, rowY + 13);
+			drawBoard(g, board, tasks, ownTasks, x + 26, rowY + 26, width - 52, y + height - rowY - 46);
+			g.dispose();
+			return null;
+		}
 		g.drawString("YOUR TEAM TASKS", x + 26, rowY + 13);
-		JsonArray ownTasks = TsgHubUi.array(TsgHubUi.scoreFor(scores, memberTeamId), "tasks");
 		int availableRows = Math.max(0, Math.min(tasks.size(), (y + height - rowY - 54) / 28));
 		g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
 		for (int i = 0; i < availableRows; i++)
@@ -132,6 +147,53 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 		}
 		g.dispose();
 		return null;
+	}
+
+	private TsgHubBingoBoard board(JsonObject snapshot)
+	{
+		if (snapshot != boardSource)
+		{
+			cachedBoard = TsgHubBingoBoard.of(snapshot);
+			boardSource = snapshot;
+		}
+		return cachedBoard;
+	}
+
+	private static void drawBoard(Graphics2D g, TsgHubBingoBoard board, JsonArray tasks, JsonArray progressRows, int left, int top, int width, int height)
+	{
+		int n = board.size;
+		int gap = 4;
+		int cell = Math.min((width - gap * (n - 1)) / n, (height - gap * (n - 1)) / n);
+		if (cell < 14) return;
+		int x0 = left + (width - (cell * n + gap * (n - 1))) / 2;
+		Map<String, JsonObject> byId = new HashMap<>();
+		for (int i = 0; i < tasks.size(); i++) byId.put(TsgHubUi.str(tasks.get(i).getAsJsonObject(), "id"), tasks.get(i).getAsJsonObject());
+		Set<String> done = new HashSet<>();
+		for (int i = 0; i < progressRows.size(); i++)
+		{
+			JsonObject row = progressRows.get(i).getAsJsonObject();
+			if (TsgHubUi.bool(row, "completed")) done.add(TsgHubUi.str(row, "taskId"));
+		}
+		List<TsgHubBingoBoard.Line> lines = board.completedLines(done);
+		Set<String> inLines = TsgHubBoardGrid.cellsInLines(board, lines);
+		Font font = new Font(Font.SANS_SERIF, Font.PLAIN, cell >= 80 ? 13 : 11);
+		for (int row = 0; row < n; row++)
+		{
+			for (int col = 0; col < n; col++)
+			{
+				int cx = x0 + col * (cell + gap);
+				int cy = top + row * (cell + gap);
+				String id = board.taskAt(row, col);
+				if (id == null)
+				{
+					TsgHubBoardGrid.paintEmpty(g, cx, cy, cell, false, false);
+					continue;
+				}
+				TsgHubBoardGrid.Tile tile = new TsgHubBoardGrid.Tile(byId.get(id), TsgHubUi.progressFor(progressRows, id), done.contains(id), inLines.contains(row + ":" + col), false, false, null);
+				TsgHubBoardGrid.paintTile(g, cx, cy, cell, tile, font, true);
+			}
+		}
+		for (TsgHubBingoBoard.Line line : lines) TsgHubBoardGrid.paintLine(g, x0, top, cell, gap, n, line, 1);
 	}
 
 	@Override public MouseEvent mousePressed(MouseEvent event)

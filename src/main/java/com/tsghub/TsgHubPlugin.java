@@ -1399,6 +1399,29 @@ public class TsgHubPlugin extends Plugin
 		}, null);
 	}
 
+	void shuffleBoard(int size, String mode)
+	{
+		JsonObject body = new JsonObject();
+		body.addProperty("size", size);
+		body.addProperty("mode", mode);
+		adminRequest("POST", "/board/shuffle", body, "Board shuffled.", result -> refreshOrganizerEvent(false), null);
+	}
+
+	void saveBoard(int size, String mode, String teamId, JsonArray tiles)
+	{
+		JsonObject body = new JsonObject();
+		body.addProperty("size", size);
+		body.addProperty("mode", mode);
+		if (tiles != null) body.add("tiles", tiles);
+		if (teamId != null && !teamId.isEmpty()) body.addProperty("teamId", teamId);
+		adminRequest("PUT", "/board", body, tiles == null ? "Board saved." : "Tiles moved.", result -> refreshOrganizerEvent(false), null);
+	}
+
+	void resetBoard()
+	{
+		adminRequest("DELETE", "/board", null, "Board reset to task order.", result -> refreshOrganizerEvent(false), null);
+	}
+
 	void reviewClaim(String claimId, boolean approve)
 	{
 		JsonObject body = new JsonObject();

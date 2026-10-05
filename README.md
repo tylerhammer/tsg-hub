@@ -8,7 +8,7 @@ Clan events for **Type Shiii Gaming** (TSG), right in your RuneLite sidebar. Joi
 
 ## Features
 
-- **Bingo boards** with team tasks that update automatically from kills, drops, raids and collection log unlocks.
+- **Bingo boards** with team tasks on a real bingo card that update automatically from kills, drops, raids and collection log unlocks.
 - **Skill of the Week** and **Boss of the Week** leaderboards you join with one click.
 - **Custom** events (drop parties, clan trips, anything else) announced with the time, world and location.
 - **Clan parties** for raids, bossing and skilling. Join with one click, no passphrase to type, and see your party's health, prayer, gear, inventory and skills live.
@@ -18,14 +18,17 @@ Clan events for **Type Shiii Gaming** (TSG), right in your RuneLite sidebar. Joi
 
 ## Bingo
 
-Your team's board opens straight from the sidebar. Every task shows its points, a progress bar, and who contributed what. Open tasks sort first; tick **Hide completed** to focus on what's left.
+Your team's board opens straight from the sidebar as a bingo card. Each tile shows the task's item icon or name, a progress strip, and a tick once it's done. When a tile completes while you watch, it flips over. Finished rows, columns and diagonals light up gold, and the line count shows above the card. Click a tile to see its task details, submit proof, or check who contributed.
 
-**Scores** ranks every team, and **Team** lists your teammates. The board updates live while it's open.
+Switch to **List** to see every task as a card instead. Open tasks sort first; tick **Hide completed** to focus on what's left. Events without a board layout open in the list, with tasks filling the card in order.
+
+**Scores** ranks every team and shows completed lines, and **Team** lists your teammates. The board updates live while it's open. The in-game board overlay shows the card too.
 
 When you make progress, a message appears in **your own chatbox only**. When your team finishes a tile, teammates who are online in clan chat get a local alert too. TSG Hub never posts to public or clan chat.
 
 <p>
-<img src="docs/images/board-tasks.png" width="320" alt="A team's bingo board with progress on each task">
+<img src="docs/images/board-grid.png" width="320" alt="A team's bingo card with a completed row and a selected tile">
+<img src="docs/images/board-tasks.png" width="320" alt="A team's bingo tasks as a list with progress on each task">
 <img src="docs/images/board-scores.png" width="320" alt="Team scoreboard">
 </p>
 
@@ -118,7 +121,10 @@ Your in-game clan rank doesn't grant admin access.
 1. **New event**: pick bingo, Skill of the Week, Boss of the Week or a custom event, then set its name and its start and end date and time. Times are entered in your computer's time zone, shown next to the fields, and players see them converted to theirs. Custom events can leave the end time empty. You can hide scores from players until the end.
 2. **Teams**: add teams. Each gets a permanent invite code; use **Copy code** to share it.
 3. **Tasks**: add tasks shared by every team. Item tasks have type-ahead search with icons and ready-made sets, and raid tasks let you choose each raid and mode.
-4. **Claims**: approve or reject manual submissions. The tab shows how many are waiting.
+4. **Board**: pick a size from 3 x 3 to 9 x 9 and **Shuffle** to place tasks on random tiles. **Same for every team** (the default) gives every team the same card, so lines are equally hard; **Different per team** shuffles each team's card separately. Click a tile, then another tile or empty cell, to swap them. **Reset** goes back to task order. The preview shows each team's progress and lines. Fill every cell if you want every line to be winnable: a line through an empty cell can't be completed. The board locks once a published event starts.
+5. **Claims**: approve or reject manual submissions. The tab shows how many are waiting.
+
+![Board tab: size, layout, shuffle and a preview of the card](docs/images/admin-board.png)
 
 ![Pending manual claims awaiting review](docs/images/admin-claims.png)
 
