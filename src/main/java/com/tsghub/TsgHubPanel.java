@@ -10,8 +10,14 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -99,6 +105,9 @@ final class TsgHubPanel extends JPanel
 	private final JTextField eventName = new JTextField();
 	private final TsgHubDatePicker eventStart = new TsgHubDatePicker();
 	private final TsgHubDatePicker eventEnd = new TsgHubDatePicker();
+	private final JTextField eventStartTime = new JTextField();
+	private final JTextField eventEndTime = new JTextField();
+	private final JLabel eventZoneHint = TsgHubUi.label("", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont());
 	private final JCheckBox eventHideScores = new JCheckBox("Hide scores from players");
 	private final JCheckBox eventHidden = new JCheckBox("Hide event from players");
 	private final JButton publishEvent = TsgHubUi.primaryButton("Publish");
@@ -109,14 +118,13 @@ final class TsgHubPanel extends JPanel
 	private final TsgHubBossPicker eventBoss = new TsgHubBossPicker("Boss", null);
 	private final JRadioButton eventSignalKc = new JRadioButton("Kill count message (recommended)", true);
 	private final JRadioButton eventSignalLoot = new JRadioButton("Loot drop (bosses without a KC message)");
-	private final JTextField partyTime = new JTextField();
 	private final JTextField partyWorld = new JTextField();
 	private final JTextField partyLocation = new JTextField();
 	private final JTextField partyHost = new JTextField();
 	private final JTextField partyNotes = new JTextField();
 	private final JLabel eventTypeHint = TsgHubUi.label("", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont());
-	private JPanel skillRow, bossRow2, signalRow2, partyRows, endDateField, hideScoresRow;
-	private JLabel startDateCaption;
+	private JPanel skillRow, bossRow2, signalRow2, partyRows, hideScoresRow;
+	private JLabel endTimeCaption;
 	private final JLabel eventFormError = TsgHubUi.label("", TsgHubUi.ERROR, FontManager.getRunescapeSmallFont());
 	private final JButton eventFormSave = TsgHubUi.primaryButton("Create event");
 	private boolean editingEvent;
@@ -236,16 +244,19 @@ final class TsgHubPanel extends JPanel
 		eventTypeHint.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
 		form.add(eventTypeHint);
 		form.add(field("Event name", eventName));
-		JPanel dates = new JPanel(new GridLayout(1, 2, 10, 0));
+		JPanel dates = new JPanel(new GridLayout(2, 2, 10, 0));
 		dates.setOpaque(false);
-		JPanel startField = field("Start date", eventStart);
-		startDateCaption = (JLabel) startField.getComponent(0);
-		endDateField = field("End date", eventEnd);
+		JPanel endTimeField = field("End time (HH:MM)", eventEndTime);
+		endTimeCaption = (JLabel) endTimeField.getComponent(0);
 		// Moving the start past the end moves the end along.
 		eventStart.onChange(() -> { if (eventEnd.getDate().isBefore(eventStart.getDate())) eventEnd.setDate(eventStart.getDate()); });
-		dates.add(startField);
-		dates.add(endDateField);
+		dates.add(field("Start date", eventStart));
+		dates.add(field("Start time (HH:MM)", eventStartTime));
+		dates.add(field("End date", eventEnd));
+		dates.add(endTimeField);
 		form.add(TsgHubUi.fitHeight(dates));
+		eventZoneHint.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+		form.add(eventZoneHint);
 
 		for (net.runelite.api.Skill skill : net.runelite.api.Skill.values())
 			if (!"OVERALL".equals(skill.name())) eventSkill.addItem(TsgHubUi.skillName(skill.name()));
@@ -257,11 +268,7 @@ final class TsgHubPanel extends JPanel
 		form.add(signalRow2);
 
 		partyRows = TsgHubUi.stack();
-		JPanel partyTop = new JPanel(new GridLayout(1, 2, 10, 0));
-		partyTop.setOpaque(false);
-		partyTop.add(field("Start time (HH:MM, your time)", partyTime));
-		partyTop.add(field("World", partyWorld));
-		partyRows.add(TsgHubUi.fitHeight(partyTop));
+		partyRows.add(field("World", partyWorld));
 		partyRows.add(field("Location", partyLocation));
 		partyRows.add(field("Host", partyHost));
 		partyRows.add(field("Notes (optional)", partyNotes));
@@ -281,8 +288,12 @@ final class TsgHubPanel extends JPanel
 		form.add(eventHidden);
 		form.add(TsgHubUi.wrapped("Only admins can see and join it, so you can set it up and test it first. Publish it when it's ready. Players who already joined keep access.", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), 480));
 		form.add(Box.createVerticalStrut(10));
-		eventType.addActionListener(e -> updateEventFormType());
-		placeholder(partyTime, "e.g. 19:30");
+		eventType.addActionListener(e -> {
+			if (!editingEvent) defaultEventEnd();
+			updateEventFormType();
+		});
+		placeholder(eventStartTime, "e.g. 19:30");
+		placeholder(eventEndTime, "e.g. 21:00");
 		placeholder(partyWorld, "e.g. 330");
 		placeholder(partyLocation, "e.g. Falador Park");
 		placeholder(partyNotes, "e.g. Bring an empty inventory");
@@ -647,7 +658,7 @@ final class TsgHubPanel extends JPanel
 		for (int i = 0; i < events.size(); i++) sorted.add(events.get(i).getAsJsonObject());
 		sorted.sort(Comparator
 			.comparingInt((JsonObject e) -> statusOrder(TsgHubUi.str(e, "status")))
-			.thenComparing(e -> TsgHubUi.str(e, "startDate")));
+			.thenComparing(TsgHubUi::eventStart, Comparator.nullsLast(Comparator.naturalOrder())));
 		for (JsonObject event : sorted)
 		{
 			String id = TsgHubUi.str(event, "id");
@@ -667,9 +678,11 @@ final class TsgHubPanel extends JPanel
 				meta.add(TsgHubUi.badge("Hidden", TsgHubUi.MUTED));
 				meta.add(Box.createHorizontalStrut(5));
 			}
-			meta.add(TsgHubUi.label(TsgHubUi.dateRange(event), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont()));
+			meta.add(TsgHubUi.label(TsgHubUi.capitalize(TsgHubUi.eventRelative(event)), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont()));
 			text.add(Box.createVerticalStrut(3));
 			text.add(meta);
+			text.add(Box.createVerticalStrut(2));
+			text.add(TsgHubUi.wrapped(TsgHubUi.eventWhen(event), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), LIST_W - 50));
 			text.add(Box.createVerticalStrut(2));
 			text.add(TsgHubUi.label(TsgHubUi.eventTypeLabel(event), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont()));
 			card.add(text, BorderLayout.CENTER);
@@ -732,7 +745,7 @@ final class TsgHubPanel extends JPanel
 		boolean competition = "skill".equals(type) || "boss".equals(type);
 		String counts = bingo ? TsgHubUi.array(event, "teams").size() + " teams · " + TsgHubUi.array(event, "tasks").size() + " tasks"
 			: competition ? TsgHubUi.integer(event, "participants", 0) + " taking part" : "";
-		eventMeta.setText(TsgHubUi.eventTypeLine(event) + " · " + TsgHubUi.statusLabel(state) + " · " + TsgHubUi.dateRange(event)
+		eventMeta.setText(TsgHubUi.eventTypeLine(event) + " · " + TsgHubUi.statusLabel(state) + " · " + TsgHubUi.eventSchedule(event)
 			+ (counts.isEmpty() ? "" : " · " + counts)
 			+ (TsgHubUi.bool(event, "hideScores") ? " · Scores hidden from players" : "")
 			+ (TsgHubUi.bool(event, "hidden") ? " · Hidden from players" : ""));
@@ -1181,10 +1194,10 @@ final class TsgHubPanel extends JPanel
 		if (!"drop-party".equals(TsgHubUi.str(currentEvent, "type"))) return;
 		JsonObject config = TsgHubUi.eventConfig(currentEvent);
 		Font font = FontManager.getRunescapeFont();
-		String countdown = TsgHubUi.dropPartyCountdown(config);
-		if (!countdown.isEmpty()) detailsTab.add(TsgHubUi.label(countdown, TsgHubUi.SUCCESS, FontManager.getRunescapeBoldFont()));
+		String countdown = TsgHubUi.capitalize(TsgHubUi.eventRelative(currentEvent));
+		if (!countdown.isEmpty()) detailsTab.add(TsgHubUi.label(countdown, "Ended".equals(countdown) ? TsgHubUi.MUTED : TsgHubUi.SUCCESS, FontManager.getRunescapeBoldFont()));
 		detailsTab.add(Box.createVerticalStrut(6));
-		detailsTab.add(TsgHubUi.label("When: " + TsgHubUi.dropPartyTime(config, true) + " (your time)", TsgHubUi.TEXT, font));
+		detailsTab.add(TsgHubUi.wrapped("When: " + TsgHubUi.eventWhen(currentEvent), TsgHubUi.TEXT, font, DETAIL_TEXT_W));
 		if (TsgHubUi.integer(config, "world", 0) > 0) detailsTab.add(TsgHubUi.label("World: " + TsgHubUi.integer(config, "world", 0), TsgHubUi.TEXT, font));
 		if (!TsgHubUi.str(config, "location").isEmpty()) detailsTab.add(TsgHubUi.label("Where: " + TsgHubUi.str(config, "location"), TsgHubUi.TEXT, font));
 		if (!TsgHubUi.str(config, "host").isEmpty()) detailsTab.add(TsgHubUi.label("Host: " + TsgHubUi.str(config, "host"), TsgHubUi.TEXT, font));
@@ -1346,8 +1359,8 @@ final class TsgHubPanel extends JPanel
 		detectedClan.setVisible(true);
 		eventFormSave.setText("Create event");
 		eventName.setText("");
-		eventStart.setDate(LocalDate.now());
-		eventEnd.setDate(LocalDate.now().plusDays(7));
+		ZonedDateTime start = ZonedDateTime.now().truncatedTo(ChronoUnit.HOURS).plusHours(1);
+		setEventTimes(start, start.plusDays(7));
 		eventHideScores.setSelected(false);
 		eventHidden.setSelected(false);
 		eventType.setEnabled(true);
@@ -1355,7 +1368,6 @@ final class TsgHubPanel extends JPanel
 		eventSkill.setSelectedIndex(0);
 		eventBoss.setText("");
 		eventSignalKc.setSelected(true);
-		partyTime.setText("");
 		partyWorld.setText("");
 		partyLocation.setText("");
 		partyHost.setText(plugin.getDetectedPlayerName());
@@ -1374,8 +1386,9 @@ final class TsgHubPanel extends JPanel
 		detectedClan.setVisible(false);
 		eventFormSave.setText("Save changes");
 		eventName.setText(TsgHubUi.str(currentEvent, "name"));
-		eventStart.setDate(parseDate(TsgHubUi.str(currentEvent, "startDate")));
-		eventEnd.setDate(parseDate(TsgHubUi.str(currentEvent, "endDate")));
+		Instant start = TsgHubUi.eventStart(currentEvent);
+		Instant end = TsgHubUi.eventEnd(currentEvent);
+		setEventTimes(start == null ? null : start.atZone(ZoneId.systemDefault()), end == null ? null : end.atZone(ZoneId.systemDefault()));
 		eventHideScores.setSelected(TsgHubUi.bool(currentEvent, "hideScores"));
 		eventHidden.setSelected(TsgHubUi.bool(currentEvent, "hidden"));
 		String type = TsgHubUi.str(currentEvent, "type");
@@ -1386,13 +1399,6 @@ final class TsgHubPanel extends JPanel
 		eventBoss.setText(TsgHubUi.str(config, "npcName"));
 		if ("loot".equals(TsgHubUi.str(config, "signal"))) eventSignalLoot.setSelected(true);
 		else eventSignalKc.setSelected(true);
-		try
-		{
-			java.time.ZonedDateTime when = java.time.Instant.parse(TsgHubUi.str(config, "startsAt")).atZone(java.time.ZoneId.systemDefault());
-			eventStart.setDate(when.toLocalDate());
-			partyTime.setText(when.toLocalTime().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")));
-		}
-		catch (RuntimeException ignored) { partyTime.setText(""); }
 		partyWorld.setText(TsgHubUi.integer(config, "world", 0) > 0 ? String.valueOf(TsgHubUi.integer(config, "world", 0)) : "");
 		partyLocation.setText(TsgHubUi.str(config, "location"));
 		partyHost.setText(TsgHubUi.str(config, "host"));
@@ -1409,15 +1415,15 @@ final class TsgHubPanel extends JPanel
 		if (name.isEmpty()) { eventFormFailed("Give the event a name."); eventName.requestFocusInWindow(); return; }
 		String type = EVENT_TYPES[Math.max(0, eventType.getSelectedIndex())];
 		boolean dropParty = "drop-party".equals(type);
-		LocalDate start;
-		LocalDate end;
-		start = eventStart.getDate();
-		if (dropParty) end = start;
-		else
+		Instant start = eventInstant(eventStart, eventStartTime);
+		if (start == null) { eventFormFailed("Start time must look like 19:30."); eventStartTime.requestFocusInWindow(); return; }
+		Instant end = null;
+		if (!dropParty || !eventEndTime.getText().trim().isEmpty())
 		{
-			end = eventEnd.getDate();
+			end = eventInstant(eventEnd, eventEndTime);
+			if (end == null) { eventFormFailed("End time must look like 21:00."); eventEndTime.requestFocusInWindow(); return; }
+			if (!end.isAfter(start)) { eventFormFailed("The end must be after the start."); eventEndTime.requestFocusInWindow(); return; }
 		}
-		if (end.isBefore(start)) { eventFormFailed("End date can't be before the start date."); eventEnd.requestFocusInWindow(); return; }
 		JsonObject config = new JsonObject();
 		if ("skill".equals(type)) config.addProperty("skill", String.valueOf(eventSkill.getSelectedItem()).toUpperCase(java.util.Locale.ROOT).replace(' ', '_'));
 		if ("boss".equals(type))
@@ -1429,10 +1435,6 @@ final class TsgHubPanel extends JPanel
 		}
 		if (dropParty)
 		{
-			java.time.LocalTime time;
-			try { time = java.time.LocalTime.parse(partyTime.getText().trim()); }
-			catch (DateTimeParseException e) { eventFormFailed("Start time must look like 19:30."); partyTime.requestFocusInWindow(); return; }
-			config.addProperty("startsAt", start.atTime(time).atZone(java.time.ZoneId.systemDefault()).toInstant().toString());
 			String world = partyWorld.getText().trim();
 			if (!world.isEmpty())
 			{
@@ -1444,8 +1446,38 @@ final class TsgHubPanel extends JPanel
 			config.addProperty("notes", partyNotes.getText().trim());
 		}
 		eventFormError.setVisible(false);
-		if (editingEvent && currentEvent != null) plugin.updateEvent(TsgHubUi.str(currentEvent, "id"), name, start.toString(), end.toString(), eventHideScores.isSelected(), eventHidden.isSelected(), "bingo".equals(type) ? null : config);
-		else plugin.createEvent(name, start.toString(), end.toString(), eventHideScores.isSelected(), eventHidden.isSelected(), type, config);
+		if (editingEvent && currentEvent != null) plugin.updateEvent(TsgHubUi.str(currentEvent, "id"), name, start, end, eventHideScores.isSelected(), eventHidden.isSelected(), "bingo".equals(type) ? null : config);
+		else plugin.createEvent(name, start, end, eventHideScores.isSelected(), eventHidden.isSelected(), type, config);
+	}
+
+	private void setEventTimes(ZonedDateTime start, ZonedDateTime end)
+	{
+		DateTimeFormatter clock = DateTimeFormatter.ofPattern("HH:mm");
+		eventStart.setDate(start == null ? LocalDate.now() : start.toLocalDate());
+		eventStartTime.setText(start == null ? "" : start.format(clock));
+		eventEnd.setDate(end == null ? eventStart.getDate() : end.toLocalDate());
+		eventEndTime.setText(end == null ? "" : end.format(clock));
+	}
+
+	private void defaultEventEnd()
+	{
+		boolean dropParty = "drop-party".equals(EVENT_TYPES[Math.max(0, eventType.getSelectedIndex())]);
+		if (dropParty)
+		{
+			eventEnd.setDate(eventStart.getDate());
+			eventEndTime.setText("");
+		}
+		else if (eventEndTime.getText().trim().isEmpty())
+		{
+			eventEnd.setDate(eventStart.getDate().plusDays(7));
+			eventEndTime.setText(eventStartTime.getText());
+		}
+	}
+
+	private static Instant eventInstant(TsgHubDatePicker date, JTextField time)
+	{
+		try { return date.getDate().atTime(LocalTime.parse(time.getText().trim())).atZone(ZoneId.systemDefault()).toInstant(); }
+		catch (DateTimeParseException e) { return null; }
 	}
 
 	private void updateEventFormType()
@@ -1456,9 +1488,10 @@ final class TsgHubPanel extends JPanel
 		bossRow2.setVisible("boss".equals(type));
 		signalRow2.setVisible("boss".equals(type));
 		partyRows.setVisible(dropParty);
-		endDateField.setVisible(!dropParty);
 		hideScoresRow.setVisible(!dropParty);
-		startDateCaption.setText(dropParty ? "Date" : "Start date");
+		endTimeCaption.setText(dropParty ? "End time (optional)" : "End time (HH:MM)");
+		eventZoneHint.setText(TsgHubUi.html(TsgHubUi.escape("Times are in your time zone, " + TsgHubUi.zoneLabel(ZoneId.systemDefault(), TsgHubUi.clock.instant())
+			+ ". Players see them in theirs." + (dropParty ? " Leave the end time empty if there's no set end." : "")), 480));
 		placeholder(eventName, "skill".equals(type) ? "e.g. SOTW: Mining" : "boss".equals(type) ? "e.g. BOTW: Vorkath" : dropParty ? "e.g. Halloween drop party, clan trip" : "e.g. Autumn Bingo");
 		eventName.repaint();
 		eventTypeHint.setText("skill".equals(type) ? "Players join with one click; most XP gained in the skill wins."
@@ -1869,12 +1902,6 @@ final class TsgHubPanel extends JPanel
 	private static void placeholder(JTextField field, String text)
 	{
 		field.putClientProperty("JTextField.placeholderText", text);
-	}
-
-	private static LocalDate parseDate(String text)
-	{
-		try { return LocalDate.parse(text); }
-		catch (DateTimeParseException e) { return LocalDate.now(); }
 	}
 
 	private static JLabel caption(String text)

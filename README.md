@@ -47,7 +47,9 @@ Tasks can be **Team** (everyone's progress pools together), **Everyone** (each m
 
 **Skill of the Week** tracks the XP you gain in one skill. **Boss of the Week** counts kills of one boss. Click the event, press join, and play: your gain and rank update as you go.
 
-**Custom events**, like drop parties, show when and where they happen, in your own time zone, along with the host and any notes.
+**Custom events**, like drop parties, show when and where they happen, along with the host and any notes.
+
+Every event shows its start and end in your own time zone, with the zone name (for example "Mon Oct 5, 7:00 PM AEDT") and how long until it starts or ends. Competitions count gains made between those exact times, wherever you are.
 
 <p>
 <img src="docs/images/competition.png" width="320" alt="Skill of the Week leaderboard">
@@ -113,7 +115,7 @@ Once the key checks out, an admin button appears in the sidebar header. It opens
 
 Your in-game clan rank doesn't grant admin access.
 
-1. **New event**: pick bingo, Skill of the Week, Boss of the Week or a custom event, then set its name and dates. You can hide scores from players until the end.
+1. **New event**: pick bingo, Skill of the Week, Boss of the Week or a custom event, then set its name and its start and end date and time. Times are entered in your computer's time zone, shown next to the fields, and players see them converted to theirs. Custom events can leave the end time empty. You can hide scores from players until the end.
 2. **Teams**: add teams. Each gets a permanent invite code; use **Copy code** to share it.
 3. **Tasks**: add tasks shared by every team. Item tasks have type-ahead search with icons and ready-made sets, and raid tasks let you choose each raid and mode.
 4. **Claims**: approve or reject manual submissions. The tab shows how many are waiting.

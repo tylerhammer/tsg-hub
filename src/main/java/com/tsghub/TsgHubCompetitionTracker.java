@@ -2,9 +2,7 @@ package com.tsghub;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import java.time.DateTimeException;
-import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -25,7 +23,6 @@ final class TsgHubCompetitionTracker
 	static final Pattern KILL_COUNT = Pattern.compile("(?:kill count|kill-count)[^0-9]*([0-9][0-9,]*)");
 	private static final long XP_FLUSH_SECONDS = 10;
 	private static final long SCHEDULE_CHECK_SECONDS = 60;
-	private static final ZoneId DEFAULT_ZONE = ZoneId.of("Australia/Sydney");
 
 	private final Supplier<TsgHubApi> api;
 	private final ScheduledExecutorService executor;
@@ -79,23 +76,10 @@ final class TsgHubCompetitionTracker
 	private static List<JsonObject> running(List<JsonObject> events)
 	{
 		List<JsonObject> running = new ArrayList<>();
+		Instant now = Instant.now();
 		for (JsonObject event : events)
-		{
-			String today = LocalDate.now(zone(event)).toString();
-			String start = TsgHubUi.str(event, "startDate");
-			String end = TsgHubUi.str(event, "endDate");
-			boolean active = start.isEmpty() || end.isEmpty()
-				? "active".equals(TsgHubUi.str(event, "status"))
-				: today.compareTo(start) >= 0 && today.compareTo(end) <= 0;
-			if (active) running.add(event);
-		}
+			if (TsgHubUi.running(event, now)) running.add(event);
 		return running;
-	}
-
-	private static ZoneId zone(JsonObject event)
-	{
-		try { return ZoneId.of(TsgHubUi.str(event, "timeZone")); }
-		catch (DateTimeException e) { return DEFAULT_ZONE; }
 	}
 
 	private static List<String> ids(List<JsonObject> events)

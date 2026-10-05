@@ -23,7 +23,13 @@ import java.awt.geom.Path2D;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.time.Clock;
+import java.time.DateTimeException;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -56,8 +62,13 @@ final class TsgHubUi
 	static final Color SUCCESS = ColorScheme.PROGRESS_COMPLETE_COLOR;
 	static final Color ERROR = ColorScheme.PROGRESS_ERROR_COLOR;
 	static final Color WARNING = new Color(230, 180, 60);
-	private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("MMM d");
-	private static final DateTimeFormatter DATE_WITH_YEAR = DateTimeFormatter.ofPattern("MMM d, yyyy");
+	private static final DateTimeFormatter DATE_WITH_YEAR = DateTimeFormatter.ofPattern("MMM d, yyyy", java.util.Locale.US);
+	private static final DateTimeFormatter WHEN = DateTimeFormatter.ofPattern("EEE MMM d, h:mm a", java.util.Locale.US);
+	private static final DateTimeFormatter WHEN_WITH_YEAR = DateTimeFormatter.ofPattern("EEE MMM d yyyy, h:mm a", java.util.Locale.US);
+	private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("h:mm a", java.util.Locale.US);
+	private static final DateTimeFormatter ZONE = DateTimeFormatter.ofPattern("zzz", java.util.Locale.US);
+	private static final ZoneId CLAN_ZONE = ZoneId.of("Australia/Sydney");
+	static Clock clock = Clock.systemUTC();
 
 	enum Tone { INFO, SUCCESS, ERROR }
 
@@ -353,20 +364,116 @@ final class TsgHubUi
 		return object != null && object.has(key) && object.get(key).isJsonArray() ? object.getAsJsonArray(key) : new JsonArray();
 	}
 
-	static String formatDate(String isoDate, boolean withYear)
+	static Instant instant(String iso)
 	{
-		if (isoDate == null || isoDate.isEmpty()) return "TBD";
-		try { return LocalDate.parse(isoDate).format(withYear ? DATE_WITH_YEAR : DATE); }
-		catch (RuntimeException ignored) { return isoDate; }
+		try { return iso == null || iso.isEmpty() ? null : Instant.parse(iso); }
+		catch (DateTimeException e) { return null; }
 	}
 
-	static String dateRange(JsonObject event)
+	private static ZoneId eventZone(JsonObject event)
 	{
-		String start = str(event, "startDate");
-		String end = str(event, "endDate");
-		boolean showYear = !start.startsWith(String.valueOf(LocalDate.now().getYear()))
-			|| !end.isEmpty() && !end.startsWith(String.valueOf(LocalDate.now().getYear()));
-		return formatDate(start, false) + " to " + formatDate(end, showYear);
+		try { return ZoneId.of(str(event, "timeZone")); }
+		catch (DateTimeException e) { return CLAN_ZONE; }
+	}
+
+	private static Instant midnight(String isoDate, ZoneId zone, int plusDays)
+	{
+		try { return LocalDate.parse(isoDate).plusDays(plusDays).atStartOfDay(zone).toInstant(); }
+		catch (DateTimeException e) { return null; }
+	}
+
+	static Instant eventStart(JsonObject event)
+	{
+		Instant start = instant(str(event, "startsAt"));
+		if (start == null) start = instant(str(eventConfig(event), "startsAt"));
+		return start != null ? start : midnight(str(event, "startDate"), eventZone(event), 0);
+	}
+
+	static Instant eventEnd(JsonObject event)
+	{
+		Instant end = instant(str(event, "endsAt"));
+		if (end != null || "drop-party".equals(str(event, "type"))) return end;
+		return midnight(str(event, "endDate"), eventZone(event), 1);
+	}
+
+	static boolean running(JsonObject event, Instant now)
+	{
+		Instant start = eventStart(event);
+		Instant end = eventEnd(event);
+		if (start == null || end == null) return "active".equals(str(event, "status"));
+		return !now.isBefore(start) && now.isBefore(end);
+	}
+
+	static String zoneName(ZonedDateTime time)
+	{
+		return time.format(ZONE);
+	}
+
+	static String zoneLabel(ZoneId zone, Instant now)
+	{
+		String name = zoneName(now.atZone(zone));
+		return name.equals(zone.getId()) ? name : name + " (" + zone.getId() + ")";
+	}
+
+	static String localDate(Instant when, ZoneId zone)
+	{
+		return when.atZone(zone).format(DATE_WITH_YEAR);
+	}
+
+	private static String day(ZonedDateTime time, Instant now)
+	{
+		return time.format(time.getYear() == now.atZone(time.getZone()).getYear() ? WHEN : WHEN_WITH_YEAR);
+	}
+
+	static String timeRange(Instant start, Instant end, ZoneId zone, Instant now)
+	{
+		if (start == null) return "Time TBD";
+		ZonedDateTime from = start.atZone(zone);
+		if (end == null) return day(from, now) + " " + zoneName(from);
+		ZonedDateTime to = end.atZone(zone);
+		boolean sameZone = zoneName(from).equals(zoneName(to));
+		String until = from.toLocalDate().equals(to.toLocalDate()) ? to.format(CLOCK) : day(to, now);
+		return day(from, now) + (sameZone ? "" : " " + zoneName(from)) + " to " + until + " " + zoneName(to);
+	}
+
+	static String span(Duration duration)
+	{
+		long minutes = Math.max(1, (duration.getSeconds() + 59) / 60);
+		long days = minutes / 1440, hours = minutes % 1440 / 60, rest = minutes % 60;
+		if (days > 0) return days + "d" + (hours > 0 ? " " + hours + "h" : "");
+		if (hours > 0) return hours + "h" + (rest > 0 ? " " + rest + "m" : "");
+		return rest + "m";
+	}
+
+	static String relativeTime(Instant start, Instant end, Instant now)
+	{
+		if (start == null) return "";
+		if (now.isBefore(start)) return "starts in " + span(Duration.between(now, start));
+		if (end == null) return "happening now";
+		if (now.isBefore(end)) return "ends in " + span(Duration.between(now, end));
+		return "ended";
+	}
+
+	static String capitalize(String text)
+	{
+		return text.isEmpty() ? text : Character.toUpperCase(text.charAt(0)) + text.substring(1);
+	}
+
+	static String eventWhen(JsonObject event)
+	{
+		return timeRange(eventStart(event), eventEnd(event), ZoneId.systemDefault(), clock.instant());
+	}
+
+	static String eventRelative(JsonObject event)
+	{
+		if ("ended".equals(str(event, "status"))) return "ended";
+		return relativeTime(eventStart(event), eventEnd(event), clock.instant());
+	}
+
+	static String eventSchedule(JsonObject event)
+	{
+		String relative = eventRelative(event);
+		return (relative.isEmpty() || "ended".equals(relative) ? "" : relative + " · ") + eventWhen(event);
 	}
 
 	static String statusLabel(String status)
@@ -419,30 +526,6 @@ final class TsgHubUi
 				return "Custom" + where;
 			default: return "Bingo";
 		}
-	}
-
-	static String dropPartyTime(JsonObject config, boolean long_)
-	{
-		try
-		{
-			java.time.ZonedDateTime when = java.time.Instant.parse(str(config, "startsAt")).atZone(java.time.ZoneId.systemDefault());
-			return when.format(DateTimeFormatter.ofPattern(long_ ? "EEEE, MMM d 'at' h:mm a" : "EEE MMM d, h:mm a"));
-		}
-		catch (RuntimeException e) { return "time TBD"; }
-	}
-
-	static String dropPartyCountdown(JsonObject config)
-	{
-		try
-		{
-			long seconds = java.time.Duration.between(java.time.Instant.now(), java.time.Instant.parse(str(config, "startsAt"))).getSeconds();
-			if (seconds <= 0) return seconds > -2 * 3600 ? "Happening now" : "Finished";
-			long days = seconds / 86400, hours = seconds % 86400 / 3600, minutes = seconds % 3600 / 60;
-			if (days > 0) return "Starts in " + days + "d " + hours + "h";
-			if (hours > 0) return "Starts in " + hours + "h " + minutes + "m";
-			return "Starts in " + Math.max(1, minutes) + "m";
-		}
-		catch (RuntimeException e) { return ""; }
 	}
 
 	static String taskTypeLabel(JsonObject task)

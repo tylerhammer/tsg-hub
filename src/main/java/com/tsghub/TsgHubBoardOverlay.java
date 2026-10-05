@@ -74,7 +74,7 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 		g.setColor(MUTED);
 		g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 14));
 		String clan = TsgHubUi.str(snapshot, "clanName");
-		String dates = TsgHubUi.str(snapshot, "startDate") + " to " + TsgHubUi.str(snapshot, "endDate");
+		String dates = TsgHubUi.eventSchedule(snapshot);
 		g.drawString((clan.isEmpty() ? "Clan" : clan) + "  ·  " + dates + "  ·  " + TsgHubUi.str(snapshot, "status").toUpperCase(), x + 26, y + 67);
 		closeButton = new java.awt.Rectangle(x + width - 43, y + 14, 28, 28);
 		g.setColor(new Color(59, 65, 73));
