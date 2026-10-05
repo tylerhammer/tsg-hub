@@ -16,10 +16,15 @@ import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import net.runelite.api.Client;
+import net.runelite.api.GameState;
+import net.runelite.api.WorldType;
+import net.runelite.api.gameval.VarbitID;
 import net.runelite.client.input.MouseListener;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.Overlay;
@@ -35,6 +40,8 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	static final int EXIT_MS = 3900;
 	static final int END_MS = 4350;
 	private static final int MAX_QUEUED = 10;
+	private static final long MAX_HELD_MS = 10 * 60 * 1000L;
+	private static final Set<WorldType> PVP_WORLDS = EnumSet.of(WorldType.DEADMAN, WorldType.PVP_ARENA, WorldType.LAST_MAN_STANDING);
 	private static final int CARD_W = 200;
 	private static final int CARD_H = 280;
 	private static final Color GOLD = new Color(232, 183, 91);
@@ -43,10 +50,22 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 
 	private final Client client;
 	private final TsgHubTileIcons icons;
-	private final Queue<TsgHubReveals.Reveal> queue = new ConcurrentLinkedQueue<>();
+	private final Queue<Held> queue = new ConcurrentLinkedQueue<>();
 	private volatile TsgHubReveals.Reveal current;
 	private volatile long startedAt;
 	private volatile Rectangle cardBounds = new Rectangle();
+
+	private static final class Held
+	{
+		final TsgHubReveals.Reveal reveal;
+		final long at;
+
+		Held(TsgHubReveals.Reveal reveal, long at)
+		{
+			this.reveal = reveal;
+			this.at = at;
+		}
+	}
 
 	TsgHubRevealOverlay(Client client, TsgHubTileIcons icons)
 	{
@@ -59,7 +78,8 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 
 	void reveal(List<TsgHubReveals.Reveal> reveals)
 	{
-		for (TsgHubReveals.Reveal reveal : reveals) if (queue.size() < MAX_QUEUED) queue.add(reveal);
+		long now = System.currentTimeMillis();
+		for (TsgHubReveals.Reveal reveal : reveals) if (queue.size() < MAX_QUEUED) queue.add(new Held(reveal, now));
 	}
 
 	void clear()
@@ -72,10 +92,17 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	public Dimension render(Graphics2D graphics)
 	{
 		long now = System.currentTimeMillis();
+		if (dangerous())
+		{
+			current = null;
+			return null;
+		}
 		TsgHubReveals.Reveal reveal = current;
 		if (reveal == null || now - startedAt >= END_MS)
 		{
-			reveal = queue.poll();
+			Held next = queue.poll();
+			while (next != null && now - next.at > MAX_HELD_MS) next = queue.poll();
+			reveal = next == null ? null : next.reveal;
 			current = reveal;
 			startedAt = now;
 			if (reveal == null) return null;
@@ -89,6 +116,14 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 		paint(g, reveal, now - startedAt, width, height, reveal.task == null ? null : icons.icon(reveal.task));
 		g.dispose();
 		return null;
+	}
+
+	private boolean dangerous()
+	{
+		if (client.getGameState() != GameState.LOGGED_IN) return true;
+		if (client.getVarbitValue(VarbitID.INSIDE_WILDERNESS) == 1 || client.getVarbitValue(VarbitID.PVP_AREA_CLIENT) == 1) return true;
+		for (WorldType type : client.getWorldType()) if (PVP_WORLDS.contains(type)) return true;
+		return false;
 	}
 
 	void paint(Graphics2D g, TsgHubReveals.Reveal reveal, long t, int width, int height, BufferedImage icon)

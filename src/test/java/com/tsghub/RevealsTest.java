@@ -16,16 +16,16 @@ public class RevealsTest
 	public void firstLoadOnlySetsBaseline()
 	{
 		TsgHubReveals reveals = new TsgHubReveals();
-		assertTrue(reveals.update(event("red", "t0", "t1"), "red").isEmpty());
-		assertTrue(reveals.update(event("red", "t0", "t1"), "red").isEmpty());
+		assertTrue(reveals.update(event("red", "t0", "t1"), "red", "Crab Legs").isEmpty());
+		assertTrue(reveals.update(event("red", "t0", "t1"), "red", "Crab Legs").isEmpty());
 	}
 
 	@Test
 	public void newTilesAndLinesAreRevealed()
 	{
 		TsgHubReveals reveals = new TsgHubReveals();
-		reveals.update(event("red", "t0", "t1"), "red");
-		List<TsgHubReveals.Reveal> found = reveals.update(event("red", "t0", "t1", "t2"), "red");
+		reveals.update(event("red", "t0", "t1"), "red", "Crab Legs");
+		List<TsgHubReveals.Reveal> found = reveals.update(event("red", "t0", "t1", "t2"), "red", "Crab Legs");
 		assertEquals(2, found.size());
 		assertFalse(found.get(0).line);
 		assertEquals("Task 2", found.get(0).title);
@@ -34,17 +34,88 @@ public class RevealsTest
 		assertTrue(found.get(1).line);
 		assertEquals("Row 1", found.get(1).title);
 		assertEquals(5, found.get(1).points);
-		assertTrue(reveals.update(event("red", "t0", "t1", "t2"), "red").isEmpty());
+		assertTrue(reveals.update(event("red", "t0", "t1", "t2"), "red", "Crab Legs").isEmpty());
 	}
 
 	@Test
 	public void switchingEventsOrTeamsResetsBaseline()
 	{
 		TsgHubReveals reveals = new TsgHubReveals();
-		reveals.update(event("red"), "red");
-		assertTrue(reveals.update(event("blue", "t0"), "blue").isEmpty());
-		reveals.update(null, null);
-		assertTrue(reveals.update(event("blue", "t0", "t1"), "blue").isEmpty());
+		reveals.update(event("red"), "red", "Crab Legs");
+		assertTrue(reveals.update(event("blue", "t0"), "blue", "Crab Legs").isEmpty());
+		reveals.update(null, null, "");
+		assertTrue(reveals.update(event("blue", "t0", "t1"), "blue", "Crab Legs").isEmpty());
+	}
+
+	@Test
+	public void teammatesDoNotGetTheReveal()
+	{
+		TsgHubReveals reveals = new TsgHubReveals();
+		reveals.update(event("red", "t0", "t1"), "red", "Mossy Rock");
+		assertTrue(reveals.update(event("red", "t0", "t1", "t2"), "red", "Mossy Rock").isEmpty());
+	}
+
+	@Test
+	public void lineGoesToWhoeverFinishedIt()
+	{
+		TsgHubReveals reveals = new TsgHubReveals();
+		JsonObject before = event("red", "t0", "t1");
+		JsonObject after = event("red", "t0", "t1", "t2", "t4");
+		row(after, "t2").addProperty("completedBy", "Mossy Rock");
+		reveals.update(before, "red", "Crab Legs");
+		List<TsgHubReveals.Reveal> found = reveals.update(after, "red", "Crab Legs");
+		assertEquals(1, found.size());
+		assertEquals("Task 4", found.get(0).title);
+	}
+
+	@Test
+	public void everyoneTileGoesToTheLastFinisher()
+	{
+		TsgHubReveals reveals = new TsgHubReveals();
+		JsonObject before = event("red");
+		everyone(before, "t5", false, false);
+		JsonObject after = event("red", "t5");
+		everyone(after, "t5", true, true);
+		reveals.update(before, "red", "Crab Legs");
+		List<TsgHubReveals.Reveal> found = reveals.update(after, "red", "Crab Legs");
+		assertEquals(1, found.size());
+		assertEquals("Task 5", found.get(0).title);
+
+		TsgHubReveals early = new TsgHubReveals();
+		JsonObject waiting = event("red");
+		everyone(waiting, "t5", true, false);
+		early.update(waiting, "red", "Crab Legs");
+		assertTrue(early.update(after, "red", "Crab Legs").isEmpty());
+	}
+
+	private static void everyone(JsonObject event, String taskId, boolean crab, boolean mossy)
+	{
+		for (int i = 0; i < event.getAsJsonArray("tasks").size(); i++)
+		{
+			JsonObject task = event.getAsJsonArray("tasks").get(i).getAsJsonObject();
+			if (taskId.equals(task.get("id").getAsString())) task.addProperty("scope", "individual");
+		}
+		JsonObject row = row(event, taskId);
+		row.remove("completedBy");
+		JsonArray members = new JsonArray();
+		members.add(member("Crab Legs", crab));
+		members.add(member("Mossy Rock", mossy));
+		row.add("members", members);
+	}
+
+	private static JsonObject member(String name, boolean completed)
+	{
+		JsonObject member = new JsonObject();
+		member.addProperty("displayName", name);
+		member.addProperty("completed", completed);
+		return member;
+	}
+
+	private static JsonObject row(JsonObject event, String taskId)
+	{
+		JsonArray rows = event.getAsJsonArray("teamScores").get(0).getAsJsonObject().getAsJsonArray("tasks");
+		for (int i = 0; i < rows.size(); i++) if (taskId.equals(rows.get(i).getAsJsonObject().get("taskId").getAsString())) return rows.get(i).getAsJsonObject();
+		throw new IllegalArgumentException(taskId);
 	}
 
 	@Test

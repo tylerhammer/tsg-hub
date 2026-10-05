@@ -20,7 +20,7 @@ Clan events for **Type Shiii Gaming** (TSG), right in your RuneLite sidebar. Joi
 
 Your team's board opens straight from the sidebar as a bingo card. Each tile shows the task's item icon, boss or raid icon, or name, a progress strip, and a tick once it's done.
 
-When your team completes a tile, a card opens in the middle of your game screen, like opening a card pack: it shakes, flips over, and bursts open to show the tile, its points and who finished it. Completing a line opens a **BINGO!** card with its bonus. Click a card to skip it, or turn the reveal off with **Tile reveal animation** under **Bingo** in the plugin settings.
+When you complete a tile, a card opens in the middle of your game screen, like opening a card pack: it shakes, flips over, and bursts open to show the tile and its points. If that tile finishes a line, a **BINGO!** card with its bonus follows. Only the player who completed the tile sees the cards, so teammates aren't interrupted mid-fight. Cards never play in the Wilderness, a PvP area or a PvP world; they wait until you're back somewhere safe. Click a card to skip it, or turn the reveal off with **Tile reveal animation** under **Bingo** in the plugin settings.
 
 **Show board on screen** puts your team's board in the game view (hold Alt and drag to move it). Tiles there flip over as they complete too. Finished rows, columns and diagonals light up gold, and the line count shows above the card. If the admins set line bonuses, each finished line also adds bonus points to your team's score: a fixed bonus, a hidden random one revealed when you finish the line, or both. The rule shows under the card. Click a tile to see its task details, submit proof, or check who contributed.
 

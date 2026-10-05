@@ -35,7 +35,7 @@ public interface TsgHubConfig extends Config
 		return false;
 	}
 
-	@ConfigItem(keyName = "bingoReveal", position = 0, section = bingoSection, name = "Tile reveal animation", description = "Open a card in the middle of the screen when your team completes a bingo tile or line, like opening a card pack. Click the card to skip it.")
+	@ConfigItem(keyName = "bingoReveal", position = 0, section = bingoSection, name = "Tile reveal animation", description = "Open a card in the middle of the screen when you complete a bingo tile or line, like opening a card pack. Never plays in the Wilderness or PvP areas. Click the card to skip it.")
 	default boolean bingoReveal()
 	{
 		return true;

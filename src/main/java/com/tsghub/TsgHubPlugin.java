@@ -266,7 +266,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		String teamId = TsgHubUi.teamIdFor(event, displayName);
 		if (boardOverlay != null) boardOverlay.setEvent(event, teamId);
-		List<TsgHubReveals.Reveal> found = reveals.update(event, teamId);
+		List<TsgHubReveals.Reveal> found = reveals.update(event, teamId, displayName == null ? "" : displayName);
 		if (revealOverlay != null && config.bingoReveal()) revealOverlay.reveal(found);
 	}
 
@@ -298,7 +298,7 @@ public class TsgHubPlugin extends Plugin
 		}
 		TsgHubBingoBoard board = TsgHubBingoBoard.of(event);
 		TsgHubBingoBoard.Line line = board.allLines().get(0);
-		preview.add(new TsgHubReveals.Reveal(true, line.label(), "Your first line", board.bonusFor(line), null));
+		preview.add(new TsgHubReveals.Reveal(true, line.label(), "Your team's first line", board.bonusFor(line), null));
 		revealOverlay.reveal(preview);
 	}
 
@@ -710,7 +710,7 @@ public class TsgHubPlugin extends Plugin
 	private void clearBoardOverlays()
 	{
 		primedBoardEventId = "";
-		reveals.update(null, null);
+		reveals.update(null, null, "");
 		if (boardOverlay != null) boardOverlay.clear();
 		if (revealOverlay != null) revealOverlay.clear();
 	}
