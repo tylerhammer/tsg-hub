@@ -110,7 +110,7 @@ Every clan member can link their RuneScape account to the clan Discord:
 1. Run `/hub key` in the clan Discord. The bot replies with a key that starts with `tsghub_`.
 2. Paste it into **Hub key** under **Discord** in the TSG Hub plugin settings, with sharing on.
 
-The plugin confirms the key in the sidebar and links your Discord account to the character you're logged in as. A name change carries over automatically next time you log in. The key renews itself while you use it. If it stops working, or you lose it, run `/hub key` again for a new one; `/hub revoke` disables it and unlinks your account.
+The plugin confirms the key in the sidebar and links your Discord account to the character you're logged in as. Using the same key on your alts links them too, and your Discord role follows your highest-ranked character. A name change carries over automatically next time you log in. The key renews itself while you use it. If it stops working, or you lose it, run `/hub key` again for a new one; `/hub revoke` disables it and unlinks your account.
 
 ### Discord rank sync
 
