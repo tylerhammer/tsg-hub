@@ -1417,6 +1417,16 @@ public class TsgHubPlugin extends Plugin
 		adminRequest("PUT", "/board", body, tiles == null ? "Board saved." : "Tiles moved.", result -> refreshOrganizerEvent(false), null);
 	}
 
+	void saveBonuses(int lineBonus, int randomMin, int randomMax, boolean reroll)
+	{
+		JsonObject body = new JsonObject();
+		body.addProperty("lineBonus", lineBonus);
+		body.addProperty("randomMin", randomMin);
+		body.addProperty("randomMax", randomMax);
+		if (reroll) body.addProperty("reroll", true);
+		adminRequest("PUT", "/board/bonus", body, reroll ? "Bonuses rerolled." : "Bonuses saved.", result -> refreshOrganizerEvent(false), null);
+	}
+
 	void resetBoard()
 	{
 		adminRequest("DELETE", "/board", null, "Board reset to task order.", result -> refreshOrganizerEvent(false), null);

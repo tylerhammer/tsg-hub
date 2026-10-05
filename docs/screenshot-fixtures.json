@@ -368,7 +368,7 @@
     {
      "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
      "completedTasks": 3,
-     "points": 40,
+     "points": 52,
      "tasks": [
       {
        "taskId": "68c47d80-a886-4ef7-8dd8-5213b6bffc0f",
@@ -636,19 +636,22 @@
        ]
       }
      ],
-     "lines": 1
+     "lines": 1,
+     "bonusPoints": 12
     },
     {
      "teamId": "88d53ff2-c501-4d8b-b566-29be32460b05",
      "completedTasks": 2,
      "points": 35,
-     "lines": 0
+     "lines": 0,
+     "bonusPoints": 0
     },
     {
      "teamId": "d1578c18-ae4e-43ec-9bbf-4311ac03f8b1",
      "completedTasks": 2,
      "points": 15,
-     "lines": 0
+     "lines": 0,
+     "bonusPoints": 0
     }
    ],
    "members": [
@@ -939,7 +942,13 @@
       "col": 2
      }
     ],
-    "unplaced": []
+    "unplaced": [],
+    "lineBonus": 5,
+    "randomMin": 1,
+    "randomMax": 10,
+    "bonuses": {
+     "ROW:1": 7
+    }
    }
   }
  },
@@ -1178,7 +1187,7 @@
    {
     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
     "completedTasks": 3,
-    "points": 40,
+    "points": 52,
     "tasks": [
      {
       "taskId": "68c47d80-a886-4ef7-8dd8-5213b6bffc0f",
@@ -1446,7 +1455,8 @@
       ]
      }
     ],
-    "lines": 1
+    "lines": 1,
+    "bonusPoints": 12
    },
    {
     "teamId": "88d53ff2-c501-4d8b-b566-29be32460b05",
@@ -1682,7 +1692,8 @@
       ]
      }
     ],
-    "lines": 0
+    "lines": 0,
+    "bonusPoints": 0
    },
    {
     "teamId": "d1578c18-ae4e-43ec-9bbf-4311ac03f8b1",
@@ -1900,7 +1911,8 @@
       ]
      }
     ],
-    "lines": 0
+    "lines": 0,
+    "bonusPoints": 0
    }
   ],
   "members": [
@@ -2642,7 +2654,20 @@
      "col": 2
     }
    ],
-   "unplaced": []
+   "unplaced": [],
+   "lineBonus": 5,
+   "randomMin": 1,
+   "randomMax": 10,
+   "bonuses": {
+    "ROW:0": 4,
+    "ROW:1": 7,
+    "ROW:2": 9,
+    "COLUMN:0": 2,
+    "COLUMN:1": 10,
+    "COLUMN:2": 5,
+    "DIAGONAL:0": 8,
+    "ANTI_DIAGONAL:0": 3
+   }
   }
  },
  "managed": {

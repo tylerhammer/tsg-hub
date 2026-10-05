@@ -46,6 +46,7 @@ final class TsgHubBoardGrid extends JComponent
 	private static final int SHINE_MS = 420;
 	private static final int STAGGER_MS = 140;
 	private static final int LINE_MS = 380;
+	private static final int BONUS_MS = 1100;
 	private static final int PET_ICON = 12646;
 	private static final int JAR_ICON = 12936;
 
@@ -196,7 +197,7 @@ final class TsgHubBoardGrid extends JComponent
 	{
 		long now = System.currentTimeMillis();
 		flips.values().removeIf(start -> now - start > FLIP_MS + SHINE_MS);
-		lineStarts.values().removeIf(start -> now - start > LINE_MS);
+		lineStarts.values().removeIf(start -> now - start > LINE_MS + BONUS_MS);
 		if (flips.isEmpty() && lineStarts.isEmpty()) timer.stop();
 		repaint();
 	}
@@ -371,6 +372,13 @@ final class TsgHubBoardGrid extends JComponent
 			if (start != null && now < start) continue;
 			double fraction = start == null ? 1 : Math.min(1, (now - start) / (double) LINE_MS);
 			paintLine(g, left, 0, cell, GAP, board.size, line, fraction);
+		}
+		for (TsgHubBingoBoard.Line line : lines)
+		{
+			Long start = lineStarts.get(line.key());
+			int bonus = board.bonusFor(line);
+			if (start == null || bonus <= 0 || now < start + LINE_MS) continue;
+			paintBonus(g, left, cell, line, "+" + bonus, (now - start - LINE_MS) / (double) BONUS_MS);
 		}
 		g.dispose();
 	}
@@ -550,6 +558,30 @@ final class TsgHubBoardGrid extends JComponent
 		stroke.setStroke(new BasicStroke(Math.max(3f, cell / 12f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
 		stroke.draw(new java.awt.geom.Line2D.Double(x1, y1, x1 + (x2 - x1) * fraction, y1 + (y2 - y1) * fraction));
 		stroke.dispose();
+	}
+
+	private void paintBonus(Graphics2D g, int left, int cell, TsgHubBingoBoard.Line line, String text, double t)
+	{
+		if (t >= 1) return;
+		int[] first = line.cell(0, board.size);
+		int[] last = line.cell(board.size - 1, board.size);
+		double cx = left + (first[1] + last[1]) / 2.0 * (cell + GAP) + cell / 2.0;
+		double cy = (first[0] + last[0]) / 2.0 * (cell + GAP) + cell / 2.0 - t * 14;
+		float alpha = (float) (t < 0.6 ? 1 : 1 - (t - 0.6) / 0.4);
+		Graphics2D label = (Graphics2D) g.create();
+		label.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, Math.max(0f, alpha)));
+		label.setFont(FontManager.getRunescapeBoldFont());
+		FontMetrics metrics = label.getFontMetrics();
+		int w = metrics.stringWidth(text) + 10;
+		int h = metrics.getHeight() + 2;
+		int x = (int) Math.round(cx - w / 2.0);
+		int y = (int) Math.round(cy - h / 2.0);
+		label.setColor(new Color(20, 20, 20, 230));
+		label.fillRoundRect(x, y, w, h, h, h);
+		label.setColor(GOLD);
+		label.drawRoundRect(x, y, w, h, h, h);
+		label.drawString(text, x + 5, y + metrics.getAscent() + 1);
+		label.dispose();
 	}
 
 	static void drawWrapped(Graphics2D g, String text, int x, int top, int width, int bottom)

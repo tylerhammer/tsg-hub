@@ -138,7 +138,7 @@ public class ReadmeScreenshots
 		selectTab(organizer, "Tasks");
 		shoot(organizer, 860, 580, "admin-tasks");
 		selectTab(organizer, "Board");
-		shoot(organizer, 860, 480, "admin-board");
+		shoot(organizer, 860, 640, "admin-board");
 		selectTab(organizer, "Claims");
 		shoot(organizer, 860, 240, "admin-claims");
 

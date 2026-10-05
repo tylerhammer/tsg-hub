@@ -125,6 +125,40 @@ public class BingoBoardTest
 	}
 
 	@Test
+	public void lineBonusesAddStaticAndRevealedRandom()
+	{
+		JsonObject event = event(9);
+		JsonObject board = new JsonObject();
+		board.addProperty("size", 3);
+		board.addProperty("lineBonus", 5);
+		board.addProperty("randomMin", 1);
+		board.addProperty("randomMax", 9);
+		JsonObject bonuses = new JsonObject();
+		bonuses.addProperty("ROW:0", 7);
+		board.add("bonuses", bonuses);
+		event.add("board", board);
+		TsgHubBingoBoard resolved = TsgHubBingoBoard.of(event);
+		List<TsgHubBingoBoard.Line> lines = resolved.completedLines(done("t0", "t1", "t2", "t3", "t6"));
+		assertEquals(2, lines.size());
+		assertEquals(17, resolved.bonusFor(lines));
+		assertEquals("Each line: +5, plus a hidden 1 to 9 pts", resolved.bonusRule());
+		assertEquals(Integer.valueOf(7), resolved.rolledBonus(new TsgHubBingoBoard.Line(TsgHubBingoBoard.Direction.ROW, 0)));
+		assertNull(resolved.rolledBonus(new TsgHubBingoBoard.Line(TsgHubBingoBoard.Direction.COLUMN, 0)));
+		assertEquals(8, resolved.allLines().size());
+		assertEquals("Row 1", resolved.allLines().get(0).label());
+		assertEquals(17, resolved.swap(0, 0, 1, 1).bonusFor(lines));
+	}
+
+	@Test
+	public void noBonusByDefault()
+	{
+		TsgHubBingoBoard board = TsgHubBingoBoard.of(event(9));
+		assertFalse(board.hasBonus());
+		assertEquals("", board.bonusRule());
+		assertEquals(0, board.bonusFor(board.completedLines(done("t0", "t1", "t2"))));
+	}
+
+	@Test
 	public void iconsComeFromItemTasks()
 	{
 		JsonObject set = new JsonObject();

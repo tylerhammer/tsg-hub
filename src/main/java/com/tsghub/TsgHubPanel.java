@@ -94,6 +94,9 @@ final class TsgHubPanel extends JPanel
 	private final JComboBox<String> boardSize = new JComboBox<>();
 	private final JComboBox<String> boardMode = new JComboBox<>(new String[] {"Same for every team", "Different per team"});
 	private final JComboBox<String> boardTeam = new JComboBox<>();
+	private final JTextField bonusLine = new JTextField(4);
+	private final JTextField bonusMin = new JTextField(4);
+	private final JTextField bonusMax = new JTextField(4);
 	private final List<String> boardTeamIds = new ArrayList<>();
 	private final TsgHubBoardGrid boardPreview;
 	private String boardSynced = "";
@@ -1216,7 +1219,7 @@ final class TsgHubPanel extends JPanel
 		JButton reset = TsgHubUi.button("Reset");
 		reset.setToolTipText("Go back to task order");
 		reset.addActionListener(e -> {
-			if (TsgHubUi.confirmDelete(this, "Reset board", "Remove the layout and place tasks in task order?", "Reset")) plugin.resetBoard();
+			if (TsgHubUi.confirmDelete(this, "Reset board", "Remove the layout and line bonuses, and place tasks in task order?", "Reset")) plugin.resetBoard();
 		});
 		controls.add(Box.createHorizontalStrut(6));
 		controls.add(shuffle);
@@ -1225,6 +1228,33 @@ final class TsgHubPanel extends JPanel
 		for (Component part : new Component[] {boardSize, boardMode, shuffle, save, reset}) part.setEnabled(!board.locked && tasks.size() > 0);
 		reset.setEnabled(!board.locked && !board.auto);
 		boardTab.add(TsgHubUi.fitHeight(controls));
+		boardTab.add(Box.createVerticalStrut(8));
+
+		JPanel bonusRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+		bonusRow.setOpaque(false);
+		bonusRow.add(caption("Line bonus"));
+		bonusRow.add(bonusLine);
+		bonusRow.add(Box.createHorizontalStrut(6));
+		bonusRow.add(caption("Random bonus"));
+		bonusRow.add(bonusMin);
+		bonusRow.add(caption("to"));
+		bonusRow.add(bonusMax);
+		JButton saveBonus = TsgHubUi.button("Save bonuses");
+		saveBonus.setToolTipText("Points added for each completed row, column or diagonal");
+		saveBonus.addActionListener(e -> submitBonuses(false));
+		JButton reroll = TsgHubUi.button("Reroll");
+		reroll.setToolTipText("Roll a new random bonus for every line");
+		reroll.addActionListener(e -> submitBonuses(true));
+		bonusRow.add(Box.createHorizontalStrut(6));
+		bonusRow.add(saveBonus);
+		bonusRow.add(reroll);
+		bonusMin.setEnabled(!board.locked);
+		bonusMax.setEnabled(!board.locked);
+		reroll.setEnabled(!board.locked && board.randomMax > 0);
+		boardTab.add(TsgHubUi.fitHeight(bonusRow));
+		boardTab.add(Box.createVerticalStrut(3));
+		boardTab.add(TsgHubUi.wrapped("Every completed line earns the line bonus plus its own random bonus from the range. Players only see a line's random bonus once they complete it. Set both to 0 for no bonus."
+			+ (board.locked ? " The random bonuses are locked, but you can still change the line bonus." : ""), TsgHubUi.MUTED, small, DETAIL_TEXT_W));
 		boardTab.add(Box.createVerticalStrut(8));
 
 		if (!boardTeamIds.isEmpty())
@@ -1255,6 +1285,16 @@ final class TsgHubPanel extends JPanel
 		previewRow.add(boardPreview);
 		boardTab.add(TsgHubUi.fitHeight(previewRow));
 		boardTab.add(Box.createVerticalStrut(8));
+		if (board.randomMax > 0)
+		{
+			List<String> rolls = new ArrayList<>();
+			for (TsgHubBingoBoard.Line line : board.allLines())
+			{
+				Integer rolled = board.rolledBonus(line);
+				if (rolled != null) rolls.add(line.label() + " +" + rolled);
+			}
+			if (!rolls.isEmpty()) boardTab.add(TsgHubUi.wrapped("Hidden bonuses: " + String.join(" · ", rolls), TsgHubBoardGrid.GOLD, small, DETAIL_TEXT_W));
+		}
 		int empty = board.emptyCells();
 		if (empty > 0) boardTab.add(TsgHubUi.wrapped(plural(empty, "empty cell") + ". A line through an empty cell can't be completed.", TsgHubUi.MUTED, small, DETAIL_TEXT_W));
 		if (!board.unplaced.isEmpty()) boardTab.add(TsgHubUi.wrapped(plural(board.unplaced.size(), "task") + " don't fit on the board. Pick a bigger size.", TsgHubUi.WARNING, small, DETAIL_TEXT_W));
@@ -1271,6 +1311,9 @@ final class TsgHubPanel extends JPanel
 			int size = TsgHubUi.integer(stored, "size", TsgHubBingoBoard.defaultSize(TsgHubUi.array(currentEvent, "tasks").size()));
 			boardSize.setSelectedIndex(Math.max(0, Math.min(boardSize.getItemCount() - 1, size - TsgHubBingoBoard.MIN_SIZE)));
 			boardMode.setSelectedIndex("team".equals(TsgHubUi.str(stored, "mode")) ? 1 : 0);
+			bonusLine.setText(String.valueOf(TsgHubUi.integer(stored, "lineBonus", 0)));
+			bonusMin.setText(String.valueOf(TsgHubUi.integer(stored, "randomMin", 0)));
+			bonusMax.setText(String.valueOf(TsgHubUi.integer(stored, "randomMax", 0)));
 		}
 		String selected = boardTeam.getSelectedIndex() >= 0 && boardTeam.getSelectedIndex() < boardTeamIds.size() ? boardTeamIds.get(boardTeam.getSelectedIndex()) : "";
 		boardTeam.removeAllItems();
@@ -1284,6 +1327,34 @@ final class TsgHubPanel extends JPanel
 		}
 		if (!boardTeamIds.isEmpty()) boardTeam.setSelectedIndex(Math.max(0, boardTeamIds.indexOf(selected)));
 		syncingBoard = false;
+	}
+
+	private void submitBonuses(boolean reroll)
+	{
+		int line = bonusPoints(bonusLine.getText());
+		int min = bonusPoints(bonusMin.getText());
+		int max = bonusPoints(bonusMax.getText());
+		if (line < 0 || min < 0 || max < 0)
+		{
+			setStatus("Bonuses must be whole numbers from 0 to 1000.", TsgHubUi.Tone.ERROR);
+			return;
+		}
+		if (min > max)
+		{
+			setStatus("The random bonus minimum can't be more than the maximum.", TsgHubUi.Tone.ERROR);
+			return;
+		}
+		plugin.saveBonuses(line, min, max, reroll);
+	}
+
+	private static int bonusPoints(String text)
+	{
+		try
+		{
+			int value = Integer.parseInt(text.trim().isEmpty() ? "0" : text.trim());
+			return value >= 0 && value <= 1000 ? value : -1;
+		}
+		catch (NumberFormatException e) { return -1; }
 	}
 
 	private int selectedBoardSize()

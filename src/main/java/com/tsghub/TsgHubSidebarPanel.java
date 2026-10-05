@@ -1600,17 +1600,25 @@ final class TsgHubSidebarPanel extends PluginPanel
 			JsonObject row = progressRows.get(i).getAsJsonObject();
 			if (TsgHubUi.bool(row, "completed")) doneIds.add(TsgHubUi.str(row, "taskId"));
 		}
-		int lines = board.completedLines(doneIds).size();
+		List<TsgHubBingoBoard.Line> completed = board.completedLines(doneIds);
+		int lines = completed.size();
+		int bonus = board.bonusFor(completed);
 		JPanel caption = new JPanel(new BorderLayout());
 		caption.setOpaque(false);
 		caption.add(TsgHubUi.label(board.size + "x" + board.size + " board", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont()), BorderLayout.WEST);
-		JLabel counts = TsgHubUi.label(left + " left · " + lines + (lines == 1 ? " line" : " lines"), lines > 0 ? TsgHubBoardGrid.GOLD : TsgHubUi.MUTED, FontManager.getRunescapeSmallFont());
+		JLabel counts = TsgHubUi.label(left + " left · " + lines + (lines == 1 ? " line" : " lines") + (bonus > 0 ? " (+" + bonus + ")" : ""),
+			lines > 0 ? TsgHubBoardGrid.GOLD : TsgHubUi.MUTED, FontManager.getRunescapeSmallFont());
 		counts.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
 		caption.add(counts, BorderLayout.EAST);
 		tasksTab.add(TsgHubUi.fitHeight(caption));
 		tasksTab.add(Box.createVerticalStrut(4));
 		tasksTab.add(boardGrid);
-		tasksTab.add(Box.createVerticalStrut(8));
+		tasksTab.add(Box.createVerticalStrut(board.hasBonus() ? 4 : 8));
+		if (board.hasBonus())
+		{
+			tasksTab.add(TsgHubUi.wrapped(board.bonusRule() + ".", TsgHubBoardGrid.GOLD, FontManager.getRunescapeSmallFont(), TEXT_W));
+			tasksTab.add(Box.createVerticalStrut(6));
+		}
 
 		JsonObject selected = null;
 		for (int i = 0; i < tasks.size(); i++)
@@ -1898,7 +1906,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 			JPanel text = TsgHubUi.stack();
 			text.add(TsgHubUi.label(TsgHubUi.html(TsgHubUi.escape(TsgHubUi.str(team, "name")) + (mine ? " <font color='#8f8f8f'>(you)</font>" : ""), 120), TsgHubUi.TEXT, FontManager.getRunescapeFont()));
 			int lines = TsgHubUi.integer(score, "lines", 0);
-			text.add(TsgHubUi.label(TsgHubUi.integer(score, "completedTasks", 0) + "/" + totalTasks + " tasks" + (lines > 0 ? " · " + lines + (lines == 1 ? " line" : " lines") : ""), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont()));
+			int bonus = TsgHubUi.integer(score, "bonusPoints", 0);
+			text.add(TsgHubUi.label(TsgHubUi.integer(score, "completedTasks", 0) + "/" + totalTasks + " tasks" + (lines > 0 ? " · " + lines + (lines == 1 ? " line" : " lines") : "") + (bonus > 0 ? " (+" + bonus + ")" : ""), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont()));
 			card.add(text, BorderLayout.CENTER);
 			card.add(TsgHubUi.label(TsgHubUi.integer(score, "points", 0) + " pts", i == 0 ? TsgHubUi.ACCENT : TsgHubUi.TEXT, FontManager.getRunescapeBoldFont()), BorderLayout.EAST);
 			scoreboardTab.add(TsgHubUi.fitHeight(card));
