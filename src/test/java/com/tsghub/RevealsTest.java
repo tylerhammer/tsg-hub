@@ -1,12 +1,14 @@
 package com.tsghub;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import java.util.List;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import net.runelite.client.hiscore.HiscoreSkill;
 import org.junit.Test;
 
@@ -16,25 +18,23 @@ public class RevealsTest
 	public void firstLoadOnlySetsBaseline()
 	{
 		TsgHubReveals reveals = new TsgHubReveals();
-		assertTrue(reveals.update(event("red", "t0", "t1"), "red", "Crab Legs").isEmpty());
-		assertTrue(reveals.update(event("red", "t0", "t1"), "red", "Crab Legs").isEmpty());
+		assertNull(reveals.update(event("red", "t0", "t1"), "red", "Crab Legs"));
+		assertNull(reveals.update(event("red", "t0", "t1"), "red", "Crab Legs"));
 	}
 
 	@Test
-	public void newTilesAndLinesAreRevealed()
+	public void newTileAndLineMakeOneMoment()
 	{
 		TsgHubReveals reveals = new TsgHubReveals();
 		reveals.update(event("red", "t0", "t1"), "red", "Crab Legs");
-		List<TsgHubReveals.Reveal> found = reveals.update(event("red", "t0", "t1", "t2"), "red", "Crab Legs");
-		assertEquals(2, found.size());
-		assertFalse(found.get(0).line);
-		assertEquals("Task 2", found.get(0).title);
-		assertEquals("by Crab Legs", found.get(0).detail);
-		assertEquals(3, found.get(0).points);
-		assertTrue(found.get(1).line);
-		assertEquals("Row 1", found.get(1).title);
-		assertEquals(5, found.get(1).points);
-		assertTrue(reveals.update(event("red", "t0", "t1", "t2"), "red", "Crab Legs").isEmpty());
+		TsgHubReveals.Moment moment = reveals.update(event("red", "t0", "t1", "t2"), "red", "Crab Legs");
+		assertEquals(Collections.singletonList("t2"), moment.tiles);
+		assertEquals(new HashSet<>(Arrays.asList("t0", "t1")), moment.before);
+		assertEquals(1, moment.lines.size());
+		assertEquals("ROW:0", moment.lines.get(0).key());
+		assertEquals(5, moment.bonus());
+		assertEquals(3, moment.board.size);
+		assertNull(reveals.update(event("red", "t0", "t1", "t2"), "red", "Crab Legs"));
 	}
 
 	@Test
@@ -42,9 +42,9 @@ public class RevealsTest
 	{
 		TsgHubReveals reveals = new TsgHubReveals();
 		reveals.update(event("red"), "red", "Crab Legs");
-		assertTrue(reveals.update(event("blue", "t0"), "blue", "Crab Legs").isEmpty());
+		assertNull(reveals.update(event("blue", "t0"), "blue", "Crab Legs"));
 		reveals.update(null, null, "");
-		assertTrue(reveals.update(event("blue", "t0", "t1"), "blue", "Crab Legs").isEmpty());
+		assertNull(reveals.update(event("blue", "t0", "t1"), "blue", "Crab Legs"));
 	}
 
 	@Test
@@ -52,7 +52,7 @@ public class RevealsTest
 	{
 		TsgHubReveals reveals = new TsgHubReveals();
 		reveals.update(event("red", "t0", "t1"), "red", "Mossy Rock");
-		assertTrue(reveals.update(event("red", "t0", "t1", "t2"), "red", "Mossy Rock").isEmpty());
+		assertNull(reveals.update(event("red", "t0", "t1", "t2"), "red", "Mossy Rock"));
 	}
 
 	@Test
@@ -63,9 +63,10 @@ public class RevealsTest
 		JsonObject after = event("red", "t0", "t1", "t2", "t4");
 		row(after, "t2").addProperty("completedBy", "Mossy Rock");
 		reveals.update(before, "red", "Crab Legs");
-		List<TsgHubReveals.Reveal> found = reveals.update(after, "red", "Crab Legs");
-		assertEquals(1, found.size());
-		assertEquals("Task 4", found.get(0).title);
+		TsgHubReveals.Moment moment = reveals.update(after, "red", "Crab Legs");
+		assertEquals(Collections.singletonList("t4"), moment.tiles);
+		assertTrue(moment.before.contains("t2"));
+		assertTrue(moment.lines.isEmpty());
 	}
 
 	@Test
@@ -77,15 +78,23 @@ public class RevealsTest
 		JsonObject after = event("red", "t5");
 		everyone(after, "t5", true, true);
 		reveals.update(before, "red", "Crab Legs");
-		List<TsgHubReveals.Reveal> found = reveals.update(after, "red", "Crab Legs");
-		assertEquals(1, found.size());
-		assertEquals("Task 5", found.get(0).title);
+		assertEquals(Collections.singletonList("t5"), reveals.update(after, "red", "Crab Legs").tiles);
 
 		TsgHubReveals early = new TsgHubReveals();
 		JsonObject waiting = event("red");
 		everyone(waiting, "t5", true, false);
 		early.update(waiting, "red", "Crab Legs");
-		assertTrue(early.update(after, "red", "Crab Legs").isEmpty());
+		assertNull(early.update(after, "red", "Crab Legs"));
+	}
+
+	@Test
+	public void previewStampsAFirstRowTile()
+	{
+		TsgHubReveals.Moment moment = TsgHubReveals.Moment.preview(event("red"));
+		assertEquals(Collections.singletonList("t0"), moment.tiles);
+		assertEquals(new HashSet<>(Arrays.asList("t1", "t2")), moment.before);
+		assertEquals("ROW:0", moment.lines.get(0).key());
+		assertTrue(TsgHubRevealOverlay.duration(moment) > TsgHubRevealOverlay.stampAt(moment));
 	}
 
 	private static void everyone(JsonObject event, String taskId, boolean crab, boolean mossy)

@@ -140,23 +140,37 @@ public class ReadmeScreenshots
 		selectTab(organizer, "Claims");
 		shoot(organizer, 860, 240, "admin-claims");
 
-		reveal(boardEvent.getAsJsonArray("tasks").get(1).getAsJsonObject());
+		reveal(boardEvent, TsgHubUi.teamIdFor(boardEvent, "Crab Legs"));
 
 		hero(480, eventList, board, parties);
 	}
 
-	private static void reveal(JsonObject task) throws Exception
+	private static void reveal(JsonObject event, String teamId) throws Exception
 	{
-		TsgHubRevealOverlay overlay = new TsgHubRevealOverlay(null, null);
-		TsgHubReveals.Reveal tile = new TsgHubReveals.Reveal(false, TsgHubUi.str(task, "title"), "by Crab Legs", TsgHubUi.integer(task, "points", 1), task);
+		TsgHubBingoBoard board = TsgHubBingoBoard.of(event);
+		java.util.Map<String, JsonObject> tasks = new java.util.HashMap<>();
+		JsonArray list = event.getAsJsonArray("tasks");
+		for (int i = 0; i < list.size(); i++) tasks.put(TsgHubUi.str(list.get(i).getAsJsonObject(), "id"), list.get(i).getAsJsonObject());
+		java.util.Map<String, JsonObject> progress = new java.util.HashMap<>();
+		java.util.Set<String> before = new java.util.HashSet<>();
+		JsonArray rows = TsgHubUi.array(TsgHubUi.scoreFor(event.getAsJsonArray("teamScores"), teamId), "tasks");
+		for (int i = 0; i < rows.size(); i++)
+		{
+			JsonObject row = rows.get(i).getAsJsonObject();
+			progress.put(TsgHubUi.str(row, "taskId"), row);
+			if (TsgHubUi.bool(row, "completed")) before.add(TsgHubUi.str(row, "taskId"));
+		}
+		String stamped = board.taskAt(1, 1);
+		before.remove(stamped);
+		TsgHubReveals.Moment moment = new TsgHubReveals.Moment(TsgHubUi.str(event, "name"), board, tasks, progress, before,
+			java.util.Collections.singletonList(stamped), java.util.Collections.singletonList(new TsgHubBingoBoard.Line(TsgHubBingoBoard.Direction.ROW, 1)));
+		TsgHubRevealOverlay overlay = new TsgHubRevealOverlay(null, new TsgHubTileIcons(ReadmeScreenshots::itemIcon, null));
 		BufferedImage image = new BufferedImage(765 * SCALE, 503 * SCALE, BufferedImage.TYPE_INT_RGB);
 		Graphics2D g = image.createGraphics();
 		g.scale(SCALE, SCALE);
 		g.setPaint(new java.awt.GradientPaint(0, 0, new java.awt.Color(74, 96, 58), 0, 503, new java.awt.Color(46, 60, 38)));
 		g.fillRect(0, 0, 765, 503);
-		g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
-		g.setRenderingHint(java.awt.RenderingHints.KEY_TEXT_ANTIALIASING, java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-		overlay.paint(g, tile, 3000, 765, 503, itemIcon(TsgHubTileIcons.itemFor(task)));
+		overlay.paint(g, moment, TsgHubRevealOverlay.stampAt(moment) + TsgHubRevealOverlay.STAMP_MS + 400, 765, 503);
 		g.dispose();
 		ImageIO.write(image, "png", new File(out, "reveal.png"));
 	}

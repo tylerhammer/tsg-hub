@@ -268,8 +268,8 @@ public class TsgHubPlugin extends Plugin
 	{
 		String teamId = TsgHubUi.teamIdFor(event, displayName);
 		if (boardOverlay != null) boardOverlay.setEvent(event, teamId);
-		List<TsgHubReveals.Reveal> found = reveals.update(event, teamId, displayName == null ? "" : displayName);
-		if (revealOverlay != null && config.bingoReveal()) revealOverlay.reveal(found);
+		TsgHubReveals.Moment moment = reveals.update(event, teamId, displayName == null ? "" : displayName);
+		if (revealOverlay != null && config.bingoReveal()) revealOverlay.reveal(moment);
 	}
 
 	TsgHubTileIcons tileIcons()
@@ -290,18 +290,7 @@ public class TsgHubPlugin extends Plugin
 
 	void previewReveal(JsonObject event)
 	{
-		if (revealOverlay == null || event == null) return;
-		JsonArray tasks = TsgHubUi.array(event, "tasks");
-		List<TsgHubReveals.Reveal> preview = new java.util.ArrayList<>();
-		if (tasks.size() > 0)
-		{
-			JsonObject task = tasks.get(0).getAsJsonObject();
-			preview.add(new TsgHubReveals.Reveal(false, TsgHubUi.str(task, "title"), "by " + (detectedPlayerName.isEmpty() ? "you" : detectedPlayerName), TsgHubUi.integer(task, "points", 1), task));
-		}
-		TsgHubBingoBoard board = TsgHubBingoBoard.of(event);
-		TsgHubBingoBoard.Line line = board.allLines().get(0);
-		preview.add(new TsgHubReveals.Reveal(true, line.label(), "Your team's first line", board.bonusFor(line), null));
-		revealOverlay.reveal(preview);
+		if (revealOverlay != null && event != null) revealOverlay.reveal(TsgHubReveals.Moment.preview(event));
 	}
 
 	private boolean wantsBoardData()
