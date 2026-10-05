@@ -30,6 +30,8 @@ final class TsgHubSocket
 		void onAdminRevoked(String token);
 
 		void onAnnouncement(String text);
+
+		void onUpdateAvailable(String version);
 	}
 
 	private static final int CLOSE_NORMAL = 1000;
@@ -290,6 +292,10 @@ final class TsgHubSocket
 				case "announcement":
 					String announcement = string(message, "text");
 					if (!announcement.isEmpty()) executor.execute(() -> listener.onAnnouncement(announcement));
+					break;
+				case "update":
+					String version = string(message, "version");
+					if (!version.isEmpty()) executor.execute(() -> listener.onUpdateAvailable(version));
 					break;
 				case "error":
 					if (!eventId.isEmpty()) rejected(ws, eventId);

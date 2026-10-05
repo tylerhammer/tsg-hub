@@ -116,6 +116,7 @@ public class TsgHubPlugin extends Plugin
 	private volatile boolean inClanChat;
 	private volatile boolean sidebarRouted;
 	private volatile String syncedIdentity = "";
+	private volatile String notifiedUpdate = "";
 	private volatile boolean routedAsHubMember;
 	private volatile boolean routedClanPending;
 	private volatile String hubClanName = "TSGaming";
@@ -154,6 +155,7 @@ public class TsgHubPlugin extends Plugin
 			@Override public void onChanged(String topic, String eventId) { liveChange(topic, eventId); }
 			@Override public void onAdminRevoked(String token) { adminKeyRejected(token); }
 			@Override public void onAnnouncement(String text) { announce(text); }
+			@Override public void onUpdateAvailable(String version) { updateAvailable(version); }
 		});
 		executor.scheduleAtFixedRate(this::socketTick, 2, 5, TimeUnit.SECONDS);
 		executor.scheduleAtFixedRate(unlessLive(this::autoRefreshBoard), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
@@ -1923,6 +1925,14 @@ public class TsgHubPlugin extends Plugin
 	{
 		if (!config.eventAnnouncements()) return;
 		showLocalChatMessage(new ChatMessageBuilder().append(ChatColorType.HIGHLIGHT).append(Text.escapeJagex(text)));
+	}
+
+	private void updateAvailable(String version)
+	{
+		if (version.equals(notifiedUpdate)) return;
+		notifiedUpdate = version;
+		SwingUtilities.invokeLater(() -> { if (sidebar != null) sidebar.setUpdate(version); });
+		showLocalChatMessage(new ChatMessageBuilder().append(ChatColorType.HIGHLIGHT).append("TSG Hub " + Text.escapeJagex(version) + " is available. Restart RuneLite to update."));
 	}
 
 	private void showLocalChatMessage(ChatMessageBuilder body)
