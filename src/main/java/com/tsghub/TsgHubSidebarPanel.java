@@ -139,7 +139,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		super(false);
 		this.plugin = plugin;
 		this.groupMembers = groupMembers;
-		boardGrid = new TsgHubBoardGrid(plugin::getItemImage, 0);
+		boardGrid = new TsgHubBoardGrid(plugin.tileIcons(), 0);
 		boardGrid.onSelect((taskId, row, col) -> renderTasks());
 		sections = Arrays.asList(
 			new Section("Events", "Clan events and your team's board", new TsgHubUi.CalendarIcon(), this::openEvents, this::eventsSummary, () -> liveEvents() > 0),
@@ -1584,6 +1584,11 @@ final class TsgHubSidebarPanel extends PluginPanel
 		return toggle;
 	}
 
+	void boardOverlayChanged()
+	{
+		if (view == View.BOARD) renderTasks();
+	}
+
 	private void setBoardView(String view)
 	{
 		boardView = view;
@@ -1619,6 +1624,12 @@ final class TsgHubSidebarPanel extends PluginPanel
 			tasksTab.add(TsgHubUi.wrapped(board.bonusRule() + ".", TsgHubBoardGrid.GOLD, FontManager.getRunescapeSmallFont(), TEXT_W));
 			tasksTab.add(Box.createVerticalStrut(6));
 		}
+		boolean onScreen = plugin.boardOverlayEnabled();
+		JButton screen = TsgHubUi.button(onScreen ? "Hide board from screen" : "Show board on screen");
+		screen.setToolTipText("Show this board in game. Hold Alt and drag it to move it.");
+		screen.addActionListener(e -> plugin.setBoardOverlayEnabled(!onScreen));
+		tasksTab.add(TsgHubUi.fitHeight(fullWidth(screen)));
+		tasksTab.add(Box.createVerticalStrut(8));
 
 		JsonObject selected = null;
 		for (int i = 0; i < tasks.size(); i++)

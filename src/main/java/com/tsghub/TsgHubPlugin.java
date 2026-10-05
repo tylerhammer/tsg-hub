@@ -94,6 +94,10 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubPanel panel;
 	private TsgHubSidebarPanel sidebar;
 	private TsgHubBoardOverlay boardOverlay;
+	private TsgHubRevealOverlay revealOverlay;
+	private TsgHubTileIcons tileIcons;
+	private final TsgHubReveals reveals = new TsgHubReveals();
+	private volatile String primedBoardEventId = "";
 	private JFrame hubWindow;
 	private NavigationButton navigationButton;
 	private ScheduledExecutorService executor;
@@ -186,9 +190,12 @@ public class TsgHubPlugin extends Plugin
 		executor.scheduleAtFixedRate(unlessLive(presence::autoRefresh), TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
 		drops = new TsgHubDrops(this, client, clientThread, executor, this::api, () -> sidebar);
 		executor.scheduleAtFixedRate(unlessLive(drops::autoRefresh), TsgHubDrops.REFRESH_SECONDS, TsgHubDrops.REFRESH_SECONDS, TimeUnit.SECONDS);
-		boardOverlay = new TsgHubBoardOverlay(client);
+		boardOverlay = new TsgHubBoardOverlay(tileIcons());
+		boardOverlay.setVisible(config.bingoOverlay());
 		overlayManager.add(boardOverlay);
-		mouseManager.registerMouseListener(boardOverlay);
+		revealOverlay = new TsgHubRevealOverlay(client, tileIcons());
+		overlayManager.add(revealOverlay);
+		mouseManager.registerMouseListener(revealOverlay);
 		navigationButton = NavigationButton.builder()
 			.tooltip("TSG Hub")
 			.icon(createIcon())
@@ -215,7 +222,12 @@ public class TsgHubPlugin extends Plugin
 		{
 			boardOverlay.setVisible(false);
 			overlayManager.remove(boardOverlay);
-			mouseManager.unregisterMouseListener(boardOverlay);
+		}
+		if (revealOverlay != null)
+		{
+			revealOverlay.clear();
+			overlayManager.remove(revealOverlay);
+			mouseManager.unregisterMouseListener(revealOverlay);
 		}
 		if (hubWindow != null) SwingUtilities.invokeLater(hubWindow::dispose);
 		if (presence != null) presence.shutDown();
@@ -250,20 +262,51 @@ public class TsgHubPlugin extends Plugin
 		});
 	}
 
-	void showBoardOverlay()
-	{
-		if (boardOverlay == null) return;
-		if (TsgHubSession.get("token").isEmpty())
-		{
-			memberStatus("Join an event before opening the board overlay.", Tone.ERROR);
-			return;
-		}
-		boardOverlay.setVisible(true);
-	}
-
 	void setBoardOverlayData(JsonObject event, String displayName)
 	{
-		boardOverlay.setEvent(event, TsgHubUi.teamIdFor(event, displayName));
+		String teamId = TsgHubUi.teamIdFor(event, displayName);
+		if (boardOverlay != null) boardOverlay.setEvent(event, teamId);
+		List<TsgHubReveals.Reveal> found = reveals.update(event, teamId);
+		if (revealOverlay != null && config.bingoReveal()) revealOverlay.reveal(found);
+	}
+
+	TsgHubTileIcons tileIcons()
+	{
+		if (tileIcons == null) tileIcons = new TsgHubTileIcons(this::getItemImage, spriteManager);
+		return tileIcons;
+	}
+
+	boolean boardOverlayEnabled()
+	{
+		return config.bingoOverlay();
+	}
+
+	void setBoardOverlayEnabled(boolean enabled)
+	{
+		configManager.setConfiguration("tsghub", "bingoOverlay", enabled);
+	}
+
+	void previewReveal(JsonObject event)
+	{
+		if (revealOverlay == null || event == null) return;
+		JsonArray tasks = TsgHubUi.array(event, "tasks");
+		List<TsgHubReveals.Reveal> preview = new java.util.ArrayList<>();
+		if (tasks.size() > 0)
+		{
+			JsonObject task = tasks.get(0).getAsJsonObject();
+			preview.add(new TsgHubReveals.Reveal(false, TsgHubUi.str(task, "title"), "by " + (detectedPlayerName.isEmpty() ? "you" : detectedPlayerName), TsgHubUi.integer(task, "points", 1), task));
+		}
+		TsgHubBingoBoard board = TsgHubBingoBoard.of(event);
+		TsgHubBingoBoard.Line line = board.allLines().get(0);
+		preview.add(new TsgHubReveals.Reveal(true, line.label(), "Your first line", board.bonusFor(line), null));
+		revealOverlay.reveal(preview);
+	}
+
+	private boolean wantsBoardData()
+	{
+		if (sidebar != null && sidebar.wantsAutoRefresh()) return true;
+		if (TsgHubSession.get("eventId").isEmpty() || TsgHubSession.get("token").isEmpty()) return false;
+		return config.bingoOverlay() || config.bingoReveal();
 	}
 
 	private BufferedImage createIcon()
@@ -441,6 +484,14 @@ public class TsgHubPlugin extends Plugin
 	public void onConfigChanged(ConfigChanged event)
 	{
 		if (!"tsghub".equals(event.getGroup())) return;
+		if ("bingoOverlay".equals(event.getKey()))
+		{
+			if (boardOverlay != null) boardOverlay.setVisible(config.bingoOverlay());
+			if (config.bingoOverlay()) refreshBoard();
+			SwingUtilities.invokeLater(() -> sidebar.boardOverlayChanged());
+			return;
+		}
+		if ("bingoReveal".equals(event.getKey())) return;
 		if ("partyShowSelf".equals(event.getKey()))
 		{
 			if (config.partyShowSelf()) groupTracker.refreshSelf();
@@ -527,7 +578,7 @@ public class TsgHubPlugin extends Plugin
 		syncedIdentity = "";
 		if (competitions != null) competitions.clear();
 		clearTaskCache();
-		if (boardOverlay != null) boardOverlay.setVisible(false);
+		clearBoardOverlays();
 		syncSocketNow();
 		if (detectedPlayerName.isEmpty()) return;
 		sidebarRouted = false;
@@ -630,7 +681,7 @@ public class TsgHubPlugin extends Plugin
 			TsgHubSession.set("eventId", "");
 			attemptedXpClaims.clear();
 			clearTaskCache();
-			if (boardOverlay != null) boardOverlay.setVisible(false);
+			clearBoardOverlays();
 		}
 		memberStatus("Disconnected. Rejoin anytime with your team code.", Tone.SUCCESS);
 		SwingUtilities.invokeLater(() -> sidebar.showEventList());
@@ -653,7 +704,15 @@ public class TsgHubPlugin extends Plugin
 		clearTaskCache();
 		checkedAdminIdentity = "";
 		if (adminVerified) setAdminVerified(false);
-		if (boardOverlay != null) boardOverlay.setVisible(false);
+		clearBoardOverlays();
+	}
+
+	private void clearBoardOverlays()
+	{
+		primedBoardEventId = "";
+		reveals.update(null, null);
+		if (boardOverlay != null) boardOverlay.clear();
+		if (revealOverlay != null) revealOverlay.clear();
 	}
 
 	private void revokeRemoteSession()
@@ -703,6 +762,7 @@ public class TsgHubPlugin extends Plugin
 					cachePvmTasks(event);
 					taskEventId = eventId;
 				}
+				primedBoardEventId = eventId;
 				SwingUtilities.invokeLater(() -> {
 					String displayName = TsgHubSession.get("displayName");
 					setBoardOverlayData(event, displayName);
@@ -758,6 +818,7 @@ public class TsgHubPlugin extends Plugin
 		String organizerToken = organizerEventId.isEmpty() ? "" : organizerCredential(organizerEventId);
 		if (!organizerToken.isEmpty()) tokens.putIfAbsent(organizerEventId, organizerToken);
 		if (organizerRefreshPending && adminWindowOpen()) liveRefreshOrganizerEvent();
+		if (!eventId.isEmpty() && !eventId.equals(primedBoardEventId) && wantsBoardData()) refreshBoard();
 		socket.sync(tokens, inClanChat);
 		socket.admin(adminKey());
 		if (!socket.isLive()) pollTeamNotifications();
@@ -803,7 +864,7 @@ public class TsgHubPlugin extends Plugin
 			case "event":
 				if (adminWindowOpen() && eventId.equals(getOrganizerEventId())) liveRefreshOrganizerEvent();
 				if (sidebar == null) break;
-				if (eventId.equals(TsgHubSession.get("eventId")) && sidebar.wantsAutoRefresh()) refreshBoard();
+				if (eventId.equals(TsgHubSession.get("eventId")) && wantsBoardData()) refreshBoard();
 				if (eventId.equals(sidebar.openCompetitionId())) openCompetition(eventId);
 				break;
 			case "events":
@@ -817,7 +878,7 @@ public class TsgHubPlugin extends Plugin
 	private void autoRefreshBoard()
 	{
 		if (sidebar == null) return;
-		if (sidebar.wantsAutoRefresh()) refreshBoard();
+		if (wantsBoardData()) refreshBoard();
 		String competitionId = sidebar.openCompetitionId();
 		if (competitionId != null) openCompetition(competitionId);
 	}

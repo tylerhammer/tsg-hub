@@ -28,12 +28,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.IntFunction;
 import javax.swing.JComponent;
-import javax.swing.JLabel;
 import javax.swing.Timer;
 import net.runelite.client.ui.FontManager;
-import net.runelite.client.util.AsyncBufferedImage;
 
 final class TsgHubBoardGrid extends JComponent
 {
@@ -47,22 +44,12 @@ final class TsgHubBoardGrid extends JComponent
 	private static final int STAGGER_MS = 140;
 	private static final int LINE_MS = 380;
 	private static final int BONUS_MS = 1100;
-	private static final int PET_ICON = 12646;
-	private static final int JAR_ICON = 12936;
 
-	private final IntFunction<AsyncBufferedImage> images;
+	private final TsgHubTileIcons images;
 	private int fixedCell;
 	private final Timer timer = new Timer(16, e -> tick());
 	private final Map<String, Long> flips = new HashMap<>();
 	private final Map<String, Long> lineStarts = new HashMap<>();
-	private final Map<Integer, AsyncBufferedImage> icons = new HashMap<>();
-	private final JLabel repainter = new JLabel()
-	{
-		@Override public void repaint()
-		{
-			TsgHubBoardGrid.this.repaint();
-		}
-	};
 	private TsgHubBingoBoard board;
 	private Map<String, JsonObject> tasks = Collections.emptyMap();
 	private Map<String, JsonObject> progress = Collections.emptyMap();
@@ -77,10 +64,11 @@ final class TsgHubBoardGrid extends JComponent
 	private SelectListener selectListener;
 	private SwapListener swapListener;
 
-	TsgHubBoardGrid(IntFunction<AsyncBufferedImage> images, int fixedCell)
+	TsgHubBoardGrid(TsgHubTileIcons images, int fixedCell)
 	{
 		this.images = images;
 		this.fixedCell = fixedCell;
+		if (images != null) images.onLoaded(this::repaint);
 		setOpaque(false);
 		setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 		setToolTipText("");
@@ -383,35 +371,9 @@ final class TsgHubBoardGrid extends JComponent
 		g.dispose();
 	}
 
-	private AsyncBufferedImage icon(JsonObject task)
+	private BufferedImage icon(JsonObject task)
 	{
-		int itemId = iconItem(task);
-		if (itemId <= 0 || images == null) return null;
-		return icons.computeIfAbsent(itemId, id -> {
-			AsyncBufferedImage image = images.apply(id);
-			if (image != null) image.addTo(repainter);
-			return image;
-		});
-	}
-
-	static int iconItem(JsonObject task)
-	{
-		if (task == null) return 0;
-		JsonObject config = task.has("config") && task.get("config").isJsonObject() ? task.getAsJsonObject("config") : new JsonObject();
-		switch (TsgHubUi.str(task, "type"))
-		{
-			case "drop":
-				JsonArray groups = TsgHubUi.array(config, "itemGroups");
-				if (groups.size() > 0 && groups.get(0).isJsonArray() && groups.get(0).getAsJsonArray().size() > 0)
-					return TsgHubUi.integer(groups.get(0).getAsJsonArray().get(0).getAsJsonObject(), "id", 0);
-				if ("pet".equals(TsgHubUi.str(config, "itemGroup"))) return PET_ICON;
-				if ("jar".equals(TsgHubUi.str(config, "itemGroup"))) return JAR_ICON;
-				JsonArray ids = TsgHubUi.array(config, "itemIds");
-				for (int i = 0; i < ids.size(); i++) if (ids.get(i).isJsonPrimitive() && ids.get(i).getAsInt() > 0) return ids.get(i).getAsInt();
-				return 0;
-			default:
-				return 0;
-		}
+		return images == null ? null : images.icon(task);
 	}
 
 	static final class Tile
@@ -532,7 +494,7 @@ final class TsgHubBoardGrid extends JComponent
 		g.draw(tick);
 	}
 
-	private static void paintShine(Graphics2D g, int x, int y, int cell, double t)
+	static void paintShine(Graphics2D g, int x, int y, int cell, double t)
 	{
 		if (t < 0 || t >= 1) return;
 		Graphics2D shine = (Graphics2D) g.create();

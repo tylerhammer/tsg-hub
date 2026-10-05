@@ -188,7 +188,7 @@ final class TsgHubPanel extends JPanel
 	{
 		this.plugin = plugin;
 		itemGroups.add(new ArrayList<>());
-		boardPreview = new TsgHubBoardGrid(plugin::getItemImage, 64);
+		boardPreview = new TsgHubBoardGrid(plugin.tileIcons(), 64);
 		boardPreview.onSwap(this::swapTiles);
 		for (int size = TsgHubBingoBoard.MIN_SIZE; size <= TsgHubBingoBoard.MAX_SIZE; size++) boardSize.addItem(size + " x " + size);
 		boardTeam.addActionListener(e -> { if (!syncingBoard) renderBoard(); });
@@ -1221,10 +1221,14 @@ final class TsgHubPanel extends JPanel
 		reset.addActionListener(e -> {
 			if (TsgHubUi.confirmDelete(this, "Reset board", "Remove the layout and line bonuses, and place tasks in task order?", "Reset")) plugin.resetBoard();
 		});
+		JButton preview = TsgHubUi.button("Preview reveal");
+		preview.setToolTipText("Play the card reveal players see when they complete a tile and a line");
+		preview.addActionListener(e -> plugin.previewReveal(currentEvent));
 		controls.add(Box.createHorizontalStrut(6));
 		controls.add(shuffle);
 		controls.add(save);
 		controls.add(reset);
+		controls.add(preview);
 		for (Component part : new Component[] {boardSize, boardMode, shuffle, save, reset}) part.setEnabled(!board.locked && tasks.size() > 0);
 		reset.setEnabled(!board.locked && !board.auto);
 		boardTab.add(TsgHubUi.fitHeight(controls));

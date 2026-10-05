@@ -172,10 +172,10 @@ public class BingoBoardTest
 		groups.add(group);
 		config.add("itemGroups", groups);
 		set.add("config", config);
-		assertEquals(4716, TsgHubBoardGrid.iconItem(set));
+		assertEquals(4716, TsgHubTileIcons.itemFor(set));
 		JsonObject manual = new JsonObject();
 		manual.addProperty("type", "manual");
-		assertEquals(0, TsgHubBoardGrid.iconItem(manual));
+		assertEquals(0, TsgHubTileIcons.itemFor(manual));
 	}
 
 	private static JsonObject event(int tasks)

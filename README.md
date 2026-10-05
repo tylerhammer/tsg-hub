@@ -18,13 +18,19 @@ Clan events for **Type Shiii Gaming** (TSG), right in your RuneLite sidebar. Joi
 
 ## Bingo
 
-Your team's board opens straight from the sidebar as a bingo card. Each tile shows the task's item icon or name, a progress strip, and a tick once it's done. When a tile completes while you watch, it flips over. Finished rows, columns and diagonals light up gold, and the line count shows above the card. If the admins set line bonuses, each finished line also adds bonus points to your team's score: a fixed bonus, a hidden random one revealed when you finish the line, or both. The rule shows under the card. Click a tile to see its task details, submit proof, or check who contributed.
+Your team's board opens straight from the sidebar as a bingo card. Each tile shows the task's item icon, boss or raid icon, or name, a progress strip, and a tick once it's done.
+
+When your team completes a tile, a card opens in the middle of your game screen, like opening a card pack: it shakes, flips over, and bursts open to show the tile, its points and who finished it. Completing a line opens a **BINGO!** card with its bonus. Click a card to skip it, or turn the reveal off with **Tile reveal animation** under **Bingo** in the plugin settings.
+
+**Show board on screen** puts your team's board in the game view (hold Alt and drag to move it). Tiles there flip over as they complete too. Finished rows, columns and diagonals light up gold, and the line count shows above the card. If the admins set line bonuses, each finished line also adds bonus points to your team's score: a fixed bonus, a hidden random one revealed when you finish the line, or both. The rule shows under the card. Click a tile to see its task details, submit proof, or check who contributed.
 
 Switch to **List** to see every task as a card instead. Open tasks sort first; tick **Hide completed** to focus on what's left. Events without a board layout open in the list, with tasks filling the card in order.
 
-**Scores** ranks every team and shows completed lines and bonus points, and **Team** lists your teammates. The board updates live while it's open. The in-game board overlay shows the card too.
+**Scores** ranks every team and shows completed lines and bonus points, and **Team** lists your teammates. The board updates live while it's open.
 
 When you make progress, a message appears in **your own chatbox only**. When your team finishes a tile, teammates who are online in clan chat get a local alert too. TSG Hub never posts to public or clan chat.
+
+![A tile reveal card opening in the middle of the game screen](docs/images/reveal.png)
 
 <p>
 <img src="docs/images/board-grid.png" width="320" alt="A team's bingo card with a completed row and a selected tile">
@@ -121,7 +127,7 @@ Your in-game clan rank doesn't grant admin access.
 1. **New event**: pick bingo, Skill of the Week, Boss of the Week or a custom event, then set its name and its start and end date and time. Times are entered in your computer's time zone, shown next to the fields, and players see them converted to theirs. Custom events can leave the end time empty. You can hide scores from players until the end.
 2. **Teams**: add teams. Each gets a permanent invite code; use **Copy code** to share it.
 3. **Tasks**: add tasks shared by every team. Item tasks have type-ahead search with icons and ready-made sets, and raid tasks let you choose each raid and mode.
-4. **Board**: pick a size from 3 x 3 to 9 x 9 and **Shuffle** to place tasks on random tiles. **Same for every team** (the default) gives every team the same card, so lines are equally hard; **Different per team** shuffles each team's card separately. Click a tile, then another tile or empty cell, to swap them. **Reset** goes back to task order. The preview shows each team's progress and lines. Set a **Line bonus** for points per completed line, and a **Random bonus** range to give every line its own hidden bonus from that range (**Reroll** rolls new ones). Players see a random bonus only once they finish that line, and the rolls are listed under the preview for you. The line bonus can change any time; the random bonuses lock with the board. Fill every cell if you want every line to be winnable: a line through an empty cell can't be completed. The board locks once a published event starts.
+4. **Board**: pick a size from 3 x 3 to 9 x 9 and **Shuffle** to place tasks on random tiles. **Same for every team** (the default) gives every team the same card, so lines are equally hard; **Different per team** shuffles each team's card separately. Click a tile, then another tile or empty cell, to swap them. **Reset** goes back to task order. The preview shows each team's progress and lines. Set a **Line bonus** for points per completed line, and a **Random bonus** range to give every line its own hidden bonus from that range (**Reroll** rolls new ones). Players see a random bonus only once they finish that line, and the rolls are listed under the preview for you. The line bonus can change any time; the random bonuses lock with the board. Fill every cell if you want every line to be winnable: a line through an empty cell can't be completed. The board locks once a published event starts. **Preview reveal** plays the tile and line cards players see.
 5. **Claims**: approve or reject manual submissions. The tab shows how many are waiting.
 
 ![Board tab: size, layout, shuffle and a preview of the card](docs/images/admin-board.png)

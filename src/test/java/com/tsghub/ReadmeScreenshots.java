@@ -142,7 +142,25 @@ public class ReadmeScreenshots
 		selectTab(organizer, "Claims");
 		shoot(organizer, 860, 240, "admin-claims");
 
+		reveal(boardEvent.getAsJsonArray("tasks").get(1).getAsJsonObject());
+
 		hero(480, eventList, board, parties);
+	}
+
+	private static void reveal(JsonObject task) throws Exception
+	{
+		TsgHubRevealOverlay overlay = new TsgHubRevealOverlay(null, null);
+		TsgHubReveals.Reveal tile = new TsgHubReveals.Reveal(false, TsgHubUi.str(task, "title"), "by Crab Legs", TsgHubUi.integer(task, "points", 1), task);
+		BufferedImage image = new BufferedImage(765 * SCALE, 503 * SCALE, BufferedImage.TYPE_INT_RGB);
+		Graphics2D g = image.createGraphics();
+		g.scale(SCALE, SCALE);
+		g.setPaint(new java.awt.GradientPaint(0, 0, new java.awt.Color(74, 96, 58), 0, 503, new java.awt.Color(46, 60, 38)));
+		g.fillRect(0, 0, 765, 503);
+		g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+		g.setRenderingHint(java.awt.RenderingHints.KEY_TEXT_ANTIALIASING, java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+		overlay.paint(g, tile, 3000, 765, 503, itemIcon(TsgHubTileIcons.itemFor(task)));
+		g.dispose();
+		ImageIO.write(image, "png", new File(out, "reveal.png"));
 	}
 
 	private static String str(String key)

@@ -11,6 +11,9 @@ public interface TsgHubConfig extends Config
 	@ConfigSection(name = "Sharing", description = "What TSG Hub sends to the clan's event service.", position = 0)
 	String sharingSection = "sharing";
 
+	@ConfigSection(name = "Bingo", description = "How your team's bingo board shows in game.", position = 3)
+	String bingoSection = "bingo";
+
 	@ConfigSection(name = "Chat", description = "TSG Hub messages in your chatbox.", position = 5)
 	String chatSection = "chat";
 
@@ -28,6 +31,18 @@ public interface TsgHubConfig extends Config
 
 	@ConfigItem(keyName = "shareLocation", position = 1, section = sharingSection, name = "Share location and activity", description = "Show clanmates your area name and what you're doing (for example Skilling - Mining) in the Members list. When off, you still appear while in clan chat, with just Online and your world. Your exact tile is never sent.")
 	default boolean shareLocation()
+	{
+		return false;
+	}
+
+	@ConfigItem(keyName = "bingoReveal", position = 0, section = bingoSection, name = "Tile reveal animation", description = "Open a card in the middle of the screen when your team completes a bingo tile or line, like opening a card pack. Click the card to skip it.")
+	default boolean bingoReveal()
+	{
+		return true;
+	}
+
+	@ConfigItem(keyName = "bingoOverlay", position = 1, section = bingoSection, name = "Show board on screen", description = "Show your team's bingo board as an on-screen overlay. Hold Alt and drag it to move it.")
+	default boolean bingoOverlay()
 	{
 		return false;
 	}
