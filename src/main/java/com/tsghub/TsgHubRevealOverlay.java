@@ -20,6 +20,8 @@ import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -62,6 +64,8 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	private static final Set<WorldType> PVP_WORLDS = EnumSet.of(WorldType.DEADMAN, WorldType.PVP_ARENA, WorldType.LAST_MAN_STANDING);
 	private static final Color INK = new Color(200, 28, 36);
 	private static final Color STAMP = new Color(214, 44, 58);
+	private static final Color DOT = new Color(INK.getRed(), INK.getGreen(), INK.getBlue(), 175);
+	private static final Color DOT_SHINE = new Color(255, 120, 110, 70);
 
 	private static final class Held
 	{
@@ -82,6 +86,8 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	private volatile long startedAt;
 	private volatile long pausedAt;
 	private volatile Rectangle panelBounds = new Rectangle();
+	private final Map<String, Area> dots = new HashMap<>();
+	private int dotCell;
 
 	TsgHubRevealOverlay(Client client, TsgHubTileIcons icons)
 	{
@@ -156,6 +162,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 			while (next != null && now - next.at > MAX_HELD_MS) next = queue.poll();
 			moment = next == null ? null : next.moment;
 			current = moment;
+			dots.clear();
 			startedAt = now;
 			if (moment == null) return null;
 		}
@@ -271,7 +278,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 					s.translate(-cx, -cy);
 				}
 				TsgHubBoardGrid.paintTile(s, x, y, cell, tile, small, names);
-				if (daubed) paintDot(s, cx, cy, cell, since < 0 ? 1 : Math.min(1, since / (double) SPLAT_MS), id.hashCode());
+				if (daubed) paintDot(s, id, cx, cy, cell, since < 0 ? 1 : Math.min(1, since / (double) SPLAT_MS));
 				if (since >= 0 && since < FLASH_MS)
 				{
 					s.setColor(new Color(255, 255, 255, (int) (190 * (1 - since / (double) FLASH_MS))));
@@ -440,7 +447,28 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 		d.dispose();
 	}
 
-	private static void paintDot(Graphics2D g, double cx, double cy, double cell, double grow, int seed)
+	private void paintDot(Graphics2D g, String id, double cx, double cy, int cell, double grow)
+	{
+		Area ink;
+		if (grow < 1) ink = dotShape(cx, cy, cell, grow, id.hashCode());
+		else
+		{
+			if (cell != dotCell)
+			{
+				dots.clear();
+				dotCell = cell;
+			}
+			ink = dots.computeIfAbsent(id, key -> dotShape(cx, cy, cell, 1, key.hashCode()));
+		}
+		g.setColor(DOT);
+		g.fill(ink);
+		Rectangle2D bounds = ink.getBounds2D();
+		double r = bounds.getWidth() / 2.9;
+		g.setColor(DOT_SHINE);
+		g.fill(new Ellipse2D.Double(cx - r * 0.55, cy - r * 0.62, r * 0.6, r * 0.4));
+	}
+
+	private static Area dotShape(double cx, double cy, double cell, double grow, int seed)
 	{
 		double r = cell * 0.34 * (0.35 + 0.65 * easeOutBack(grow));
 		Area ink = new Area(new Ellipse2D.Double(cx - r, cy - r, r * 2, r * 2));
@@ -452,10 +480,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 			double lobe = r * (0.22 + 0.14 * variance);
 			ink.add(new Area(new Ellipse2D.Double(cx + Math.cos(a) * d - lobe, cy + Math.sin(a) * d - lobe, lobe * 2, lobe * 2)));
 		}
-		g.setColor(new Color(INK.getRed(), INK.getGreen(), INK.getBlue(), 175));
-		g.fill(ink);
-		g.setColor(new Color(255, 120, 110, 70));
-		g.fill(new Ellipse2D.Double(cx - r * 0.55, cy - r * 0.62, r * 0.6, r * 0.4));
+		return ink;
 	}
 
 	private static void paintSpray(Graphics2D g, double cx, double cy, double cell, long since, int seed)
