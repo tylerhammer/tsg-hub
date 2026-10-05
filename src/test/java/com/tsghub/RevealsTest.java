@@ -88,6 +88,35 @@ public class RevealsTest
 	}
 
 	@Test
+	public void offBoardTasksStillReveal()
+	{
+		TsgHubReveals reveals = new TsgHubReveals();
+		JsonObject before = event("red");
+		extraTask(before, false);
+		JsonObject after = event("red");
+		extraTask(after, true);
+		reveals.update(before, "red", "Crab Legs");
+		TsgHubReveals.Moment moment = reveals.update(after, "red", "Crab Legs");
+		assertEquals(Collections.singletonList("t9"), moment.tiles);
+		assertTrue(moment.lines.isEmpty());
+		assertEquals(Collections.singletonList("t9"), moment.board.unplaced);
+	}
+
+	private static void extraTask(JsonObject event, boolean completed)
+	{
+		JsonObject task = new JsonObject();
+		task.addProperty("id", "t9");
+		task.addProperty("title", "Task 9");
+		task.addProperty("points", 2);
+		event.getAsJsonArray("tasks").add(task);
+		JsonObject row = new JsonObject();
+		row.addProperty("taskId", "t9");
+		row.addProperty("completedBy", "Crab Legs");
+		row.addProperty("completed", completed);
+		event.getAsJsonArray("teamScores").get(0).getAsJsonObject().getAsJsonArray("tasks").add(row);
+	}
+
+	@Test
 	public void previewStampsAFirstRowTile()
 	{
 		TsgHubReveals.Moment moment = TsgHubReveals.Moment.preview(event("red"));

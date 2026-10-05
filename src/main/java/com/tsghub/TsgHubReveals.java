@@ -112,6 +112,7 @@ final class TsgHubReveals
 					if (id != null && byMe(byId.get(id), progress.get(id), nowDone, nowMine, playerName)) finished.add(id);
 				}
 			}
+			for (String id : board.unplaced) if (byMe(byId.get(id), progress.get(id), nowDone, nowMine, playerName)) finished.add(id);
 			List<TsgHubBingoBoard.Line> newLines = new ArrayList<>();
 			for (TsgHubBingoBoard.Line line : complete)
 			{

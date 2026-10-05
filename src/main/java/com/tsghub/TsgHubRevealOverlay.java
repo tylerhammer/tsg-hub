@@ -286,7 +286,12 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 		{
 			long since = t - (FIRST_TILE_MS + (long) i * TILE_MS + DROP_MS);
 			int[] at = find(board, moment.tiles.get(i));
-			if (since < 0 || at == null) continue;
+			if (since < 0) continue;
+			if (at == null)
+			{
+				if (since < FLOAT_MS) paintFloat(g, panelW / 2.0, panelH - PAD - 6, cell, since / (double) FLOAT_MS, TsgHubUi.integer(moment.tasks.get(moment.tiles.get(i)), "points", 1));
+				continue;
+			}
 			double cx = left + at[1] * (cell + GAP) + cell / 2.0;
 			double cy = top + at[0] * (cell + GAP) + cell / 2.0;
 			paintSpray(g, cx, cy, cell, since, moment.tiles.get(i).hashCode());
