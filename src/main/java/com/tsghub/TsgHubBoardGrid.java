@@ -440,22 +440,46 @@ final class TsgHubBoardGrid extends JComponent
 		Graphics2D content = (Graphics2D) g.create();
 		content.clip(shape);
 		if (tile.complete) content.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.75f));
-		int textTop = y + 3;
-		if (tile.image != null)
+		int areaTop = y + 3;
+		int areaBottom = y + cell - 7;
+		String title = TsgHubUi.str(tile.task, "title");
+		content.setFont(font);
+		FontMetrics metrics = content.getFontMetrics();
+		int lineHeight = metrics.getHeight() - 2;
+		int textInset = 3;
+		if (tile.image != null && !names)
 		{
-			int max = Math.min(names ? cell / 2 : cell - 10, Math.max(tile.image.getWidth(), 32));
+			int max = Math.min(cell - 10, Math.max(tile.image.getWidth(), 32));
 			double scale = Math.min(max / (double) tile.image.getWidth(), max / (double) tile.image.getHeight());
 			int w = (int) Math.round(tile.image.getWidth() * scale);
 			int h = (int) Math.round(tile.image.getHeight() * scale);
-			int iy = names ? y + 4 : y + (cell - h) / 2 - 1;
-			content.drawImage(tile.image, x + (cell - w) / 2, iy, w, h, null);
-			textTop = iy + h + 1;
+			content.drawImage(tile.image, x + (cell - w) / 2, y + (cell - h) / 2 - 1, w, h, null);
 		}
-		if (tile.image == null || names)
+		else
 		{
-			content.setFont(font);
+			int w = 0;
+			int h = 0;
+			if (tile.image != null)
+			{
+				int max = Math.min(cell / 2, Math.max(tile.image.getWidth(), 32));
+				double scale = Math.min(max / (double) tile.image.getWidth(), max / (double) tile.image.getHeight());
+				w = (int) Math.round(tile.image.getWidth() * scale);
+				h = (int) Math.round(tile.image.getHeight() * scale);
+			}
+			int gap = h > 0 ? 2 : 0;
+			int maxLines = Math.max(1, (areaBottom - areaTop - h - gap - metrics.getAscent()) / lineHeight + 1);
+			List<String> lines = wrapLines(metrics, title, cell - textInset * 2, maxLines);
+			int textHeight = lines.isEmpty() ? 0 : (lines.size() - 1) * lineHeight + metrics.getAscent();
+			int block = h + gap + textHeight;
+			int top = areaTop + Math.max(0, (areaBottom - areaTop - block) / 2);
+			if (h > 0) content.drawImage(tile.image, x + (cell - w) / 2, top, w, h, null);
 			content.setColor(tile.complete ? TsgHubUi.MUTED : TsgHubUi.TEXT);
-			drawWrapped(content, TsgHubUi.str(tile.task, "title"), x + 3, textTop, cell - 6, y + cell - 5);
+			int baseline = top + h + gap + metrics.getAscent();
+			for (String line : lines)
+			{
+				content.drawString(line, x + (cell - metrics.stringWidth(line)) / 2, baseline);
+				baseline += lineHeight;
+			}
 		}
 		content.dispose();
 
@@ -546,39 +570,33 @@ final class TsgHubBoardGrid extends JComponent
 		label.dispose();
 	}
 
-	static void drawWrapped(Graphics2D g, String text, int x, int top, int width, int bottom)
+	static List<String> wrapLines(FontMetrics metrics, String text, int width, int maxLines)
 	{
-		FontMetrics metrics = g.getFontMetrics();
-		int lineHeight = metrics.getHeight() - 2;
-		int maxLines = Math.max(1, (bottom - top) / lineHeight);
 		List<String> lines = new ArrayList<>();
 		StringBuilder line = new StringBuilder();
-		for (String word : text.split("\\s+"))
+		for (String word : text.trim().split("\\s+"))
 		{
 			String next = line.length() == 0 ? word : line + " " + word;
 			if (metrics.stringWidth(next) <= width || line.length() == 0)
 			{
 				line.setLength(0);
 				line.append(next);
+				continue;
 			}
-			else
-			{
-				lines.add(line.toString());
-				line.setLength(0);
-				line.append(word);
-			}
+			lines.add(line.toString());
+			line.setLength(0);
+			line.append(word);
 		}
 		if (line.length() > 0) lines.add(line.toString());
-		int shown = Math.min(lines.size(), maxLines);
-		int y = top + metrics.getAscent() - 1;
-		for (int i = 0; i < shown; i++)
+		boolean cut = lines.size() > maxLines;
+		List<String> shown = new ArrayList<>(lines.subList(0, Math.min(lines.size(), maxLines)));
+		for (int i = 0; i < shown.size(); i++)
 		{
-			String part = lines.get(i);
-			if (i == shown - 1 && shown < lines.size()) part = part + "…";
+			String part = shown.get(i) + (cut && i == shown.size() - 1 ? "…" : "");
 			while (metrics.stringWidth(part) > width && part.length() > 1) part = part.substring(0, part.length() - 2) + "…";
-			g.drawString(part, x + Math.max(0, (width - metrics.stringWidth(part)) / 2), y);
-			y += lineHeight;
+			shown.set(i, part);
 		}
+		return shown;
 	}
 
 	private static Color blend(Color a, Color b, double amount)

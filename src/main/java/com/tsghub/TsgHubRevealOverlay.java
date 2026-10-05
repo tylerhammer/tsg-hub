@@ -16,7 +16,6 @@ import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -285,7 +284,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 		int textTop = 172;
 		if (!reveal.line)
 		{
-			List<String> lines = wrap(g.getFontMetrics(titleFont), reveal.title, CARD_W - 28, 2);
+			List<String> lines = TsgHubBoardGrid.wrapLines(g.getFontMetrics(titleFont), reveal.title, CARD_W - 28, 2);
 			for (String line : lines)
 			{
 				centered(g, line, titleFont, Color.WHITE, CARD_W / 2.0, textTop + 14);
@@ -357,32 +356,6 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 		g.drawString(text, x + 1, y + 1);
 		g.setColor(color);
 		g.drawString(text, x, y);
-	}
-
-	static List<String> wrap(FontMetrics metrics, String text, int width, int maxLines)
-	{
-		List<String> lines = new ArrayList<>();
-		StringBuilder line = new StringBuilder();
-		for (String word : text.trim().split("\\s+"))
-		{
-			String next = line.length() == 0 ? word : line + " " + word;
-			if (metrics.stringWidth(next) <= width || line.length() == 0)
-			{
-				line.setLength(0);
-				line.append(next);
-				continue;
-			}
-			lines.add(line.toString());
-			line.setLength(0);
-			line.append(word);
-		}
-		if (line.length() > 0) lines.add(line.toString());
-		if (lines.size() <= maxLines) return lines;
-		List<String> shown = new ArrayList<>(lines.subList(0, maxLines));
-		String last = shown.get(maxLines - 1) + "…";
-		while (metrics.stringWidth(last) > width && last.length() > 2) last = last.substring(0, last.length() - 2) + "…";
-		shown.set(maxLines - 1, last);
-		return shown;
 	}
 
 	private static Color alpha(Color color, int alpha)
