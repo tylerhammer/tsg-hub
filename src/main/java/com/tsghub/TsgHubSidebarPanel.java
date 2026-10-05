@@ -89,6 +89,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private volatile boolean groupsWanted;
 	private volatile boolean dropsWanted;
 	private JsonArray members;
+	private String update;
 	private JsonArray drops;
 	private JsonObject competitionEvent;
 	private String competitionName = "";
@@ -395,7 +396,21 @@ final class TsgHubSidebarPanel extends PluginPanel
 			page.add(TsgHubUi.fitHeight(row));
 			page.add(Box.createVerticalStrut(6));
 		}
+		if (update != null)
+		{
+			page.add(Box.createVerticalStrut(4));
+			JLabel notice = TsgHubUi.label("Update available. Restart RuneLite.", TsgHubUi.WARNING, FontManager.getRunescapeSmallFont());
+			notice.setHorizontalAlignment(JLabel.CENTER);
+			notice.setToolTipText("TSG Hub " + update + " is available. Restart RuneLite to update.");
+			page.add(TsgHubUi.fitHeight(fullWidth(notice)));
+		}
 		refreshPage();
+	}
+
+	void setUpdate(String version)
+	{
+		update = version;
+		if (view == View.HOME) renderHome();
 	}
 
 	private JPanel sectionTile(Section section, boolean half)
