@@ -16,12 +16,12 @@ public class DropsPanelTest
 	@Test
 	public void formatGp()
 	{
-		assertEquals("", TsgHubSidebarPanel.formatGp(0));
-		assertEquals("950 gp", TsgHubSidebarPanel.formatGp(950));
-		assertEquals("7.2K", TsgHubSidebarPanel.formatGp(7_250));
-		assertEquals("1.5M", TsgHubSidebarPanel.formatGp(1_512_345));
-		assertEquals("12M", TsgHubSidebarPanel.formatGp(12_000_000));
-		assertEquals("1.2B", TsgHubSidebarPanel.formatGp(1_234_567_890L));
+		assertEquals("", TsgHubUi.formatGp(0));
+		assertEquals("950 gp", TsgHubUi.formatGp(950));
+		assertEquals("7.2K", TsgHubUi.formatGp(7_250));
+		assertEquals("1.5M", TsgHubUi.formatGp(1_512_345));
+		assertEquals("12M", TsgHubUi.formatGp(12_000_000));
+		assertEquals("1.2B", TsgHubUi.formatGp(1_234_567_890L));
 	}
 
 	@Test
@@ -85,9 +85,9 @@ public class DropsPanelTest
 	@Test
 	public void coinColor()
 	{
-		assertEquals(new Color(255, 255, 0), TsgHubSidebarPanel.coinColor(99_999));
-		assertEquals(Color.WHITE, TsgHubSidebarPanel.coinColor(803_300));
-		assertEquals(new Color(0, 255, 128), TsgHubSidebarPanel.coinColor(10_000_000));
+		assertEquals(new Color(255, 255, 0), TsgHubUi.coinColor(99_999));
+		assertEquals(Color.WHITE, TsgHubUi.coinColor(803_300));
+		assertEquals(new Color(0, 255, 128), TsgHubUi.coinColor(10_000_000));
 	}
 
 	@Test
