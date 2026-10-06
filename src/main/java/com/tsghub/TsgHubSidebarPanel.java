@@ -103,6 +103,31 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final GroupMembersPanel groupMembers;
 	private static final String WILDERNESS = "Wilderness lvl ";
 	private static final int DROP_ICON_W = 40;
+	private static final DateTimeFormatter CLOCK_TIME = DateTimeFormatter.ofPattern("HH:mm");
+	private static final Color SELF_CARD = new Color(43, 36, 22);
+	private static final Color SELF_BORDER = new Color(122, 82, 8);
+	private static final Color COIN_LOW = new Color(255, 255, 0);
+	private static final Color COIN_HIGH = new Color(0, 255, 128);
+	private static final Color TAG_DEFAULT = new Color(195, 140, 255);
+	private static final Map<String, Color> TAG_COLORS = Map.of(
+		"Log", new Color(55, 240, 70),
+		"CoX", new Color(111, 179, 255),
+		"ToB", new Color(255, 122, 122),
+		"ToA", new Color(224, 180, 76),
+		"Pet", new Color(255, 138, 216),
+		"Dupe pet", new Color(255, 138, 216));
+	private static final java.util.Set<String> COX_ITEMS = java.util.Set.of(
+		"Dexterous prayer scroll", "Arcane prayer scroll", "Twisted buckler", "Dragon hunter crossbow",
+		"Dinh's bulwark", "Ancestral hat", "Ancestral robe top", "Ancestral robe bottom", "Dragon claws",
+		"Elder maul", "Kodai insignia", "Twisted bow", "Olmlet", "Metamorphic dust", "Twisted ancestral colour kit");
+	private static final java.util.Set<String> TOB_ITEMS = java.util.Set.of(
+		"Avernic defender hilt", "Ghrazi rapier", "Sanguinesti staff", "Justiciar faceguard", "Justiciar chestguard",
+		"Justiciar legguards", "Scythe of vitur", "Lil' zik", "Sanguine dust", "Sanguine ornament kit", "Holy ornament kit");
+	private static final java.util.Set<String> TOA_ITEMS = java.util.Set.of(
+		"Osmumten's fang", "Lightbearer", "Elidinis' ward", "Masori mask", "Masori body", "Masori chaps",
+		"Tumeken's shadow", "Tumeken's guardian", "Thread of Elidinis", "Breach of the scarab", "Eye of the corruptor",
+		"Jewel of the sun", "Menaphite ornament kit", "Remnant of Akkha",
+		"Remnant of Ba-Ba", "Remnant of Kephri", "Remnant of Zebak", "Ancient remnant");
 	private final JButton createGroupButton = TsgHubUi.primaryButton("New party");
 	private final JLabel groupError = TsgHubUi.label("", TsgHubUi.ERROR, FontManager.getRunescapeSmallFont());
 	private JsonArray groupList;
@@ -519,10 +544,16 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 		else
 		{
+			int myWorld = 0;
 			for (int i = 0; i < members.size(); i++)
 			{
-				page.add(memberCard(members.get(i).getAsJsonObject()));
-				page.add(Box.createVerticalStrut(5));
+				JsonObject member = members.get(i).getAsJsonObject();
+				if (TsgHubUi.samePlayer(TsgHubUi.str(member, "displayName"), plugin.getDetectedPlayerName())) myWorld = TsgHubUi.integer(member, "world", 0);
+			}
+			for (int i = 0; i < members.size(); i++)
+			{
+				page.add(memberCard(members.get(i).getAsJsonObject(), myWorld));
+				page.add(Box.createVerticalStrut(6));
 			}
 		}
 		page.add(Box.createVerticalStrut(8));
@@ -531,50 +562,65 @@ final class TsgHubSidebarPanel extends PluginPanel
 		refreshPage();
 	}
 
-	private JPanel memberCard(JsonObject member)
+	private JPanel memberCard(JsonObject member, int myWorld)
 	{
+		Font small = FontManager.getRunescapeSmallFont();
 		String name = TsgHubUi.str(member, "displayName");
 		String activity = TsgHubUi.str(member, "activity");
-		String area = TsgHubUi.str(member, "area");
 		int world = TsgHubUi.integer(member, "world", 0);
+		boolean self = TsgHubUi.samePlayer(name, plugin.getDetectedPlayerName());
 		JPanel card = TsgHubUi.card();
-		JPanel text = TsgHubUi.stack();
+		if (self)
+		{
+			card.setBackground(SELF_CARD);
+			card.setBorder(BorderFactory.createCompoundBorder(
+				BorderFactory.createLineBorder(SELF_BORDER),
+				BorderFactory.createEmptyBorder(6, 7, 6, 7)));
+		}
+
+		JLabel nameLabel = shrinkable(TsgHubUi.label(self ? name + " (you)" : name, TsgHubUi.TEXT, FontManager.getRunescapeBoldFont()));
 		String rank = TsgHubUi.str(member, "rank");
 		java.awt.image.BufferedImage rankIcon = plugin.presence().rankIcon(member);
-		JLabel nameLabel = TsgHubUi.label(TsgHubUi.html("<b>" + TsgHubUi.escape(name) + "</b>", CARD_TITLE_W - (rankIcon == null ? 0 : rankIcon.getWidth() + 4)), TsgHubUi.TEXT, FontManager.getRunescapeFont());
 		if (rankIcon != null)
 		{
 			nameLabel.setIcon(new javax.swing.ImageIcon(rankIcon));
 			nameLabel.setIconTextGap(4);
-			nameLabel.setToolTipText(rank);
 		}
-		text.add(nameLabel);
-		text.add(Box.createVerticalStrut(2));
-		if (!activity.isEmpty())
-			text.add(TsgHubUi.wrapped(activity, "Idle".equals(activity) ? TsgHubUi.MUTED : TsgHubUi.SUCCESS, FontManager.getRunescapeSmallFont(), CARD_TITLE_W));
-		List<String> where = new ArrayList<>();
-		if (world > 0) where.add("W" + world);
-		if (!area.isEmpty() && !activity.endsWith(area)) where.add(area);
-		if (!where.isEmpty()) text.add(TsgHubUi.wrapped(String.join(" · ", where), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), CARD_TITLE_W));
-		card.add(text, BorderLayout.CENTER);
-		boolean rankText = rankIcon == null && !rank.isEmpty();
-		boolean self = TsgHubUi.samePlayer(name, plugin.getDetectedPlayerName());
-		if (rankText || self)
+		if (!rank.isEmpty()) nameLabel.setToolTipText(rank);
+		JPanel top = row();
+		top.add(nameLabel, BorderLayout.CENTER);
+		if (world > 0)
 		{
-			JPanel east = TsgHubUi.stack();
-			if (rankText) east.add(TsgHubUi.label(rank, TsgHubUi.ACCENT, FontManager.getRunescapeSmallFont()));
-			if (self)
-			{
-				if (rankText) east.add(Box.createVerticalStrut(3));
-				east.add(TsgHubUi.badge("You", TsgHubUi.SUCCESS));
-			}
-			for (java.awt.Component part : east.getComponents()) ((javax.swing.JComponent) part).setAlignmentX(RIGHT_ALIGNMENT);
-			JPanel wrap = new JPanel(new BorderLayout());
-			wrap.setOpaque(false);
-			wrap.add(east, BorderLayout.NORTH);
-			card.add(wrap, BorderLayout.EAST);
+			boolean sameWorld = !self && world == myWorld;
+			JLabel worldLabel = TsgHubUi.label("W" + world, sameWorld ? TsgHubUi.SUCCESS : TsgHubUi.MUTED, small);
+			if (sameWorld) worldLabel.setToolTipText("On your world");
+			top.add(worldLabel, BorderLayout.EAST);
 		}
+
+		JPanel text = TsgHubUi.stack();
+		text.add(top);
+		String detail = activityDetail(activity, TsgHubUi.str(member, "area"));
+		if (!detail.isEmpty())
+		{
+			boolean active = !"Idle".equals(activity) && !"Online".equals(activity) && !activity.isEmpty();
+			JLabel detailLabel = shrinkable(TsgHubUi.label(detail, active ? TsgHubUi.SUCCESS : TsgHubUi.MUTED, small));
+			detailLabel.setToolTipText(detail);
+			JPanel bottom = row();
+			bottom.add(detailLabel, BorderLayout.CENTER);
+			text.add(Box.createVerticalStrut(3));
+			text.add(bottom);
+		}
+		card.add(text, BorderLayout.CENTER);
 		return TsgHubUi.fitHeight(card);
+	}
+
+	static String activityDetail(String activity, String area)
+	{
+		if (activity.isEmpty()) activity = "Online";
+		int dash = activity.indexOf(" - ");
+		String detail = dash < 0 ? activity : activity.substring(dash + 3);
+		if (area.isEmpty() || area.equals(detail)) return detail;
+		return detail + " · " + area;
 	}
 
 	void setDrops(JsonArray drops)
@@ -606,51 +652,91 @@ final class TsgHubSidebarPanel extends PluginPanel
 		else
 		{
 			Instant now = TsgHubUi.clock.instant();
+			java.time.ZoneId zone = java.time.ZoneId.systemDefault();
+			String day = null;
 			for (int i = 0; i < drops.size(); i++)
 			{
-				page.add(dropCard(drops.get(i).getAsJsonObject(), now));
-				page.add(Box.createVerticalStrut(5));
+				JsonObject drop = drops.get(i).getAsJsonObject();
+				String nextDay = dropDay(TsgHubUi.str(drop, "receivedAt"), now, zone);
+				if (!nextDay.equals(day))
+				{
+					JLabel heading = TsgHubUi.label(nextDay.toUpperCase(), TsgHubUi.MUTED, small);
+					heading.setBorder(BorderFactory.createEmptyBorder(i == 0 ? 0 : 6, 2, 4, 0));
+					page.add(heading);
+					day = nextDay;
+				}
+				page.add(dropCard(drop, now, zone));
+				page.add(Box.createVerticalStrut(6));
 			}
 		}
 		refreshPage();
 	}
 
-	private JPanel dropCard(JsonObject drop, Instant now)
+	private JPanel dropCard(JsonObject drop, Instant now, java.time.ZoneId zone)
 	{
 		Font small = FontManager.getRunescapeSmallFont();
+		String player = TsgHubUi.str(drop, "player");
+		boolean self = TsgHubUi.samePlayer(player, plugin.getDetectedPlayerName());
 		JPanel card = TsgHubUi.card();
-		JLabel icon = dropIcon(TsgHubUi.integer(drop, "itemId", 0));
-		int textW = CARD_TITLE_W - (icon == null ? 0 : DROP_ICON_W);
-		if (icon != null) card.add(icon, BorderLayout.WEST);
-		JPanel text = TsgHubUi.stack();
-		JLabel name = TsgHubUi.label(TsgHubUi.html("<b>" + TsgHubUi.escape(dropItem(drop)) + "</b>", textW), TsgHubUi.TEXT, FontManager.getRunescapeFont());
-		name.setToolTipText(TsgHubUi.str(drop, "item"));
-		text.add(name);
-		text.add(Box.createVerticalStrut(2));
-		text.add(TsgHubUi.wrapped(TsgHubUi.str(drop, "player"), TsgHubUi.ACCENT, small, textW));
-		List<String> meta = new ArrayList<>();
-		String value = formatGp(drop.has("value") ? drop.get("value").getAsLong() : 0);
-		if (!value.isEmpty()) meta.add(value);
-		String age = dropAge(TsgHubUi.str(drop, "receivedAt"), now);
-		if (!age.isEmpty()) meta.add(age);
-		if (!meta.isEmpty()) text.add(TsgHubUi.wrapped(String.join(" · ", meta), TsgHubUi.MUTED, small, textW));
-		card.add(text, BorderLayout.CENTER);
-		List<String> badges = dropBadges(drop);
-		if (!badges.isEmpty())
+		if (self)
 		{
-			JPanel east = TsgHubUi.stack();
-			for (String badge : badges)
-			{
-				if (east.getComponentCount() > 0) east.add(Box.createVerticalStrut(3));
-				east.add(TsgHubUi.badge(badge, TsgHubUi.SUCCESS));
-			}
-			for (java.awt.Component part : east.getComponents()) ((javax.swing.JComponent) part).setAlignmentX(RIGHT_ALIGNMENT);
-			JPanel wrap = new JPanel(new BorderLayout());
-			wrap.setOpaque(false);
-			wrap.add(east, BorderLayout.NORTH);
-			card.add(wrap, BorderLayout.EAST);
+			card.setBackground(SELF_CARD);
+			card.setBorder(BorderFactory.createCompoundBorder(
+				BorderFactory.createLineBorder(SELF_BORDER),
+				BorderFactory.createEmptyBorder(6, 7, 6, 7)));
 		}
+		JLabel icon = dropIcon(TsgHubUi.integer(drop, "itemId", 0));
+		if (icon != null) card.add(icon, BorderLayout.WEST);
+
+		JLabel name = shrinkable(TsgHubUi.label(dropItem(drop), TsgHubUi.TEXT, FontManager.getRunescapeBoldFont()));
+		name.setToolTipText(TsgHubUi.str(drop, "item"));
+		JPanel top = row();
+		top.add(name, BorderLayout.CENTER);
+		top.add(TsgHubUi.label(dropWhen(TsgHubUi.str(drop, "receivedAt"), now, zone), TsgHubUi.MUTED, small), BorderLayout.EAST);
+
+		JPanel bottom = row();
+		bottom.add(shrinkable(TsgHubUi.label(self ? player + " (you)" : player, TsgHubUi.ACCENT, small)), BorderLayout.CENTER);
+		JPanel extras = new JPanel(new FlowLayout(FlowLayout.RIGHT, 3, 0));
+		extras.setOpaque(false);
+		for (String tag : dropTags(drop)) extras.add(TsgHubUi.badge(tag, TAG_COLORS.getOrDefault(tag, TAG_DEFAULT)));
+		long value = drop.has("value") ? drop.get("value").getAsLong() : 0;
+		if (value > 0) extras.add(TsgHubUi.label(formatGp(value), coinColor(value), small));
+		bottom.add(extras, BorderLayout.EAST);
+
+		JPanel text = TsgHubUi.stack();
+		text.add(top);
+		text.add(Box.createVerticalStrut(3));
+		text.add(bottom);
+		JPanel center = new JPanel(new java.awt.GridBagLayout());
+		center.setOpaque(false);
+		java.awt.GridBagConstraints fill = new java.awt.GridBagConstraints();
+		fill.fill = java.awt.GridBagConstraints.HORIZONTAL;
+		fill.weightx = 1;
+		center.add(text, fill);
+		card.add(center, BorderLayout.CENTER);
 		return TsgHubUi.fitHeight(card);
+	}
+
+	private static JPanel row()
+	{
+		JPanel row = new JPanel(new BorderLayout(6, 0));
+		row.setOpaque(false);
+		return row;
+	}
+
+	private static JLabel shrinkable(JLabel label)
+	{
+		int height = label.getPreferredSize().height;
+		label.setMinimumSize(new Dimension(0, height));
+		label.setPreferredSize(new Dimension(0, height));
+		return label;
+	}
+
+	static Color coinColor(long value)
+	{
+		if (value < 100_000) return COIN_LOW;
+		if (value < 10_000_000) return TsgHubUi.TEXT;
+		return COIN_HIGH;
 	}
 
 	private JLabel dropIcon(int itemId)
@@ -659,19 +745,30 @@ final class TsgHubSidebarPanel extends PluginPanel
 		net.runelite.client.util.AsyncBufferedImage image = plugin.getItemImage(itemId);
 		if (image == null) return null;
 		JLabel label = new JLabel();
-		label.setVerticalAlignment(JLabel.TOP);
+		label.setVerticalAlignment(JLabel.CENTER);
 		label.setPreferredSize(new java.awt.Dimension(DROP_ICON_W, 32));
 		image.addTo(label);
 		return label;
 	}
 
-	static List<String> dropBadges(JsonObject drop)
+	static List<String> dropTags(JsonObject drop)
 	{
-		List<String> badges = new ArrayList<>();
-		String kind = dropKind(TsgHubUi.str(drop, "kind"));
-		if (!kind.isEmpty()) badges.add(kind);
-		if (TsgHubUi.bool(drop, "newLog") || "clog".equals(TsgHubUi.str(drop, "kind"))) badges.add("New log");
-		return badges;
+		List<String> tags = new ArrayList<>();
+		String kind = TsgHubUi.str(drop, "kind");
+		if ("raid".equals(kind)) tags.add(raidName(TsgHubUi.str(drop, "item")));
+		else if ("pet".equals(kind)) tags.add("Pet");
+		else if ("dupe".equals(kind)) tags.add("Dupe pet");
+		if (TsgHubUi.bool(drop, "newLog") || "clog".equals(kind)) tags.add("Log");
+		return tags;
+	}
+
+	static String raidName(String item)
+	{
+		String base = item.replaceAll("(\\s*\\([^)]*\\))+$", "");
+		if (COX_ITEMS.contains(base)) return "CoX";
+		if (TOB_ITEMS.contains(base)) return "ToB";
+		if (TOA_ITEMS.contains(base)) return "ToA";
+		return "Raid";
 	}
 
 	static String dropItem(JsonObject drop)
@@ -713,13 +810,31 @@ final class TsgHubSidebarPanel extends PluginPanel
 		try { then = Instant.parse(iso); }
 		catch (Exception e) { return ""; }
 		long minutes = Math.max(0, Duration.between(then, now).toMinutes());
-		if (minutes < 1) return "just now";
-		if (minutes < 60) return minutes + "m ago";
+		if (minutes < 1) return "now";
+		if (minutes < 60) return minutes + "m";
 		long hours = minutes / 60;
-		if (hours < 24) return hours + "h ago";
-		long days = hours / 24;
-		if (days < 30) return days + "d ago";
-		return TsgHubUi.localDate(then, java.time.ZoneId.systemDefault());
+		if (hours < 24) return hours + "h";
+		return hours / 24 + "d";
+	}
+
+	static String dropWhen(String iso, Instant now, java.time.ZoneId zone)
+	{
+		String day = dropDay(iso, now, zone);
+		if ("Earlier".equals(day)) return "";
+		if ("Today".equals(day)) return dropAge(iso, now);
+		return Instant.parse(iso).atZone(zone).format(CLOCK_TIME);
+	}
+
+	static String dropDay(String iso, Instant now, java.time.ZoneId zone)
+	{
+		Instant then;
+		try { then = Instant.parse(iso); }
+		catch (Exception e) { return "Earlier"; }
+		java.time.LocalDate day = then.atZone(zone).toLocalDate();
+		java.time.LocalDate today = now.atZone(zone).toLocalDate();
+		if (!day.isBefore(today)) return "Today";
+		if (day.equals(today.minusDays(1))) return "Yesterday";
+		return TsgHubUi.localDate(then, zone);
 	}
 
 	private void openEvents()
