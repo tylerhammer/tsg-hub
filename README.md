@@ -11,6 +11,7 @@ Clan events for **Type Shiii Gaming** (TSG), right in your RuneLite sidebar. Joi
 - **Bingo boards** with team tasks that update automatically from kills, drops, raids and collection log unlocks.
 - **Skill of the Week** and **Boss of the Week** leaderboards you join with one click.
 - **Custom** events (drop parties, clan trips, anything else) announced with the time, world and location.
+- **Prizes**: events can list GP prizes for 1st, 2nd and 3rd place.
 - **Clan parties** for raids, bossing and skilling. Join with one click, no passphrase to type, and see your party's health, prayer, gear, inventory and skills live.
 - **Members** list showing which clanmates are online, their world, area and what they're doing.
 - **Drops** history of the clan's big drops, raid loot, pets and collection log items, so you can catch up on what you missed.
@@ -19,7 +20,7 @@ Clan events for **Type Shiii Gaming** (TSG), right in your RuneLite sidebar. Joi
 
 ## Bingo
 
-Your team's board opens straight from the sidebar. Every task shows its points, a progress bar, and who contributed what. Open tasks sort first; tick **Hide completed** to focus on what's left.
+Your team's board opens straight from the sidebar. The header shows your team's rank, points and tasks done, plus the prize for each place. Every task shows its points, a progress bar, and who contributed what. Open tasks sort first; tick **Hide completed** to focus on what's left.
 
 **Scores** ranks every team, and **Team** lists your teammates. The board updates live while it's open.
 
@@ -50,6 +51,8 @@ Tasks can be **Team** (everyone's progress pools together), **Everyone** (each m
 
 **Custom events**, like drop parties, show when and where they happen, along with the host and any notes.
 
+The **Events** list splits live and upcoming events, with each one's prize pool. Open an event to see the prize for each place.
+
 Every event shows its start and end in your own time zone, with the zone name (for example "Mon 5 Oct, 7pm AEDT") and how long until it starts or ends. Competitions count gains made between those exact times, wherever you are.
 
 <p>
@@ -70,7 +73,7 @@ A party closes when its last member leaves. Members drop out after 3 minutes wit
 
 ## Members
 
-The **Members** section lists clanmates who are in clan chat with sharing on. Each row shows their world, area and what they're doing, such as `Skilling - Mining`, `Bossing - Vorkath` or `Raiding - Chambers of Xeric`.
+The **Members** section lists clanmates who are in clan chat with sharing on. Each row shows their world, area and what they're doing, such as `Mining · Motherlode Mine`, `Vorkath` or `Chambers of Xeric`. Clanmates on your world have their world shown in green.
 
 Activity is detected automatically from where you are and the XP you gain. Only the area name is sent, never your exact tile.
 
@@ -82,7 +85,7 @@ Anyone in clan chat with sharing on appears in the list. Your area and activity 
 
 ## Drops
 
-The **Drops** section keeps a history of the clan's big drops, so you can see what clanmates got while you were offline. Each row shows the item, who got it, its value and how long ago.
+The **Drops** section keeps a history of the clan's big drops, so you can see what clanmates got while you were offline. Drops are grouped by day, and each row shows the item, who got it, its value and how long ago. Tags mark raid loot (`CoX`, `ToB`, `ToA`), pets and new collection log items.
 
 It's built from the clan chat broadcasts your clan already has turned on: drops over the clan's value threshold, raid loot, pets and new collection log items. Anyone online with sharing on records them, so drops from clanmates who don't use TSG Hub show up too. If several people see the same broadcast, it's only recorded once.
 
@@ -128,7 +131,7 @@ Once the key checks out, an admin button appears in the sidebar header. It opens
 
 Your in-game clan rank doesn't grant admin access. Owners and Deputy Owners keep admin tools through their Discord admin role, and their plugin keeps Discord rank roles in sync while they're logged in with sharing on.
 
-1. **New event**: pick bingo, Skill of the Week, Boss of the Week or a custom event, then set its name and its start and end date and time. Times are entered in your computer's time zone, shown next to the fields, and players see them converted to theirs. Custom events can leave the end time empty. You can hide scores from players until the end.
+1. **New event**: pick bingo, Skill of the Week, Boss of the Week or a custom event, then set its name and its start and end date and time. Times are entered in your computer's time zone, shown next to the fields, and players see them converted to theirs. Custom events can leave the end time empty. You can add optional prizes for 1st, 2nd and 3rd place, in millions of GP, and hide scores from players until the end.
 2. **Teams**: add teams. Each gets a permanent invite code; use **Copy code** to share it.
 3. **Tasks**: add tasks shared by every team. Item tasks have type-ahead search with icons and ready-made sets, and raid tasks let you choose each raid and mode.
 4. **Claims**: approve or reject manual submissions. The tab shows how many are waiting.
