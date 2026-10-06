@@ -544,10 +544,16 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 		else
 		{
+			int myWorld = 0;
 			for (int i = 0; i < members.size(); i++)
 			{
-				page.add(memberCard(members.get(i).getAsJsonObject()));
-				page.add(Box.createVerticalStrut(5));
+				JsonObject member = members.get(i).getAsJsonObject();
+				if (TsgHubUi.samePlayer(TsgHubUi.str(member, "displayName"), plugin.getDetectedPlayerName())) myWorld = TsgHubUi.integer(member, "world", 0);
+			}
+			for (int i = 0; i < members.size(); i++)
+			{
+				page.add(memberCard(members.get(i).getAsJsonObject(), myWorld));
+				page.add(Box.createVerticalStrut(6));
 			}
 		}
 		page.add(Box.createVerticalStrut(8));
@@ -556,50 +562,65 @@ final class TsgHubSidebarPanel extends PluginPanel
 		refreshPage();
 	}
 
-	private JPanel memberCard(JsonObject member)
+	private JPanel memberCard(JsonObject member, int myWorld)
 	{
+		Font small = FontManager.getRunescapeSmallFont();
 		String name = TsgHubUi.str(member, "displayName");
 		String activity = TsgHubUi.str(member, "activity");
-		String area = TsgHubUi.str(member, "area");
 		int world = TsgHubUi.integer(member, "world", 0);
+		boolean self = TsgHubUi.samePlayer(name, plugin.getDetectedPlayerName());
 		JPanel card = TsgHubUi.card();
-		JPanel text = TsgHubUi.stack();
+		if (self)
+		{
+			card.setBackground(SELF_CARD);
+			card.setBorder(BorderFactory.createCompoundBorder(
+				BorderFactory.createLineBorder(SELF_BORDER),
+				BorderFactory.createEmptyBorder(6, 7, 6, 7)));
+		}
+
+		JLabel nameLabel = shrinkable(TsgHubUi.label(self ? name + " (you)" : name, TsgHubUi.TEXT, FontManager.getRunescapeBoldFont()));
 		String rank = TsgHubUi.str(member, "rank");
 		java.awt.image.BufferedImage rankIcon = plugin.presence().rankIcon(member);
-		JLabel nameLabel = TsgHubUi.label(TsgHubUi.html("<b>" + TsgHubUi.escape(name) + "</b>", CARD_TITLE_W - (rankIcon == null ? 0 : rankIcon.getWidth() + 4)), TsgHubUi.TEXT, FontManager.getRunescapeFont());
 		if (rankIcon != null)
 		{
 			nameLabel.setIcon(new javax.swing.ImageIcon(rankIcon));
 			nameLabel.setIconTextGap(4);
-			nameLabel.setToolTipText(rank);
 		}
-		text.add(nameLabel);
-		text.add(Box.createVerticalStrut(2));
-		if (!activity.isEmpty())
-			text.add(TsgHubUi.wrapped(activity, "Idle".equals(activity) ? TsgHubUi.MUTED : TsgHubUi.SUCCESS, FontManager.getRunescapeSmallFont(), CARD_TITLE_W));
-		List<String> where = new ArrayList<>();
-		if (world > 0) where.add("W" + world);
-		if (!area.isEmpty() && !activity.endsWith(area)) where.add(area);
-		if (!where.isEmpty()) text.add(TsgHubUi.wrapped(String.join(" · ", where), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), CARD_TITLE_W));
-		card.add(text, BorderLayout.CENTER);
-		boolean rankText = rankIcon == null && !rank.isEmpty();
-		boolean self = TsgHubUi.samePlayer(name, plugin.getDetectedPlayerName());
-		if (rankText || self)
+		if (!rank.isEmpty()) nameLabel.setToolTipText(rank);
+		JPanel top = row();
+		top.add(nameLabel, BorderLayout.CENTER);
+		if (world > 0)
 		{
-			JPanel east = TsgHubUi.stack();
-			if (rankText) east.add(TsgHubUi.label(rank, TsgHubUi.ACCENT, FontManager.getRunescapeSmallFont()));
-			if (self)
-			{
-				if (rankText) east.add(Box.createVerticalStrut(3));
-				east.add(TsgHubUi.badge("You", TsgHubUi.SUCCESS));
-			}
-			for (java.awt.Component part : east.getComponents()) ((javax.swing.JComponent) part).setAlignmentX(RIGHT_ALIGNMENT);
-			JPanel wrap = new JPanel(new BorderLayout());
-			wrap.setOpaque(false);
-			wrap.add(east, BorderLayout.NORTH);
-			card.add(wrap, BorderLayout.EAST);
+			boolean sameWorld = !self && world == myWorld;
+			JLabel worldLabel = TsgHubUi.label("W" + world, sameWorld ? TsgHubUi.SUCCESS : TsgHubUi.MUTED, small);
+			if (sameWorld) worldLabel.setToolTipText("On your world");
+			top.add(worldLabel, BorderLayout.EAST);
 		}
+
+		JPanel text = TsgHubUi.stack();
+		text.add(top);
+		String detail = activityDetail(activity, TsgHubUi.str(member, "area"));
+		if (!detail.isEmpty())
+		{
+			boolean active = !"Idle".equals(activity) && !"Online".equals(activity) && !activity.isEmpty();
+			JLabel detailLabel = shrinkable(TsgHubUi.label(detail, active ? TsgHubUi.SUCCESS : TsgHubUi.MUTED, small));
+			detailLabel.setToolTipText(detail);
+			JPanel bottom = row();
+			bottom.add(detailLabel, BorderLayout.CENTER);
+			text.add(Box.createVerticalStrut(3));
+			text.add(bottom);
+		}
+		card.add(text, BorderLayout.CENTER);
 		return TsgHubUi.fitHeight(card);
+	}
+
+	static String activityDetail(String activity, String area)
+	{
+		if (activity.isEmpty()) activity = "Online";
+		int dash = activity.indexOf(" - ");
+		String detail = dash < 0 ? activity : activity.substring(dash + 3);
+		if (area.isEmpty() || area.equals(detail)) return detail;
+		return detail + " · " + area;
 	}
 
 	void setDrops(JsonArray drops)
