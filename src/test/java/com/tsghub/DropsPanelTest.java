@@ -4,7 +4,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 import com.google.gson.JsonObject;
+import java.awt.Color;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Collections;
 import org.junit.Test;
@@ -32,34 +34,60 @@ public class DropsPanelTest
 	}
 
 	@Test
-	public void dropBadges()
+	public void dropTags()
 	{
 		JsonObject raid = drop("Twisted bow", 1);
 		raid.addProperty("kind", "raid");
-		assertEquals(Arrays.asList("Raid"), TsgHubSidebarPanel.dropBadges(raid));
+		assertEquals(Arrays.asList("CoX"), TsgHubSidebarPanel.dropTags(raid));
 		raid.addProperty("newLog", true);
-		assertEquals(Arrays.asList("Raid", "New log"), TsgHubSidebarPanel.dropBadges(raid));
+		assertEquals(Arrays.asList("CoX", "Log"), TsgHubSidebarPanel.dropTags(raid));
 		JsonObject clog = drop("Dragon warhammer", 1);
 		clog.addProperty("kind", "clog");
-		assertEquals(Arrays.asList("New log"), TsgHubSidebarPanel.dropBadges(clog));
+		assertEquals(Arrays.asList("Log"), TsgHubSidebarPanel.dropTags(clog));
 		JsonObject dupe = drop("Vorki", 1);
 		dupe.addProperty("kind", "dupe");
-		assertEquals(Arrays.asList("Dupe pet"), TsgHubSidebarPanel.dropBadges(dupe));
+		assertEquals(Arrays.asList("Dupe pet"), TsgHubSidebarPanel.dropTags(dupe));
 		JsonObject plain = drop("Abyssal whip", 1);
 		plain.addProperty("kind", "drop");
-		assertEquals(Collections.emptyList(), TsgHubSidebarPanel.dropBadges(plain));
+		assertEquals(Collections.emptyList(), TsgHubSidebarPanel.dropTags(plain));
 	}
 
 	@Test
-	public void dropAge()
+	public void raidName()
 	{
-		Instant now = Instant.parse("2026-09-28T12:00:00Z");
-		assertEquals("just now", TsgHubSidebarPanel.dropAge("2026-09-28T11:59:30Z", now));
-		assertEquals("5m ago", TsgHubSidebarPanel.dropAge("2026-09-28T11:54:59.500Z", now));
-		assertEquals("3h ago", TsgHubSidebarPanel.dropAge("2026-09-28T09:00:00Z", now));
-		assertEquals("2d ago", TsgHubSidebarPanel.dropAge("2026-09-26T12:00:00Z", now));
-		assertEquals("1 Jul 2026", TsgHubSidebarPanel.dropAge("2026-07-01T12:00:00Z", now));
-		assertEquals("", TsgHubSidebarPanel.dropAge("", now));
+		assertEquals("ToB", TsgHubSidebarPanel.raidName("Scythe of vitur (uncharged)"));
+		assertEquals("ToA", TsgHubSidebarPanel.raidName("Elidinis' ward"));
+		assertEquals("CoX", TsgHubSidebarPanel.raidName("Dexterous prayer scroll"));
+		assertEquals("Raid", TsgHubSidebarPanel.raidName("Mystery box"));
+	}
+
+	@Test
+	public void dropDay()
+	{
+		ZoneId zone = ZoneId.of("America/New_York");
+		Instant now = Instant.parse("2026-09-28T16:00:00Z");
+		assertEquals("Today", TsgHubSidebarPanel.dropDay("2026-09-28T05:00:00Z", now, zone));
+		assertEquals("Yesterday", TsgHubSidebarPanel.dropDay("2026-09-28T03:00:00Z", now, zone));
+		assertEquals("26 Sep 2026", TsgHubSidebarPanel.dropDay("2026-09-26T12:00:00Z", now, zone));
+		assertEquals("Earlier", TsgHubSidebarPanel.dropDay("", now, zone));
+	}
+
+	@Test
+	public void dropWhen()
+	{
+		ZoneId zone = ZoneId.of("America/New_York");
+		Instant now = Instant.parse("2026-09-28T16:00:00Z");
+		assertEquals("11h", TsgHubSidebarPanel.dropWhen("2026-09-28T05:00:00Z", now, zone));
+		assertEquals("23:00", TsgHubSidebarPanel.dropWhen("2026-09-28T03:00:00Z", now, zone));
+		assertEquals("", TsgHubSidebarPanel.dropWhen("", now, zone));
+	}
+
+	@Test
+	public void coinColor()
+	{
+		assertEquals(new Color(255, 255, 0), TsgHubSidebarPanel.coinColor(99_999));
+		assertEquals(Color.WHITE, TsgHubSidebarPanel.coinColor(803_300));
+		assertEquals(new Color(0, 255, 128), TsgHubSidebarPanel.coinColor(10_000_000));
 	}
 
 	@Test
