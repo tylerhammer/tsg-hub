@@ -148,7 +148,7 @@ public class ReadmeScreenshots
 		selectTab(organizer, "Tasks");
 		shoot(organizer, 860, 580, "admin-tasks");
 		selectTab(organizer, "Claims");
-		shoot(organizer, 860, 240, "admin-claims");
+		shoot(organizer, 860, 270, "admin-claims");
 
 		hero(480, eventList, board, parties);
 	}
