@@ -129,6 +129,10 @@ final class TsgHubPanel extends JPanel
 	private final JComboBox<String> eventSkill = new JComboBox<>();
 	private final TsgHubBossPicker eventBoss = new TsgHubBossPicker("Boss", null);
 	private final JRadioButton eventSignalKc = new JRadioButton("Kill count message (recommended)", true);
+	private final JRadioButton styleBoard = new JRadioButton("Bingo board", true);
+	private final JRadioButton styleList = new JRadioButton("Task list");
+	private final JLabel styleHint = TsgHubUi.label("", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont());
+	private JPanel styleRow;
 	private final JRadioButton eventSignalLoot = new JRadioButton("Loot drop (bosses without a KC message)");
 	private final JTextField partyWorld = new JTextField();
 	private final JTextField partyLocation = new JTextField();
@@ -282,6 +286,13 @@ final class TsgHubPanel extends JPanel
 		form.add(bossRow2);
 		signalRow2 = radioField("Count kills using", eventSignalKc, eventSignalLoot);
 		form.add(signalRow2);
+		styleRow = TsgHubUi.stack();
+		styleRow.add(radioField("Style", styleBoard, styleList));
+		styleRow.add(styleHint);
+		styleRow.add(Box.createVerticalStrut(8));
+		styleBoard.addActionListener(e -> updateEventFormType());
+		styleList.addActionListener(e -> updateEventFormType());
+		form.add(styleRow);
 
 		partyRows = TsgHubUi.stack();
 		partyRows.add(field("World", partyWorld));
@@ -772,7 +783,8 @@ final class TsgHubPanel extends JPanel
 		teamsTabButton.setVisible(bingo);
 		tasksTabButton.setVisible(bingo);
 		claimsTabButton.setVisible(bingo);
-		boardTabButton.setVisible(bingo);
+		boardTabButton.setVisible(bingo && TsgHubBingoBoard.hasBoard(event));
+		if (!boardTabButton.isVisible() && boardTabButton.isSelected()) tabs.select(tasksTabButton);
 		leaderboardTabButton.setVisible(competition);
 		detailsTabButton.setVisible("drop-party".equals(type));
 		renderTeams();
@@ -1591,6 +1603,9 @@ final class TsgHubPanel extends JPanel
 		eventSkill.setSelectedIndex(0);
 		eventBoss.setText("");
 		eventSignalKc.setSelected(true);
+		styleBoard.setSelected(true);
+		styleBoard.setEnabled(true);
+		styleList.setEnabled(true);
 		partyWorld.setText("");
 		partyLocation.setText("");
 		partyHost.setText(plugin.getDetectedPlayerName());
@@ -1622,6 +1637,11 @@ final class TsgHubPanel extends JPanel
 		eventBoss.setText(TsgHubUi.str(config, "npcName"));
 		if ("loot".equals(TsgHubUi.str(config, "signal"))) eventSignalLoot.setSelected(true);
 		else eventSignalKc.setSelected(true);
+		if ("board".equals(TsgHubUi.str(currentEvent, "style"))) styleBoard.setSelected(true);
+		else styleList.setSelected(true);
+		boolean styleLocked = !TsgHubUi.bool(currentEvent, "hidden") && !"scheduled".equals(TsgHubUi.str(currentEvent, "status"));
+		styleBoard.setEnabled(!styleLocked);
+		styleList.setEnabled(!styleLocked);
 		partyWorld.setText(TsgHubUi.integer(config, "world", 0) > 0 ? String.valueOf(TsgHubUi.integer(config, "world", 0)) : "");
 		partyLocation.setText(TsgHubUi.str(config, "location"));
 		partyHost.setText(TsgHubUi.str(config, "host"));
@@ -1669,8 +1689,9 @@ final class TsgHubPanel extends JPanel
 			config.addProperty("notes", partyNotes.getText().trim());
 		}
 		eventFormError.setVisible(false);
-		if (editingEvent && currentEvent != null) plugin.updateEvent(TsgHubUi.str(currentEvent, "id"), name, start, end, eventHideScores.isSelected(), eventHidden.isSelected(), "bingo".equals(type) ? null : config);
-		else plugin.createEvent(name, start, end, eventHideScores.isSelected(), eventHidden.isSelected(), type, config);
+		String style = "bingo".equals(type) ? styleBoard.isSelected() ? "board" : "list" : null;
+		if (editingEvent && currentEvent != null) plugin.updateEvent(TsgHubUi.str(currentEvent, "id"), name, start, end, eventHideScores.isSelected(), eventHidden.isSelected(), "bingo".equals(type) ? null : config, style);
+		else plugin.createEvent(name, start, end, eventHideScores.isSelected(), eventHidden.isSelected(), type, config, style);
 	}
 
 	private void setEventTimes(ZonedDateTime start, ZonedDateTime end)
@@ -1711,6 +1732,11 @@ final class TsgHubPanel extends JPanel
 		bossRow2.setVisible("boss".equals(type));
 		signalRow2.setVisible("boss".equals(type));
 		partyRows.setVisible(dropParty);
+		styleRow.setVisible("bingo".equals(type));
+		styleHint.setText(TsgHubUi.html(TsgHubUi.escape(styleBoard.isSelected()
+			? "Tasks sit on a bingo card with lines, line bonuses and the dauber stamp when a tile completes."
+			: "Tasks show as a plain list. No card, lines or animation.")
+			+ (styleBoard.isEnabled() ? "" : " Locked now that the event has started."), 480));
 		hideScoresRow.setVisible(!dropParty);
 		endTimeCaption.setText(dropParty ? "End time (optional)" : "End time (HH:MM)");
 		eventZoneHint.setText(TsgHubUi.html(TsgHubUi.escape("Times are in your time zone, " + TsgHubUi.zoneLabel(ZoneId.systemDefault(), TsgHubUi.clock.instant())

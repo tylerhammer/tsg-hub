@@ -71,7 +71,7 @@ final class TsgHubReveals
 
 	Moment update(JsonObject event, String teamId, String playerName)
 	{
-		if (event == null || teamId == null || teamId.isEmpty())
+		if (event == null || teamId == null || teamId.isEmpty() || !TsgHubBingoBoard.hasBoard(event))
 		{
 			key = null;
 			return null;

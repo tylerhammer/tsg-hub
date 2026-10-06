@@ -1526,8 +1526,9 @@ final class TsgHubSidebarPanel extends PluginPanel
 			(completed ? done : open).add(task);
 		}
 
-		boolean grid = tasks.size() > 0 && showGrid(board);
-		if (tasks.size() > 0)
+		boolean hasBoard = TsgHubBingoBoard.hasBoard(boardEvent);
+		boolean grid = hasBoard && tasks.size() > 0 && showGrid();
+		if (hasBoard && tasks.size() > 0)
 		{
 			tasksTab.add(TsgHubUi.fitHeight(viewToggle(grid)));
 			tasksTab.add(Box.createVerticalStrut(6));
@@ -1564,9 +1565,9 @@ final class TsgHubSidebarPanel extends PluginPanel
 		refresh(tasksTab);
 	}
 
-	private boolean showGrid(TsgHubBingoBoard board)
+	private boolean showGrid()
 	{
-		return boardView.isEmpty() ? !board.auto : "grid".equals(boardView);
+		return !"list".equals(boardView);
 	}
 
 	private JPanel viewToggle(boolean grid)

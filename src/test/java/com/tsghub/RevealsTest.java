@@ -88,6 +88,18 @@ public class RevealsTest
 	}
 
 	@Test
+	public void taskListBingosNeverReveal()
+	{
+		TsgHubReveals reveals = new TsgHubReveals();
+		JsonObject before = event("red", "t0", "t1");
+		JsonObject after = event("red", "t0", "t1", "t2");
+		before.remove("board");
+		after.remove("board");
+		assertNull(reveals.update(before, "red", "Crab Legs"));
+		assertNull(reveals.update(after, "red", "Crab Legs"));
+	}
+
+	@Test
 	public void offBoardTasksStillReveal()
 	{
 		TsgHubReveals reveals = new TsgHubReveals();

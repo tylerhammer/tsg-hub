@@ -105,6 +105,11 @@ final class TsgHubBingoBoard
 		return Math.max(MIN_SIZE, Math.min(MAX_SIZE, size));
 	}
 
+	static boolean hasBoard(JsonObject event)
+	{
+		return event != null && event.has("board") && event.get("board").isJsonObject();
+	}
+
 	static TsgHubBingoBoard of(JsonObject event)
 	{
 		return of(event, "");

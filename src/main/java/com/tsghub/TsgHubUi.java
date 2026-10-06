@@ -512,7 +512,7 @@ final class TsgHubUi
 			case "skill": return "Skill of the Week";
 			case "boss": return "Boss of the Week";
 			case "drop-party": return "Custom";
-			default: return "Bingo";
+			default: return "board".equals(str(event, "style")) ? "Bingo board" : "Bingo";
 		}
 	}
 

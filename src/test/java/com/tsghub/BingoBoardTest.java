@@ -31,6 +31,16 @@ public class BingoBoardTest
 	}
 
 	@Test
+	public void onlyEventsWithABoardHaveOne()
+	{
+		JsonObject list = event(4);
+		assertFalse(TsgHubBingoBoard.hasBoard(list));
+		list.add("board", new JsonObject());
+		assertTrue(TsgHubBingoBoard.hasBoard(list));
+		assertFalse(TsgHubBingoBoard.hasBoard(null));
+	}
+
+	@Test
 	public void defaultSizeFitsTasks()
 	{
 		assertEquals(3, TsgHubBingoBoard.defaultSize(0));

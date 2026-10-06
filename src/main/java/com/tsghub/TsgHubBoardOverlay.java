@@ -99,7 +99,7 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 
 	void setEvent(JsonObject event, String teamId)
 	{
-		if (event == null || teamId == null || teamId.isEmpty())
+		if (event == null || teamId == null || teamId.isEmpty() || !TsgHubBingoBoard.hasBoard(event))
 		{
 			clear();
 			return;
