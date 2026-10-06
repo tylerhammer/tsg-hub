@@ -297,6 +297,8 @@ public class TsgHubPlugin extends Plugin
 	String getCurrentEventId() { return TsgHubSession.get("eventId"); }
 	AsyncBufferedImage getItemImage(int itemId) { return itemManager == null ? null : itemManager.getImage(itemId); }
 
+	AsyncBufferedImage getCoinImage(long gp) { return itemManager == null ? null : itemManager.getImage(net.runelite.api.gameval.ItemID.COINS, (int) Math.min(gp, Integer.MAX_VALUE), false); }
+
 	private String getOrganizerEventId()
 	{
 		return TsgHubSession.get("organizerEventId");
@@ -1154,7 +1156,7 @@ public class TsgHubPlugin extends Plugin
 		});
 	}
 
-	void createEvent(String name, Instant startsAt, Instant endsAt, boolean hideScores, boolean hidden, String type, JsonObject typeConfig)
+	void createEvent(String name, Instant startsAt, Instant endsAt, boolean hideScores, boolean hidden, String type, JsonObject typeConfig, JsonArray prizes)
 	{
 		if (!isInHubClan()) { eventFormFailed("TSG Hub is only for members of the " + hubClanName + " clan."); return; }
 		if (!config.dataSharingOptIn()) { eventFormFailed("Turn on sharing in the TSG Hub sidebar first."); return; }
@@ -1178,6 +1180,7 @@ public class TsgHubPlugin extends Plugin
 		body.addProperty("type", type);
 		addAccountHash(body);
 		body.add("config", typeConfig == null ? new JsonObject() : typeConfig);
+		body.add("prizes", prizes);
 		organizerStatus("Creating event...", Tone.INFO);
 		executor.submit(() -> {
 			try
@@ -1203,7 +1206,7 @@ public class TsgHubPlugin extends Plugin
 		if (endsAt != null) body.addProperty("endsAt", endsAt.toString());
 	}
 
-	void updateEvent(String eventId, String name, Instant startsAt, Instant endsAt, boolean hideScores, boolean hidden, JsonObject typeConfig)
+	void updateEvent(String eventId, String name, Instant startsAt, Instant endsAt, boolean hideScores, boolean hidden, JsonObject typeConfig, JsonArray prizes)
 	{
 		JsonObject body = new JsonObject();
 		body.addProperty("name", name.trim());
@@ -1211,6 +1214,7 @@ public class TsgHubPlugin extends Plugin
 		body.addProperty("hideScores", hideScores);
 		body.addProperty("hidden", hidden);
 		if (typeConfig != null) body.add("config", typeConfig);
+		body.add("prizes", prizes);
 		String credential = organizerCredential(eventId);
 		organizerStatus("Saving...", Tone.INFO);
 		executor.submit(() -> {
