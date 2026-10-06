@@ -14,6 +14,7 @@ Clan events for **Type Shiii Gaming** (TSG), right in your RuneLite sidebar. Joi
 - **Clan parties** for raids, bossing and skilling. Join with one click, no passphrase to type, and see your party's health, prayer, gear, inventory and skills live.
 - **Members** list showing which clanmates are online, their world, area and what they're doing.
 - **Drops** history of the clan's big drops, raid loot, pets and collection log items, so you can catch up on what you missed.
+- **Discord linking**: link your RuneScape account to the clan Discord, and your Discord roles follow your in-game clan rank.
 - **Admin tools** for clan admins: create events, teams and tasks, and review proof, all without leaving the game.
 
 ## Bingo
@@ -102,18 +103,30 @@ It's built from the clan chat broadcasts your clan already has turned on: drops 
 
 **Disconnect from event** on the **Team** tab stops tracking on this device. Your team keeps its progress, and you can rejoin with the same code.
 
+## Link your Discord
+
+Every clan member can link their RuneScape account to the clan Discord:
+
+1. Run `/hub key` in the clan Discord. The bot replies with a key that starts with `tsghub_`.
+2. Paste it into **Hub key** under **Discord** in the TSG Hub plugin settings, with sharing on.
+
+The plugin confirms the key in the sidebar and links your Discord account to the character you're logged in as. Using the same key on your alts links them too, and your Discord role follows your highest-ranked character. A name change carries over automatically next time you log in. The key renews itself while you use it. If it stops working, or you lose it, run `/hub key` again for a new one; `/hub revoke` disables it and unlinks your account.
+
+### Discord rank sync
+
+Once you're linked, your Discord rank role follows your in-game clan rank. When the Owner or a Deputy Owner changes your rank in game, their plugin tells the TSG Hub service, and the bot swaps your Discord role within a few seconds. If your rank changed before you linked, you get the right role as soon as you link.
+
+Only rank changes reported by the Owner or a Deputy Owner who is also a Discord admin are applied. Reports from anyone else are ignored.
+
 ## For admins
 
 ![Admin window: events on the left, the selected event's tasks on the right](docs/images/admin-tasks.png)
 
-Admin tools need an admin key from the clan Discord:
+Admin tools use the same hub key. If you're a Discord admin (the server owner, a member with an admin role, or anyone with Manage Server), `/hub key` gives you a key with admin access. Keys from before hub keys existed, starting with `tsgadm_`, keep working and move into the **Hub key** setting by themselves.
 
-1. Run `/hub key` in the clan Discord. The bot replies with a key that starts with `tsgadm_`.
-2. Paste it into **Admin key** under **Admin** in the TSG Hub plugin settings.
+Once the key checks out, an admin button appears in the sidebar header. It opens a separate window with your clan's events on the left and the selected event on the right. Admins also see and can join hidden events. If you lose your Discord admin role, your key keeps linking your account but the admin tools disappear.
 
-Once the key checks out, an admin button appears in the sidebar header. It opens a separate window with your clan's events on the left and the selected event on the right. Admins also see and can join hidden events. The key renews itself while you use it. If it stops working, or you lose it, run `/hub key` again for a new one.
-
-Your in-game clan rank doesn't grant admin access.
+Your in-game clan rank doesn't grant admin access. Owners and Deputy Owners keep admin tools through their Discord admin role, and their plugin keeps Discord rank roles in sync while they're logged in with sharing on.
 
 1. **New event**: pick bingo, Skill of the Week, Boss of the Week or a custom event, then set its name and its start and end date and time. Times are entered in your computer's time zone, shown next to the fields, and players see them converted to theirs. Custom events can leave the end time empty. You can hide scores from players until the end.
 2. **Teams**: add teams. Each gets a permanent invite code; use **Copy code** to share it.
@@ -131,7 +144,8 @@ TSG Hub is **opt-in**. Until you click **Enable sharing** (or turn on **Share ga
 Once you opt in, it sends the following to the TSG Hub service:
 
 - Your RuneScape display name, and the clan name and rank your client detects
-- If you've set an admin key, the key with your display name when the plugin checks it, so admins can see which character uses each key
+- If you've set a hub key, the key with your display name and RuneLite account hash when the plugin checks it, to link your Discord account to this character and follow name changes
+- If you're the Owner or a Deputy Owner with an admin hub key, every clan member's name, rank number and rank title from your clan settings, once after you log in and again whenever a rank changes, so Discord roles follow in-game ranks
 - Progress for events you've joined: kill counts, drops, raid completions, collection log unlocks and skill XP
 - Loot you receive while a bingo event you've joined is active, so admins can reconcile a task from earlier drops if its item list changes
 - Manual proof you submit
@@ -143,7 +157,7 @@ In a clan party, your stats, gear and inventory go to the other members through 
 
 Turning sharing off, or disconnecting from an event, deletes your local token and asks the service to revoke it. Progress your team already earned stays with the clan.
 
-Clan membership, rank and progress are reported by each player's client. They're useful for convenience checks, but a modified client can fake them, so admins should double-check high-stakes results. Admin access comes only from Discord-issued admin keys, never from the reported rank.
+Clan membership, rank and progress are reported by each player's client. They're useful for convenience checks, but a modified client can fake them, so admins should double-check high-stakes results. Admin access comes only from Discord-issued hub keys whose holder is a Discord admin, never from the reported rank. Rank changes only update Discord roles when they come from an Owner or Deputy Owner who is also a Discord admin.
 
 ## Credits
 
