@@ -42,6 +42,7 @@ import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.WidgetClosed;
 import net.runelite.api.events.WidgetLoaded;
+import net.runelite.api.events.ScriptPostFired;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.Item;
 import net.runelite.api.NPC;
@@ -108,8 +109,8 @@ public class TsgHubPlugin extends Plugin
 	private static final int PET_CHECK_TICKS = 5;
 	private static final int MAX_LOOT_LOG_ITEMS = 50;
 	private static final int CLAN_CHECK_TICKS = 50;
-	private static final long ADMIN_CHECK_RETRY_SECONDS = 15;
-	private static final long ADMIN_CHECK_MAX_RETRY_SECONDS = 300;
+	private static final long KEY_CHECK_RETRY_SECONDS = 15;
+	private static final long KEY_CHECK_MAX_RETRY_SECONDS = 300;
 	private volatile int clanCheckTicks;
 	private int petCheckTicks;
 	private Set<Integer> inventoryPets = Collections.emptySet();
@@ -127,9 +128,10 @@ public class TsgHubPlugin extends Plugin
 	private volatile List<PvmTask> pvmTasks = Collections.emptyList();
 	private volatile String taskEventId = "";
 	private volatile boolean adminVerified;
-	private volatile String checkedAdminIdentity = "";
-	private volatile String rejectedAdminKey = "";
-	private volatile int adminCheckAttempts;
+	private volatile String checkedKeyIdentity = "";
+	private volatile String rejectedKey = "";
+	private volatile int keyCheckAttempts;
+	private volatile boolean announceKey;
 	private volatile TsgHubApi api;
 	private TsgHubSocket socket;
 	private volatile boolean organizerRefreshPending;
@@ -137,12 +139,14 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubGroups groups;
 	private TsgHubPresence presence;
 	private TsgHubDrops drops;
+	private TsgHubRanks ranks;
 	private com.tsghub.group.GroupTracker groupTracker;
 
 	@Override
 	protected void startUp()
 	{
 		TsgHubSession.init(configManager);
+		migrateAdminKey();
 		String clanOverride = System.getProperty("tsghub.clanName", "").trim();
 		hubClanName = developerMode && !clanOverride.isEmpty() ? clanOverride : "TSGaming";
 		String serviceOverride = System.getProperty("tsghub.serviceUrl", "").trim();
@@ -157,7 +161,7 @@ public class TsgHubPlugin extends Plugin
 		{
 			@Override public void onReady() { resyncLiveViews(); }
 			@Override public void onChanged(String topic, String eventId) { liveChange(topic, eventId); }
-			@Override public void onAdminRevoked(String token) { adminKeyRejected(token); }
+			@Override public void onAdminRevoked(String token) { recheckHubKey(token); }
 			@Override public void onAnnouncement(String text) { announce(text); }
 			@Override public void onUpdateAvailable(String version) { updateAvailable(version); }
 		});
@@ -189,6 +193,7 @@ public class TsgHubPlugin extends Plugin
 		executor.scheduleAtFixedRate(unlessLive(presence::autoRefresh), TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
 		drops = new TsgHubDrops(this, client, clientThread, executor, this::api, () -> sidebar);
 		executor.scheduleAtFixedRate(unlessLive(drops::autoRefresh), TsgHubDrops.REFRESH_SECONDS, TsgHubDrops.REFRESH_SECONDS, TimeUnit.SECONDS);
+		ranks = new TsgHubRanks(this, client, executor, this::api, this::adminKey);
 		boardOverlay = new TsgHubBoardOverlay(client);
 		overlayManager.add(boardOverlay);
 		mouseManager.registerMouseListener(boardOverlay);
@@ -222,6 +227,7 @@ public class TsgHubPlugin extends Plugin
 		}
 		if (hubWindow != null) SwingUtilities.invokeLater(hubWindow::dispose);
 		if (presence != null) presence.shutDown();
+		if (ranks != null) ranks.shutDown();
 		if (socket != null) socket.disconnect();
 		if (executor != null) executor.shutdownNow();
 		if (itemSearchExecutor != null) itemSearchExecutor.shutdownNow();
@@ -231,7 +237,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		if (!canManageOrganizerUi())
 		{
-			memberStatus("Admin tools need an admin key. Run /hub key in the clan Discord and paste it in the plugin settings.", Tone.ERROR);
+			memberStatus("Admin tools need a hub key with admin access. Run /hub key in the clan Discord and paste it in the plugin settings.", Tone.ERROR);
 			return;
 		}
 		SwingUtilities.invokeLater(() -> {
@@ -318,64 +324,96 @@ public class TsgHubPlugin extends Plugin
 		return isInHubClan() && adminVerified;
 	}
 
-	private String configuredAdminKey()
+	private String configuredKey()
 	{
-		String key = config.adminKey();
+		String key = config.hubKey();
 		return key == null ? "" : key.trim();
 	}
 
 	private String adminKey()
 	{
-		return adminVerified ? configuredAdminKey() : "";
+		return adminVerified ? configuredKey() : "";
 	}
 
-	private void checkAdminKey()
+	private void migrateAdminKey()
 	{
-		String key = configuredAdminKey();
+		String legacy = configManager.getConfiguration("tsghub", "adminKey");
+		if (legacy == null) return;
+		if (!legacy.trim().isEmpty() && configuredKey().isEmpty()) configManager.setConfiguration("tsghub", "hubKey", legacy.trim());
+		configManager.unsetConfiguration("tsghub", "adminKey");
+	}
+
+	private void checkHubKey()
+	{
+		String key = configuredKey();
 		String name = detectedPlayerName;
 		if (key.isEmpty())
 		{
-			checkedAdminIdentity = "";
+			checkedKeyIdentity = "";
 			if (adminVerified) setAdminVerified(false);
 			return;
 		}
 		if (name.isEmpty() || !isInHubClan() || !config.dataSharingOptIn()) return;
-		String identity = key + "\n" + name;
-		if (identity.equals(checkedAdminIdentity) || key.equals(rejectedAdminKey) || executor == null || executor.isShutdown()) return;
-		checkedAdminIdentity = identity;
+		String hash = accountHash();
+		String identity = key + "\n" + name + "\n" + hash;
+		if (identity.equals(checkedKeyIdentity) || key.equals(rejectedKey) || executor == null || executor.isShutdown()) return;
+		checkedKeyIdentity = identity;
 		executor.submit(() -> {
 			try
 			{
-				String encodedName = java.net.URLEncoder.encode(name, java.nio.charset.StandardCharsets.UTF_8.name());
-				api().request("GET", "/v1/me?displayName=" + encodedName, key, null);
-				if (!identity.equals(checkedAdminIdentity)) return;
-				adminCheckAttempts = 0;
-				setAdminVerified(true);
-				loadClanEvents();
+				String query = "/v1/me?displayName=" + java.net.URLEncoder.encode(name, java.nio.charset.StandardCharsets.UTF_8.name());
+				if (!hash.isEmpty()) query += "&accountHash=" + hash;
+				JsonObject result = api().request("GET", query, key, null);
+				if (!identity.equals(checkedKeyIdentity)) return;
+				keyCheckAttempts = 0;
+				boolean admin = grantsAdmin(result);
+				if (admin != adminVerified) setAdminVerified(admin);
+				if (admin) loadClanEvents();
+				String linkError = TsgHubUi.str(result, "linkError");
+				boolean linked = TsgHubUi.bool(result, "linked");
+				if (!linkError.isEmpty()) memberStatus(linkError, Tone.ERROR);
+				else if (announceKey && linked) memberStatus(admin ? "Hub key accepted. Your Discord account is linked and admin tools are unlocked." : "Hub key accepted. Your Discord account is linked.", Tone.SUCCESS);
+				if (linked || !linkError.isEmpty()) announceKey = false;
+				if (!linked && hash.isEmpty()) retryKeyCheck(identity);
 			}
 			catch (TsgHubApi.HttpError e)
 			{
-				if (e.status == 401) adminKeyRejected(key);
-				else retryAdminCheck(identity);
+				if (e.status == 401) keyRejected(key);
+				else retryKeyCheck(identity);
 			}
-			catch (Exception e) { retryAdminCheck(identity); }
+			catch (Exception e) { retryKeyCheck(identity); }
 		});
 	}
 
-	private void retryAdminCheck(String identity)
+	static boolean grantsAdmin(JsonObject me)
 	{
-		if (!identity.equals(checkedAdminIdentity)) return;
-		checkedAdminIdentity = "";
-		long delay = Math.min(ADMIN_CHECK_MAX_RETRY_SECONDS, ADMIN_CHECK_RETRY_SECONDS << Math.min(adminCheckAttempts++, 5));
-		if (executor != null && !executor.isShutdown()) executor.schedule(this::checkAdminKey, delay, TimeUnit.SECONDS);
+		String role = TsgHubUi.str(me, "role");
+		return role.isEmpty() || "admin".equals(role);
 	}
 
-	private void adminKeyRejected(String key)
+	private void retryKeyCheck(String identity)
 	{
-		if (!key.equals(configuredAdminKey())) return;
-		rejectedAdminKey = key;
+		if (!identity.equals(checkedKeyIdentity)) return;
+		checkedKeyIdentity = "";
+		long delay = Math.min(KEY_CHECK_MAX_RETRY_SECONDS, KEY_CHECK_RETRY_SECONDS << Math.min(keyCheckAttempts++, 5));
+		if (executor != null && !executor.isShutdown()) executor.schedule(this::checkHubKey, delay, TimeUnit.SECONDS);
+	}
+
+	private void recheckHubKey(String key)
+	{
+		if (!key.equals(configuredKey())) return;
+		checkedKeyIdentity = "";
+		if (adminVerified) setAdminVerified(false);
+		checkHubKey();
+	}
+
+	private void keyRejected(String key)
+	{
+		if (!key.equals(configuredKey())) return;
+		rejectedKey = key;
+		announceKey = false;
 		setAdminVerified(false);
-		memberStatus("Your admin key wasn't accepted. It may have expired or been revoked. Run /hub key in the clan Discord and paste the new key in the plugin settings.", Tone.ERROR);
+		memberStatus("Your hub key wasn't accepted. It may have expired or been revoked. Run /hub key in the clan Discord and paste the new key in the plugin settings.", Tone.ERROR);
 	}
 
 	private void setAdminVerified(boolean verified)
@@ -413,6 +451,7 @@ public class TsgHubPlugin extends Plugin
 		// Loading screens and world hops aren't logouts.
 		if (state != GameState.LOGIN_SCREEN && state != GameState.LOGIN_SCREEN_AUTHENTICATOR) return;
 		if (presence != null) presence.onLoggedOut();
+		if (ranks != null) ranks.reset();
 		detectedPlayerName = "";
 		detectedClanName = "";
 		detectedClanRank = -1;
@@ -420,7 +459,7 @@ public class TsgHubPlugin extends Plugin
 		clanCheckTicks = 0;
 		sidebarRouted = false;
 		adminVerified = false;
-		checkedAdminIdentity = "";
+		checkedKeyIdentity = "";
 		syncSocketNow();
 		if (competitions != null) competitions.clear();
 		SwingUtilities.invokeLater(() -> {
@@ -439,7 +478,14 @@ public class TsgHubPlugin extends Plugin
 	{
 		String previousClan = detectedClanName;
 		refreshDetectedClan();
+		if (ranks != null) ranks.onClanChannelChanged();
 		if (config.dataSharingOptIn() && sidebarRouted && !detectedClanName.equals(previousClan)) loadClanEvents();
+	}
+
+	@net.runelite.client.eventbus.Subscribe
+	public void onScriptPostFired(ScriptPostFired event)
+	{
+		if (ranks != null) ranks.onScriptPostFired(event.getScriptId());
 	}
 
 	@net.runelite.client.eventbus.Subscribe
@@ -463,13 +509,15 @@ public class TsgHubPlugin extends Plugin
 			SwingUtilities.invokeLater(() -> sidebar.locationSharingChanged());
 			return;
 		}
-		if ("adminKey".equals(event.getKey()))
+		if ("hubKey".equals(event.getKey()))
 		{
-			checkedAdminIdentity = "";
-			rejectedAdminKey = "";
-			adminCheckAttempts = 0;
+			checkedKeyIdentity = "";
+			rejectedKey = "";
+			keyCheckAttempts = 0;
+			announceKey = !configuredKey().isEmpty();
 			if (adminVerified) setAdminVerified(false);
-			checkAdminKey();
+			if (ranks != null) ranks.reset();
+			checkHubKey();
 			return;
 		}
 		if (!"dataSharingOptIn".equals(event.getKey())) return;
@@ -521,7 +569,7 @@ public class TsgHubPlugin extends Plugin
 		if (!sidebarRouted && !detectedPlayerName.isEmpty()) routeSidebar();
 		else if (sidebarRouted && (routedAsHubMember != isInHubClan() || routedClanPending != clanPending())) routeSidebar();
 		else if (client.getGameState() != GameState.LOGGED_IN && !sidebarRouted) SwingUtilities.invokeLater(() -> sidebar.showLoggedOut());
-		checkAdminKey();
+		checkHubKey();
 	}
 
 	@net.runelite.client.eventbus.Subscribe
@@ -530,6 +578,7 @@ public class TsgHubPlugin extends Plugin
 		attemptedXpClaims.clear();
 		syncedClanRanks.clear();
 		syncedIdentity = "";
+		if (ranks != null) ranks.reset();
 		if (competitions != null) competitions.clear();
 		clearTaskCache();
 		if (boardOverlay != null) boardOverlay.setVisible(false);
@@ -550,7 +599,7 @@ public class TsgHubPlugin extends Plugin
 		if (loggedIn && !pending && isInHubClan() && config.dataSharingOptIn())
 		{
 			syncIdentity();
-			checkAdminKey();
+			checkHubKey();
 		}
 		SwingUtilities.invokeLater(() -> {
 			if (!loggedIn) { sidebar.showLoggedOut(); return; }
@@ -656,7 +705,7 @@ public class TsgHubPlugin extends Plugin
 		attemptedXpClaims.clear();
 		syncedClanRanks.clear();
 		clearTaskCache();
-		checkedAdminIdentity = "";
+		checkedKeyIdentity = "";
 		if (adminVerified) setAdminVerified(false);
 		if (boardOverlay != null) boardOverlay.setVisible(false);
 	}
@@ -1117,7 +1166,7 @@ public class TsgHubPlugin extends Plugin
 		String credential = adminKey();
 		if (credential.isEmpty())
 		{
-			eventFormFailed("Creating events needs an admin key from /hub key in the clan Discord.");
+			eventFormFailed("Creating events needs a hub key with admin access from /hub key in the clan Discord.");
 			return;
 		}
 		if (detectedClanName.isEmpty()) { eventFormFailed("No clan detected. Log in to a character in your clan first."); return; }
@@ -1595,6 +1644,7 @@ public class TsgHubPlugin extends Plugin
 	public void onGameTick(GameTick tick)
 	{
 		if (presence != null) presence.onGameTick();
+		if (ranks != null) ranks.onGameTick();
 		if (clanCheckTicks > 0)
 		{
 			clanCheckTicks--;
@@ -2110,7 +2160,7 @@ public class TsgHubPlugin extends Plugin
 		try { return api().request(method, path, credential, payload); }
 		catch (TsgHubApi.HttpError e)
 		{
-			if (e.status == 401 && !credential.isEmpty() && credential.equals(adminKey())) adminKeyRejected(credential);
+			if (e.status == 401 && !credential.isEmpty() && credential.equals(adminKey())) keyRejected(credential);
 			throw e;
 		}
 	}
