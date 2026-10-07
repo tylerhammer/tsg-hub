@@ -65,7 +65,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final TsgHubPlugin plugin;
 	private final JButton back = TsgHubUi.iconButton(new TsgHubUi.BackIcon(), "Back to events");
 	private final JLabel title = TsgHubUi.label("TSG Hub", TsgHubUi.TEXT, FontManager.getRunescapeBoldFont());
-	private final JLabel subtitle = TsgHubUi.label(" ", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont());
+	private final JLabel subtitle = TsgHubUi.caption(" ");
 	private String titleText = "TSG Hub";
 	private final TsgHubUi.RefreshIcon refreshIcon = new TsgHubUi.RefreshIcon();
 	private final JButton refresh = TsgHubUi.iconButton(refreshIcon, "Refresh");
