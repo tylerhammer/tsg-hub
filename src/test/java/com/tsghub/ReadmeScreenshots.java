@@ -92,7 +92,7 @@ public class ReadmeScreenshots
 		set(plugin, "detectedClanRank", 100);
 		set(plugin, "detectedPlayerName", "Crab Legs");
 		set(plugin, "groups", new TsgHubGroups(plugin, null, (PartyService) unsafe().allocateInstance(PartyService.class), null, null, null));
-		set(plugin, "presence", new TsgHubPresence(plugin, null, null, null, stopped(), null, null, null));
+		set(plugin, "presence", new TsgHubPresence(plugin, null, null, null, stopped(), null, null, null, () -> ""));
 		set(plugin, "drops", new TsgHubDrops(plugin, null, null, stopped(), null, null));
 
 		TsgHubSidebarPanel sidebar = new TsgHubSidebarPanel(plugin, new GroupMembersPanel(new GroupViewSettings() {}, null, null));
@@ -109,7 +109,7 @@ public class ReadmeScreenshots
 		}
 		sidebar.setEvents(events);
 		sidebar.setGroups(data.getAsJsonObject("groupsList").getAsJsonArray("groups"));
-		sidebar.setMembers(data.getAsJsonObject("membersList").getAsJsonArray("members"));
+		sidebar.setMembers(data.getAsJsonObject("membersList").getAsJsonArray("members"), TsgHubUi.array(data.getAsJsonObject("membersList"), "offline"), true);
 		JsonArray drops = data.getAsJsonObject("dropsList").getAsJsonArray("drops");
 		for (int i = 0; i < drops.size(); i++)
 		{

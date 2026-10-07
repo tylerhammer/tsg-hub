@@ -79,6 +79,10 @@ Activity is detected automatically from where you are and the XP you gain. Only 
 
 Anyone in clan chat with sharing on appears in the list. Your area and activity are only shown if you turn on **Share location and activity** under **Sharing** in the plugin settings; otherwise clanmates just see **Online** and your world, the same as clan chat shows. Leave clan chat to hide yourself, and you also drop off the list when you log out.
 
+Online clanmates are listed first, including those in clan chat without TSG Hub, who show just their world. The rest of the clan is listed under **Offline**; tick **Show offline** to expand it. Offline members who use TSG Hub show how long ago they were last online.
+
+Admins with a hub key can right-click any member to edit their admin note. On Gnome Child characters it also sets whose alt they are; type part of a name to search the clan for their main. Alt links, notes and last seen times follow TSG Hub users through name changes. Hover a member's rank to see whose alt they are, or a main's alts. Admin notes show as a note icon with the note on hover, and only admins see them.
+
 <p>
 <img src="docs/images/members.png" width="320" alt="Online clan members with their world, area and activity">
 </p>

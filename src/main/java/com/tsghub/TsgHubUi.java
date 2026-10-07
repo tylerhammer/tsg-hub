@@ -353,9 +353,8 @@ final class TsgHubUi
 
 	static boolean samePlayer(String a, String b)
 	{
-		String left = a == null ? "" : a.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]", "");
-		String right = b == null ? "" : b.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]", "");
-		return !left.isEmpty() && left.equals(right);
+		String left = PlayerNames.normalize(a);
+		return !left.isEmpty() && left.equals(PlayerNames.normalize(b));
 	}
 
 	static String str(JsonObject object, String key)
@@ -1144,6 +1143,24 @@ final class TsgHubUi
 			tick.lineTo(6, 10);
 			tick.lineTo(10.5, 4.5);
 			g.draw(tick);
+			g.dispose();
+		}
+	}
+
+	static final class NoteIcon implements Icon
+	{
+		@Override public int getIconWidth() { return 11; }
+		@Override public int getIconHeight() { return 13; }
+		@Override public void paintIcon(Component component, Graphics graphics, int x, int y)
+		{
+			Graphics2D g = (Graphics2D) graphics.create();
+			g.translate(x, y);
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			g.setColor(WARNING);
+			g.setStroke(new BasicStroke(1.3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+			g.drawPolygon(new int[] {1, 7, 10, 10, 1}, new int[] {1, 1, 4, 12, 12}, 5);
+			g.drawLine(3, 6, 8, 6);
+			g.drawLine(3, 9, 8, 9);
 			g.dispose();
 		}
 	}

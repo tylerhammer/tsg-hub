@@ -189,7 +189,7 @@ public class TsgHubPlugin extends Plugin
 		executor.scheduleAtFixedRate(groups::heartbeat, 5, TsgHubGroups.HEARTBEAT_SECONDS, TimeUnit.SECONDS);
 		executor.scheduleAtFixedRate(groupTracker::keepAlive, com.tsghub.group.GroupTracker.KEEPALIVE_SECONDS, com.tsghub.group.GroupTracker.KEEPALIVE_SECONDS, TimeUnit.SECONDS);
 		executor.scheduleAtFixedRate(unlessLive(groups::autoRefresh), TsgHubGroups.REFRESH_SECONDS, TsgHubGroups.REFRESH_SECONDS, TimeUnit.SECONDS);
-		presence = new TsgHubPresence(this, client, clientThread, chatIconManager, executor, this::api, () -> sidebar, socket);
+		presence = new TsgHubPresence(this, client, clientThread, chatIconManager, executor, this::api, () -> sidebar, socket, this::adminKey);
 		executor.scheduleAtFixedRate(unlessLive(presence::autoRefresh), TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
 		drops = new TsgHubDrops(this, client, clientThread, executor, this::api, () -> sidebar);
 		executor.scheduleAtFixedRate(unlessLive(drops::autoRefresh), TsgHubDrops.REFRESH_SECONDS, TsgHubDrops.REFRESH_SECONDS, TimeUnit.SECONDS);
@@ -316,7 +316,7 @@ public class TsgHubPlugin extends Plugin
 
 	boolean isInHubClan()
 	{
-		return !detectedClanName.isEmpty() && normalizePlayerName(detectedClanName).equals(normalizePlayerName(hubClanName));
+		return !detectedClanName.isEmpty() && PlayerNames.normalize(detectedClanName).equals(PlayerNames.normalize(hubClanName));
 	}
 
 	boolean canManageOrganizerUi()
@@ -420,16 +420,12 @@ public class TsgHubPlugin extends Plugin
 	{
 		adminVerified = verified;
 		syncSocketNow();
+		if (presence != null) presence.autoRefresh();
 		boolean access = canManageOrganizerUi();
 		SwingUtilities.invokeLater(() -> {
 			if (sidebar != null) sidebar.setOrganizerAccess(access);
 			if (!access && hubWindow != null) hubWindow.setVisible(false);
 		});
-	}
-
-	private String normalizePlayerName(String name)
-	{
-		return name == null ? "" : name.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]", "");
 	}
 
 	@net.runelite.client.eventbus.Subscribe
@@ -612,7 +608,7 @@ public class TsgHubPlugin extends Plugin
 			String memberName = TsgHubSession.get("memberName:" + eventId);
 			if (memberName.isEmpty()) memberName = TsgHubSession.get("displayName");
 			if (!eventId.isEmpty() && !TsgHubSession.get("token").isEmpty()
-				&& normalizePlayerName(memberName).equals(normalizePlayerName(detectedPlayerName)))
+				&& PlayerNames.normalize(memberName).equals(PlayerNames.normalize(detectedPlayerName)))
 				activateEvent(eventId, false);
 		});
 	}
@@ -1006,7 +1002,7 @@ public class TsgHubPlugin extends Plugin
 	private void renameStored(String key, String name)
 	{
 		String stored = TsgHubSession.get(key);
-		if (!stored.isEmpty() && !normalizePlayerName(stored).equals(normalizePlayerName(name))) TsgHubSession.set(key, name);
+		if (!stored.isEmpty() && !PlayerNames.normalize(stored).equals(PlayerNames.normalize(name))) TsgHubSession.set(key, name);
 	}
 
 	void loadClanEvents()
@@ -1084,7 +1080,7 @@ public class TsgHubPlugin extends Plugin
 		if (token.isEmpty() || displayName.isEmpty() || !displayName.equalsIgnoreCase(memberName)
 			|| eventClan.isEmpty() || !eventClan.equalsIgnoreCase(detectedClanName)) return;
 		int rank = detectedClanRank;
-		String key = eventId + ":" + normalizePlayerName(displayName);
+		String key = eventId + ":" + PlayerNames.normalize(displayName);
 		Integer synced = syncedClanRanks.get(key);
 		if (synced != null && synced == rank) return;
 		JsonObject body = new JsonObject();

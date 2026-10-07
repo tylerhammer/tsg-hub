@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
+import java.awt.Component;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -28,6 +29,7 @@ import javax.swing.BoxLayout;
 import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -45,6 +47,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 {
 	private static final int TEXT_W = 215;
 	private static final int CARD_TEXT_W = 185;
+	private static final String ALT_RANK = "Gnome Child";
 	private static final int CARD_TITLE_W = 150;
 	private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("h:mm a");
 
@@ -90,6 +93,9 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private volatile boolean groupsWanted;
 	private volatile boolean dropsWanted;
 	private JsonArray members;
+	private JsonArray offlineMembers = new JsonArray();
+	private boolean notesLoaded;
+	private final JCheckBox showOffline = new JCheckBox("Show offline");
 	private String update;
 	private JsonArray drops;
 	private JsonObject competitionEvent;
@@ -186,6 +192,16 @@ final class TsgHubSidebarPanel extends PluginPanel
 		joinError.setVisible(false);
 		createGroupButton.addActionListener(e -> submitCreateGroup());
 		groupError.setVisible(false);
+
+		showOffline.setOpaque(false);
+		showOffline.setForeground(TsgHubUi.MUTED);
+		showOffline.setFont(FontManager.getRunescapeSmallFont());
+		showOffline.setFocusPainted(false);
+		showOffline.setSelected("true".equals(TsgHubSession.get("showOffline")));
+		showOffline.addActionListener(e -> {
+			TsgHubSession.set("showOffline", showOffline.isSelected() ? "true" : "");
+			renderMembers();
+		});
 
 		hideCompleted.setOpaque(false);
 		hideCompleted.setForeground(TsgHubUi.MUTED);
@@ -297,6 +313,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		organizer.setVisible(allowed);
 		title.setText(TsgHubUi.html(TsgHubUi.escape(titleText), titleWidth()));
+		if (view == View.MEMBERS) renderMembers();
 	}
 
 	private int titleWidth()
@@ -521,9 +538,11 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (view == View.MEMBERS) renderMembers();
 	}
 
-	void setMembers(JsonArray members)
+	void setMembers(JsonArray members, JsonArray offline, boolean notesLoaded)
 	{
 		this.members = members;
+		this.offlineMembers = offline;
+		this.notesLoaded = notesLoaded;
 		if (view == View.MEMBERS) renderMembers();
 		else if (view == View.HOME) renderHome();
 	}
@@ -543,23 +562,33 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (members == null)
 		{
 			page.add(TsgHubUi.label("Loading members...", TsgHubUi.MUTED, small));
+			refreshPage();
+			return;
 		}
-		else if (members.size() == 0)
+		page.add(sectionHeading("Online (" + members.size() + ")", null));
+		if (members.size() == 0) page.add(TsgHubUi.wrapped("Nobody online right now.", TsgHubUi.MUTED, small, TEXT_W));
+		int myWorld = 0;
+		for (int i = 0; i < members.size(); i++)
 		{
-			page.add(errorPanel("Nobody online", "Clanmates show up here while they're in clan chat with TSG Hub sharing on."));
+			JsonObject member = members.get(i).getAsJsonObject();
+			if (TsgHubUi.samePlayer(TsgHubUi.str(member, "displayName"), plugin.getDetectedPlayerName())) myWorld = TsgHubUi.integer(member, "world", 0);
 		}
-		else
+		for (int i = 0; i < members.size(); i++)
 		{
-			int myWorld = 0;
-			for (int i = 0; i < members.size(); i++)
+			page.add(memberCard(members.get(i).getAsJsonObject(), myWorld));
+			page.add(Box.createVerticalStrut(6));
+		}
+		if (offlineMembers.size() > 0)
+		{
+			page.add(Box.createVerticalStrut(4));
+			page.add(sectionHeading("Offline (" + offlineMembers.size() + ")", showOffline));
+			if (showOffline.isSelected())
 			{
-				JsonObject member = members.get(i).getAsJsonObject();
-				if (TsgHubUi.samePlayer(TsgHubUi.str(member, "displayName"), plugin.getDetectedPlayerName())) myWorld = TsgHubUi.integer(member, "world", 0);
-			}
-			for (int i = 0; i < members.size(); i++)
-			{
-				page.add(memberCard(members.get(i).getAsJsonObject(), myWorld));
-				page.add(Box.createVerticalStrut(6));
+				for (int i = 0; i < offlineMembers.size(); i++)
+				{
+					page.add(offlineRow(offlineMembers.get(i).getAsJsonObject()));
+					page.add(Box.createVerticalStrut(3));
+				}
 			}
 		}
 		page.add(Box.createVerticalStrut(8));
@@ -576,34 +605,65 @@ final class TsgHubSidebarPanel extends PluginPanel
 			BorderFactory.createEmptyBorder(6, 7, 6, 7)));
 	}
 
+	private JPanel sectionHeading(String text, JComponent right)
+	{
+		JPanel row = TsgHubUi.row();
+		row.setBorder(BorderFactory.createEmptyBorder(0, 2, 4, 0));
+		row.add(TsgHubUi.label(text.toUpperCase(), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont()), BorderLayout.CENTER);
+		if (right != null) row.add(right, BorderLayout.EAST);
+		return TsgHubUi.fitHeight(row);
+	}
+
+	private JLabel memberName(JsonObject member, String text, Color color, Font font)
+	{
+		JLabel label = TsgHubUi.shrinkable(TsgHubUi.label(text, color, font));
+		java.awt.image.BufferedImage rankIcon = plugin.presence().rankIcon(member);
+		if (rankIcon != null)
+		{
+			label.setIcon(new javax.swing.ImageIcon(rankIcon));
+			label.setIconTextGap(4);
+		}
+		String tip = rankTooltip(TsgHubUi.str(member, "rank"), TsgHubUi.str(member, "altOf"), TsgHubUi.array(member, "alts"));
+		if (!tip.isEmpty()) label.setToolTipText(tip);
+		return label;
+	}
+
+	private static JLabel noteIcon(String note)
+	{
+		JLabel label = new JLabel(new TsgHubUi.NoteIcon());
+		label.setToolTipText(TsgHubUi.html("Admin note<br>" + TsgHubUi.escape(note), 200));
+		return label;
+	}
+
 	private JPanel memberCard(JsonObject member, int myWorld)
 	{
 		Font small = FontManager.getRunescapeSmallFont();
 		String name = TsgHubUi.str(member, "displayName");
 		String activity = TsgHubUi.str(member, "activity");
+		String note = visibleNote(member);
 		int world = TsgHubUi.integer(member, "world", 0);
 		boolean self = TsgHubUi.samePlayer(name, plugin.getDetectedPlayerName());
 		JPanel card = TsgHubUi.card();
 		if (self) highlightSelf(card);
 
-		JLabel nameLabel = TsgHubUi.shrinkable(TsgHubUi.label(name, TsgHubUi.TEXT, FontManager.getRunescapeBoldFont()));
-		String rank = TsgHubUi.str(member, "rank");
-		java.awt.image.BufferedImage rankIcon = plugin.presence().rankIcon(member);
-		if (rankIcon != null)
-		{
-			nameLabel.setIcon(new javax.swing.ImageIcon(rankIcon));
-			nameLabel.setIconTextGap(4);
-		}
-		if (!rank.isEmpty()) nameLabel.setToolTipText(rank);
 		JPanel top = TsgHubUi.row();
-		top.add(nameLabel, BorderLayout.CENTER);
+		top.add(memberName(member, name, TsgHubUi.TEXT, FontManager.getRunescapeBoldFont()), BorderLayout.CENTER);
+		JPanel badges = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+		badges.setOpaque(false);
+		if (!note.isEmpty())
+		{
+			JLabel noteLabel = noteIcon(note);
+			noteLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
+			badges.add(noteLabel);
+		}
 		if (world > 0)
 		{
 			boolean sameWorld = !self && world == myWorld;
 			JLabel worldLabel = TsgHubUi.label("W" + world, sameWorld ? TsgHubUi.SUCCESS : TsgHubUi.MUTED, small);
 			if (sameWorld) worldLabel.setToolTipText("On your world");
-			top.add(worldLabel, BorderLayout.EAST);
+			badges.add(worldLabel);
 		}
+		if (badges.getComponentCount() > 0) top.add(badges, BorderLayout.EAST);
 
 		JPanel text = TsgHubUi.stack();
 		text.add(top);
@@ -619,7 +679,170 @@ final class TsgHubSidebarPanel extends PluginPanel
 			text.add(bottom);
 		}
 		card.add(text, BorderLayout.CENTER);
+		addNoteMenu(card, member);
 		return TsgHubUi.fitHeight(card);
+	}
+
+	private JPanel offlineRow(JsonObject member)
+	{
+		Font small = FontManager.getRunescapeSmallFont();
+		String note = visibleNote(member);
+		String seen = lastSeen(TsgHubUi.str(member, "lastSeenAt"), TsgHubUi.clock.instant());
+		JPanel row = TsgHubUi.card();
+		row.setBorder(BorderFactory.createEmptyBorder(4, 7, 4, 7));
+		row.add(memberName(member, TsgHubUi.str(member, "displayName"), TsgHubUi.MUTED, small), BorderLayout.CENTER);
+		JPanel badges = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+		badges.setOpaque(false);
+		if (!note.isEmpty())
+		{
+			JLabel noteLabel = noteIcon(note);
+			if (!seen.isEmpty()) noteLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
+			badges.add(noteLabel);
+		}
+		if (!seen.isEmpty())
+		{
+			JLabel seenLabel = TsgHubUi.label(seen, TsgHubUi.MUTED, small);
+			seenLabel.setToolTipText("Last seen with TSG Hub");
+			badges.add(seenLabel);
+		}
+		if (badges.getComponentCount() > 0) row.add(badges, BorderLayout.EAST);
+		addNoteMenu(row, member);
+		return TsgHubUi.fitHeight(row);
+	}
+
+	private String visibleNote(JsonObject member)
+	{
+		return plugin.canManageOrganizerUi() ? TsgHubUi.str(member, "note") : "";
+	}
+
+	static String lastSeen(String iso, Instant now)
+	{
+		Instant then = TsgHubUi.instant(iso);
+		if (then == null) return "";
+		long minutes = Math.max(0, java.time.Duration.between(then, now).toMinutes());
+		if (minutes < 1) return "just now";
+		if (minutes < 60) return minutes + "m ago";
+		long hours = minutes / 60;
+		if (hours < 24) return hours + "h ago";
+		long days = hours / 24;
+		if (days < 14) return days + "d ago";
+		if (days < 60) return days / 7 + "w ago";
+		if (days < 365) return days / 30 + "mo ago";
+		return days / 365 + "y ago";
+	}
+
+	private void addNoteMenu(JComponent card, JsonObject member)
+	{
+		if (!plugin.canManageOrganizerUi() || !notesLoaded) return;
+		String name = TsgHubUi.str(member, "displayName");
+		String altOf = TsgHubUi.str(member, "altOf");
+		String note = TsgHubUi.str(member, "note");
+		boolean alt = isAltRank(TsgHubUi.str(member, "rank"));
+		javax.swing.JPopupMenu menu = new javax.swing.JPopupMenu();
+		javax.swing.JMenuItem edit = new javax.swing.JMenuItem(alt ? "Edit alt and admin note" : "Edit admin note");
+		edit.addActionListener(e -> promptMemberNote(name, alt, altOf, note));
+		menu.add(edit);
+		card.setComponentPopupMenu(menu);
+		inheritMenu(card);
+	}
+
+	private static void inheritMenu(java.awt.Container parent)
+	{
+		for (Component child : parent.getComponents())
+		{
+			if (child instanceof JComponent) ((JComponent) child).setInheritsPopupMenu(true);
+			if (child instanceof java.awt.Container) inheritMenu((java.awt.Container) child);
+		}
+	}
+
+	static String rankTooltip(String rank, String altOf, JsonArray alts)
+	{
+		List<String> parts = new ArrayList<>();
+		if (!rank.isEmpty()) parts.add(rank);
+		if (!altOf.isEmpty()) parts.add("Alt of " + altOf);
+		List<String> names = new ArrayList<>();
+		for (int i = 0; i < alts.size(); i++) if (alts.get(i).isJsonPrimitive()) names.add(alts.get(i).getAsString());
+		if (!names.isEmpty()) parts.add((names.size() == 1 ? "Alt: " : "Alts: ") + String.join(", ", names));
+		return String.join(" · ", parts);
+	}
+
+	static boolean isAltRank(String rank)
+	{
+		return ALT_RANK.equalsIgnoreCase(rank.trim());
+	}
+
+	private void promptMemberNote(String name, boolean alt, String altOf, String note)
+	{
+		List<String> candidates = mainCandidates(name);
+		TsgHubMemberPicker main = new TsgHubMemberPicker(candidates, altOf);
+		javax.swing.JTextArea notes = new javax.swing.JTextArea(note, 4, 20);
+		notes.setLineWrap(true);
+		notes.setWrapStyleWord(true);
+		JPanel form = TsgHubUi.stack();
+		if (alt)
+		{
+			form.add(new JLabel("Alt of (main character)"));
+			form.add(main);
+			form.add(Box.createVerticalStrut(8));
+		}
+		form.add(new JLabel("Admin note (only admins see this)"));
+		form.add(new javax.swing.JScrollPane(notes));
+		if (JOptionPane.showConfirmDialog(this, form, name, JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) != JOptionPane.OK_OPTION) return;
+		String typed = main.getText();
+		String nextMain = typed.equals(altOf) ? altOf : resolveName(candidates, typed);
+		String nextNote = notes.getText().trim();
+		if (TsgHubUi.samePlayer(nextMain, name))
+		{
+			setStatus("A character can't be its own alt.", TsgHubUi.Tone.ERROR);
+			return;
+		}
+		if (nextNote.length() > 500)
+		{
+			setStatus("Keep the note to 500 characters.", TsgHubUi.Tone.ERROR);
+			return;
+		}
+		if (nextMain.equals(altOf) && nextNote.equals(note)) return;
+		plugin.presence().saveNote(name, nextMain, nextNote);
+	}
+
+	private List<String> mainCandidates(String alt)
+	{
+		List<String> names = new ArrayList<>();
+		for (JsonArray list : new JsonArray[] {members, offlineMembers})
+		{
+			if (list == null) continue;
+			for (int i = 0; i < list.size(); i++)
+			{
+				JsonObject member = list.get(i).getAsJsonObject();
+				String candidate = TsgHubUi.str(member, "displayName");
+				if (!TsgHubUi.samePlayer(candidate, alt) && !isAltRank(TsgHubUi.str(member, "rank"))) names.add(candidate);
+			}
+		}
+		names.sort(String.CASE_INSENSITIVE_ORDER);
+		return names;
+	}
+
+	static List<String> matchNames(List<String> names, String query, int limit)
+	{
+		String needle = PlayerNames.normalize(query);
+		List<String> prefix = new ArrayList<>();
+		List<String> contains = new ArrayList<>();
+		for (String name : names)
+		{
+			String key = PlayerNames.normalize(name);
+			if (key.startsWith(needle)) prefix.add(name);
+			else if (key.contains(needle)) contains.add(name);
+		}
+		prefix.addAll(contains);
+		return prefix.size() > limit ? prefix.subList(0, limit) : prefix;
+	}
+
+	static String resolveName(List<String> names, String typed)
+	{
+		if (typed.isEmpty()) return typed;
+		for (String name : names) if (TsgHubUi.samePlayer(name, typed)) return name;
+		List<String> matches = matchNames(names, typed, 2);
+		return matches.size() == 1 ? matches.get(0) : typed;
 	}
 
 	static String activityDetail(String activity, String area)
