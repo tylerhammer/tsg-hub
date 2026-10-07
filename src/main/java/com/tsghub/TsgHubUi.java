@@ -33,6 +33,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Consumer;
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
@@ -353,9 +354,13 @@ final class TsgHubUi
 
 	static boolean samePlayer(String a, String b)
 	{
-		String left = a == null ? "" : a.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]", "");
-		String right = b == null ? "" : b.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]", "");
-		return !left.isEmpty() && left.equals(right);
+		String left = playerKey(a);
+		return !left.isEmpty() && left.equals(playerKey(b));
+	}
+
+	static String playerKey(String name)
+	{
+		return name == null ? "" : name.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
 	}
 
 	static String str(JsonObject object, String key)
