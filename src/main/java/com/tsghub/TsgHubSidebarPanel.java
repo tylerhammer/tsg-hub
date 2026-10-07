@@ -107,6 +107,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private static final DateTimeFormatter CLOCK_TIME = DateTimeFormatter.ofPattern("HH:mm");
 	private static final Color SELF_CARD = new Color(43, 36, 22);
 	private static final Color SELF_BORDER = new Color(122, 82, 8);
+	private static final String SELF_TEXT = "#e0a82e";
 	private static final Color TAG_DEFAULT = new Color(195, 140, 255);
 	private static final Map<String, Color> TAG_COLORS = Map.of(
 		"Log", new Color(55, 240, 70),
@@ -567,6 +568,14 @@ final class TsgHubSidebarPanel extends PluginPanel
 		refreshPage();
 	}
 
+	private static void highlightSelf(JPanel card)
+	{
+		card.setBackground(SELF_CARD);
+		card.setBorder(BorderFactory.createCompoundBorder(
+			BorderFactory.createLineBorder(SELF_BORDER),
+			BorderFactory.createEmptyBorder(6, 7, 6, 7)));
+	}
+
 	private JPanel memberCard(JsonObject member, int myWorld)
 	{
 		Font small = FontManager.getRunescapeSmallFont();
@@ -575,15 +584,9 @@ final class TsgHubSidebarPanel extends PluginPanel
 		int world = TsgHubUi.integer(member, "world", 0);
 		boolean self = TsgHubUi.samePlayer(name, plugin.getDetectedPlayerName());
 		JPanel card = TsgHubUi.card();
-		if (self)
-		{
-			card.setBackground(SELF_CARD);
-			card.setBorder(BorderFactory.createCompoundBorder(
-				BorderFactory.createLineBorder(SELF_BORDER),
-				BorderFactory.createEmptyBorder(6, 7, 6, 7)));
-		}
+		if (self) highlightSelf(card);
 
-		JLabel nameLabel = TsgHubUi.shrinkable(TsgHubUi.label(self ? name + " (you)" : name, TsgHubUi.TEXT, FontManager.getRunescapeBoldFont()));
+		JLabel nameLabel = TsgHubUi.shrinkable(TsgHubUi.label(name, TsgHubUi.TEXT, FontManager.getRunescapeBoldFont()));
 		String rank = TsgHubUi.str(member, "rank");
 		java.awt.image.BufferedImage rankIcon = plugin.presence().rankIcon(member);
 		if (rankIcon != null)
@@ -683,13 +686,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		String player = TsgHubUi.str(drop, "player");
 		boolean self = TsgHubUi.samePlayer(player, plugin.getDetectedPlayerName());
 		JPanel card = TsgHubUi.card();
-		if (self)
-		{
-			card.setBackground(SELF_CARD);
-			card.setBorder(BorderFactory.createCompoundBorder(
-				BorderFactory.createLineBorder(SELF_BORDER),
-				BorderFactory.createEmptyBorder(6, 7, 6, 7)));
-		}
+		if (self) highlightSelf(card);
 		JLabel icon = dropIcon(TsgHubUi.integer(drop, "itemId", 0));
 		if (icon != null) card.add(icon, BorderLayout.WEST);
 
@@ -700,7 +697,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		top.add(TsgHubUi.label(dropWhen(TsgHubUi.str(drop, "receivedAt"), now, zone), TsgHubUi.MUTED, small), BorderLayout.EAST);
 
 		JPanel bottom = TsgHubUi.row();
-		bottom.add(TsgHubUi.shrinkable(TsgHubUi.label(self ? player + " (you)" : player, TsgHubUi.ACCENT, small)), BorderLayout.CENTER);
+		bottom.add(TsgHubUi.shrinkable(TsgHubUi.label(player, TsgHubUi.ACCENT, small)), BorderLayout.CENTER);
 		JPanel extras = new JPanel(new FlowLayout(FlowLayout.RIGHT, 3, 0));
 		extras.setOpaque(false);
 		for (String tag : dropTags(drop)) extras.add(TsgHubUi.badge(tag, TAG_COLORS.getOrDefault(tag, TAG_DEFAULT)));
@@ -959,20 +956,14 @@ final class TsgHubSidebarPanel extends PluginPanel
 				int rank = TsgHubUi.integer(row, "rank", i + 1);
 				JPanel card = TsgHubUi.card();
 				card.setLayout(new BorderLayout(8, 0));
-				if (me)
-				{
-					card.setBackground(SELF_CARD);
-					card.setBorder(BorderFactory.createCompoundBorder(
-						BorderFactory.createLineBorder(SELF_BORDER),
-						BorderFactory.createEmptyBorder(6, 7, 6, 7)));
-				}
+				if (me) highlightSelf(card);
 				if (started)
 				{
 					JLabel rankLabel = TsgHubUi.label(String.valueOf(rank), rank == 1 ? TsgHubUi.ACCENT : TsgHubUi.MUTED, FontManager.getRunescapeBoldFont());
 					rankLabel.setPreferredSize(new Dimension(18, rankLabel.getPreferredSize().height));
 					card.add(rankLabel, BorderLayout.WEST);
 				}
-				card.add(TsgHubUi.label(TsgHubUi.html(TsgHubUi.escape(TsgHubUi.str(row, "displayName")) + (me ? " <font color='#8f8f8f'>(you)</font>" : ""), 110), TsgHubUi.TEXT, FontManager.getRunescapeFont()), BorderLayout.CENTER);
+				card.add(TsgHubUi.label(TsgHubUi.html(TsgHubUi.escape(TsgHubUi.str(row, "displayName")), 110), TsgHubUi.TEXT, FontManager.getRunescapeFont()), BorderLayout.CENTER);
 				String gained = TsgHubUi.bool(row, "tracking") ? String.format("%,d", TsgHubUi.integer(row, "gained", 0)) : "-";
 				if (started) card.add(TsgHubUi.label(gained, rank == 1 ? TsgHubUi.ACCENT : TsgHubUi.TEXT, FontManager.getRunescapeBoldFont()), BorderLayout.EAST);
 				page.add(TsgHubUi.fitHeight(card));
@@ -1497,13 +1488,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		boolean live = "active".equals(TsgHubUi.str(event, "status"));
 		boolean joined = TsgHubUi.bool(event, "joined");
 		JPanel card = TsgHubUi.card();
-		if (joined)
-		{
-			card.setBackground(SELF_CARD);
-			card.setBorder(BorderFactory.createCompoundBorder(
-				BorderFactory.createLineBorder(SELF_BORDER),
-				BorderFactory.createEmptyBorder(6, 7, 6, 7)));
-		}
+		if (joined) highlightSelf(card);
 
 		JPanel top = TsgHubUi.row();
 		top.add(TsgHubUi.shrinkable(TsgHubUi.label(TsgHubUi.eventName(event), TsgHubUi.TEXT, FontManager.getRunescapeBoldFont())), BorderLayout.CENTER);
@@ -1917,7 +1902,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			for (JsonObject member : sorted)
 			{
 				String name = TsgHubUi.escape(TsgHubUi.str(member, "displayName"));
-				if (TsgHubUi.str(member, "displayName").equalsIgnoreCase(boardDisplayName)) name += " (you)";
+				if (TsgHubUi.str(member, "displayName").equalsIgnoreCase(boardDisplayName)) name = "<font color='" + SELF_TEXT + "'>" + name + "</font>";
 				int have = TsgHubUi.integer(member, "progress", 0);
 				int need = TsgHubUi.integer(member, "target", 1);
 				if (solo) waiting.add(name + " " + have + "/" + need);
@@ -1973,12 +1958,12 @@ final class TsgHubSidebarPanel extends PluginPanel
 			boolean mine = TsgHubUi.str(team, "id").equals(ownTeam);
 			JPanel card = TsgHubUi.card();
 			card.setLayout(new BorderLayout(8, 0));
-			if (mine) card.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0, 3, 0, 0, TsgHubUi.ACCENT), BorderFactory.createEmptyBorder(7, 5, 7, 8)));
+			if (mine) highlightSelf(card);
 			JLabel rank = TsgHubUi.label(String.valueOf(i + 1), i == 0 ? TsgHubUi.ACCENT : TsgHubUi.MUTED, FontManager.getRunescapeBoldFont());
 			rank.setPreferredSize(new Dimension(14, rank.getPreferredSize().height));
 			card.add(rank, BorderLayout.WEST);
 			JPanel text = TsgHubUi.stack();
-			text.add(TsgHubUi.label(TsgHubUi.html(TsgHubUi.escape(TsgHubUi.str(team, "name")) + (mine ? " <font color='#8f8f8f'>(you)</font>" : ""), 120), TsgHubUi.TEXT, FontManager.getRunescapeFont()));
+			text.add(TsgHubUi.label(TsgHubUi.html(TsgHubUi.escape(TsgHubUi.str(team, "name")), 120), TsgHubUi.TEXT, FontManager.getRunescapeFont()));
 			text.add(TsgHubUi.label(TsgHubUi.integer(score, "completedTasks", 0) + "/" + totalTasks + " tasks", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont()));
 			card.add(text, BorderLayout.CENTER);
 			card.add(TsgHubUi.label(TsgHubUi.integer(score, "points", 0) + " pts", i == 0 ? TsgHubUi.ACCENT : TsgHubUi.TEXT, FontManager.getRunescapeBoldFont()), BorderLayout.EAST);
@@ -2000,8 +1985,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 		{
 			boolean mine = TsgHubUi.str(team, "id").equals(ownTeam);
 			JPanel card = TsgHubUi.card();
-			if (mine) card.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0, 3, 0, 0, TsgHubUi.ACCENT), BorderFactory.createEmptyBorder(7, 5, 7, 8)));
-			card.add(TsgHubUi.label(TsgHubUi.html(TsgHubUi.escape(TsgHubUi.str(team, "name")) + (mine ? " <font color='#8f8f8f'>(you)</font>" : ""), CARD_TEXT_W), TsgHubUi.TEXT, FontManager.getRunescapeFont()), BorderLayout.CENTER);
+			if (mine) highlightSelf(card);
+			card.add(TsgHubUi.label(TsgHubUi.html(TsgHubUi.escape(TsgHubUi.str(team, "name")), CARD_TEXT_W), TsgHubUi.TEXT, FontManager.getRunescapeFont()), BorderLayout.CENTER);
 			scoreboardTab.add(TsgHubUi.fitHeight(card));
 			scoreboardTab.add(Box.createVerticalStrut(4));
 		}
@@ -2025,8 +2010,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 		for (String name : teammates)
 		{
 			JPanel row = TsgHubUi.card();
-			boolean me = name.equalsIgnoreCase(boardDisplayName);
-			row.add(TsgHubUi.label(TsgHubUi.html(TsgHubUi.escape(name) + (me ? " <font color='#8f8f8f'>(you)</font>" : ""), CARD_TEXT_W), TsgHubUi.TEXT, FontManager.getRunescapeFont()), BorderLayout.CENTER);
+			if (name.equalsIgnoreCase(boardDisplayName)) highlightSelf(row);
+			row.add(TsgHubUi.label(TsgHubUi.html(TsgHubUi.escape(name), CARD_TEXT_W), TsgHubUi.TEXT, FontManager.getRunescapeFont()), BorderLayout.CENTER);
 			teamTab.add(TsgHubUi.fitHeight(row));
 			teamTab.add(Box.createVerticalStrut(3));
 		}
