@@ -1022,9 +1022,8 @@ public class TsgHubPlugin extends Plugin
 			{
 				JsonObject response = api().request("GET", "/v1/events?clanName=" + encodedClan, adminKey(), null);
 				JsonArray events = response.getAsJsonArray("events");
-				for (JsonElement element : events)
+				for (JsonObject event : TsgHubUi.objects(events))
 				{
-					JsonObject event = element.getAsJsonObject();
 					String eventId = event.get("id").getAsString();
 					String savedToken = TsgHubSession.get("memberToken:" + eventId);
 					if (savedToken.isEmpty() && eventId.equals(TsgHubSession.get("eventId")))
@@ -1291,7 +1290,7 @@ public class TsgHubPlugin extends Plugin
 			List<String> targetNames = new ArrayList<>();
 			if (selectedType == 2 || selectedType == 3)
 			{
-				for (JsonElement item : selectedItems) targetNames.add(item.getAsJsonObject().get("name").getAsString());
+				for (JsonObject item : TsgHubUi.objects(selectedItems)) targetNames.add(item.get("name").getAsString());
 			}
 			else for (String name : targetNamesText.split("\\R")) if (!name.trim().isEmpty()) targetNames.add(name.trim());
 			if (targetNames.isEmpty() && !(selectedType == 2 && dropCategory > 0)) { taskFormFailed(selectedType == 2 || selectedType == 3 ? "Search for and add at least one item." : "Enter at least one target name or raid mode."); return; }
@@ -1323,15 +1322,14 @@ public class TsgHubPlugin extends Plugin
 				targetNames.forEach(itemNames::add);
 				cfg.add("itemNames", itemNames);
 				JsonArray itemIds = new JsonArray();
-				for (JsonElement item : selectedItems) itemIds.add(item.getAsJsonObject().get("id").getAsInt());
+				for (JsonObject item : TsgHubUi.objects(selectedItems)) itemIds.add(item.get("id").getAsInt());
 				cfg.add("itemIds", itemIds);
 				// Completing any one set group finishes the task.
 				if (selectedType == 3 || dropRuleMode == 1)
 				{
 					Map<Integer, JsonArray> groupedItems = new TreeMap<>();
-					for (JsonElement element : selectedItems)
+					for (JsonObject selected : TsgHubUi.objects(selectedItems))
 					{
-						JsonObject selected = element.getAsJsonObject();
 						JsonArray groupItems = groupedItems.computeIfAbsent(Math.max(0, selected.get("group").getAsInt()), ignored -> new JsonArray());
 						JsonObject item = new JsonObject();
 						item.addProperty("name", selected.get("name").getAsString());
@@ -1904,9 +1902,8 @@ public class TsgHubPlugin extends Plugin
 			String path = "/v1/events/" + eventId + "/notifications?inClanChat=" + inClanChat + "&clanName=" + URLEncoder.encode(detectedClanName, StandardCharsets.UTF_8);
 			JsonArray notifications = api().request("GET", path, token, null).getAsJsonArray("notifications");
 			if (notifications == null) return;
-			for (JsonElement element : notifications)
+			for (JsonObject notification : TsgHubUi.objects(notifications))
 			{
-				JsonObject notification = element.getAsJsonObject();
 				if (!"task-completed".equals(notification.get("type").getAsString())) continue;
 				showLocalChatMessage(new ChatMessageBuilder()
 					.append(ChatColorType.NORMAL).append(notification.get("actorName").getAsString() + " completed ")
@@ -1975,9 +1972,8 @@ public class TsgHubPlugin extends Plugin
 	private void cacheXpTasks(JsonObject event)
 	{
 		List<XpTask> found = new ArrayList<>();
-		for (JsonElement element : event.getAsJsonArray("tasks"))
+		for (JsonObject task : TsgHubUi.objects(event.getAsJsonArray("tasks")))
 		{
-			JsonObject task = element.getAsJsonObject();
 			if (!"xp".equals(task.get("type").getAsString())) continue;
 			JsonObject config = task.getAsJsonObject("config");
 			found.add(new XpTask(task.get("id").getAsString(), config.get("skill").getAsString(), config.get("targetXp").getAsInt()));
@@ -1988,9 +1984,8 @@ public class TsgHubPlugin extends Plugin
 	private void cachePvmTasks(JsonObject event)
 	{
 		List<PvmTask> found = new ArrayList<>();
-		for (JsonElement element : event.getAsJsonArray("tasks"))
+		for (JsonObject task : TsgHubUi.objects(event.getAsJsonArray("tasks")))
 		{
-			JsonObject task = element.getAsJsonObject();
 			String type = task.get("type").getAsString();
 			if (!"kill".equals(type) && !"drop".equals(type) && !"raid".equals(type)) continue;
 			JsonObject config = task.getAsJsonObject("config");
