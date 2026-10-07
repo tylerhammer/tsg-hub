@@ -1,6 +1,7 @@
 package com.tsghub;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.inject.Provides;
 import com.tsghub.TsgHubUi.Tone;
@@ -570,10 +571,7 @@ public class TsgHubPlugin extends Plugin
 		syncSocketNow();
 		SwingUtilities.invokeLater(() -> {
 			if (panel != null) panel.setDetectedClanName(detectedClanName, detectedClanRank);
-			if (sidebar != null)
-			{
-				sidebar.setOrganizerAccess(organizerAccess);
-			}
+			if (sidebar != null) sidebar.setOrganizerAccess(organizerAccess);
 			if (!organizerAccess && hubWindow != null) hubWindow.setVisible(false);
 		});
 		if (!sidebarRouted && !detectedPlayerName.isEmpty()) routeSidebar();
@@ -1025,9 +1023,9 @@ public class TsgHubPlugin extends Plugin
 			{
 				JsonObject response = api().request("GET", "/v1/events?clanName=" + encodedClan, adminKey(), null);
 				JsonArray events = response.getAsJsonArray("events");
-				for (int i = 0; i < events.size(); i++)
+				for (JsonElement element : events)
 				{
-					JsonObject event = events.get(i).getAsJsonObject();
+					JsonObject event = element.getAsJsonObject();
 					String eventId = event.get("id").getAsString();
 					String savedToken = TsgHubSession.get("memberToken:" + eventId);
 					if (savedToken.isEmpty() && eventId.equals(TsgHubSession.get("eventId")))
@@ -1075,7 +1073,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		String displayName = detectedPlayerName;
 		String memberName = TsgHubSession.get("displayName");
-		String eventClan = event.has("clanName") && !event.get("clanName").isJsonNull() ? event.get("clanName").getAsString() : "";
+		String eventClan = TsgHubUi.str(event, "clanName");
 		if (token.isEmpty() || displayName.isEmpty() || !displayName.equalsIgnoreCase(memberName)
 			|| eventClan.isEmpty() || !eventClan.equalsIgnoreCase(detectedClanName)) return;
 		int rank = detectedClanRank;
@@ -1098,11 +1096,9 @@ public class TsgHubPlugin extends Plugin
 	{
 		String eventId = TsgHubSession.get("eventId");
 		String token = TsgHubSession.get("token");
-		JsonObject body = new JsonObject();
-		body.addProperty("taskId", taskId);
-		body.addProperty("evidenceId", "manual-" + UUID.randomUUID());
-		body.addProperty("source", "manual");
-		JsonObject evidence = new JsonObject(); evidence.addProperty("note", note.trim()); body.add("evidence", evidence);
+		JsonObject evidence = new JsonObject();
+		evidence.addProperty("note", note.trim());
+		JsonObject body = claim(taskId, "manual-" + UUID.randomUUID(), "manual", evidence);
 		memberStatus("Sending proof...", Tone.INFO);
 		executor.submit(() -> {
 			try
@@ -1296,7 +1292,7 @@ public class TsgHubPlugin extends Plugin
 			List<String> targetNames = new ArrayList<>();
 			if (selectedType == 2 || selectedType == 3)
 			{
-				for (int i = 0; i < selectedItems.size(); i++) targetNames.add(selectedItems.get(i).getAsJsonObject().get("name").getAsString());
+				for (JsonElement item : selectedItems) targetNames.add(item.getAsJsonObject().get("name").getAsString());
 			}
 			else for (String name : targetNamesText.split("\\R")) if (!name.trim().isEmpty()) targetNames.add(name.trim());
 			if (targetNames.isEmpty() && !(selectedType == 2 && dropCategory > 0)) { taskFormFailed(selectedType == 2 || selectedType == 3 ? "Search for and add at least one item." : "Enter at least one target name or raid mode."); return; }
@@ -1325,32 +1321,26 @@ public class TsgHubPlugin extends Plugin
 			else
 			{
 				JsonArray itemNames = new JsonArray();
-				for (String name : targetNames) itemNames.add(name);
+				targetNames.forEach(itemNames::add);
 				cfg.add("itemNames", itemNames);
 				JsonArray itemIds = new JsonArray();
-				for (int i = 0; i < selectedItems.size(); i++)
-				{
-					JsonObject selected = selectedItems.get(i).getAsJsonObject();
-					itemIds.add(selected.get("id").getAsInt());
-				}
+				for (JsonElement item : selectedItems) itemIds.add(item.getAsJsonObject().get("id").getAsInt());
 				cfg.add("itemIds", itemIds);
 				// Completing any one set group finishes the task.
 				if (selectedType == 3 || dropRuleMode == 1)
 				{
 					Map<Integer, JsonArray> groupedItems = new TreeMap<>();
-					for (int i = 0; i < selectedItems.size(); i++)
+					for (JsonElement element : selectedItems)
 					{
-						JsonObject selected = selectedItems.get(i).getAsJsonObject();
-						int group = selected.get("group").getAsInt();
-						if (group < 0) group = 0;
-						JsonArray groupItems = groupedItems.computeIfAbsent(group, ignored -> new JsonArray());
+						JsonObject selected = element.getAsJsonObject();
+						JsonArray groupItems = groupedItems.computeIfAbsent(Math.max(0, selected.get("group").getAsInt()), ignored -> new JsonArray());
 						JsonObject item = new JsonObject();
 						item.addProperty("name", selected.get("name").getAsString());
 						item.addProperty("id", selected.get("id").getAsInt());
 						groupItems.add(item);
 					}
 					JsonArray groups = new JsonArray();
-					for (JsonArray group : groupedItems.values()) groups.add(group);
+					groupedItems.values().forEach(groups::add);
 					cfg.add("itemGroups", groups);
 				}
 			}
@@ -1425,7 +1415,7 @@ public class TsgHubPlugin extends Plugin
 				SwingUtilities.invokeLater(() -> panel.confirmReconcile(taskId, result));
 				return;
 			}
-			int count = result.has("count") ? result.get("count").getAsInt() : 0;
+			int count = TsgHubUi.integer(result, "count", 0);
 			organizerStatus("Credited " + count + (count == 1 ? " match" : " matches") + " from the loot log.", Tone.SUCCESS);
 			refreshOrganizerEvent(false);
 		}, null);
@@ -1728,28 +1718,11 @@ public class TsgHubPlugin extends Plugin
 			if (!message.contains(bossName.toLowerCase(Locale.ROOT))) continue;
 			String key = task.id + ":" + count;
 			if (!attemptedKillCountClaims.add(key)) continue;
-			JsonObject claim = new JsonObject();
-			claim.addProperty("taskId", task.id);
-			claim.addProperty("evidenceId", "kc-" + task.id + "-" + count);
-			claim.addProperty("source", "kill");
 			JsonObject evidence = new JsonObject();
 			evidence.addProperty("name", bossName);
 			evidence.addProperty("quantity", 1);
 			evidence.addProperty("killCount", count);
-			claim.add("evidence", evidence);
-			executor.submit(() -> {
-				try
-				{
-					JsonObject result = api().request("POST", "/v1/events/" + eventId + "/claims", eventToken(eventId), claim);
-					showProgressMessage(result);
-					SwingUtilities.invokeLater(() -> refreshBoard());
-				}
-				catch (Exception e)
-				{
-					attemptedKillCountClaims.remove(key);
-					SwingUtilities.invokeLater(() -> memberStatus("Kill count sync failed. " + TsgHubUi.friendlyError(e), Tone.ERROR));
-				}
-			});
+			postClaim(eventId, claim(task.id, "kc-" + task.id + "-" + count, "kill", evidence), "Kill count sync failed. ", () -> attemptedKillCountClaims.remove(key));
 		}
 	}
 
@@ -1774,28 +1747,15 @@ public class TsgHubPlugin extends Plugin
 
 	private void submitRaidClaim(String eventId, PvmTask task, String mode, List<String> players, List<String> nonClanPlayers)
 	{
-		JsonObject claim = new JsonObject();
-		claim.addProperty("taskId", task.id);
-		claim.addProperty("evidenceId", "raid-" + UUID.randomUUID());
-		claim.addProperty("source", "raid");
 		JsonObject evidence = new JsonObject();
 		evidence.addProperty("mode", mode);
 		JsonArray playerNames = new JsonArray();
-		for (String player : players) playerNames.add(player);
+		players.forEach(playerNames::add);
 		evidence.add("players", playerNames);
 		JsonArray outsiders = new JsonArray();
-		for (String player : nonClanPlayers) outsiders.add(player);
+		nonClanPlayers.forEach(outsiders::add);
 		evidence.add("nonClanPlayers", outsiders);
-		claim.add("evidence", evidence);
-		executor.submit(() -> {
-			try
-			{
-				JsonObject result = api().request("POST", "/v1/events/" + eventId + "/claims", eventToken(eventId), claim);
-				showProgressMessage(result);
-				SwingUtilities.invokeLater(() -> refreshBoard());
-			}
-			catch (Exception e) { SwingUtilities.invokeLater(() -> memberStatus("Raid progress not credited. " + TsgHubUi.friendlyError(e), Tone.ERROR)); }
-		});
+		postClaim(eventId, claim(task.id, "raid-" + UUID.randomUUID(), "raid", evidence), "Raid progress not credited. ", null);
 	}
 
 	private void processLoot(String sourceType, String sourceName, Collection<ItemStack> items, int amount)
@@ -1904,24 +1864,37 @@ public class TsgHubPlugin extends Plugin
 
 	private void submitPvmClaim(String eventId, PvmTask task, String source, String name, int quantity, int itemId, String lootId)
 	{
-		JsonObject claim = new JsonObject();
-		claim.addProperty("taskId", task.id);
-		claim.addProperty("evidenceId", source + "-" + UUID.randomUUID());
-		claim.addProperty("source", source);
 		JsonObject evidence = new JsonObject();
 		evidence.addProperty("name", name);
 		evidence.addProperty("quantity", quantity);
 		if (itemId > 0) evidence.addProperty("itemId", itemId);
 		if (lootId != null) evidence.addProperty("lootId", lootId);
+		postClaim(eventId, claim(task.id, source + "-" + UUID.randomUUID(), source, evidence), "PVM progress sync failed. ", null);
+	}
+
+	private static JsonObject claim(String taskId, String evidenceId, String source, JsonObject evidence)
+	{
+		JsonObject claim = new JsonObject();
+		claim.addProperty("taskId", taskId);
+		claim.addProperty("evidenceId", evidenceId);
+		claim.addProperty("source", source);
 		claim.add("evidence", evidence);
+		return claim;
+	}
+
+	private void postClaim(String eventId, JsonObject claim, String failure, Runnable onFailure)
+	{
 		executor.submit(() -> {
 			try
 			{
-				JsonObject result = api().request("POST", "/v1/events/" + eventId + "/claims", eventToken(eventId), claim);
-				showProgressMessage(result);
-				SwingUtilities.invokeLater(() -> refreshBoard());
+				showProgressMessage(api().request("POST", "/v1/events/" + eventId + "/claims", eventToken(eventId), claim));
+				SwingUtilities.invokeLater(this::refreshBoard);
 			}
-			catch (Exception e) { SwingUtilities.invokeLater(() -> memberStatus("PVM progress sync failed. " + TsgHubUi.friendlyError(e), Tone.ERROR)); }
+			catch (Exception e)
+			{
+				if (onFailure != null) onFailure.run();
+				memberStatus(failure + TsgHubUi.friendlyError(e), Tone.ERROR);
+			}
 		});
 	}
 
@@ -1933,14 +1906,12 @@ public class TsgHubPlugin extends Plugin
 		if (token.isEmpty() || eventId.isEmpty()) return;
 		try
 		{
-			String clan = URLEncoder.encode(detectedClanName, StandardCharsets.UTF_8);
-			String path = "/v1/events/" + eventId + "/notifications?inClanChat=" + inClanChat + "&clanName=" + clan;
-			JsonObject result = api().request("GET", path, token, null);
-			JsonArray notifications = result.getAsJsonArray("notifications");
+			String path = "/v1/events/" + eventId + "/notifications?inClanChat=" + inClanChat + "&clanName=" + URLEncoder.encode(detectedClanName, StandardCharsets.UTF_8);
+			JsonArray notifications = api().request("GET", path, token, null).getAsJsonArray("notifications");
 			if (notifications == null) return;
-			for (int i = 0; i < notifications.size(); i++)
+			for (JsonElement element : notifications)
 			{
-				JsonObject notification = notifications.get(i).getAsJsonObject();
+				JsonObject notification = element.getAsJsonObject();
 				if (!"task-completed".equals(notification.get("type").getAsString())) continue;
 				showLocalChatMessage(new ChatMessageBuilder()
 					.append(ChatColorType.NORMAL).append(notification.get("actorName").getAsString() + " completed ")
@@ -1961,24 +1932,15 @@ public class TsgHubPlugin extends Plugin
 		JsonObject shown = mine != null ? mine : progress;
 		String title = result.get("taskTitle").getAsString();
 		String count = shown.get("progress").getAsInt() + "/" + shown.get("target").getAsInt();
+		boolean complete = progress.get("completed").getAsBoolean();
 		ChatMessageBuilder message = new ChatMessageBuilder();
-		if (!progress.get("completed").getAsBoolean() && mine != null && TsgHubUi.bool(mine, "completed"))
+		if (complete || mine != null && TsgHubUi.bool(mine, "completed"))
 		{
-			message.append(TsgHubUi.SUCCESS.darker(), "Your part is done: ")
+			message.append(TsgHubUi.SUCCESS.darker(), complete ? "Task complete: " : "Your part is done: ")
 				.append(ChatColorType.HIGHLIGHT).append(title)
 				.append(ChatColorType.NORMAL).append(" (" + count + ")");
 		}
-		else if (progress.get("completed").getAsBoolean())
-		{
-			message.append(TsgHubUi.SUCCESS.darker(), "Task complete: ")
-				.append(ChatColorType.HIGHLIGHT).append(title)
-				.append(ChatColorType.NORMAL).append(" (" + count + ")");
-		}
-		else
-		{
-			message.append(ChatColorType.HIGHLIGHT).append(title)
-				.append(ChatColorType.NORMAL).append(": " + count);
-		}
+		else message.append(ChatColorType.HIGHLIGHT).append(title).append(ChatColorType.NORMAL).append(": " + count);
 		showLocalChatMessage(message);
 	}
 
@@ -2004,26 +1966,23 @@ public class TsgHubPlugin extends Plugin
 
 	private void submitXpClaim(String eventId, XpTask task, String skill, int xp, String key)
 	{
-		JsonObject claim = new JsonObject();
-		claim.addProperty("taskId", task.id);
-		claim.addProperty("evidenceId", "xp-" + key);
-		claim.addProperty("source", "xp");
-		JsonObject evidence = new JsonObject(); evidence.addProperty("skill", skill); evidence.addProperty("xp", xp); claim.add("evidence", evidence);
-		try { showProgressMessage(api().request("POST", "/v1/events/" + eventId + "/claims", eventToken(eventId), claim)); }
+		JsonObject evidence = new JsonObject();
+		evidence.addProperty("skill", skill);
+		evidence.addProperty("xp", xp);
+		try { showProgressMessage(api().request("POST", "/v1/events/" + eventId + "/claims", eventToken(eventId), claim(task.id, "xp-" + key, "xp", evidence))); }
 		catch (Exception e)
 		{
 			attemptedXpClaims.remove(key);
-			SwingUtilities.invokeLater(() -> memberStatus("Progress sync paused. " + TsgHubUi.friendlyError(e), Tone.ERROR));
+			memberStatus("Progress sync paused. " + TsgHubUi.friendlyError(e), Tone.ERROR);
 		}
 	}
 
 	private void cacheXpTasks(JsonObject event)
 	{
 		List<XpTask> found = new ArrayList<>();
-		JsonArray tasks = event.getAsJsonArray("tasks");
-		for (int i = 0; i < tasks.size(); i++)
+		for (JsonElement element : event.getAsJsonArray("tasks"))
 		{
-			JsonObject task = tasks.get(i).getAsJsonObject();
+			JsonObject task = element.getAsJsonObject();
 			if (!"xp".equals(task.get("type").getAsString())) continue;
 			JsonObject config = task.getAsJsonObject("config");
 			found.add(new XpTask(task.get("id").getAsString(), config.get("skill").getAsString(), config.get("targetXp").getAsInt()));
@@ -2034,10 +1993,9 @@ public class TsgHubPlugin extends Plugin
 	private void cachePvmTasks(JsonObject event)
 	{
 		List<PvmTask> found = new ArrayList<>();
-		JsonArray tasks = event.getAsJsonArray("tasks");
-		for (int i = 0; i < tasks.size(); i++)
+		for (JsonElement element : event.getAsJsonArray("tasks"))
 		{
-			JsonObject task = tasks.get(i).getAsJsonObject();
+			JsonObject task = element.getAsJsonObject();
 			String type = task.get("type").getAsString();
 			if (!"kill".equals(type) && !"drop".equals(type) && !"raid".equals(type)) continue;
 			JsonObject config = task.getAsJsonObject("config");
@@ -2045,25 +2003,17 @@ public class TsgHubPlugin extends Plugin
 			if ("kill".equals(type)) targetNames.add(config.get("npcName").getAsString());
 			else if ("raid".equals(type) && config.has("modes"))
 			{
-				JsonArray modes = config.getAsJsonArray("modes");
-				for (int j = 0; j < modes.size(); j++) targetNames.add(modes.get(j).getAsString().toLowerCase(Locale.ROOT));
+				for (JsonElement mode : config.getAsJsonArray("modes")) targetNames.add(mode.getAsString().toLowerCase(Locale.ROOT));
 			}
 			else if (config.has("itemNames") && config.get("itemNames").isJsonArray())
 			{
-				JsonArray itemNames = config.getAsJsonArray("itemNames");
-				for (int j = 0; j < itemNames.size(); j++) targetNames.add(itemNames.get(j).getAsString());
+				for (JsonElement name : config.getAsJsonArray("itemNames")) targetNames.add(name.getAsString());
 			}
 			else if (config.has("itemName")) targetNames.add(config.get("itemName").getAsString());
 			List<Integer> targetItemIds = new ArrayList<>();
-			if (config.has("itemIds") && config.get("itemIds").isJsonArray())
-			{
-				JsonArray ids = config.getAsJsonArray("itemIds");
-				for (int j = 0; j < ids.size(); j++) targetItemIds.add(ids.get(j).getAsInt());
-			}
-			found.add(new PvmTask(task.get("id").getAsString(), type, targetNames, targetItemIds,
-				"chat".equals(config.has("signal") ? config.get("signal").getAsString() : "loot"),
-				config.has("requireAllItems") && config.get("requireAllItems").getAsBoolean() || config.has("itemGroups"),
-				config.has("itemGroup") ? config.get("itemGroup").getAsString() : ""));
+			for (JsonElement id : TsgHubUi.array(config, "itemIds")) targetItemIds.add(id.getAsInt());
+			found.add(new PvmTask(task.get("id").getAsString(), type, targetNames, targetItemIds, "chat".equals(TsgHubUi.str(config, "signal")),
+				TsgHubUi.bool(config, "requireAllItems") || config.has("itemGroups"), TsgHubUi.str(config, "itemGroup")));
 		}
 		pvmTasks = found;
 	}
