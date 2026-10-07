@@ -17,6 +17,7 @@ import net.runelite.client.util.Text;
 final class ActivityDetector
 {
 	static final long RECENT_MILLIS = 90_000;
+	static final long SLAYER_MILLIS = 300_000;
 	private static final Set<Skill> COMBAT = EnumSet.of(Skill.ATTACK, Skill.STRENGTH, Skill.DEFENCE, Skill.RANGED, Skill.HITPOINTS);
 	private static final Map<String, String> BOSSES = loadBosses();
 
@@ -24,6 +25,10 @@ final class ActivityDetector
 	private Skill lastSkill;
 	private long lastSkillAt;
 	private long lastCombatAt;
+	private long lastSlayerAt;
+	private long slayerTarget;
+	private int slayerRemaining;
+	private String slayerTask;
 	private String lastBoss;
 	private long lastBossAt;
 
@@ -37,7 +42,7 @@ final class ActivityDetector
 		Integer previous = xp.put(skill, value);
 		if (previous == null || value <= previous) return;
 		if (skill == Skill.HITPOINTS) lastCombatAt = now;
-		else if (!COMBAT.contains(skill))
+		else if (skill != Skill.SLAYER && !COMBAT.contains(skill))
 		{
 			lastSkill = skill;
 			lastSkillAt = now;
@@ -52,12 +57,39 @@ final class ActivityDetector
 		lastBossAt = now;
 	}
 
+	void onSlayerTask(long target, int remaining, String task, long now)
+	{
+		if (remaining <= 0)
+		{
+			clearSlayer();
+			return;
+		}
+		if (target == slayerTarget && remaining < slayerRemaining) lastSlayerAt = now;
+		slayerTarget = target;
+		slayerRemaining = remaining;
+		slayerTask = task;
+	}
+
+	boolean needsSlayerTaskName()
+	{
+		return slayerRemaining > 0 && slayerTask == null;
+	}
+
+	private void clearSlayer()
+	{
+		lastSlayerAt = 0;
+		slayerTarget = 0;
+		slayerRemaining = 0;
+		slayerTask = null;
+	}
+
 	void reset()
 	{
 		xp.clear();
 		lastSkill = null;
 		lastSkillAt = 0;
 		lastCombatAt = 0;
+		clearSlayer();
 		lastBoss = null;
 		lastBossAt = 0;
 	}
@@ -71,7 +103,10 @@ final class ActivityDetector
 			if (area.type == AreaNames.Type.RAIDS) return "Raiding - " + area.name;
 			if (area.type == AreaNames.Type.MINIGAMES) return "Minigame - " + area.name;
 		}
-		if (lastCombatAt > 0 && now - lastCombatAt < RECENT_MILLIS) return "Combat";
+		boolean fighting = lastCombatAt > 0 && now - lastCombatAt < RECENT_MILLIS;
+		boolean slaying = lastSlayerAt > 0 && now - lastSlayerAt < (fighting ? SLAYER_MILLIS : RECENT_MILLIS);
+		if (slaying) return slayerTask == null ? "Slayer" : "Slayer - " + slayerTask;
+		if (fighting) return "Combat";
 		if (lastSkill != null && now - lastSkillAt < RECENT_MILLIS) return "Skilling - " + lastSkill.getName();
 		return "Idle";
 	}

@@ -12,6 +12,7 @@ public class MembersPanelTest
 		assertEquals("Mining · Motherlode Mine", TsgHubSidebarPanel.activityDetail("Skilling - Mining", "Motherlode Mine"));
 		assertEquals("Nex", TsgHubSidebarPanel.activityDetail("Bossing - Nex", "Nex"));
 		assertEquals("Idle · Grand Exchange", TsgHubSidebarPanel.activityDetail("Idle", "Grand Exchange"));
+		assertEquals("Slayer: Abyssal demons · Catacombs of Kourend", TsgHubSidebarPanel.activityDetail("Slayer - Abyssal demons", "Catacombs of Kourend"));
 		assertEquals("Combat", TsgHubSidebarPanel.activityDetail("Combat", ""));
 		assertEquals("Online", TsgHubSidebarPanel.activityDetail("", ""));
 	}
