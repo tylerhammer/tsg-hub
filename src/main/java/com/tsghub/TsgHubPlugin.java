@@ -335,6 +335,11 @@ public class TsgHubPlugin extends Plugin
 		return TsgHubUi.samePlayer(detectedClanName, hubClanName);
 	}
 
+	private boolean sharingInClan()
+	{
+		return isInHubClan() && config.dataSharingOptIn();
+	}
+
 	boolean canManageOrganizerUi()
 	{
 		return isInHubClan() && adminVerified;
@@ -369,7 +374,7 @@ public class TsgHubPlugin extends Plugin
 			if (adminVerified) setAdminVerified(false);
 			return;
 		}
-		if (name.isEmpty() || !isInHubClan() || !config.dataSharingOptIn()) return;
+		if (name.isEmpty() || !sharingInClan()) return;
 		String hash = accountHash();
 		String identity = key + "\n" + name + "\n" + hash;
 		if (identity.equals(checkedKeyIdentity) || key.equals(rejectedKey) || executor == null || executor.isShutdown()) return;
@@ -604,7 +609,7 @@ public class TsgHubPlugin extends Plugin
 		routedAsHubMember = isInHubClan();
 		boolean pending = clanPending();
 		routedClanPending = pending;
-		if (loggedIn && !pending && isInHubClan() && config.dataSharingOptIn())
+		if (loggedIn && !pending && sharingInClan())
 		{
 			syncIdentity();
 			checkHubKey();
@@ -675,12 +680,10 @@ public class TsgHubPlugin extends Plugin
 				catch (Exception ignored) { /* Local disconnect still succeeds while the service is unavailable. */ }
 			});
 		}
-		TsgHubSession.set("memberToken:" + eventId, "");
-		TsgHubSession.set("memberName:" + eventId, "");
+		TsgHubSession.clear("memberToken:" + eventId, "memberName:" + eventId);
 		if (eventId.equals(TsgHubSession.get("eventId")))
 		{
-			TsgHubSession.set("token", "");
-			TsgHubSession.set("eventId", "");
+			TsgHubSession.clear("token", "eventId");
 			attemptedXpClaims.clear();
 			clearTaskCache();
 			if (boardOverlay != null) boardOverlay.setVisible(false);
@@ -694,9 +697,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		if (competitions != null) competitions.clear();
 		revokeRemoteSession();
-		TsgHubSession.set("token", "");
-		TsgHubSession.set("eventId", "");
-		TsgHubSession.set("organizerEventId", "");
+		TsgHubSession.clear("token", "eventId", "organizerEventId");
 		TsgHubSession.removePrefix("memberToken:");
 		TsgHubSession.removePrefix("memberName:");
 		TsgHubSession.removePrefix("organizerToken:");
@@ -738,8 +739,7 @@ public class TsgHubPlugin extends Plugin
 
 	private void refreshBoard(boolean open)
 	{
-		if (!isInHubClan()) return;
-		if (!config.dataSharingOptIn()) return;
+		if (!sharingInClan()) return;
 		String eventId = TsgHubSession.get("eventId");
 		String token = TsgHubSession.get("token");
 		if (eventId.isEmpty() || token.isEmpty()) return;
@@ -777,7 +777,7 @@ public class TsgHubPlugin extends Plugin
 			memberStatus("That event is no longer available.", Tone.ERROR);
 			loadClanEvents();
 		}
-		else memberStatus(failure + TsgHubUi.friendlyError(e), Tone.ERROR);
+		else memberError(failure, e);
 	}
 
 	private Runnable unlessLive(Runnable poll)
@@ -796,7 +796,7 @@ public class TsgHubPlugin extends Plugin
 
 	private void socketTick()
 	{
-		if (!isInHubClan() || !config.dataSharingOptIn())
+		if (!sharingInClan())
 		{
 			socket.disconnect();
 			return;
@@ -879,7 +879,7 @@ public class TsgHubPlugin extends Plugin
 
 	void participate(String eventId)
 	{
-		if (!isInHubClan() || !config.dataSharingOptIn() || detectedPlayerName.isEmpty()) return;
+		if (!sharingInClan() || detectedPlayerName.isEmpty()) return;
 		JsonObject body = memberBody(detectedPlayerName);
 		sidebarBusy(true);
 		executor.submit(() -> {
@@ -941,7 +941,7 @@ public class TsgHubPlugin extends Plugin
 				SwingUtilities.invokeLater(() -> TsgHubUi.copyToClipboard(url));
 				memberStatus("Discord invite copied. Paste it in your browser to join.", Tone.SUCCESS);
 			}
-			catch (Exception e) { memberStatus(TsgHubUi.friendlyError(e), Tone.ERROR); }
+			catch (Exception e) { memberError("", e); }
 			finally { SwingUtilities.invokeLater(done); }
 		});
 	}
@@ -1008,8 +1008,7 @@ public class TsgHubPlugin extends Plugin
 
 	void loadClanEvents()
 	{
-		if (!isInHubClan()) return;
-		if (!config.dataSharingOptIn()) return;
+		if (!sharingInClan()) return;
 		String clanName = detectedClanName;
 		if (clanName == null || clanName.trim().isEmpty())
 		{
@@ -1042,7 +1041,7 @@ public class TsgHubPlugin extends Plugin
 				competitions.setEvents(events);
 				SwingUtilities.invokeLater(() -> sidebar.setEvents(events));
 			}
-			catch (Exception e) { memberStatus("Couldn't load events. " + TsgHubUi.friendlyError(e), Tone.ERROR); }
+			catch (Exception e) { memberError("Couldn't load events. ", e); }
 			finally { sidebarBusy(false); }
 		});
 	}
@@ -1110,7 +1109,7 @@ public class TsgHubPlugin extends Plugin
 			}
 			catch (Exception e)
 			{
-				memberStatus("Couldn't send proof. " + TsgHubUi.friendlyError(e), Tone.ERROR);
+				memberError("Couldn't send proof. ", e);
 				SwingUtilities.invokeLater(() -> sidebar.manualSubmitFinished(false));
 			}
 		});
@@ -1129,7 +1128,7 @@ public class TsgHubPlugin extends Plugin
 				SwingUtilities.invokeLater(() -> panel.openOrganizerEvent(event));
 				organizerStatus("", Tone.INFO);
 			}
-			catch (Exception e) { organizerStatus("Couldn't open event. " + TsgHubUi.friendlyError(e), Tone.ERROR); }
+			catch (Exception e) { organizerError("Couldn't open event. ", e); }
 		});
 	}
 
@@ -1146,7 +1145,7 @@ public class TsgHubPlugin extends Plugin
 				JsonObject response = organizerRequest("GET", "/v1/managed-events", credential, null);
 				SwingUtilities.invokeLater(() -> panel.setManagedEvents(response.getAsJsonArray("events")));
 			}
-			catch (Exception e) { organizerStatus("Couldn't load events. " + TsgHubUi.friendlyError(e), Tone.ERROR); }
+			catch (Exception e) { organizerError("Couldn't load events. ", e); }
 		});
 	}
 
@@ -1248,7 +1247,7 @@ public class TsgHubPlugin extends Plugin
 
 	private void organizerFailed(Exception e, String failure, Consumer<String> onError)
 	{
-		if (onError == null) organizerStatus(failure + TsgHubUi.friendlyError(e), Tone.ERROR);
+		if (onError == null) organizerError(failure, e);
 		else
 		{
 			onError.accept(TsgHubUi.friendlyError(e));
@@ -1384,15 +1383,11 @@ public class TsgHubPlugin extends Plugin
 
 	private void forgetEvent(String eventId)
 	{
-		TsgHubSession.set("organizerToken:" + eventId, "");
-		TsgHubSession.set("organizerName:" + eventId, "");
-		TsgHubSession.set("memberToken:" + eventId, "");
-		TsgHubSession.set("memberName:" + eventId, "");
-		if (eventId.equals(TsgHubSession.get("organizerEventId"))) TsgHubSession.set("organizerEventId", "");
+		TsgHubSession.clear("organizerToken:" + eventId, "organizerName:" + eventId, "memberToken:" + eventId, "memberName:" + eventId);
+		if (eventId.equals(TsgHubSession.get("organizerEventId"))) TsgHubSession.clear("organizerEventId");
 		if (eventId.equals(TsgHubSession.get("eventId")))
 		{
-			TsgHubSession.set("token", "");
-			TsgHubSession.set("eventId", "");
+			TsgHubSession.clear("token", "eventId");
 			clearTaskCache();
 			SwingUtilities.invokeLater(() -> sidebar.closeBoard());
 		}
@@ -1441,7 +1436,7 @@ public class TsgHubPlugin extends Plugin
 					else panel.showEvent(event);
 				});
 			}
-			catch (Exception e) { organizerStatus("Couldn't refresh the event. " + TsgHubUi.friendlyError(e), Tone.ERROR); }
+			catch (Exception e) { organizerError("Couldn't refresh the event. ", e); }
 		});
 	}
 
@@ -1479,7 +1474,7 @@ public class TsgHubPlugin extends Plugin
 			}
 			catch (RuntimeException e)
 			{
-				organizerStatus("Item search failed. " + TsgHubUi.friendlyError(e), Tone.ERROR);
+				organizerError("Item search failed. ", e);
 				SwingUtilities.invokeLater(() -> callback.accept(Collections.emptyList()));
 				return;
 			}
@@ -1497,7 +1492,7 @@ public class TsgHubPlugin extends Plugin
 						if (suggestions.size() >= 30) break;
 					}
 				}
-				catch (RuntimeException e) { organizerStatus("Item search failed. " + TsgHubUi.friendlyError(e), Tone.ERROR); }
+				catch (RuntimeException e) { organizerError("Item search failed. ", e); }
 				List<ItemSuggestion> result = suggestions;
 				SwingUtilities.invokeLater(() -> callback.accept(result));
 			});
@@ -1893,14 +1888,14 @@ public class TsgHubPlugin extends Plugin
 			catch (Exception e)
 			{
 				if (onFailure != null) onFailure.run();
-				memberStatus(failure + TsgHubUi.friendlyError(e), Tone.ERROR);
+				memberError(failure, e);
 			}
 		});
 	}
 
 	private void pollTeamNotifications()
 	{
-		if (!isInHubClan() || !config.dataSharingOptIn() || executor == null || executor.isShutdown()) return;
+		if (!sharingInClan() || executor == null || executor.isShutdown()) return;
 		String token = TsgHubSession.get("token");
 		String eventId = TsgHubSession.get("eventId");
 		if (token.isEmpty() || eventId.isEmpty()) return;
@@ -1973,7 +1968,7 @@ public class TsgHubPlugin extends Plugin
 		catch (Exception e)
 		{
 			attemptedXpClaims.remove(key);
-			memberStatus("Progress sync paused. " + TsgHubUi.friendlyError(e), Tone.ERROR);
+			memberError("Progress sync paused. ", e);
 		}
 	}
 
@@ -2050,6 +2045,16 @@ public class TsgHubPlugin extends Plugin
 	private void memberStatus(String message, Tone tone)
 	{
 		SwingUtilities.invokeLater(() -> { if (sidebar != null) sidebar.setStatus(message, tone); });
+	}
+
+	private void memberError(String failure, Exception e)
+	{
+		memberStatus(failure + TsgHubUi.friendlyError(e), Tone.ERROR);
+	}
+
+	private void organizerError(String failure, Exception e)
+	{
+		organizerStatus(failure + TsgHubUi.friendlyError(e), Tone.ERROR);
 	}
 
 	private void organizerStatus(String message, Tone tone)
