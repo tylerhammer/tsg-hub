@@ -1129,7 +1129,7 @@ public class TsgHubPlugin extends Plugin
 		executor.submit(() -> {
 			try
 			{
-				JsonObject event = organizerRequest("GET", "/v1/events/" + eventId.trim() + "/organizer", organizerCredential(eventId.trim()), null);
+				JsonObject event = organizerEvent(eventId.trim());
 				SwingUtilities.invokeLater(() -> panel.openOrganizerEvent(event));
 				organizerStatus("", Tone.INFO);
 			}
@@ -1194,7 +1194,7 @@ public class TsgHubPlugin extends Plugin
 				loadManagedEvents();
 				loadClanEvents();
 			}
-			catch (Exception e) { eventFormFailed(TsgHubUi.friendlyError(e)); organizerStatus("", Tone.INFO); }
+			catch (Exception e) { organizerFailed(e, null, this::eventFormFailed); }
 		});
 	}
 
@@ -1213,19 +1213,7 @@ public class TsgHubPlugin extends Plugin
 		body.addProperty("hidden", hidden);
 		if (typeConfig != null) body.add("config", typeConfig);
 		body.add("prizes", prizes);
-		String credential = organizerCredential(eventId);
-		organizerStatus("Saving...", Tone.INFO);
-		executor.submit(() -> {
-			try
-			{
-				organizerRequest("PATCH", "/v1/events/" + eventId, credential, body);
-				organizerStatus("Event saved.", Tone.SUCCESS);
-				refreshOrganizerEvent(true);
-				loadManagedEvents();
-				loadClanEvents();
-			}
-			catch (Exception e) { eventFormFailed(TsgHubUi.friendlyError(e)); organizerStatus("", Tone.INFO); }
-		});
+		eventAction(eventId, "PATCH", "", body, "Saving...", "Event saved.", null, () -> refreshOrganizerEvent(true));
 	}
 
 	void publishEvent(JsonObject event)
@@ -1237,36 +1225,39 @@ public class TsgHubPlugin extends Plugin
 		if (startsAt == null) { organizerStatus("Couldn't publish. The event has no start time.", Tone.ERROR); return; }
 		addEventTimes(body, startsAt, TsgHubUi.eventEnd(event));
 		body.addProperty("hidden", false);
-		String credential = organizerCredential(eventId);
-		organizerStatus("Publishing...", Tone.INFO);
-		executor.submit(() -> {
-			try
-			{
-				organizerRequest("PATCH", "/v1/events/" + eventId, credential, body);
-				organizerStatus("Event published. Players can see it now.", Tone.SUCCESS);
-				refreshOrganizerEvent(true);
-				loadManagedEvents();
-				loadClanEvents();
-			}
-			catch (Exception e) { organizerStatus("Couldn't publish. " + TsgHubUi.friendlyError(e), Tone.ERROR); }
-		});
+		eventAction(eventId, "PATCH", "", body, "Publishing...", "Event published. Players can see it now.", "Couldn't publish. ", () -> refreshOrganizerEvent(true));
 	}
 
 	void endEvent(String eventId)
 	{
+		eventAction(eventId, "POST", "/end", null, "Ending event...", "Event ended.", "Couldn't end the event. ", () -> refreshOrganizerEvent(true));
+	}
+
+	private void eventAction(String eventId, String method, String suffix, JsonObject body, String pending, String success, String failure, Runnable done)
+	{
 		String credential = organizerCredential(eventId);
-		organizerStatus("Ending event...", Tone.INFO);
+		organizerStatus(pending, Tone.INFO);
 		executor.submit(() -> {
 			try
 			{
-				organizerRequest("POST", "/v1/events/" + eventId + "/end", credential, null);
-				organizerStatus("Event ended.", Tone.SUCCESS);
-				refreshOrganizerEvent(true);
+				organizerRequest(method, "/v1/events/" + eventId + suffix, credential, body);
+				done.run();
+				organizerStatus(success, Tone.SUCCESS);
 				loadManagedEvents();
 				loadClanEvents();
 			}
-			catch (Exception e) { organizerStatus("Couldn't end the event. " + TsgHubUi.friendlyError(e), Tone.ERROR); }
+			catch (Exception e) { organizerFailed(e, failure, failure == null ? this::eventFormFailed : null); }
 		});
+	}
+
+	private void organizerFailed(Exception e, String failure, Consumer<String> onError)
+	{
+		if (onError == null) organizerStatus(failure + TsgHubUi.friendlyError(e), Tone.ERROR);
+		else
+		{
+			onError.accept(TsgHubUi.friendlyError(e));
+			organizerStatus("", Tone.INFO);
+		}
 	}
 
 	private void eventFormFailed(String message)
@@ -1395,19 +1386,9 @@ public class TsgHubPlugin extends Plugin
 
 	void deleteEvent(String eventId)
 	{
-		String credential = organizerCredential(eventId);
-		organizerStatus("Deleting event...", Tone.INFO);
-		executor.submit(() -> {
-			try
-			{
-				organizerRequest("DELETE", "/v1/events/" + eventId, credential, null);
-				forgetEvent(eventId);
-				SwingUtilities.invokeLater(() -> panel.eventDeleted(eventId));
-				organizerStatus("Event deleted.", Tone.SUCCESS);
-				loadManagedEvents();
-				loadClanEvents();
-			}
-			catch (Exception e) { organizerStatus("Couldn't delete the event. " + TsgHubUi.friendlyError(e), Tone.ERROR); }
+		eventAction(eventId, "DELETE", "", null, "Deleting event...", "Event deleted.", "Couldn't delete the event. ", () -> {
+			forgetEvent(eventId);
+			SwingUtilities.invokeLater(() -> panel.eventDeleted(eventId));
 		});
 	}
 
@@ -1464,7 +1445,7 @@ public class TsgHubPlugin extends Plugin
 		executor.submit(() -> {
 			try
 			{
-				JsonObject event = organizerRequest("GET", "/v1/events/" + eventId + "/organizer", organizerCredential(eventId), null);
+				JsonObject event = organizerEvent(eventId);
 				SwingUtilities.invokeLater(() -> {
 					if (open) panel.openOrganizerEvent(event);
 					else panel.showEvent(event);
@@ -1482,7 +1463,7 @@ public class TsgHubPlugin extends Plugin
 		executor.submit(() -> {
 			try
 			{
-				JsonObject event = organizerRequest("GET", "/v1/events/" + eventId + "/organizer", organizerCredential(eventId), null);
+				JsonObject event = organizerEvent(eventId);
 				SwingUtilities.invokeLater(() -> {
 					if (!eventId.equals(getOrganizerEventId())) return;
 					if (panel.editingText()) organizerRefreshPending = true;
@@ -2146,11 +2127,7 @@ public class TsgHubPlugin extends Plugin
 				organizerStatus(success, Tone.SUCCESS);
 				callback.accept(result);
 			}
-			catch (Exception e)
-			{
-				if (onError != null) { onError.accept(TsgHubUi.friendlyError(e)); organizerStatus("", Tone.INFO); }
-				else organizerStatus(TsgHubUi.friendlyError(e), Tone.ERROR);
-			}
+			catch (Exception e) { organizerFailed(e, "", onError); }
 		});
 	}
 
@@ -2162,6 +2139,11 @@ public class TsgHubPlugin extends Plugin
 			if (e.status == 401 && !credential.isEmpty() && credential.equals(adminKey())) keyRejected(credential);
 			throw e;
 		}
+	}
+
+	private JsonObject organizerEvent(String eventId) throws Exception
+	{
+		return organizerRequest("GET", "/v1/events/" + eventId + "/organizer", organizerCredential(eventId), null);
 	}
 
 	private String organizerCredential(String eventId)
