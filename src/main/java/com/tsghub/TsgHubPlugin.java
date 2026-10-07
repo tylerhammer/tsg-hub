@@ -41,6 +41,8 @@ import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.ScriptPostFired;
+import net.runelite.api.events.WidgetClosed;
+import net.runelite.api.events.WidgetLoaded;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.Item;
 import net.runelite.api.NPC;
@@ -1569,6 +1571,18 @@ public class TsgHubPlugin extends Plugin
 			if (!attemptedXpClaims.add(key)) continue;
 			executor.submit(() -> submitXpClaim(eventId, task, skill, xp, key));
 		}
+	}
+
+	@net.runelite.client.eventbus.Subscribe
+	public void onWidgetLoaded(WidgetLoaded event)
+	{
+		if (competitions != null) competitions.onInterfaceOpened(event.getGroupId());
+	}
+
+	@net.runelite.client.eventbus.Subscribe
+	public void onWidgetClosed(WidgetClosed event)
+	{
+		if (competitions != null) competitions.onInterfaceClosed(event.getGroupId());
 	}
 
 	@net.runelite.client.eventbus.Subscribe
