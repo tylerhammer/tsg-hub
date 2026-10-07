@@ -58,7 +58,6 @@ import javax.swing.event.DocumentListener;
 import javax.swing.text.JTextComponent;
 import net.runelite.api.Skill;
 import net.runelite.api.clan.ClanRank;
-import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.components.materialtabs.MaterialTab;
 import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
 import net.runelite.client.util.AsyncBufferedImage;
@@ -97,7 +96,7 @@ final class TsgHubPanel extends JPanel
 	private final JPanel detail = new JPanel(detailLayout);
 	private final StatusLine status = new StatusLine(DETAIL_TEXT_W);
 
-	private final JLabel eventTitle = label(" ", TEXT, FontManager.getRunescapeBoldFont().deriveFont(20f));
+	private final JLabel eventTitle = label(" ", TEXT, boldFont().deriveFont(20f));
 	private final JLabel eventMeta = caption(" ");
 	private final JLabel eventSchedule = caption(" ");
 	private final WidthTrackingPanel teamsTab = new WidthTrackingPanel();
@@ -140,7 +139,7 @@ final class TsgHubPanel extends JPanel
 	private final JLabel eventTypeHint = caption("");
 	private JPanel skillRow, bossRow2, signalRow2, partyRows, hideScoresRow;
 	private JLabel endTimeCaption;
-	private final JLabel eventFormError = label("", TsgHubUi.ERROR, FontManager.getRunescapeSmallFont());
+	private final JLabel eventFormError = label("", TsgHubUi.ERROR, smallFont());
 	private final JButton eventFormSave = primaryButton("Create event");
 	private boolean editingEvent;
 
@@ -172,7 +171,7 @@ final class TsgHubPanel extends JPanel
 	private final JTextField targetCount = new JTextField("1");
 	private final JLabel targetCountCaption = caption("How many");
 	private final JTextField taskPoints = new JTextField("1");
-	private final JLabel taskFormError = label("", TsgHubUi.ERROR, FontManager.getRunescapeSmallFont());
+	private final JLabel taskFormError = label("", TsgHubUi.ERROR, smallFont());
 	private final JButton taskSave = primaryButton("Add task");
 	private final Map<Integer, ImageIcon> itemIcons = new HashMap<>();
 	private final Timer searchDebounce = new Timer(300, e -> runItemSearch());
@@ -221,7 +220,7 @@ final class TsgHubPanel extends JPanel
 
 		JButton refresh = iconButton(new RefreshIcon(), "Refresh events");
 		refresh.addActionListener(e -> plugin.loadManagedEvents());
-		JPanel header = row(label("Events", TEXT, FontManager.getRunescapeBoldFont()), refresh);
+		JPanel header = row(boldLabel("Events"), refresh);
 
 		JButton create = primaryButton("New event");
 		create.addActionListener(e -> beginCreateEvent());
@@ -293,11 +292,11 @@ final class TsgHubPanel extends JPanel
 
 		hideScoresRow = stack();
 		hideScoresRow.add(plain(eventHideScores, TEXT));
-		hideScoresRow.add(wrapped("Players still see their own progress, but not other players' or teams' scores and ranks. You can change this any time.", MUTED, FontManager.getRunescapeSmallFont(), 480));
+		hideScoresRow.add(wrapped("Players still see their own progress, but not other players' or teams' scores and ranks. You can change this any time.", MUTED, smallFont(), 480));
 		form.add(hideScoresRow);
 		form.add(Box.createVerticalStrut(6));
 		form.add(plain(eventHidden, TEXT));
-		form.add(wrapped("Only admins can see and join it, so you can set it up and test it first. Publish it when it's ready. Players who already joined keep access.", MUTED, FontManager.getRunescapeSmallFont(), 480));
+		form.add(wrapped("Only admins can see and join it, so you can set it up and test it first. Publish it when it's ready. Players who already joined keep access.", MUTED, smallFont(), 480));
 		form.add(Box.createVerticalStrut(10));
 		eventType.addActionListener(e -> {
 			if (!editingEvent) defaultEventEnd();
@@ -667,7 +666,7 @@ final class TsgHubPanel extends JPanel
 		}
 		if (sorted.isEmpty())
 		{
-			eventList.add(wrapped("No events yet. Create one to get started.", MUTED, FontManager.getRunescapeSmallFont(), LIST_W - 30));
+			eventList.add(wrapped("No events yet. Create one to get started.", MUTED, smallFont(), LIST_W - 30));
 		}
 		eventList.revalidate();
 		eventList.repaint();
@@ -874,7 +873,7 @@ final class TsgHubPanel extends JPanel
 
 		if (ranked.isEmpty())
 		{
-			teamsTab.add(wrapped("No teams yet. Add your first team below, then share its code with the players on it.", MUTED, FontManager.getRunescapeFont(), DETAIL_TEXT_W));
+			teamsTab.add(wrapped("No teams yet. Add your first team below, then share its code with the players on it.", MUTED, plainFont(), DETAIL_TEXT_W));
 			teamsTab.add(Box.createVerticalStrut(8));
 		}
 		for (int i = 0; i < ranked.size(); i++)
@@ -886,9 +885,9 @@ final class TsgHubPanel extends JPanel
 
 			JPanel card = card();
 			card.setLayout(new BorderLayout(10, 4));
-			card.add(rankLabel(i + 1, FontManager.getRunescapeBoldFont().deriveFont(18f), 20), BorderLayout.WEST);
+			card.add(rankLabel(i + 1, boldFont().deriveFont(18f), 20), BorderLayout.WEST);
 			JPanel text = stack();
-			text.add(label(str(team, "name"), TEXT, FontManager.getRunescapeBoldFont()));
+			text.add(boldLabel(str(team, "name")));
 			text.add(caption(integer(score, "points", 0) + " pts · " + integer(score, "completedTasks", 0) + "/" + totalTasks + " tasks · "
 				+ members + (members == 1 ? " member" : " members")));
 			card.add(text, BorderLayout.CENTER);
@@ -946,7 +945,7 @@ final class TsgHubPanel extends JPanel
 		teamsTab.add(back);
 		teamsTab.add(Box.createVerticalStrut(8));
 		JsonObject score = scoreFor(array(currentEvent, "teamScores"), teamId);
-		teamsTab.add(label(str(team, "name"), TEXT, FontManager.getRunescapeBoldFont().deriveFont(18f)));
+		teamsTab.add(label(str(team, "name"), TEXT, boldFont().deriveFont(18f)));
 		String code = str(team, "inviteCode");
 		teamsTab.add(caption(integer(score, "points", 0) + " pts" + (code.isEmpty() ? "" : " · code " + code)));
 
@@ -955,12 +954,12 @@ final class TsgHubPanel extends JPanel
 		for (JsonObject member : objects(array(currentEvent, "members")))
 			if (str(member, "teamId").equals(teamId)) roster.add(str(member, "displayName"));
 		roster.sort(String.CASE_INSENSITIVE_ORDER);
-		teamsTab.add(wrapped(roster.isEmpty() ? "Nobody has joined yet. Share the team code above." : String.join(", ", roster), TEXT, FontManager.getRunescapeFont(), DETAIL_TEXT_W));
+		teamsTab.add(wrapped(roster.isEmpty() ? "Nobody has joined yet. Share the team code above." : String.join(", ", roster), TEXT, plainFont(), DETAIL_TEXT_W));
 
 		teamsTab.add(sectionTitle("Task progress"));
 		JsonArray progressRows = array(score, "tasks");
 		JsonArray tasks = array(currentEvent, "tasks");
-		if (tasks.size() == 0) teamsTab.add(label("No tasks yet.", MUTED, FontManager.getRunescapeFont()));
+		if (tasks.size() == 0) teamsTab.add(label("No tasks yet.", MUTED, plainFont()));
 		for (JsonObject task : objects(tasks))
 		{
 			String taskId = str(task, "id");
@@ -969,17 +968,16 @@ final class TsgHubPanel extends JPanel
 
 			JPanel card = card();
 			JPanel text = stack();
-			JLabel name = label(str(task, "title"), completed ? MUTED : TEXT, FontManager.getRunescapeBoldFont());
+			JLabel name = label(str(task, "title"), completed ? MUTED : TEXT, boldFont());
 			if (completed) name.setIcon(new CheckIcon());
 			text.add(name);
-			Font small = FontManager.getRunescapeSmallFont();
 			String progressScope = str(progress, "scope");
 			boolean perMember = "individual".equals(progressScope) || "solo".equals(progressScope);
 			if (completed)
 			{
 				String by = str(progress, "completedBy");
 				boolean creditedToOrganizer = bool(progress, "override") && !bool(progress, "overrideCredited");
-				text.add(label(completedLine(progress), SUCCESS, small));
+				text.add(label(completedLine(progress), SUCCESS, smallFont()));
 				JsonObject manual = overrideClaim(teamId, taskId);
 				if (manual != null)
 				{
@@ -987,11 +985,11 @@ final class TsgHubPanel extends JPanel
 					String markedBy = str(evidence, "markedBy").isEmpty() ? str(manual, "displayName") : str(evidence, "markedBy");
 					String how = !creditedToOrganizer && markedBy.equalsIgnoreCase(by) ? "Marked complete manually" : "Marked complete by " + markedBy;
 					String note = str(evidence, "note");
-					text.add(wrapped(how + (note.isEmpty() ? "" : " · Reason: " + note), WARNING, small, DETAIL_TEXT_W - 140));
+					text.add(wrapped(how + (note.isEmpty() ? "" : " · Reason: " + note), WARNING, smallFont(), DETAIL_TEXT_W - 140));
 				}
 				if (!perMember && !contributorsText(progress, ", ", 12).isEmpty())
 				{
-					text.add(wrapped("Contributors: " + contributorsText(progress, ", ", 12), MUTED, small, DETAIL_TEXT_W - 140));
+					text.add(wrapped("Contributors: " + contributorsText(progress, ", ", 12), MUTED, smallFont(), DETAIL_TEXT_W - 140));
 				}
 			}
 			else if (perMember)
@@ -1016,7 +1014,7 @@ final class TsgHubPanel extends JPanel
 						String line = set.name + " " + set.have + "/" + set.target
 							+ (set.found.isEmpty() ? "" : " · have " + String.join(", ", set.found))
 							+ (set.needed.isEmpty() ? "" : " · need " + String.join(", ", set.needed));
-						text.add(wrapped(line, MUTED, small, DETAIL_TEXT_W - 140));
+						text.add(wrapped(line, MUTED, smallFont(), DETAIL_TEXT_W - 140));
 						if (set.have == 0) break;
 					}
 					int notStarted = sets.size() - Math.max(1, started);
@@ -1026,7 +1024,7 @@ final class TsgHubPanel extends JPanel
 				{
 					text.add(caption(progressText(progress)));
 					String amounts = contributorsText(progress, ", ", 12);
-					if (!amounts.isEmpty()) text.add(wrapped("Contributors: " + amounts, MUTED, small, DETAIL_TEXT_W - 140));
+					if (!amounts.isEmpty()) text.add(wrapped("Contributors: " + amounts, MUTED, smallFont(), DETAIL_TEXT_W - 140));
 				}
 			}
 			card.add(text, BorderLayout.CENTER);
@@ -1116,7 +1114,7 @@ final class TsgHubPanel extends JPanel
 			: participants + " signed up · counting starts " + eventStartWhen(currentEvent)));
 		leaderboardTab.add(Box.createVerticalStrut(8));
 		JsonArray rows = array(currentEvent, "leaderboard");
-		if (rows.size() == 0) leaderboardTab.add(wrapped("Nobody has joined yet. Players join with one click from the TSG Hub sidebar.", MUTED, FontManager.getRunescapeFont(), DETAIL_TEXT_W));
+		if (rows.size() == 0) leaderboardTab.add(wrapped("Nobody has joined yet. Players join with one click from the TSG Hub sidebar.", MUTED, plainFont(), DETAIL_TEXT_W));
 		for (int i = 0; i < rows.size(); i++)
 		{
 			JsonObject row = rows.get(i).getAsJsonObject();
@@ -1125,14 +1123,14 @@ final class TsgHubPanel extends JPanel
 			card.setLayout(new BorderLayout(10, 0));
 			if (started)
 			{
-				card.add(rankLabel(rank, FontManager.getRunescapeBoldFont(), 28), BorderLayout.WEST);
+				card.add(rankLabel(rank, boldFont(), 28), BorderLayout.WEST);
 			}
-			card.add(label(str(row, "displayName"), TEXT, FontManager.getRunescapeBoldFont()), BorderLayout.CENTER);
+			card.add(boldLabel(str(row, "displayName")), BorderLayout.CENTER);
 			if (started)
 			{
 				boolean tracking = bool(row, "tracking");
 				String gained = tracking ? "+" + String.format("%,d", integer(row, "gained", 0)) + " " + unit : "Waiting for first " + ("XP".equals(unit) ? "XP" : "kill");
-				card.add(label(gained, !tracking ? MUTED : rank == 1 ? ACCENT : TEXT, tracking ? FontManager.getRunescapeBoldFont() : FontManager.getRunescapeSmallFont()), BorderLayout.EAST);
+				card.add(label(gained, !tracking ? MUTED : rank == 1 ? ACCENT : TEXT, tracking ? boldFont() : smallFont()), BorderLayout.EAST);
 			}
 			leaderboardTab.add(fitHeight(card));
 			leaderboardTab.add(Box.createVerticalStrut(6));
@@ -1145,15 +1143,14 @@ final class TsgHubPanel extends JPanel
 		detailsTab.removeAll();
 		if (!"drop-party".equals(str(currentEvent, "type"))) return;
 		JsonObject config = eventConfig(currentEvent);
-		Font font = FontManager.getRunescapeFont();
 		String countdown = capitalize(eventRelative(currentEvent));
-		if (!countdown.isEmpty()) detailsTab.add(label(countdown, "Ended".equals(countdown) ? MUTED : SUCCESS, FontManager.getRunescapeBoldFont()));
+		if (!countdown.isEmpty()) detailsTab.add(label(countdown, "Ended".equals(countdown) ? MUTED : SUCCESS, boldFont()));
 		detailsTab.add(Box.createVerticalStrut(6));
-		detailsTab.add(wrapped("When: " + eventWhen(currentEvent), TEXT, font, DETAIL_TEXT_W));
-		if (integer(config, "world", 0) > 0) detailsTab.add(label("World: " + integer(config, "world", 0), TEXT, font));
-		if (!str(config, "location").isEmpty()) detailsTab.add(label("Where: " + str(config, "location"), TEXT, font));
-		if (!str(config, "host").isEmpty()) detailsTab.add(label("Host: " + str(config, "host"), TEXT, font));
-		if (!str(config, "notes").isEmpty()) detailsTab.add(wrapped("Notes: " + str(config, "notes"), MUTED, font, DETAIL_TEXT_W));
+		detailsTab.add(wrapped("When: " + eventWhen(currentEvent), TEXT, plainFont(), DETAIL_TEXT_W));
+		if (integer(config, "world", 0) > 0) detailsTab.add(label("World: " + integer(config, "world", 0), TEXT, plainFont()));
+		if (!str(config, "location").isEmpty()) detailsTab.add(label("Where: " + str(config, "location"), TEXT, plainFont()));
+		if (!str(config, "host").isEmpty()) detailsTab.add(label("Host: " + str(config, "host"), TEXT, plainFont()));
+		if (!str(config, "notes").isEmpty()) detailsTab.add(wrapped("Notes: " + str(config, "notes"), MUTED, plainFont(), DETAIL_TEXT_W));
 		detailsTab.add(Box.createVerticalStrut(10));
 		detailsTab.add(caption("Players see this in the TSG Hub sidebar. Use Edit event to change it."));
 		refresh(detailsTab);
@@ -1172,13 +1169,13 @@ final class TsgHubPanel extends JPanel
 		tasksTab.add(Box.createVerticalStrut(8));
 		if (tasks.size() == 0)
 		{
-			tasksTab.add(wrapped("No tasks yet. Choose New task to add the first one.", MUTED, FontManager.getRunescapeFont(), DETAIL_TEXT_W));
+			tasksTab.add(wrapped("No tasks yet. Choose New task to add the first one.", MUTED, plainFont(), DETAIL_TEXT_W));
 		}
 		for (JsonObject task : objects(tasks))
 		{
 			JPanel card = card();
 			JPanel text = stack();
-			text.add(label(str(task, "title"), TEXT, FontManager.getRunescapeBoldFont()));
+			text.add(boldLabel(str(task, "title")));
 			JPanel meta = panel(new FlowLayout(FlowLayout.LEFT, 4, 2));
 			meta.add(badge(integer(task, "points", 1) + " pts", ACCENT));
 			meta.add(badge(taskTypeLabel(task), MUTED));
@@ -1188,7 +1185,7 @@ final class TsgHubPanel extends JPanel
 			if (!summary.isEmpty()) meta.add(caption(summary));
 			text.add(meta);
 			String description = str(task, "description");
-			if (!description.isEmpty()) text.add(wrapped(description, MUTED, FontManager.getRunescapeSmallFont(), DETAIL_TEXT_W - 80));
+			if (!description.isEmpty()) text.add(wrapped(description, MUTED, smallFont(), DETAIL_TEXT_W - 80));
 			card.add(text, BorderLayout.CENTER);
 			JButton edit = button("Edit");
 			edit.addActionListener(e -> beginTaskEdit(task));
@@ -1247,14 +1244,14 @@ final class TsgHubPanel extends JPanel
 			JsonObject team = findTeam(str(claim, "teamId"));
 			JPanel card = card();
 			JPanel text = stack();
-			text.add(label(taskTitle, TEXT, FontManager.getRunescapeBoldFont()));
+			text.add(boldLabel(taskTitle));
 			text.add(caption(str(claim, "displayName") + (team == null ? "" : " · " + str(team, "name"))));
 			JsonObject evidence = object(claim, "evidence");
 			String note = str(evidence, "note");
 			if (!note.isEmpty())
 			{
 				text.add(Box.createVerticalStrut(3));
-				text.add(wrapped(note, TEXT, FontManager.getRunescapeFont(), DETAIL_TEXT_W - 150));
+				text.add(wrapped(note, TEXT, plainFont(), DETAIL_TEXT_W - 150));
 			}
 			card.add(text, BorderLayout.CENTER);
 			JPanel actions = panel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
@@ -1283,7 +1280,7 @@ final class TsgHubPanel extends JPanel
 		}
 		if (pending == 0)
 		{
-			claimsTab.add(wrapped("Nothing to review. Proof submitted for manual tasks shows up here.", MUTED, FontManager.getRunescapeFont(), DETAIL_TEXT_W));
+			claimsTab.add(wrapped("Nothing to review. Proof submitted for manual tasks shows up here.", MUTED, plainFont(), DETAIL_TEXT_W));
 		}
 		claimsTabButton.setText(pending == 0 ? "Claims" : "Claims (" + pending + ")");
 		refresh(claimsTab);
@@ -1769,7 +1766,7 @@ final class TsgHubPanel extends JPanel
 			BorderFactory.createEmptyBorder(6, 8, 6, 6)));
 		JPanel header = row();
 		String name = TsgHubItemSets.nameFor(ids(group));
-		header.add(label((name.isEmpty() ? "Set " + (index + 1) : name) + "  ", TEXT, FontManager.getRunescapeBoldFont()), BorderLayout.WEST);
+		header.add(boldLabel((name.isEmpty() ? "Set " + (index + 1) : name) + "  "), BorderLayout.WEST);
 		header.add(caption(group.size() == 1 ? "1 piece" : group.size() + " pieces"), BorderLayout.CENTER);
 		if (itemGroups.size() > 1)
 		{
@@ -1803,7 +1800,7 @@ final class TsgHubPanel extends JPanel
 		JPanel row = new JPanel(new BorderLayout(4, 0));
 		row.setBackground(BACKGROUND);
 		row.setBorder(BorderFactory.createEmptyBorder(2, 6, 2, 2));
-		JLabel name = label(item.name, TEXT, FontManager.getRunescapeFont());
+		JLabel name = label(item.name, TEXT, plainFont());
 		name.setIcon(iconFor(item.id, selectedItemsPanel));
 		row.add(name, BorderLayout.CENTER);
 		JButton remove = iconButton(new RemoveIcon(), "Remove " + item.name);

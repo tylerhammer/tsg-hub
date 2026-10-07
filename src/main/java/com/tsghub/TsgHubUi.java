@@ -103,6 +103,21 @@ final class TsgHubUi
 		return tone == Tone.ERROR ? ERROR : tone == Tone.SUCCESS ? SUCCESS : MUTED;
 	}
 
+	static Font smallFont()
+	{
+		return FontManager.getRunescapeSmallFont();
+	}
+
+	static Font boldFont()
+	{
+		return FontManager.getRunescapeBoldFont();
+	}
+
+	static Font plainFont()
+	{
+		return FontManager.getRunescapeFont();
+	}
+
 	static String escape(String text)
 	{
 		return text == null ? "" : text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
@@ -128,9 +143,14 @@ final class TsgHubUi
 		return label(html(escape(text), widthPx), color, font);
 	}
 
+	static JLabel boldLabel(String text)
+	{
+		return label(text, TEXT, boldFont());
+	}
+
 	static JLabel caption(String text)
 	{
-		return label(text, MUTED, FontManager.getRunescapeSmallFont());
+		return label(text, MUTED, smallFont());
 	}
 
 	static JLabel listHeading(String text, boolean first)
@@ -163,9 +183,9 @@ final class TsgHubUi
 		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 		panel.setOpaque(false);
 		panel.setBorder(BorderFactory.createEmptyBorder(40, 0, 20, 0));
-		JLabel title = label(heading, TEXT, FontManager.getRunescapeBoldFont());
+		JLabel title = boldLabel(heading);
 		title.setAlignmentX(Component.CENTER_ALIGNMENT);
-		JLabel text = label(html("<div style='text-align:center'>" + escape(body) + "</div>", widthPx), MUTED, FontManager.getRunescapeSmallFont());
+		JLabel text = caption(html("<div style='text-align:center'>" + escape(body) + "</div>", widthPx));
 		text.setAlignmentX(Component.CENTER_ALIGNMENT);
 		text.setHorizontalAlignment(JLabel.CENTER);
 		panel.add(title);
@@ -178,14 +198,14 @@ final class TsgHubUi
 
 	static JLabel sectionTitle(String text)
 	{
-		JLabel label = label(text, ACCENT, FontManager.getRunescapeBoldFont());
+		JLabel label = label(text, ACCENT, boldFont());
 		label.setBorder(BorderFactory.createEmptyBorder(10, 0, 5, 0));
 		return label;
 	}
 
 	static JLabel badge(String text, Color color)
 	{
-		JLabel label = label(text, color, FontManager.getRunescapeSmallFont());
+		JLabel label = label(text, color, smallFont());
 		label.setBorder(BorderFactory.createCompoundBorder(
 			BorderFactory.createLineBorder(color.darker()),
 			BorderFactory.createEmptyBorder(0, 4, 0, 4)));
@@ -247,12 +267,11 @@ final class TsgHubUi
 
 	static JPanel eventLines(JsonObject event, LongFunction<AsyncBufferedImage> coins)
 	{
-		Font small = FontManager.getRunescapeSmallFont();
-		JPanel top = row(shrinkable(label(eventName(event), TEXT, FontManager.getRunescapeBoldFont())),
-			label(eventCountdown(event), "active".equals(str(event, "status")) ? SUCCESS : MUTED, small));
+		JPanel top = row(shrinkable(boldLabel(eventName(event))),
+			label(eventCountdown(event), "active".equals(str(event, "status")) ? SUCCESS : MUTED, smallFont()));
 		JPanel extras = panel(new FlowLayout(FlowLayout.RIGHT, 3, 0));
 		if (bool(event, "hidden")) extras.add(badge("Hidden", MUTED));
-		JLabel prize = prizeLabel(event, small, coins);
+		JLabel prize = prizeLabel(event, smallFont(), coins);
 		if (prize != null) extras.add(prize);
 		return twoLines(top, row(shrinkable(caption(eventDetail(event))), extras));
 	}
@@ -408,7 +427,7 @@ final class TsgHubUi
 		{
 			this.widthPx = widthPx;
 			clear.setRepeats(false);
-			setFont(FontManager.getRunescapeSmallFont());
+			setFont(smallFont());
 			setAlignmentX(Component.LEFT_ALIGNMENT);
 			setBorder(BorderFactory.createEmptyBorder(4, 0, 2, 0));
 			setVisible(false);
