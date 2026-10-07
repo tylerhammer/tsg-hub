@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.tsghub.TsgHubUi.Tone;
 import java.awt.image.BufferedImage;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
@@ -21,6 +22,9 @@ import net.runelite.api.clan.ClanMember;
 import net.runelite.api.clan.ClanSettings;
 import net.runelite.api.clan.ClanTitle;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.api.gameval.DBTableID;
+import net.runelite.api.gameval.VarPlayerID;
+import net.runelite.api.gameval.VarbitID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.game.ChatIconManager;
 
@@ -29,6 +33,7 @@ final class TsgHubPresence
 	static final int REFRESH_SECONDS = 30;
 	private static final long HEARTBEAT_MILLIS = 30_000;
 	private static final long MIN_GAP_MILLIS = 5_000;
+	private static final int SLAYER_BOSS_TARGET = 98;
 
 	private final TsgHubPlugin plugin;
 	private final Client client;
@@ -43,6 +48,7 @@ final class TsgHubPresence
 	private volatile JsonObject listed;
 	private volatile long sentAt;
 	private volatile AreaNames.Area area;
+	private boolean slayerDirty = true;
 
 	TsgHubPresence(TsgHubPlugin plugin, Client client, ClientThread clientThread, ChatIconManager chatIcons, ScheduledExecutorService executor,
 		Supplier<TsgHubApi> api, Supplier<TsgHubSidebarPanel> sidebar, TsgHubSocket socket)
@@ -62,10 +68,16 @@ final class TsgHubPresence
 		activity.onXp(skill, xp, System.currentTimeMillis());
 	}
 
+	void onVarbitChanged(int varp, int varbit)
+	{
+		if (varp == VarPlayerID.SLAYER_COUNT || varp == VarPlayerID.SLAYER_TARGET || varbit == VarbitID.SLAYER_TARGET_BOSSID) slayerDirty = true;
+	}
+
 	void onGameTick()
 	{
 		area = locate();
 		trackOpponents();
+		trackSlayerTask();
 		JsonObject next = snapshot();
 		if (next == null)
 		{
@@ -83,6 +95,7 @@ final class TsgHubPresence
 	{
 		leave();
 		activity.reset();
+		slayerDirty = true;
 	}
 
 	void leave()
@@ -197,6 +210,40 @@ final class TsgHubPresence
 		{
 			if (npc != null && npc.getInteracting() == player) activity.onOpponent(npc.getName(), now);
 		}
+	}
+
+	private void trackSlayerTask()
+	{
+		if (!slayerDirty || client.getGameState() != GameState.LOGGED_IN) return;
+		int remaining = client.getVarpValue(VarPlayerID.SLAYER_COUNT);
+		int target = remaining > 0 ? client.getVarpValue(VarPlayerID.SLAYER_TARGET) : 0;
+		int boss = target == SLAYER_BOSS_TARGET ? client.getVarbitValue(VarbitID.SLAYER_TARGET_BOSSID) : 0;
+		String name = remaining > 0 ? slayerTaskName(target, boss) : null;
+		activity.onSlayerTask(((long) target << 32) | boss, remaining, name, System.currentTimeMillis());
+		slayerDirty = activity.needsSlayerTaskName();
+	}
+
+	private String slayerTaskName(int target, int boss)
+	{
+		Object row;
+		if (target == SLAYER_BOSS_TARGET)
+		{
+			List<Integer> rows = client.getDBRowsByValue(DBTableID.SlayerTaskSublist.ID, DBTableID.SlayerTaskSublist.COL_TASK_SUBTABLE_ID, 0, boss);
+			row = rows.isEmpty() ? null : first(client.getDBTableField(rows.get(0), DBTableID.SlayerTaskSublist.COL_TASK, 0));
+		}
+		else
+		{
+			List<Integer> rows = client.getDBRowsByValue(DBTableID.SlayerTask.ID, DBTableID.SlayerTask.COL_ID, 0, target);
+			row = rows.isEmpty() ? null : rows.get(0);
+		}
+		if (!(row instanceof Integer)) return null;
+		Object name = first(client.getDBTableField((Integer) row, DBTableID.SlayerTask.COL_NAME_UPPERCASE, 0));
+		return name instanceof String && !((String) name).isEmpty() ? (String) name : null;
+	}
+
+	private static Object first(Object[] values)
+	{
+		return values == null || values.length == 0 ? null : values[0];
 	}
 
 	private void send(JsonObject payload, long now)

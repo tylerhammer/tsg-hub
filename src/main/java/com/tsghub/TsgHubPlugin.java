@@ -37,6 +37,7 @@ import net.runelite.api.clan.ClanMember;
 import net.runelite.api.events.ClanChannelChanged;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.StatChanged;
+import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.ItemContainer;
@@ -1493,6 +1494,12 @@ public class TsgHubPlugin extends Plugin
 
 		ItemSuggestion(int id, String name) { this.id = id; this.name = name; }
 		@Override public String toString() { return name; }
+	}
+
+	@net.runelite.client.eventbus.Subscribe
+	public void onVarbitChanged(VarbitChanged event)
+	{
+		if (presence != null) presence.onVarbitChanged(event.getVarpId(), event.getVarbitId());
 	}
 
 	@net.runelite.client.eventbus.Subscribe
