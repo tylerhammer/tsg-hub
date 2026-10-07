@@ -757,12 +757,6 @@ final class TsgHubUi
 		return (started ? "Ends " : "Starts ") + day(at.atZone(ZoneId.systemDefault()), now);
 	}
 
-	static String eventSchedule(JsonObject event)
-	{
-		String relative = eventRelative(event);
-		return (relative.isEmpty() || "ended".equals(relative) ? "" : relative + " · ") + eventWhen(event);
-	}
-
 	static String statusLabel(String status)
 	{
 		if ("active".equals(status)) return "Live";
@@ -1026,17 +1020,6 @@ final class TsgHubUi
 		{
 			g.drawLine(10, 3, 5, 8);
 			g.drawLine(5, 8, 10, 13);
-		}
-	}
-
-	static final class MenuIcon extends HoverIcon
-	{
-		MenuIcon() { super(16); }
-		@Override void paint(Graphics2D g, Component c)
-		{
-			g.fillOval(7, 2, 3, 3);
-			g.fillOval(7, 7, 3, 3);
-			g.fillOval(7, 12, 3, 3);
 		}
 	}
 

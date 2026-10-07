@@ -76,7 +76,6 @@ import net.runelite.client.game.ChatIconManager;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.ItemStack;
 import net.runelite.client.game.SpriteManager;
-import net.runelite.client.input.MouseManager;
 import net.runelite.client.party.PartyService;
 import net.runelite.client.party.WSClient;
 import net.runelite.client.plugins.Plugin;
@@ -85,7 +84,6 @@ import net.runelite.client.plugins.loottracker.LootReceived;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.Overlay;
-import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.ui.overlay.OverlayMenuEntry;
 import net.runelite.client.util.AsyncBufferedImage;
 import net.runelite.client.util.ImageUtil;
@@ -105,8 +103,6 @@ public class TsgHubPlugin extends Plugin
 	@Inject private ConfigManager configManager;
 	@Inject private ClientThread clientThread;
 	@Inject private ClientToolbar clientToolbar;
-	@Inject private OverlayManager overlayManager;
-	@Inject private MouseManager mouseManager;
 	@Inject private OkHttpClient okHttpClient;
 	@Inject private ChatMessageManager chatMessageManager;
 	@Inject private ChatIconManager chatIconManager;
@@ -117,7 +113,6 @@ public class TsgHubPlugin extends Plugin
 	@Inject @Named("developerMode") private boolean developerMode;
 	private TsgHubPanel panel;
 	private TsgHubSidebarPanel sidebar;
-	private TsgHubBoardOverlay boardOverlay;
 	private JFrame hubWindow;
 	private NavigationButton navigationButton;
 	private ScheduledExecutorService executor;
@@ -206,9 +201,6 @@ public class TsgHubPlugin extends Plugin
 		drops = new TsgHubDrops(this, client, clientThread, executor, this::api, () -> sidebar);
 		executor.scheduleAtFixedRate(unlessLive(drops::autoRefresh), TsgHubDrops.REFRESH_SECONDS, TsgHubDrops.REFRESH_SECONDS, TimeUnit.SECONDS);
 		ranks = new TsgHubRanks(this, client, executor, this::api, this::adminKey);
-		boardOverlay = new TsgHubBoardOverlay(client);
-		overlayManager.add(boardOverlay);
-		mouseManager.registerMouseListener(boardOverlay);
 		navigationButton = NavigationButton.builder()
 			.tooltip("TSG Hub")
 			.icon(ImageUtil.loadImageResource(getClass(), "icon.png"))
@@ -240,12 +232,6 @@ public class TsgHubPlugin extends Plugin
 		}
 		// Stay listed across a brief restart, but leave the RuneLite party.
 		if (groups != null && groupTracker != null && groupTracker.isSharing()) partyService.changeParty(null);
-		if (boardOverlay != null)
-		{
-			boardOverlay.setVisible(false);
-			overlayManager.remove(boardOverlay);
-			mouseManager.unregisterMouseListener(boardOverlay);
-		}
 		if (hubWindow != null) SwingUtilities.invokeLater(hubWindow::dispose);
 		if (presence != null) presence.shutDown();
 		if (ranks != null) ranks.shutDown();
@@ -278,22 +264,6 @@ public class TsgHubPlugin extends Plugin
 			loadManagedEvents();
 			syncSocketNow();
 		});
-	}
-
-	void showBoardOverlay()
-	{
-		if (boardOverlay == null) return;
-		if (TsgHubSession.get("token").isEmpty())
-		{
-			memberStatus("Join an event before opening the board overlay.", Tone.ERROR);
-			return;
-		}
-		boardOverlay.setVisible(true);
-	}
-
-	void setBoardOverlayData(JsonObject event, String displayName)
-	{
-		boardOverlay.setEvent(event, TsgHubUi.teamIdFor(event, displayName));
 	}
 
 	@Provides
@@ -594,7 +564,6 @@ public class TsgHubPlugin extends Plugin
 		if (ranks != null) ranks.reset();
 		if (competitions != null) competitions.clear();
 		clearTaskCache();
-		if (boardOverlay != null) boardOverlay.setVisible(false);
 		syncSocketNow();
 		if (detectedPlayerName.isEmpty()) return;
 		sidebarRouted = false;
@@ -680,8 +649,7 @@ public class TsgHubPlugin extends Plugin
 			TsgHubSession.clear("token", "eventId");
 			attemptedXpClaims.clear();
 			clearTaskCache();
-			if (boardOverlay != null) boardOverlay.setVisible(false);
-		}
+			}
 		memberStatus("Disconnected. Rejoin anytime with your team code.", Tone.SUCCESS);
 		SwingUtilities.invokeLater(() -> sidebar.showEventList());
 		loadClanEvents();
@@ -701,7 +669,6 @@ public class TsgHubPlugin extends Plugin
 		clearTaskCache();
 		checkedKeyIdentity = "";
 		if (adminVerified) setAdminVerified(false);
-		if (boardOverlay != null) boardOverlay.setVisible(false);
 	}
 
 	private void revokeRemoteSession()
@@ -749,11 +716,7 @@ public class TsgHubPlugin extends Plugin
 					cachePvmTasks(event);
 					taskEventId = eventId;
 				}
-				SwingUtilities.invokeLater(() -> {
-					String displayName = TsgHubSession.get("displayName");
-					setBoardOverlayData(event, displayName);
-					sidebar.showBoard(event, displayName, open);
-				});
+				SwingUtilities.invokeLater(() -> sidebar.showBoard(event, TsgHubSession.get("displayName"), open));
 			}
 			catch (Exception e) { eventLoadFailed(eventId, e, "Couldn't update the board. "); }
 			finally { sidebarBusy(false); }
