@@ -3,66 +3,84 @@ package com.tsghub;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.inject.Provides;
-import java.util.Set;
-import java.awt.image.BufferedImage;
-import java.awt.Color;
+import com.tsghub.TsgHubUi.Tone;
+import com.tsghub.group.GroupMembersPanel;
+import com.tsghub.group.GroupTracker;
+import com.tsghub.group.GroupViewSettings;
+import java.awt.Dimension;
 import java.awt.Graphics2D;
+import java.awt.Window;
+import java.awt.image.BufferedImage;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
 import javax.inject.Inject;
 import javax.inject.Named;
-import javax.swing.SwingUtilities;
 import javax.swing.JFrame;
-import java.awt.Dimension;
-import java.awt.Window;
-import net.runelite.api.Client;
+import javax.swing.SwingUtilities;
 import net.runelite.api.ChatMessageType;
+import net.runelite.api.Client;
+import net.runelite.api.GameState;
+import net.runelite.api.Item;
+import net.runelite.api.ItemContainer;
+import net.runelite.api.MenuAction;
+import net.runelite.api.NPC;
 import net.runelite.api.Player;
 import net.runelite.api.WorldView;
-import net.runelite.api.GameState;
-import net.runelite.api.MenuAction;
 import net.runelite.api.clan.ClanChannel;
-import net.runelite.api.clan.ClanSettings;
 import net.runelite.api.clan.ClanMember;
+import net.runelite.api.clan.ClanSettings;
+import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.ClanChannelChanged;
 import net.runelite.api.events.GameStateChanged;
-import net.runelite.api.events.StatChanged;
-import net.runelite.api.events.VarbitChanged;
-import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.ScriptPostFired;
+import net.runelite.api.events.StatChanged;
+import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.events.WidgetClosed;
 import net.runelite.api.events.WidgetLoaded;
-import net.runelite.api.ItemContainer;
-import net.runelite.api.Item;
-import net.runelite.api.NPC;
 import net.runelite.api.gameval.InventoryID;
+import net.runelite.api.gameval.ItemID;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.chat.ChatColorType;
 import net.runelite.client.chat.ChatMessageBuilder;
 import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.chat.QueuedMessage;
-import net.runelite.client.events.ServerNpcLoot;
-import net.runelite.client.plugins.loottracker.LootReceived;
-import net.runelite.client.game.ItemStack;
-import net.runelite.client.game.ItemManager;
-import net.runelite.http.api.item.ItemPrice;
-import net.runelite.client.input.MouseManager;
 import net.runelite.client.config.ConfigManager;
+import net.runelite.client.eventbus.EventBus;
+import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.events.OverlayMenuClicked;
-import net.runelite.client.callback.ClientThread;
+import net.runelite.client.events.RuneScapeProfileChanged;
+import net.runelite.client.events.ServerNpcLoot;
+import net.runelite.client.game.ChatIconManager;
+import net.runelite.client.game.ItemManager;
+import net.runelite.client.game.ItemStack;
+import net.runelite.client.game.SpriteManager;
+import net.runelite.client.input.MouseManager;
+import net.runelite.client.party.PartyService;
+import net.runelite.client.party.WSClient;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.plugins.loottracker.LootReceived;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.Overlay;
@@ -71,7 +89,8 @@ import net.runelite.client.ui.overlay.OverlayMenuEntry;
 import net.runelite.client.util.AsyncBufferedImage;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
-import com.tsghub.TsgHubUi.Tone;
+import net.runelite.http.api.item.ItemPrice;
+import okhttp3.OkHttpClient;
 
 @PluginDescriptor(name = "TSG Hub", description = "Type Shiii Gaming clan events and progress tracking", tags = {"tsg", "clan", "bingo", "events"})
 public class TsgHubPlugin extends Plugin
@@ -87,13 +106,13 @@ public class TsgHubPlugin extends Plugin
 	@Inject private ClientToolbar clientToolbar;
 	@Inject private OverlayManager overlayManager;
 	@Inject private MouseManager mouseManager;
-	@Inject private okhttp3.OkHttpClient okHttpClient;
+	@Inject private OkHttpClient okHttpClient;
 	@Inject private ChatMessageManager chatMessageManager;
-	@Inject private net.runelite.client.game.ChatIconManager chatIconManager;
-	@Inject private net.runelite.client.party.PartyService partyService;
-	@Inject private net.runelite.client.party.WSClient wsClient;
-	@Inject private net.runelite.client.game.SpriteManager spriteManager;
-	@Inject private net.runelite.client.eventbus.EventBus eventBus;
+	@Inject private ChatIconManager chatIconManager;
+	@Inject private PartyService partyService;
+	@Inject private WSClient wsClient;
+	@Inject private SpriteManager spriteManager;
+	@Inject private EventBus eventBus;
 	@Inject @Named("developerMode") private boolean developerMode;
 	private TsgHubPanel panel;
 	private TsgHubSidebarPanel sidebar;
@@ -140,7 +159,7 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubPresence presence;
 	private TsgHubDrops drops;
 	private TsgHubRanks ranks;
-	private com.tsghub.group.GroupTracker groupTracker;
+	private GroupTracker groupTracker;
 
 	@Override
 	protected void startUp()
@@ -174,7 +193,7 @@ public class TsgHubPlugin extends Plugin
 			return thread;
 		});
 		panel = new TsgHubPanel(this);
-		com.tsghub.group.GroupMembersPanel groupMembers = new com.tsghub.group.GroupMembersPanel(new com.tsghub.group.GroupViewSettings()
+		GroupMembersPanel groupMembers = new GroupMembersPanel(new GroupViewSettings()
 		{
 			@Override public boolean autoExpandMembers() { return config.partyExpandMembers(); }
 			@Override public boolean displayVirtualLevels() { return config.partyVirtualLevels(); }
@@ -182,12 +201,12 @@ public class TsgHubPlugin extends Plugin
 		}, spriteManager, itemManager);
 		sidebar = new TsgHubSidebarPanel(this, groupMembers);
 		groups = new TsgHubGroups(this, client, partyService, executor, this::api, () -> sidebar);
-		groupTracker = new com.tsghub.group.GroupTracker(client, clientThread, partyService, wsClient, itemManager, groups::isGroupParty, config::partyShowSelf, this::currentArea, groups);
+		groupTracker = new GroupTracker(client, clientThread, partyService, wsClient, itemManager, groups::isGroupParty, config::partyShowSelf, this::currentArea, groups);
 		groups.setTracker(groupTracker);
 		eventBus.register(groupTracker);
 		groupTracker.start();
 		executor.scheduleAtFixedRate(groups::heartbeat, 5, TsgHubGroups.HEARTBEAT_SECONDS, TimeUnit.SECONDS);
-		executor.scheduleAtFixedRate(groupTracker::keepAlive, com.tsghub.group.GroupTracker.KEEPALIVE_SECONDS, com.tsghub.group.GroupTracker.KEEPALIVE_SECONDS, TimeUnit.SECONDS);
+		executor.scheduleAtFixedRate(groupTracker::keepAlive, GroupTracker.KEEPALIVE_SECONDS, GroupTracker.KEEPALIVE_SECONDS, TimeUnit.SECONDS);
 		executor.scheduleAtFixedRate(unlessLive(groups::autoRefresh), TsgHubGroups.REFRESH_SECONDS, TsgHubGroups.REFRESH_SECONDS, TimeUnit.SECONDS);
 		presence = new TsgHubPresence(this, client, clientThread, chatIconManager, executor, this::api, () -> sidebar, socket);
 		executor.scheduleAtFixedRate(unlessLive(presence::autoRefresh), TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
@@ -248,7 +267,7 @@ public class TsgHubPlugin extends Plugin
 				hubWindow.setContentPane(panel);
 				hubWindow.setMinimumSize(new Dimension(680, 480));
 				hubWindow.setSize(860, 640);
-				Window owner = javax.swing.SwingUtilities.getWindowAncestor(client.getCanvas());
+				Window owner = SwingUtilities.getWindowAncestor(client.getCanvas());
 				if (owner != null && owner.getIconImages() != null) hubWindow.setIconImages(owner.getIconImages());
 				hubWindow.setLocationRelativeTo(owner);
 			}
@@ -300,7 +319,7 @@ public class TsgHubPlugin extends Plugin
 	String getCurrentEventId() { return TsgHubSession.get("eventId"); }
 	AsyncBufferedImage getItemImage(int itemId) { return itemManager == null ? null : itemManager.getImage(itemId); }
 
-	AsyncBufferedImage getCoinImage(long gp) { return itemManager == null ? null : itemManager.getImage(net.runelite.api.gameval.ItemID.COINS, (int) Math.min(gp, Integer.MAX_VALUE), false); }
+	AsyncBufferedImage getCoinImage(long gp) { return itemManager == null ? null : itemManager.getImage(ItemID.COINS, (int) Math.min(gp, Integer.MAX_VALUE), false); }
 
 	private String getOrganizerEventId()
 	{
@@ -361,7 +380,7 @@ public class TsgHubPlugin extends Plugin
 		executor.submit(() -> {
 			try
 			{
-				String query = "/v1/me?displayName=" + java.net.URLEncoder.encode(name, java.nio.charset.StandardCharsets.UTF_8.name());
+				String query = "/v1/me?displayName=" + URLEncoder.encode(name, StandardCharsets.UTF_8);
 				if (!hash.isEmpty()) query += "&accountHash=" + hash;
 				JsonObject result = api().request("GET", query, key, null);
 				if (!identity.equals(checkedKeyIdentity)) return;
@@ -429,10 +448,10 @@ public class TsgHubPlugin extends Plugin
 
 	private String normalizePlayerName(String name)
 	{
-		return name == null ? "" : name.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]", "");
+		return name == null ? "" : name.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
 	}
 
-	@net.runelite.client.eventbus.Subscribe
+	@Subscribe
 	public void onGameStateChanged(GameStateChanged event)
 	{
 		GameState state = event.getGameState();
@@ -473,7 +492,7 @@ public class TsgHubPlugin extends Plugin
 		});
 	}
 
-	@net.runelite.client.eventbus.Subscribe
+	@Subscribe
 	public void onClanChannelChanged(ClanChannelChanged event)
 	{
 		String previousClan = detectedClanName;
@@ -482,13 +501,13 @@ public class TsgHubPlugin extends Plugin
 		if (config.dataSharingOptIn() && sidebarRouted && !detectedClanName.equals(previousClan)) loadClanEvents();
 	}
 
-	@net.runelite.client.eventbus.Subscribe
+	@Subscribe
 	public void onScriptPostFired(ScriptPostFired event)
 	{
 		if (ranks != null) ranks.onScriptPostFired(event.getScriptId());
 	}
 
-	@net.runelite.client.eventbus.Subscribe
+	@Subscribe
 	public void onConfigChanged(ConfigChanged event)
 	{
 		if (!"tsghub".equals(event.getGroup())) return;
@@ -572,8 +591,8 @@ public class TsgHubPlugin extends Plugin
 		checkHubKey();
 	}
 
-	@net.runelite.client.eventbus.Subscribe
-	public void onRuneScapeProfileChanged(net.runelite.client.events.RuneScapeProfileChanged event)
+	@Subscribe
+	public void onRuneScapeProfileChanged(RuneScapeProfileChanged event)
 	{
 		attemptedXpClaims.clear();
 		syncedClanRanks.clear();
@@ -713,7 +732,7 @@ public class TsgHubPlugin extends Plugin
 	private void revokeRemoteSession()
 	{
 		if (executor == null || executor.isShutdown()) return;
-		java.util.Map<String, String> sessions = new java.util.HashMap<>();
+		Map<String, String> sessions = new HashMap<>();
 		for (String key : TsgHubSession.keysWithPrefix("memberToken:"))
 		{
 			String eventId = key.substring("memberToken:".length());
@@ -724,7 +743,7 @@ public class TsgHubPlugin extends Plugin
 		if (!activeEventId.isEmpty() && !activeToken.isEmpty()) sessions.putIfAbsent(activeEventId, activeToken);
 		if (sessions.isEmpty()) return;
 		executor.submit(() -> {
-			for (java.util.Map.Entry<String, String> session : sessions.entrySet())
+			for (Map.Entry<String, String> session : sessions.entrySet())
 			{
 				try { api().request("POST", "/v1/events/" + session.getKey() + "/disconnect", session.getValue(), new JsonObject()); }
 				catch (Exception e) { /* Local disconnect still succeeds while the service is unavailable. */ }
@@ -801,7 +820,7 @@ public class TsgHubPlugin extends Plugin
 			return;
 		}
 		socket.connect(detectedClanName);
-		Map<String, String> tokens = new java.util.HashMap<>();
+		Map<String, String> tokens = new HashMap<>();
 		String eventId = TsgHubSession.get("eventId");
 		String token = TsgHubSession.get("token");
 		if (!eventId.isEmpty() && !token.isEmpty()) tokens.put(eventId, token);
@@ -1105,7 +1124,7 @@ public class TsgHubPlugin extends Plugin
 		String token = TsgHubSession.get("token");
 		JsonObject body = new JsonObject();
 		body.addProperty("taskId", taskId);
-		body.addProperty("evidenceId", "manual-" + java.util.UUID.randomUUID());
+		body.addProperty("evidenceId", "manual-" + UUID.randomUUID());
 		body.addProperty("source", "manual");
 		JsonObject evidence = new JsonObject(); evidence.addProperty("note", note.trim()); body.add("evidence", evidence);
 		memberStatus("Sending proof...", Tone.INFO);
@@ -1328,7 +1347,7 @@ public class TsgHubPlugin extends Plugin
 			else if ("raid".equals(type))
 			{
 				JsonArray modes = new JsonArray();
-				for (String mode : targetNames) modes.add(mode.toLowerCase(java.util.Locale.ROOT));
+				for (String mode : targetNames) modes.add(mode.toLowerCase(Locale.ROOT));
 				cfg.add("modes", modes);
 				cfg.addProperty("clanOnly", true);
 			}
@@ -1351,7 +1370,7 @@ public class TsgHubPlugin extends Plugin
 				// Completing any one set group finishes the task.
 				if (selectedType == 3 || dropRuleMode == 1)
 				{
-					Map<Integer, JsonArray> groupedItems = new java.util.TreeMap<>();
+					Map<Integer, JsonArray> groupedItems = new TreeMap<>();
 					for (int i = 0; i < selectedItems.size(); i++)
 					{
 						JsonObject selected = selectedItems.get(i).getAsJsonObject();
@@ -1547,13 +1566,13 @@ public class TsgHubPlugin extends Plugin
 		@Override public String toString() { return name; }
 	}
 
-	@net.runelite.client.eventbus.Subscribe
+	@Subscribe
 	public void onVarbitChanged(VarbitChanged event)
 	{
 		if (presence != null) presence.onVarbitChanged(event.getVarpId(), event.getVarbitId());
 	}
 
-	@net.runelite.client.eventbus.Subscribe
+	@Subscribe
 	public void onStatChanged(StatChanged event)
 	{
 		if (presence != null) presence.onXp(event.getSkill(), event.getXp());
@@ -1573,19 +1592,19 @@ public class TsgHubPlugin extends Plugin
 		}
 	}
 
-	@net.runelite.client.eventbus.Subscribe
+	@Subscribe
 	public void onWidgetLoaded(WidgetLoaded event)
 	{
 		if (competitions != null) competitions.onInterfaceOpened(event.getGroupId());
 	}
 
-	@net.runelite.client.eventbus.Subscribe
+	@Subscribe
 	public void onWidgetClosed(WidgetClosed event)
 	{
 		if (competitions != null) competitions.onInterfaceClosed(event.getGroupId());
 	}
 
-	@net.runelite.client.eventbus.Subscribe
+	@Subscribe
 	public void onServerNpcLoot(ServerNpcLoot event)
 	{
 		if (!isInHubClan()) return;
@@ -1595,7 +1614,7 @@ public class TsgHubPlugin extends Plugin
 		processLoot("NPC", name, event.getItems(), 1);
 	}
 
-	@net.runelite.client.eventbus.Subscribe
+	@Subscribe
 	public void onLootReceived(LootReceived event)
 	{
 		if (!isInHubClan()) return;
@@ -1603,14 +1622,14 @@ public class TsgHubPlugin extends Plugin
 		processLoot(event.getType().name(), event.getName(), event.getItems(), event.getAmount());
 	}
 
-	@net.runelite.client.eventbus.Subscribe
+	@Subscribe
 	public void onChatMessage(ChatMessage event)
 	{
 		if (!isInHubClan()) return;
 		if (event == null || event.getMessage() == null || client.getLocalPlayer() == null) return;
 		if (drops != null) drops.onChatMessage(event);
 		if (event.getType() != ChatMessageType.GAMEMESSAGE && event.getType() != ChatMessageType.SPAM) return;
-		String message = event.getMessage().replaceAll("<[^>]*>", "").toLowerCase(java.util.Locale.ROOT);
+		String message = event.getMessage().replaceAll("<[^>]*>", "").toLowerCase(Locale.ROOT);
 		if (config.dataSharingOptIn() && competitions != null) competitions.onChat(message);
 		if (!config.dataSharingOptIn()) return;
 		String eventId = claimEventId();
@@ -1640,7 +1659,7 @@ public class TsgHubPlugin extends Plugin
 		}
 	}
 
-	@net.runelite.client.eventbus.Subscribe
+	@Subscribe
 	public void onGameTick(GameTick tick)
 	{
 		if (presence != null) presence.onGameTick();
@@ -1692,7 +1711,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
 		if (inventory == null) return Collections.emptySet();
-		Set<Integer> pets = new java.util.HashSet<>();
+		Set<Integer> pets = new HashSet<>();
 		for (Item item : inventory.getItems())
 		{
 			int itemId = itemManager.canonicalize(item.getId());
@@ -1717,7 +1736,7 @@ public class TsgHubPlugin extends Plugin
 	private static String petName(String name)
 	{
 		if (name == null) return null;
-		String normalized = name.replaceAll("<[^>]*>", "").trim().toLowerCase(java.util.Locale.ROOT);
+		String normalized = name.replaceAll("<[^>]*>", "").trim().toLowerCase(Locale.ROOT);
 		return normalized.startsWith("pet ") ? normalized.substring(4) : normalized;
 	}
 
@@ -1730,7 +1749,7 @@ public class TsgHubPlugin extends Plugin
 			for (int i = 0; i < task.targetNames.size(); i++)
 			{
 				String itemName = task.targetNames.get(i);
-				if (!message.contains(itemName.toLowerCase(java.util.Locale.ROOT))) continue;
+				if (!message.contains(itemName.toLowerCase(Locale.ROOT))) continue;
 				int itemId = i < task.targetItemIds.size() ? task.targetItemIds.get(i) : 0;
 				submitPvmClaim(eventId, task, "drop", itemName, 1, itemId);
 			}
@@ -1740,7 +1759,7 @@ public class TsgHubPlugin extends Plugin
 	private void submitKillCountSignals(String eventId, String message)
 	{
 		if (!message.contains("kill count") && !message.contains("kill-count")) return;
-		java.util.regex.Matcher countMatch = TsgHubCompetitionTracker.KILL_COUNT.matcher(message);
+		Matcher countMatch = TsgHubCompetitionTracker.KILL_COUNT.matcher(message);
 		if (!countMatch.find()) return;
 		int count;
 		try { count = Integer.parseInt(countMatch.group(1).replace(",", "")); }
@@ -1749,7 +1768,7 @@ public class TsgHubPlugin extends Plugin
 		{
 			if (!"kill".equals(task.type) || !task.chatKillCount || task.targetNames.isEmpty()) continue;
 			String bossName = task.targetNames.get(0);
-			if (!message.contains(bossName.toLowerCase(java.util.Locale.ROOT))) continue;
+			if (!message.contains(bossName.toLowerCase(Locale.ROOT))) continue;
 			String key = task.id + ":" + count;
 			if (!attemptedKillCountClaims.add(key)) continue;
 			JsonObject claim = new JsonObject();
@@ -1800,7 +1819,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		JsonObject claim = new JsonObject();
 		claim.addProperty("taskId", task.id);
-		claim.addProperty("evidenceId", "raid-" + java.util.UUID.randomUUID());
+		claim.addProperty("evidenceId", "raid-" + UUID.randomUUID());
 		claim.addProperty("source", "raid");
 		JsonObject evidence = new JsonObject();
 		evidence.addProperty("mode", mode);
@@ -1828,7 +1847,7 @@ public class TsgHubPlugin extends Plugin
 			|| sourceName == null || items == null || isDuplicateLootEvent(sourceType, sourceName, items)) return;
 		String eventId = claimEventId();
 		if (eventId.isEmpty()) return;
-		String lootId = "loot-" + java.util.UUID.randomUUID();
+		String lootId = "loot-" + UUID.randomUUID();
 		submitLootLog(eventId, lootId, sourceType, sourceName, items, amount);
 		for (PvmTask task : pvmTasks)
 		{
@@ -1843,7 +1862,7 @@ public class TsgHubPlugin extends Plugin
 					int itemId = itemManager.canonicalize(item.getId());
 					String itemName = client.getItemDefinition(itemId).getName();
 					boolean itemMatch = "jar".equals(task.itemGroup) && itemName != null
-						&& itemName.toLowerCase(java.util.Locale.ROOT).startsWith("jar of ")
+						&& itemName.toLowerCase(Locale.ROOT).startsWith("jar of ")
 						|| "pet".equals(task.itemGroup) && PVM_PET_ITEM_IDS.contains(itemId);
 					for (int i = 0; i < task.targetNames.size(); i++)
 					{
@@ -1892,7 +1911,7 @@ public class TsgHubPlugin extends Plugin
 		List<String> stacks = new ArrayList<>();
 		for (ItemStack item : items) stacks.add(itemManager.canonicalize(item.getId()) + "x" + item.getQuantity());
 		Collections.sort(stacks);
-		String key = tick + ":" + sourceType + ":" + sourceName.toLowerCase(java.util.Locale.ROOT) + ":" + String.join(",", stacks);
+		String key = tick + ":" + sourceType + ":" + sourceName.toLowerCase(Locale.ROOT) + ":" + String.join(",", stacks);
 		return recentLootEvents.putIfAbsent(key, tick) != null;
 	}
 
@@ -1926,7 +1945,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		JsonObject claim = new JsonObject();
 		claim.addProperty("taskId", task.id);
-		claim.addProperty("evidenceId", source + "-" + java.util.UUID.randomUUID());
+		claim.addProperty("evidenceId", source + "-" + UUID.randomUUID());
 		claim.addProperty("source", source);
 		JsonObject evidence = new JsonObject();
 		evidence.addProperty("name", name);
@@ -1953,7 +1972,7 @@ public class TsgHubPlugin extends Plugin
 		if (token.isEmpty() || eventId.isEmpty()) return;
 		try
 		{
-			String clan = java.net.URLEncoder.encode(detectedClanName, java.nio.charset.StandardCharsets.UTF_8.name());
+			String clan = URLEncoder.encode(detectedClanName, StandardCharsets.UTF_8);
 			String path = "/v1/events/" + eventId + "/notifications?inClanChat=" + inClanChat + "&clanName=" + clan;
 			JsonObject result = api().request("GET", path, token, null);
 			JsonArray notifications = result.getAsJsonArray("notifications");
@@ -2066,7 +2085,7 @@ public class TsgHubPlugin extends Plugin
 			else if ("raid".equals(type) && config.has("modes"))
 			{
 				JsonArray modes = config.getAsJsonArray("modes");
-				for (int j = 0; j < modes.size(); j++) targetNames.add(modes.get(j).getAsString().toLowerCase(java.util.Locale.ROOT));
+				for (int j = 0; j < modes.size(); j++) targetNames.add(modes.get(j).getAsString().toLowerCase(Locale.ROOT));
 			}
 			else if (config.has("itemNames") && config.get("itemNames").isJsonArray())
 			{
