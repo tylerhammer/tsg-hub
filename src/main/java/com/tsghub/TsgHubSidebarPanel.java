@@ -626,7 +626,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		if (activity.isEmpty()) activity = "Online";
 		int dash = activity.indexOf(" - ");
-		String detail = dash < 0 ? activity : activity.substring(dash + 3);
+		String detail = dash < 0 ? activity : activity.startsWith("Slayer - ") ? "Slayer: " + activity.substring(dash + 3) : activity.substring(dash + 3);
 		if (area.isEmpty() || area.equals(detail)) return detail;
 		return detail + " · " + area;
 	}
