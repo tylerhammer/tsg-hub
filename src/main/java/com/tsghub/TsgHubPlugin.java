@@ -673,13 +673,7 @@ public class TsgHubPlugin extends Plugin
 	void leaveEvent(String eventId)
 	{
 		String revokeToken = eventToken(eventId);
-		if (!revokeToken.isEmpty())
-		{
-			executor.submit(() -> {
-				try { api().request("POST", "/v1/events/" + eventId + "/disconnect", revokeToken, new JsonObject()); }
-				catch (Exception ignored) { /* Local disconnect still succeeds while the service is unavailable. */ }
-			});
-		}
+		if (!revokeToken.isEmpty()) executor.submit(() -> disconnect(eventId, revokeToken));
 		TsgHubSession.clear("memberToken:" + eventId, "memberName:" + eventId);
 		if (eventId.equals(TsgHubSession.get("eventId")))
 		{
@@ -722,14 +716,13 @@ public class TsgHubPlugin extends Plugin
 		String activeEventId = TsgHubSession.get("eventId");
 		String activeToken = TsgHubSession.get("token");
 		if (!activeEventId.isEmpty() && !activeToken.isEmpty()) sessions.putIfAbsent(activeEventId, activeToken);
-		if (sessions.isEmpty()) return;
-		executor.submit(() -> {
-			for (Map.Entry<String, String> session : sessions.entrySet())
-			{
-				try { api().request("POST", "/v1/events/" + session.getKey() + "/disconnect", session.getValue(), new JsonObject()); }
-				catch (Exception e) { /* Local disconnect still succeeds while the service is unavailable. */ }
-			}
-		});
+		if (!sessions.isEmpty()) executor.submit(() -> sessions.forEach(this::disconnect));
+	}
+
+	private void disconnect(String eventId, String token)
+	{
+		try { api().request("POST", "/v1/events/" + eventId + "/disconnect", token, new JsonObject()); }
+		catch (Exception ignored) { /* Local disconnect still succeeds while the service is unavailable. */ }
 	}
 
 	void refreshBoard()
