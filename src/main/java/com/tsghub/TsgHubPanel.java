@@ -750,6 +750,12 @@ final class TsgHubPanel extends JPanel
 		showFormError(eventFormError, message);
 	}
 
+	private void eventFormFailed(String message, JComponent focus)
+	{
+		eventFormFailed(message);
+		focus.requestFocusInWindow();
+	}
+
 	void taskFormFailed(String message)
 	{
 		showFormError(taskFormError, message);
@@ -1302,6 +1308,11 @@ final class TsgHubPanel extends JPanel
 		partyHost.setText(plugin.getDetectedPlayerName());
 		partyNotes.setText("");
 		for (JTextField prize : prizeFields) prize.setText("");
+		showEventForm();
+	}
+
+	private void showEventForm()
+	{
 		updateEventFormType();
 		eventFormError.setVisible(false);
 		detailLayout.show(detail, "event-form");
@@ -1335,33 +1346,30 @@ final class TsgHubPanel extends JPanel
 		partyNotes.setText(TsgHubUi.str(config, "notes"));
 		List<Long> prizes = TsgHubUi.eventPrizes(currentEvent);
 		for (int i = 0; i < prizeFields.length; i++) prizeFields[i].setText(i < prizes.size() ? TsgHubUi.millions(prizes.get(i)) : "");
-		updateEventFormType();
-		eventFormError.setVisible(false);
-		detailLayout.show(detail, "event-form");
-		eventName.requestFocusInWindow();
+		showEventForm();
 	}
 
 	private void submitEventForm()
 	{
 		String type = EVENT_TYPES[Math.max(0, eventType.getSelectedIndex())];
 		String name = "skill".equals(type) ? "Skill of the Week" : "boss".equals(type) ? "Boss of the Week" : eventName.getText().trim();
-		if (name.isEmpty()) { eventFormFailed("Give the event a name."); eventName.requestFocusInWindow(); return; }
+		if (name.isEmpty()) { eventFormFailed("Give the event a name.", eventName); return; }
 		boolean dropParty = "drop-party".equals(type);
 		Instant start = eventInstant(eventStart, eventStartTime);
-		if (start == null) { eventFormFailed("Start time must look like 19:30."); eventStartTime.requestFocusInWindow(); return; }
+		if (start == null) { eventFormFailed("Start time must look like 19:30.", eventStartTime); return; }
 		Instant end = null;
 		if (!dropParty || !eventEndTime.getText().trim().isEmpty())
 		{
 			end = eventInstant(eventEnd, eventEndTime);
-			if (end == null) { eventFormFailed("End time must look like 21:00."); eventEndTime.requestFocusInWindow(); return; }
-			if (!end.isAfter(start)) { eventFormFailed("The end must be after the start."); eventEndTime.requestFocusInWindow(); return; }
+			if (end == null) { eventFormFailed("End time must look like 21:00.", eventEndTime); return; }
+			if (!end.isAfter(start)) { eventFormFailed("The end must be after the start.", eventEndTime); return; }
 		}
 		JsonObject config = new JsonObject();
 		if ("skill".equals(type)) config.addProperty("skill", String.valueOf(eventSkill.getSelectedItem()).toUpperCase(Locale.ROOT).replace(' ', '_'));
 		if ("boss".equals(type))
 		{
 			String boss = eventBoss.getText();
-			if (boss.isEmpty()) { eventFormFailed("Choose or type the boss."); eventBoss.field().requestFocusInWindow(); return; }
+			if (boss.isEmpty()) { eventFormFailed("Choose or type the boss.", eventBoss.field()); return; }
 			config.addProperty("npcName", boss);
 			config.addProperty("signal", eventSignalLoot.isSelected() ? "loot" : "chat");
 		}
@@ -1370,7 +1378,7 @@ final class TsgHubPanel extends JPanel
 			String world = partyWorld.getText().trim();
 			if (!world.isEmpty())
 			{
-				if (positiveInt(world) < 0) { eventFormFailed("World must be a number, like 330."); partyWorld.requestFocusInWindow(); return; }
+				if (positiveInt(world) < 0) { eventFormFailed("World must be a number, like 330.", partyWorld); return; }
 				config.addProperty("world", positiveInt(world));
 			}
 			config.addProperty("location", partyLocation.getText().trim());
@@ -1381,8 +1389,8 @@ final class TsgHubPanel extends JPanel
 		for (int i = 0; i < prizeFields.length; i++)
 		{
 			long gp = TsgHubUi.parseMillions(prizeFields[i].getText());
-			if (gp < 0) { eventFormFailed(TsgHubUi.place(i + 1) + " prize must be a number of millions, like 20 or 2.5."); prizeFields[i].requestFocusInWindow(); return; }
-			if (gp > 0 && prizes.size() < i) { eventFormFailed("Fill in the prizes in order, starting with 1st."); prizeFields[i].requestFocusInWindow(); return; }
+			if (gp < 0) { eventFormFailed(TsgHubUi.place(i + 1) + " prize must be a number of millions, like 20 or 2.5.", prizeFields[i]); return; }
+			if (gp > 0 && prizes.size() < i) { eventFormFailed("Fill in the prizes in order, starting with 1st.", prizeFields[i]); return; }
 			if (gp > 0) prizes.add(gp);
 		}
 		eventFormError.setVisible(false);
