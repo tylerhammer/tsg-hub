@@ -8,18 +8,26 @@ import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Container;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.LayoutManager;
+import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Area;
 import java.awt.geom.Ellipse2D;
+import java.awt.geom.Line2D;
 import java.awt.geom.Path2D;
+import java.math.BigDecimal;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
@@ -34,23 +42,31 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.function.Consumer;
+import java.util.function.LongFunction;
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.Icon;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JToolTip;
 import javax.swing.Scrollable;
 import javax.swing.Timer;
 import javax.swing.border.Border;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
+import net.runelite.client.util.AsyncBufferedImage;
+import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.SwingUtil;
 
+@Slf4j
 final class TsgHubUi
 {
 	static final Color BACKGROUND = ColorScheme.DARK_GRAY_COLOR;
@@ -63,16 +79,16 @@ final class TsgHubUi
 	static final Color SUCCESS = ColorScheme.PROGRESS_COMPLETE_COLOR;
 	static final Color ERROR = ColorScheme.PROGRESS_ERROR_COLOR;
 	static final Color WARNING = new Color(230, 180, 60);
-	private static final DateTimeFormatter DATE_WITH_YEAR = DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale.US);
+	private static final DateTimeFormatter DATE_WITH_YEAR = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.US);
 	private static final int COIN_ICON_W = 18;
 	private static final int COIN_ICON_H = 16;
 	private static final Color COIN_LOW = new Color(255, 255, 0);
 	private static final Color COIN_HIGH = new Color(0, 255, 128);
-	private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("EEE d MMM", java.util.Locale.US);
-	private static final DateTimeFormatter DAY_WITH_YEAR = DateTimeFormatter.ofPattern("EEE d MMM yyyy", java.util.Locale.US);
-	private static final DateTimeFormatter HOUR = DateTimeFormatter.ofPattern("h", java.util.Locale.US);
-	private static final DateTimeFormatter HOUR_MINUTE = DateTimeFormatter.ofPattern("h:mm", java.util.Locale.US);
-	private static final DateTimeFormatter ZONE = DateTimeFormatter.ofPattern("zzz", java.util.Locale.US);
+	private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("EEE d MMM", Locale.US);
+	private static final DateTimeFormatter DAY_WITH_YEAR = DateTimeFormatter.ofPattern("EEE d MMM yyyy", Locale.US);
+	private static final DateTimeFormatter HOUR = DateTimeFormatter.ofPattern("h", Locale.US);
+	private static final DateTimeFormatter HOUR_MINUTE = DateTimeFormatter.ofPattern("h:mm", Locale.US);
+	private static final DateTimeFormatter ZONE = DateTimeFormatter.ofPattern("zzz", Locale.US);
 	private static final ZoneId CLAN_ZONE = ZoneId.of("Australia/Sydney");
 	static Clock clock = Clock.systemUTC();
 
@@ -112,6 +128,35 @@ final class TsgHubUi
 		return label(html(escape(text), widthPx), color, font);
 	}
 
+	static JLabel caption(String text)
+	{
+		return label(text, MUTED, FontManager.getRunescapeSmallFont());
+	}
+
+	static JLabel listHeading(String text, boolean first)
+	{
+		JLabel heading = caption(text.toUpperCase());
+		heading.setBorder(BorderFactory.createEmptyBorder(first ? 0 : 6, 2, 4, 0));
+		return heading;
+	}
+
+	static JLabel rankLabel(int rank, Font font, int width)
+	{
+		JLabel label = label(String.valueOf(rank), rank == 1 ? ACCENT : MUTED, font);
+		label.setPreferredSize(new Dimension(width, label.getPreferredSize().height));
+		return label;
+	}
+
+	static JLabel listRow(String text, boolean selected)
+	{
+		JLabel row = new JLabel(text);
+		row.setOpaque(true);
+		row.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
+		row.setBackground(selected ? CARD_HOVER : CARD);
+		row.setForeground(TEXT);
+		return row;
+	}
+
 	static JPanel emptyState(String heading, String body, int widthPx)
 	{
 		JPanel panel = new JPanel();
@@ -124,7 +169,7 @@ final class TsgHubUi
 		text.setAlignmentX(Component.CENTER_ALIGNMENT);
 		text.setHorizontalAlignment(JLabel.CENTER);
 		panel.add(title);
-		panel.add(javax.swing.Box.createVerticalStrut(8));
+		panel.add(Box.createVerticalStrut(8));
 		panel.add(text);
 		panel.setAlignmentX(Component.LEFT_ALIGNMENT);
 		panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, panel.getPreferredSize().height));
@@ -164,11 +209,52 @@ final class TsgHubUi
 		return panel;
 	}
 
+	static JPanel panel(LayoutManager layout)
+	{
+		JPanel panel = new JPanel(layout);
+		panel.setOpaque(false);
+		return panel;
+	}
+
 	static JPanel row()
 	{
-		JPanel row = new JPanel(new BorderLayout(6, 0));
-		row.setOpaque(false);
+		return panel(new BorderLayout(6, 0));
+	}
+
+	static JPanel row(Component center, Component east)
+	{
+		JPanel row = row();
+		row.add(center, BorderLayout.CENTER);
+		row.add(east, BorderLayout.EAST);
 		return row;
+	}
+
+	static JPanel north(Component component)
+	{
+		JPanel wrap = panel(new BorderLayout());
+		wrap.add(component, BorderLayout.NORTH);
+		return wrap;
+	}
+
+	static JPanel twoLines(Component top, Component bottom)
+	{
+		JPanel text = stack();
+		text.add(top);
+		text.add(Box.createVerticalStrut(3));
+		text.add(bottom);
+		return text;
+	}
+
+	static JPanel eventLines(JsonObject event, LongFunction<AsyncBufferedImage> coins)
+	{
+		Font small = FontManager.getRunescapeSmallFont();
+		JPanel top = row(shrinkable(label(eventName(event), TEXT, FontManager.getRunescapeBoldFont())),
+			label(eventCountdown(event), "active".equals(str(event, "status")) ? SUCCESS : MUTED, small));
+		JPanel extras = panel(new FlowLayout(FlowLayout.RIGHT, 3, 0));
+		if (bool(event, "hidden")) extras.add(badge("Hidden", MUTED));
+		JLabel prize = prizeLabel(event, small, coins);
+		if (prize != null) extras.add(prize);
+		return twoLines(top, row(shrinkable(caption(eventDetail(event))), extras));
 	}
 
 	static JLabel shrinkable(JLabel label)
@@ -185,13 +271,13 @@ final class TsgHubUi
 		{
 			// Anchor tooltips beside the card so they don't follow the mouse.
 			@Override
-			public java.awt.Point getToolTipLocation(MouseEvent event)
+			public Point getToolTipLocation(MouseEvent event)
 			{
 				String text = getToolTipText(event);
 				if (text == null) return null;
-				javax.swing.JToolTip tip = createToolTip();
+				JToolTip tip = createToolTip();
 				tip.setTipText(text);
-				return new java.awt.Point(-tip.getPreferredSize().width - 6, 0);
+				return new Point(-tip.getPreferredSize().width - 6, 0);
 			}
 		};
 		panel.setBackground(CARD);
@@ -224,8 +310,8 @@ final class TsgHubUi
 	private static void recolor(Component component, Color from, Color to)
 	{
 		if (from.equals(component.getBackground())) component.setBackground(to);
-		if (component instanceof java.awt.Container)
-			for (Component child : ((java.awt.Container) component).getComponents()) recolor(child, from, to);
+		if (component instanceof Container)
+			for (Component child : ((Container) component).getComponents()) recolor(child, from, to);
 	}
 
 	static JScrollPane scroll(JComponent content)
@@ -259,6 +345,14 @@ final class TsgHubUi
 		@Override public int getScrollableBlockIncrement(Rectangle visible, int orientation, int direction) { return Math.max(visible.height - 16, 16); }
 		@Override public boolean getScrollableTracksViewportWidth() { return true; }
 		@Override public boolean getScrollableTracksViewportHeight() { return false; }
+	}
+
+	static <T extends AbstractButton> T plain(T button, Color color)
+	{
+		button.setOpaque(false);
+		button.setForeground(color);
+		button.setFocusPainted(false);
+		return button;
 	}
 
 	static JButton button(String text)
@@ -302,7 +396,7 @@ final class TsgHubUi
 
 	static void copyToClipboard(String text)
 	{
-		java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new java.awt.datatransfer.StringSelection(text), null);
+		Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(text), null);
 	}
 
 	static final class StatusLine extends JLabel
@@ -335,8 +429,6 @@ final class TsgHubUi
 			}
 		}
 	}
-
-	private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(TsgHubUi.class);
 
 	static String friendlyError(Throwable error)
 	{
@@ -540,7 +632,7 @@ final class TsgHubUi
 		}
 	}
 
-	static JLabel prizeLabel(JsonObject event, Font font, java.util.function.LongFunction<net.runelite.client.util.AsyncBufferedImage> coins)
+	static JLabel prizeLabel(JsonObject event, Font font, LongFunction<AsyncBufferedImage> coins)
 	{
 		List<Long> prizes = eventPrizes(event);
 		if (prizes.isEmpty()) return null;
@@ -548,10 +640,10 @@ final class TsgHubUi
 		JLabel label = label(formatGp(total), coinColor(total), font);
 		label.setToolTipText("Prize pool: " + prizeSummary(prizes));
 		label.setIconTextGap(2);
-		net.runelite.client.util.AsyncBufferedImage image = coins.apply(total);
+		AsyncBufferedImage image = coins.apply(total);
 		if (image != null)
 		{
-			Runnable apply = () -> label.setIcon(new javax.swing.ImageIcon(net.runelite.client.util.ImageUtil.resizeImage(image, COIN_ICON_W, COIN_ICON_H)));
+			Runnable apply = () -> label.setIcon(new ImageIcon(ImageUtil.resizeImage(image, COIN_ICON_W, COIN_ICON_H)));
 			apply.run();
 			image.onLoaded(apply);
 		}
@@ -569,8 +661,7 @@ final class TsgHubUi
 	{
 		List<Long> prizes = eventPrizes(event);
 		if (prizes.isEmpty()) return null;
-		JPanel row = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 0, 0));
-		row.setOpaque(false);
+		JPanel row = panel(new FlowLayout(FlowLayout.LEFT, 0, 0));
 		row.setAlignmentX(Component.LEFT_ALIGNMENT);
 		row.add(label("Prizes ", MUTED, font));
 		for (int i = 0; i < prizes.size(); i++)
@@ -614,7 +705,7 @@ final class TsgHubUi
 		if (value.isEmpty()) return 0;
 		try
 		{
-			java.math.BigDecimal amount = new java.math.BigDecimal(value).multiply(java.math.BigDecimal.valueOf(1_000_000L));
+			BigDecimal amount = new BigDecimal(value).multiply(BigDecimal.valueOf(1_000_000L));
 			if (amount.signum() <= 0 || amount.stripTrailingZeros().scale() > 0) return -1;
 			return amount.longValueExact();
 		}
@@ -626,7 +717,7 @@ final class TsgHubUi
 
 	static String millions(long gp)
 	{
-		return java.math.BigDecimal.valueOf(gp).divide(java.math.BigDecimal.valueOf(1_000_000L)).stripTrailingZeros().toPlainString();
+		return BigDecimal.valueOf(gp).divide(BigDecimal.valueOf(1_000_000L)).stripTrailingZeros().toPlainString();
 	}
 
 	static String formatGp(long value)
@@ -640,13 +731,13 @@ final class TsgHubUi
 
 	private static String trimDecimal(double value)
 	{
-		String text = String.format(java.util.Locale.ROOT, "%.1f", Math.floor(value * 10) / 10);
+		String text = String.format(Locale.ROOT, "%.1f", Math.floor(value * 10) / 10);
 		return text.endsWith(".0") ? text.substring(0, text.length() - 2) : text;
 	}
 	static Color coinColor(long value)
 	{
 		if (value < 100_000) return COIN_LOW;
-		if (value < 10_000_000) return TsgHubUi.TEXT;
+		if (value < 10_000_000) return TEXT;
 		return COIN_HIGH;
 	}
 	static String eventStartWhen(JsonObject event)
@@ -679,13 +770,6 @@ final class TsgHubUi
 		return "Upcoming";
 	}
 
-	static Color statusColor(String status)
-	{
-		if ("active".equals(status)) return SUCCESS;
-		if ("ended".equals(status)) return MUTED;
-		return WARNING;
-	}
-
 	static String eventTypeLabel(JsonObject event)
 	{
 		switch (str(event, "type"))
@@ -699,35 +783,32 @@ final class TsgHubUi
 
 	static JsonObject eventConfig(JsonObject event)
 	{
-		return event != null && event.has("config") && event.get("config").isJsonObject() ? event.getAsJsonObject("config") : new JsonObject();
+		return object(event, "config");
+	}
+
+	static JsonObject object(JsonObject object, String key)
+	{
+		return object != null && object.has(key) && object.get(key).isJsonObject() ? object.getAsJsonObject(key) : new JsonObject();
+	}
+
+	static List<JsonObject> objects(JsonArray array)
+	{
+		List<JsonObject> objects = new ArrayList<>();
+		for (JsonElement element : array) objects.add(element.getAsJsonObject());
+		return objects;
 	}
 
 	static String skillName(String key)
 	{
 		if (key == null || key.isEmpty()) return "";
-		String lower = key.toLowerCase(java.util.Locale.ROOT).replace('_', ' ');
+		String lower = key.toLowerCase(Locale.ROOT).replace('_', ' ');
 		return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
-	}
-
-	static String eventTypeLine(JsonObject event)
-	{
-		JsonObject config = eventConfig(event);
-		switch (str(event, "type"))
-		{
-			case "skill": return "Skill of the Week · " + skillName(str(config, "skill"));
-			case "boss": return "Boss of the Week · " + str(config, "npcName");
-			case "drop-party":
-				String where = (integer(config, "world", 0) > 0 ? " · W" + integer(config, "world", 0) : "")
-					+ (str(config, "location").isEmpty() ? "" : " · " + str(config, "location"));
-				return "Custom" + where;
-			default: return "Bingo";
-		}
 	}
 
 	static String taskTypeLabel(JsonObject task)
 	{
 		String type = str(task, "type");
-		JsonObject config = task.has("config") && task.get("config").isJsonObject() ? task.getAsJsonObject("config") : new JsonObject();
+		JsonObject config = eventConfig(task);
 		switch (type)
 		{
 			case "kill": return "Boss KC";
@@ -744,11 +825,7 @@ final class TsgHubUi
 
 	static JsonObject scoreFor(JsonArray scores, String teamId)
 	{
-		for (int i = 0; i < scores.size(); i++)
-		{
-			JsonObject score = scores.get(i).getAsJsonObject();
-			if (str(score, "teamId").equals(teamId)) return score;
-		}
+		for (JsonObject score : objects(scores)) if (str(score, "teamId").equals(teamId)) return score;
 		JsonObject empty = new JsonObject();
 		empty.addProperty("points", 0);
 		empty.addProperty("completedTasks", 0);
@@ -758,11 +835,7 @@ final class TsgHubUi
 
 	static JsonObject progressFor(JsonArray progressRows, String taskId)
 	{
-		for (int i = 0; i < progressRows.size(); i++)
-		{
-			JsonObject progress = progressRows.get(i).getAsJsonObject();
-			if (str(progress, "taskId").equals(taskId)) return progress;
-		}
+		for (JsonObject progress : objects(progressRows)) if (str(progress, "taskId").equals(taskId)) return progress;
 		JsonObject empty = new JsonObject();
 		empty.addProperty("progress", 0);
 		empty.addProperty("target", 1);
@@ -774,11 +847,9 @@ final class TsgHubUi
 
 	static JsonObject bestSet(JsonObject progress)
 	{
-		JsonArray alternatives = array(progress, "alternatives");
 		JsonObject best = null;
-		for (int i = 0; i < alternatives.size(); i++)
+		for (JsonObject alt : objects(array(progress, "alternatives")))
 		{
-			JsonObject alt = alternatives.get(i).getAsJsonObject();
 			if (best == null || share(alt) > share(best) || share(alt) == share(best) && integer(alt, "progress", 0) > integer(best, "progress", 0)) best = alt;
 		}
 		return best;
@@ -791,11 +862,15 @@ final class TsgHubUi
 
 	static String setName(JsonObject alt)
 	{
-		List<Integer> ids = new ArrayList<>();
-		JsonArray items = array(alt, "items");
-		for (int i = 0; i < items.size(); i++) ids.add(integer(items.get(i).getAsJsonObject(), "id", 0));
-		String name = TsgHubItemSets.nameFor(ids);
+		String name = TsgHubItemSets.nameFor(itemIds(array(alt, "items")));
 		return name.isEmpty() ? "Set " + integer(alt, "group", 1) : name;
+	}
+
+	static List<Integer> itemIds(JsonArray items)
+	{
+		List<Integer> ids = new ArrayList<>();
+		for (JsonObject item : objects(items)) ids.add(integer(item, "id", 0));
+		return ids;
 	}
 
 	static final class SetLine
@@ -816,9 +891,7 @@ final class TsgHubUi
 
 	static List<SetLine> setLines(JsonObject source, boolean withFinders)
 	{
-		List<JsonObject> options = new ArrayList<>();
-		JsonArray alternatives = array(source, "alternatives");
-		for (int i = 0; i < alternatives.size(); i++) options.add(alternatives.get(i).getAsJsonObject());
+		List<JsonObject> options = objects(array(source, "alternatives"));
 		if (options.isEmpty() && source.has("items"))
 		{
 			JsonObject single = new JsonObject();
@@ -838,12 +911,10 @@ final class TsgHubUi
 			String name = legacy ? "Pieces" : setName(option);
 			SetLine line = new SetLine(name, integer(option, "progress", 0), integer(option, "target", 1));
 			String prefix = legacy || name.startsWith("Set ") ? "" : name + " ";
-			JsonArray items = array(option, "items");
-			for (int i = 0; i < items.size(); i++)
+			for (JsonObject item : objects(array(option, "items")))
 			{
-				JsonObject item = items.get(i).getAsJsonObject();
 				String piece = str(item, "name");
-				if (!prefix.isEmpty() && piece.toLowerCase(java.util.Locale.ROOT).startsWith(prefix.toLowerCase(java.util.Locale.ROOT))) piece = piece.substring(prefix.length());
+				if (!prefix.isEmpty() && piece.toLowerCase(Locale.ROOT).startsWith(prefix.toLowerCase(Locale.ROOT))) piece = piece.substring(prefix.length());
 				if (bool(item, "complete"))
 				{
 					String who = str(item, "obtainedBy");
@@ -859,11 +930,7 @@ final class TsgHubUi
 	static List<String> missingPieces(JsonArray items)
 	{
 		List<String> missing = new ArrayList<>();
-		for (int i = 0; i < items.size(); i++)
-		{
-			JsonObject item = items.get(i).getAsJsonObject();
-			if (!bool(item, "complete")) missing.add(str(item, "name"));
-		}
+		for (JsonObject item : objects(items)) if (!bool(item, "complete")) missing.add(str(item, "name"));
 		return missing;
 	}
 
@@ -894,10 +961,8 @@ final class TsgHubUi
 
 	static String teamIdFor(JsonObject event, String displayName)
 	{
-		JsonArray members = array(event, "members");
-		for (int i = 0; i < members.size(); i++)
+		for (JsonObject member : objects(array(event, "members")))
 		{
-			JsonObject member = members.get(i).getAsJsonObject();
 			if (str(member, "displayName").equalsIgnoreCase(displayName) && !str(member, "teamId").isEmpty()) return str(member, "teamId");
 		}
 		return "";
@@ -949,8 +1014,8 @@ final class TsgHubUi
 	static boolean confirmDelete(Component parent, String title, String message, String action)
 	{
 		Object[] options = {action, "Cancel"};
-		int choice = javax.swing.JOptionPane.showOptionDialog(parent, message, title, javax.swing.JOptionPane.DEFAULT_OPTION,
-			javax.swing.JOptionPane.WARNING_MESSAGE, null, options, options[1]);
+		int choice = JOptionPane.showOptionDialog(parent, message, title, JOptionPane.DEFAULT_OPTION,
+			JOptionPane.WARNING_MESSAGE, null, options, options[1]);
 		return choice == 0;
 	}
 
@@ -1100,7 +1165,7 @@ final class TsgHubUi
 			for (int i = 0; i < 8; i++)
 			{
 				double a = Math.PI / 4 * i;
-				g.draw(new java.awt.geom.Line2D.Double(8 + 5 * Math.cos(a), 8 + 5 * Math.sin(a), 8 + 7.5 * Math.cos(a), 8 + 7.5 * Math.sin(a)));
+				g.draw(new Line2D.Double(8 + 5 * Math.cos(a), 8 + 5 * Math.sin(a), 8 + 7.5 * Math.cos(a), 8 + 7.5 * Math.sin(a)));
 			}
 		}
 	}
@@ -1175,10 +1240,5 @@ final class TsgHubUi
 	static Border bottomRule()
 	{
 		return BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER);
-	}
-
-	static void onEnter(javax.swing.JTextField field, Consumer<String> action)
-	{
-		field.addActionListener(e -> action.accept(field.getText()));
 	}
 }
