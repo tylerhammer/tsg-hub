@@ -4,6 +4,7 @@ import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigSection;
+import net.runelite.client.config.Range;
 
 @ConfigGroup("tsghub")
 public interface TsgHubConfig extends Config
@@ -41,7 +42,20 @@ public interface TsgHubConfig extends Config
 		return true;
 	}
 
-	@ConfigItem(keyName = "bingoOverlay", position = 1, section = bingoSection, name = "Show board on screen", description = "Show your team's bingo board as an on-screen overlay. Click a tile to flip it over and see its task. Hold Alt and drag it to move it.")
+	@ConfigItem(keyName = "bingoSounds", position = 1, section = bingoSection, name = "Reveal sounds", description = "Play sounds with the tile reveal: the dauber stamp, the line wave and the BINGO! stamp.")
+	default boolean bingoSounds()
+	{
+		return true;
+	}
+
+	@Range(max = 100)
+	@ConfigItem(keyName = "bingoVolume", position = 2, section = bingoSection, name = "Reveal volume", description = "How loud the reveal sounds play, from 0 to 100.")
+	default int bingoVolume()
+	{
+		return 60;
+	}
+
+	@ConfigItem(keyName = "bingoOverlay", position = 3, section = bingoSection, name = "Show board on screen", description = "Show your team's bingo board as an on-screen overlay. Click a tile to flip it over and see its task. Hold Alt and drag it to move it.")
 	default boolean bingoOverlay()
 	{
 		return false;

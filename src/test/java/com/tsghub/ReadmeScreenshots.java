@@ -181,7 +181,7 @@ public class ReadmeScreenshots
 		before.remove(stamped);
 		TsgHubReveals.Moment moment = new TsgHubReveals.Moment(TsgHubUi.str(event, "name"), board, tasks, progress, before,
 			java.util.Collections.singletonList(stamped), java.util.Collections.singletonList(new TsgHubBingoBoard.Line(TsgHubBingoBoard.Direction.ROW, 1)));
-		TsgHubRevealOverlay overlay = new TsgHubRevealOverlay(null, new TsgHubTileIcons(ReadmeScreenshots::itemIcon, null));
+		TsgHubRevealOverlay overlay = new TsgHubRevealOverlay(null, new TsgHubTileIcons(ReadmeScreenshots::itemIcon, null), null);
 		BufferedImage image = new BufferedImage(765 * SCALE, 503 * SCALE, BufferedImage.TYPE_INT_RGB);
 		Graphics2D g = image.createGraphics();
 		g.scale(SCALE, SCALE);

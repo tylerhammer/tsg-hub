@@ -98,6 +98,7 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubSidebarPanel sidebar;
 	private TsgHubBoardOverlay boardOverlay;
 	private TsgHubRevealOverlay revealOverlay;
+	private TsgHubSounds sounds;
 	private TsgHubTileIcons tileIcons;
 	private final TsgHubReveals reveals = new TsgHubReveals();
 	private volatile String primedBoardEventId = "";
@@ -201,7 +202,8 @@ public class TsgHubPlugin extends Plugin
 		boardOverlay.setVisible(config.bingoOverlay());
 		overlayManager.add(boardOverlay);
 		mouseManager.registerMouseListener(boardOverlay);
-		revealOverlay = new TsgHubRevealOverlay(client, tileIcons());
+		sounds = new TsgHubSounds(config::bingoSounds, config::bingoVolume);
+		revealOverlay = new TsgHubRevealOverlay(client, tileIcons(), sounds);
 		overlayManager.add(revealOverlay);
 		mouseManager.registerMouseListener(revealOverlay);
 		navigationButton = NavigationButton.builder()
@@ -240,6 +242,11 @@ public class TsgHubPlugin extends Plugin
 			overlayManager.remove(revealOverlay);
 			mouseManager.unregisterMouseListener(revealOverlay);
 			revealOverlay = null;
+		}
+		if (sounds != null)
+		{
+			sounds.shutdown();
+			sounds = null;
 		}
 		if (hubWindow != null) SwingUtilities.invokeLater(hubWindow::dispose);
 		if (presence != null) presence.shutDown();

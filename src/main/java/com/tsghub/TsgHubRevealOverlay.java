@@ -19,7 +19,12 @@ import java.awt.geom.Line2D;
 import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
@@ -55,6 +60,9 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	static final int STAMP_HOLD_MS = 1600;
 	static final int HOLD_MS = 900;
 	static final int EXIT_MS = 350;
+	static final int POINTS_SOUND_MS = 100;
+	static final int STAMP_SOUND_LEAD_MS = 27;
+	private static final int[] SCALE = {0, 2, 4, 5, 7, 9, 11, 12, 14};
 	private static final int MAX_QUEUED = 6;
 	private static final long MAX_HELD_MS = 10 * 60 * 1000L;
 	private static final int GAP = 4;
@@ -66,6 +74,20 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	private static final Color STAMP = new Color(214, 44, 58);
 	private static final Color DOT = new Color(INK.getRed(), INK.getGreen(), INK.getBlue(), 175);
 	private static final Color DOT_SHINE = new Color(255, 120, 110, 70);
+
+	static final class Cue
+	{
+		final int at;
+		final TsgHubSounds.Sound sound;
+		final double pitch;
+
+		Cue(int at, TsgHubSounds.Sound sound, double pitch)
+		{
+			this.at = at;
+			this.sound = sound;
+			this.pitch = pitch;
+		}
+	}
 
 	private static final class Held
 	{
@@ -81,6 +103,9 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 
 	private final Client client;
 	private final TsgHubTileIcons icons;
+	private final TsgHubSounds sounds;
+	private volatile List<Cue> cues = Collections.emptyList();
+	private volatile long heard = -1;
 	private final Queue<Held> queue = new ConcurrentLinkedQueue<>();
 	private volatile TsgHubReveals.Moment current;
 	private volatile long startedAt;
@@ -89,10 +114,11 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	private final Map<String, Area> dots = new HashMap<>();
 	private int dotCell;
 
-	TsgHubRevealOverlay(Client client, TsgHubTileIcons icons)
+	TsgHubRevealOverlay(Client client, TsgHubTileIcons icons, TsgHubSounds sounds)
 	{
 		this.client = client;
 		this.icons = icons;
+		this.sounds = sounds;
 		setPosition(OverlayPosition.DYNAMIC);
 		setLayer(OverlayLayer.ABOVE_WIDGETS);
 		setPriority(Overlay.PRIORITY_HIGHEST);
@@ -164,8 +190,11 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 			current = moment;
 			dots.clear();
 			startedAt = now;
+			heard = -1;
+			cues = moment == null ? Collections.emptyList() : cues(moment);
 			if (moment == null) return null;
 		}
+		playCues(now - startedAt);
 		int width = client.getCanvasWidth();
 		int height = client.getCanvasHeight();
 		if (width < 200 || height < 200) return null;
@@ -397,6 +426,48 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 		return 0;
 	}
 
+	private void playCues(long t)
+	{
+		if (sounds == null) return;
+		long last = heard;
+		for (Cue cue : cues) if (cue.at > last && cue.at <= t) sounds.play(cue.sound, cue.pitch);
+		heard = Math.max(last, t);
+	}
+
+	static int[] noteSteps(int tiles)
+	{
+		if (tiles <= 3) return new int[]{0, 7, 12};
+		if (tiles == 4) return new int[]{0, 4, 7, 12};
+		if (tiles == 5) return new int[]{0, 4, 7, 9, 12};
+		return Arrays.copyOf(SCALE, Math.min(tiles, SCALE.length));
+	}
+
+	static List<Cue> cues(TsgHubReveals.Moment moment)
+	{
+		List<Cue> cues = new ArrayList<>();
+		cues.add(new Cue(0, TsgHubSounds.Sound.BOARD_IN, 1));
+		for (int i = 0; i < moment.tiles.size(); i++)
+		{
+			int start = FIRST_TILE_MS + i * TILE_MS;
+			if (find(moment.board, moment.tiles.get(i)) != null)
+			{
+				cues.add(new Cue(start, TsgHubSounds.Sound.DAUBER_DROP, 1));
+				cues.add(new Cue(start + DROP_MS, TsgHubSounds.Sound.DAUBER_HIT, 1));
+			}
+			cues.add(new Cue(start + DROP_MS + POINTS_SOUND_MS, TsgHubSounds.Sound.POINTS, 1));
+		}
+		int[] steps = noteSteps(moment.board.size);
+		for (int i = 0; i < moment.lines.size(); i++)
+		{
+			for (int k = 0; k < moment.board.size; k++)
+				cues.add(new Cue(lineAt(moment, i) + k * WAVE_STEP_MS, TsgHubSounds.Sound.LINE_NOTE, Math.pow(2, steps[Math.min(k, steps.length - 1)] / 12.0)));
+			cues.add(new Cue(strikeAt(moment, i), TsgHubSounds.Sound.STRIKE, 1));
+		}
+		if (!moment.lines.isEmpty()) cues.add(new Cue(stampAt(moment) + STAMP_MS / 2 - STAMP_SOUND_LEAD_MS, TsgHubSounds.Sound.BINGO_STAMP, 1));
+		cues.sort(Comparator.comparingInt(cue -> cue.at));
+		return cues;
+	}
+
 	private static int[] find(TsgHubBingoBoard board, String id)
 	{
 		for (int row = 0; row < board.size; row++)
@@ -618,7 +689,11 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 		if (moment != null && panelBounds.contains(event.getPoint()))
 		{
 			long now = System.currentTimeMillis();
-			if (now - startedAt < exitAt(moment)) startedAt = now - exitAt(moment);
+			if (now - startedAt < exitAt(moment))
+			{
+				heard = exitAt(moment);
+				startedAt = now - exitAt(moment);
+			}
 			event.consume();
 		}
 		return event;
