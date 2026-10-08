@@ -144,6 +144,12 @@ public class PlayerSkillsPanel extends JPanel
 
 	public void update(PartyPlayer player, boolean displayVirtualLevels)
 	{
+		if (player.getStats() == null)
+		{
+			for (SkillPanelSlot slot : panelMap.values()) slot.clear();
+			totalLabel.setText("");
+			return;
+		}
 		int total = 0;
 		for (Skill skill : SKILLS)
 		{

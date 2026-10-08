@@ -33,6 +33,7 @@ import java.awt.image.BufferedImage;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import lombok.Getter;
+import lombok.Setter;
 import net.runelite.client.util.QuantityFormatter;
 
 public class EquipmentPanelSlot extends JLabel
@@ -42,6 +43,9 @@ public class EquipmentPanelSlot extends JLabel
 	private ImageIcon placeholder;
 	@Getter
 	private GameItem item;
+	@Getter
+	@Setter
+	private BufferedImage pending;
 
 	EquipmentPanelSlot()
 	{

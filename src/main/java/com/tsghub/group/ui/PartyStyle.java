@@ -1,6 +1,8 @@
 package com.tsghub.group.ui;
 
 import java.awt.Color;
+import javax.swing.BorderFactory;
+import javax.swing.border.Border;
 import net.runelite.client.ui.ColorScheme;
 
 public final class PartyStyle
@@ -22,6 +24,21 @@ public final class PartyStyle
 
 	private PartyStyle()
 	{
+	}
+
+	public static Border cardBorder()
+	{
+		return BorderFactory.createEmptyBorder(7, 8, 7, 8);
+	}
+
+	public static Border selfBorder()
+	{
+		return BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(SELF_BORDER), BorderFactory.createEmptyBorder(6, 7, 6, 7));
+	}
+
+	public static String plainTooltip(String text)
+	{
+		return "<html>" + text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") + "</html>";
 	}
 
 	public static Color levelColor(int current, int max)

@@ -40,11 +40,11 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
-import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.client.game.AlternateSprites;
@@ -109,7 +109,7 @@ public class PlayerPanel extends JPanel
 			@Override
 			public void mouseReleased(MouseEvent e)
 			{
-				if (e.getButton() != MouseEvent.BUTTON1 || e.isPopupTrigger()) return;
+				if (!SwingUtilities.isLeftMouseButton(e) || e.isPopupTrigger() || e.isControlDown() || !e.getComponent().contains(e.getPoint())) return;
 				showInfo = !showInfo;
 				updatePanel();
 				if (showInfo) updatePlayerData(PlayerPanel.this.player, false);
@@ -250,9 +250,7 @@ public class PlayerPanel extends JPanel
 	{
 		Color background = self ? (hovered ? PartyStyle.SELF_CARD_HOVER : PartyStyle.SELF_CARD) : (hovered ? PartyStyle.CARD_HOVER : PartyStyle.CARD);
 		setBackground(background);
-		setBorder(self
-			? BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(PartyStyle.SELF_BORDER), BorderFactory.createEmptyBorder(6, 7, 6, 7))
-			: BorderFactory.createEmptyBorder(7, 8, 7, 8));
+		setBorder(self ? PartyStyle.selfBorder() : PartyStyle.cardBorder());
 		repaint();
 	}
 

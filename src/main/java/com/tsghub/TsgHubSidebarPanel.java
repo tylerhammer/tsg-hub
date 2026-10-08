@@ -1,11 +1,13 @@
 package com.tsghub;
 
 import static com.tsghub.TsgHubUi.*;
+import static net.runelite.client.util.ColorUtil.toHexColor;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.tsghub.group.GroupMembersPanel;
 import com.tsghub.group.data.PartyPlayer;
+import com.tsghub.group.ui.PartyStyle;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
@@ -117,8 +119,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private static final String WILDERNESS = "Wilderness lvl ";
 	private static final int DROP_ICON_W = 40;
 	private static final DateTimeFormatter CLOCK_TIME = DateTimeFormatter.ofPattern("HH:mm");
-	private static final Color SELF_CARD = new Color(43, 36, 22);
-	private static final Color SELF_BORDER = new Color(122, 82, 8);
 	private static final String SELF_TEXT = "#e0a82e";
 	private static final Color TAG_DEFAULT = new Color(195, 140, 255);
 	private static final Map<String, Color> TAG_COLORS = Map.of(
@@ -557,10 +557,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	private static void highlightSelf(JPanel card)
 	{
-		card.setBackground(SELF_CARD);
-		card.setBorder(BorderFactory.createCompoundBorder(
-			BorderFactory.createLineBorder(SELF_BORDER),
-			BorderFactory.createEmptyBorder(6, 7, 6, 7)));
+		card.setBackground(PartyStyle.SELF_CARD);
+		card.setBorder(PartyStyle.selfBorder());
 	}
 
 	private JPanel memberCard(JsonObject member, int myWorld)
@@ -1199,6 +1197,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		JsonArray members = array(group, "members");
 		String leader = str(group, "leaderName");
 		int world = 0;
+		boolean leaderListed = false;
 		List<String> names = new ArrayList<>();
 		for (JsonObject member : objects(members))
 		{
@@ -1206,9 +1205,10 @@ final class TsgHubSidebarPanel extends PluginPanel
 			if (samePlayer(name, leader))
 			{
 				world = integer(member, "world", 0);
-				names.add(0, "<font color='#ffffff'>" + escape(name) + "</font>");
+				leaderListed = true;
+				names.add(0, "<font color='" + toHexColor(TEXT) + "'>" + escape(name) + "</font>");
 			}
-			else names.add("<font color='" + hex(MUTED) + "'>" + escape(name) + "</font>");
+			else names.add("<font color='" + toHexColor(MUTED) + "'>" + escape(name) + "</font>");
 		}
 		JPanel card = card();
 		boolean mine = current != null && str(group, "id").equals(str(current, "id"));
@@ -1217,6 +1217,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		String title = mine ? currentTitle(group) : partyTitle(group);
 
 		JLabel heading = shrinkable(label(title, locked ? MUTED : TEXT, boldFont()));
+		heading.putClientProperty("html.disable", Boolean.TRUE);
 		if (bool(group, "locked"))
 		{
 			heading.setIcon(new LockIcon());
@@ -1232,9 +1233,10 @@ final class TsgHubSidebarPanel extends PluginPanel
 		text.add(Box.createVerticalStrut(3));
 		Map.Entry<String, Integer> area = areaSummary(members);
 		String here = area != null && area.getValue() < members.size() ? " · " + area.getValue() + " here" : "";
-		String meta = escape((members.size() == 1 ? "1 member" : members.size() + " members") + here + (world > 0 ? " · W" + world : ""));
+		String meta = escape((members.size() == 1 ? "1 member" : members.size() + " members") + here + (world > 0 ? " · W" + world : "")
+			+ (!leaderListed && !leader.isEmpty() ? " · led by " + leader : ""));
 		if (area != null && !area.getKey().equalsIgnoreCase(title))
-			meta += " · <font color='" + hex(SUCCESS) + "'>" + escape(area.getKey()) + "</font>";
+			meta += " · <font color='" + toHexColor(SUCCESS) + "'>" + escape(area.getKey()) + "</font>";
 		text.add(label(html(meta, CARD_TEXT_W), MUTED, smallFont()));
 		text.add(Box.createVerticalStrut(4));
 		text.add(label(html(String.join(", ", names), CARD_TEXT_W), MUTED, smallFont()));
@@ -1262,11 +1264,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 			plugin.groups().join(str(group, "id"));
 		});
 		return fitHeight(card);
-	}
-
-	private static String hex(Color color)
-	{
-		return String.format("#%06x", color.getRGB() & 0xffffff);
 	}
 
 	static String partyTitle(JsonObject group)

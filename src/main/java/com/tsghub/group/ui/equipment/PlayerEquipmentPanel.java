@@ -121,11 +121,15 @@ public class PlayerEquipmentPanel extends JPanel
 	{
 		if (item == null || itemManager == null)
 		{
+			panel.setPending(null);
 			panel.setGameItem(null, null);
 			return;
 		}
 		AsyncBufferedImage img = itemManager.getImage(item.getId(), item.getQty(), item.isStackable());
+		panel.setPending(img);
 		panel.setGameItem(item, img);
-		img.onLoaded(() -> panel.setGameItem(item, img));
+		img.onLoaded(() -> SwingUtilities.invokeLater(() -> {
+			if (panel.getPending() == img) panel.setGameItem(item, img);
+		}));
 	}
 }

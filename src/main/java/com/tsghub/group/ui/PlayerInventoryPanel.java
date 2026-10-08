@@ -31,9 +31,12 @@ import java.awt.GridLayout;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 import net.runelite.client.game.ItemManager;
+import net.runelite.client.util.AsyncBufferedImage;
 import org.apache.commons.lang3.ArrayUtils;
 
 public class PlayerInventoryPanel extends JPanel
@@ -43,6 +46,7 @@ public class PlayerInventoryPanel extends JPanel
 
 	private final ItemManager itemManager;
 	private final JLabel[] slots = new JLabel[SLOTS];
+	private final AsyncBufferedImage[] images = new AsyncBufferedImage[SLOTS];
 
 	public PlayerInventoryPanel(final GameItem[] items, final GameItem[] runePouchContents, final ItemManager itemManager)
 	{
@@ -71,6 +75,7 @@ public class PlayerInventoryPanel extends JPanel
 			GameItem item = items != null && i < items.length ? items[i] : null;
 			if (item == null)
 			{
+				images[i] = null;
 				label.setIcon(null);
 				label.setToolTipText(null);
 				continue;
@@ -78,7 +83,14 @@ public class PlayerInventoryPanel extends JPanel
 			label.setToolTipText(ArrayUtils.contains(GroupTracker.RUNEPOUCH_ITEM_IDS, item.getId())
 				? getRunePouchHoverText(item, runePouchContents)
 				: item.getDisplayName());
-			if (itemManager != null) itemManager.getImage(item.getId(), item.getQty(), item.isStackable()).addTo(label);
+			if (itemManager == null) continue;
+			AsyncBufferedImage image = itemManager.getImage(item.getId(), item.getQty(), item.isStackable());
+			int slot = i;
+			images[slot] = image;
+			label.setIcon(new ImageIcon(image));
+			image.onLoaded(() -> SwingUtilities.invokeLater(() -> {
+				if (images[slot] == image) label.setIcon(new ImageIcon(image));
+			}));
 		}
 	}
 

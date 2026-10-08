@@ -69,6 +69,15 @@ public class SkillPanelSlot extends JPanel
 		levelLabel.setIcon(new ImageIcon(ImageUtil.resizeImage(icon, 16, 16)));
 	}
 
+	void clear()
+	{
+		boosted = -1;
+		base = -1;
+		levelLabel.setText("");
+		baseLabel.setText("");
+		setToolTipText(name);
+	}
+
 	void setLevels(int boostedLevel, int baseLevel)
 	{
 		if (boostedLevel == boosted && baseLevel == base) return;

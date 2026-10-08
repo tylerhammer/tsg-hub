@@ -45,10 +45,9 @@ import net.runelite.client.util.ImageUtil;
 public class PlayerBanner extends JPanel
 {
 	private static final int STAT_ICON = 16;
-	private static final int AVATAR = 32;
+	private static final String SPRITE_KEY = "tsghub.sprite";
 
 	private final SpriteManager spriteManager;
-	private final JLabel avatarLabel = new JLabel();
 	private final JLabel nameLabel = new JLabel();
 	private final JLabel worldLabel = new JLabel();
 	private final JLabel areaLabel = new JLabel();
@@ -60,7 +59,6 @@ public class PlayerBanner extends JPanel
 
 	private PartyPlayer player;
 	private boolean displayWorld;
-	private BufferedImage avatar;
 	private BufferedImage currentHeart;
 	private boolean heartSet;
 	private Boolean usingStamIcon;
@@ -76,10 +74,12 @@ public class PlayerBanner extends JPanel
 
 		nameLabel.setFont(FontManager.getRunescapeBoldFont());
 		nameLabel.setMinimumSize(new Dimension(0, 0));
+		nameLabel.putClientProperty("html.disable", Boolean.TRUE);
 		worldLabel.setFont(FontManager.getRunescapeSmallFont());
 		worldLabel.setForeground(PartyStyle.MUTED);
 		areaLabel.setFont(FontManager.getRunescapeSmallFont());
 		areaLabel.setMinimumSize(new Dimension(0, 0));
+		areaLabel.putClientProperty("html.disable", Boolean.TRUE);
 
 		JPanel top = row();
 		top.add(nameLabel, BorderLayout.CENTER);
@@ -87,19 +87,6 @@ public class PlayerBanner extends JPanel
 		JPanel bottom = row();
 		bottom.add(areaLabel, BorderLayout.CENTER);
 		bottom.add(spellbookLabel, BorderLayout.EAST);
-		JPanel ident = new JPanel();
-		ident.setOpaque(false);
-		ident.setLayout(new BoxLayout(ident, BoxLayout.Y_AXIS));
-		ident.add(top);
-		ident.add(Box.createVerticalStrut(3));
-		ident.add(bottom);
-
-		avatarLabel.setVerticalAlignment(JLabel.TOP);
-		JPanel header = new JPanel(new BorderLayout(6, 0));
-		header.setOpaque(false);
-		header.add(avatarLabel, BorderLayout.WEST);
-		header.add(ident, BorderLayout.CENTER);
-
 		JPanel stats = new JPanel(new GridLayout(1, 4, 2, 0));
 		stats.setOpaque(false);
 		stats.add(hpLabel);
@@ -107,9 +94,10 @@ public class PlayerBanner extends JPanel
 		stats.add(specLabel);
 		stats.add(runLabel);
 
-		header.setAlignmentX(LEFT_ALIGNMENT);
 		stats.setAlignmentX(LEFT_ALIGNMENT);
-		add(header);
+		add(top);
+		add(Box.createVerticalStrut(3));
+		add(bottom);
 		add(Box.createVerticalStrut(6));
 		add(stats);
 
@@ -131,7 +119,6 @@ public class PlayerBanner extends JPanel
 		nameLabel.setForeground(online ? PartyStyle.TEXT : PartyStyle.MUTED);
 		nameLabel.setToolTipText(online && player.getStats() != null ? "Combat level " + player.getStats().getCombatLevel() : null);
 		updateWorld(player, displayWorld);
-		refreshAvatar();
 		refreshStats();
 		updateSpellbookIcon(player.getSpellbook());
 	}
@@ -158,7 +145,7 @@ public class PlayerBanner extends JPanel
 		String text = !online ? "Last seen stats" : !inGame ? "Not logged in" : area;
 		areaLabel.setText(text);
 		areaLabel.setForeground(inGame && !area.isEmpty() ? PartyStyle.SUCCESS : PartyStyle.MUTED);
-		areaLabel.setToolTipText(area.isEmpty() ? null : area);
+		areaLabel.setToolTipText(area.isEmpty() ? null : PartyStyle.plainTooltip(area));
 	}
 
 	public void setCurrentHeart(BufferedImage img)
@@ -166,8 +153,13 @@ public class PlayerBanner extends JPanel
 		if (heartSet && img == currentHeart) return;
 		heartSet = true;
 		currentHeart = img;
-		if (img == null) setSprite(hpLabel, SpriteID.Staticons.HITPOINTS);
-		else hpLabel.setIcon(new ImageIcon(ImageUtil.resizeImage(img, STAT_ICON, STAT_ICON)));
+		if (img == null)
+		{
+			setSprite(hpLabel, SpriteID.Staticons.HITPOINTS);
+			return;
+		}
+		hpLabel.putClientProperty(SPRITE_KEY, null);
+		hpLabel.setIcon(new ImageIcon(ImageUtil.resizeImage(img, STAT_ICON, STAT_ICON)));
 	}
 
 	public void setUsingStamIcon(boolean stamina)
@@ -175,15 +167,6 @@ public class PlayerBanner extends JPanel
 		if (usingStamIcon != null && usingStamIcon == stamina) return;
 		usingStamIcon = stamina;
 		setSprite(runLabel, stamina ? SpriteID.OrbIcon.RUN_ICON_SLOWED_DEPLETION : SpriteID.OrbIcon.RUN);
-	}
-
-	private void refreshAvatar()
-	{
-		BufferedImage next = player.getMember().getAvatar();
-		if (next == avatar) return;
-		avatar = next;
-		avatarLabel.setIcon(next == null ? null : new ImageIcon(ImageUtil.resizeImage(next, AVATAR, AVATAR)));
-		avatarLabel.setVisible(next != null);
 	}
 
 	private void updateSpellbookIcon(int book)
@@ -216,8 +199,11 @@ public class PlayerBanner extends JPanel
 
 	private void setSprite(JLabel label, int spriteID)
 	{
-		spriteManager.getSpriteAsync(spriteID, 0, img -> SwingUtilities.invokeLater(() ->
-			label.setIcon(new ImageIcon(ImageUtil.resizeImage(img, STAT_ICON, STAT_ICON)))));
+		label.putClientProperty(SPRITE_KEY, spriteID);
+		spriteManager.getSpriteAsync(spriteID, 0, img -> SwingUtilities.invokeLater(() -> {
+			if (Integer.valueOf(spriteID).equals(label.getClientProperty(SPRITE_KEY)))
+				label.setIcon(new ImageIcon(ImageUtil.resizeImage(img, STAT_ICON, STAT_ICON)));
+		}));
 	}
 
 	private static JLabel statLabel(String tooltip)
