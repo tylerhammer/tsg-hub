@@ -95,7 +95,8 @@
      500000000,
      250000000,
      100000000
-    ]
+    ],
+    "style": "board"
    },
    {
     "id": "0df1ad0f-8568-45a1-813f-8fc433ddb8f9",
@@ -381,7 +382,7 @@
     {
      "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
      "completedTasks": 3,
-     "points": 40,
+     "points": 52,
      "tasks": [
       {
        "taskId": "68c47d80-a886-4ef7-8dd8-5213b6bffc0f",
@@ -648,17 +649,23 @@
         }
        ]
       }
-     ]
+     ],
+     "lines": 1,
+     "bonusPoints": 12
     },
     {
      "teamId": "88d53ff2-c501-4d8b-b566-29be32460b05",
      "completedTasks": 2,
-     "points": 35
+     "points": 35,
+     "lines": 0,
+     "bonusPoints": 0
     },
     {
      "teamId": "d1578c18-ae4e-43ec-9bbf-4311ac03f8b1",
      "completedTasks": 2,
-     "points": 15
+     "points": 15,
+     "lines": 0,
+     "bonusPoints": 0
     }
    ],
    "members": [
@@ -905,7 +912,64 @@
     500000000,
     250000000,
     100000000
-   ]
+   ],
+   "board": {
+    "type": "grid",
+    "size": 3,
+    "mode": "shared",
+    "auto": false,
+    "tiles": [
+     {
+      "taskId": "68c47d80-a886-4ef7-8dd8-5213b6bffc0f",
+      "row": 0,
+      "col": 0
+     },
+     {
+      "taskId": "77e119ec-91b7-46b9-93ad-b3617f2ad939",
+      "row": 0,
+      "col": 1
+     },
+     {
+      "taskId": "94264e83-0d97-4942-b42a-7ab3424c8779",
+      "row": 0,
+      "col": 2
+     },
+     {
+      "taskId": "654b5fd2-e2fc-4a9a-8e9f-a02d67716e11",
+      "row": 1,
+      "col": 0
+     },
+     {
+      "taskId": "e880ea37-c64b-4e87-9f22-96203b53c773",
+      "row": 1,
+      "col": 1
+     },
+     {
+      "taskId": "499ccdcd-2635-4519-8fad-138dbba8e50f",
+      "row": 1,
+      "col": 2
+     },
+     {
+      "taskId": "75f6f9af-9636-4431-bf31-f446043535b5",
+      "row": 2,
+      "col": 0
+     },
+     {
+      "taskId": "968c76bd-b5ff-4063-9231-e54c0fa3ef53",
+      "row": 2,
+      "col": 2
+     }
+    ],
+    "unplaced": [],
+    "lineBonus": 5,
+    "randomMin": 1,
+    "randomMax": 10,
+    "locked": true,
+    "bonuses": {
+     "ROW:1": 7
+    }
+   },
+   "style": "board"
   }
  },
  "organizer": {
@@ -1143,7 +1207,7 @@
    {
     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
     "completedTasks": 3,
-    "points": 40,
+    "points": 52,
     "tasks": [
      {
       "taskId": "68c47d80-a886-4ef7-8dd8-5213b6bffc0f",
@@ -1410,7 +1474,9 @@
        }
       ]
      }
-    ]
+    ],
+    "lines": 1,
+    "bonusPoints": 12
    },
    {
     "teamId": "88d53ff2-c501-4d8b-b566-29be32460b05",
@@ -1645,7 +1711,9 @@
        }
       ]
      }
-    ]
+    ],
+    "lines": 0,
+    "bonusPoints": 0
    },
    {
     "teamId": "d1578c18-ae4e-43ec-9bbf-4311ac03f8b1",
@@ -1862,7 +1930,9 @@
        }
       ]
      }
-    ]
+    ],
+    "lines": 0,
+    "bonusPoints": 0
    }
   ],
   "members": [
@@ -2560,7 +2630,71 @@
    500000000,
    250000000,
    100000000
-  ]
+  ],
+  "board": {
+   "type": "grid",
+   "size": 3,
+   "mode": "shared",
+   "auto": false,
+   "tiles": [
+    {
+     "taskId": "68c47d80-a886-4ef7-8dd8-5213b6bffc0f",
+     "row": 0,
+     "col": 0
+    },
+    {
+     "taskId": "77e119ec-91b7-46b9-93ad-b3617f2ad939",
+     "row": 0,
+     "col": 1
+    },
+    {
+     "taskId": "94264e83-0d97-4942-b42a-7ab3424c8779",
+     "row": 0,
+     "col": 2
+    },
+    {
+     "taskId": "654b5fd2-e2fc-4a9a-8e9f-a02d67716e11",
+     "row": 1,
+     "col": 0
+    },
+    {
+     "taskId": "e880ea37-c64b-4e87-9f22-96203b53c773",
+     "row": 1,
+     "col": 1
+    },
+    {
+     "taskId": "499ccdcd-2635-4519-8fad-138dbba8e50f",
+     "row": 1,
+     "col": 2
+    },
+    {
+     "taskId": "75f6f9af-9636-4431-bf31-f446043535b5",
+     "row": 2,
+     "col": 0
+    },
+    {
+     "taskId": "968c76bd-b5ff-4063-9231-e54c0fa3ef53",
+     "row": 2,
+     "col": 2
+    }
+   ],
+   "unplaced": [],
+   "lineBonus": 5,
+   "randomMin": 1,
+   "randomMax": 10,
+   "locked": false,
+   "bonuses": {
+    "ROW:0": 4,
+    "ROW:1": 7,
+    "ROW:2": 9,
+    "COLUMN:0": 2,
+    "COLUMN:1": 10,
+    "COLUMN:2": 5,
+    "DIAGONAL:0": 8,
+    "ANTI_DIAGONAL:0": 3
+   }
+  },
+  "style": "board"
  },
  "managed": {
   "events": [
@@ -2577,7 +2711,8 @@
      250000000,
      100000000
     ],
-    "config": {}
+    "config": {},
+    "style": "board"
    },
    {
     "id": "0df1ad0f-8568-45a1-813f-8fc433ddb8f9",

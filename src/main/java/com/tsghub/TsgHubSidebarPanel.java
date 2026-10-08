@@ -17,9 +17,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import javax.swing.BorderFactory;
@@ -72,6 +74,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final TsgHubUi.WidthTrackingPanel teamTab = new TsgHubUi.WidthTrackingPanel();
 	private final JCheckBox hideCompleted = new JCheckBox("Hide completed");
 	private final JTextField manualNote = new JTextField();
+	private final TsgHubBoardGrid boardGrid;
+	private String boardView = TsgHubSession.get("boardView");
 
 	private final JTextField codeField = new JTextField();
 	private final JButton joinButton = TsgHubUi.primaryButton("Join event");
@@ -160,6 +164,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 		super(false);
 		this.plugin = plugin;
 		this.groupMembers = groupMembers;
+		boardGrid = new TsgHubBoardGrid(plugin.tileIcons(), 0);
+		boardGrid.onSelect((taskId, row, col) -> renderTasks());
 		sections = Arrays.asList(
 			new Section("Events", "Clan events and your team's board", new TsgHubUi.CalendarIcon(), this::openEvents, this::eventsSummary, () -> liveEvents() > 0),
 			new Section("Parties", "Join a clanmate's party or start one", new TsgHubUi.PartyIcon(), this::showParties, this::partiesSummary, () -> plugin.groups().inGroup()),
@@ -1669,6 +1675,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		JsonArray tasks = TsgHubUi.array(boardEvent, "tasks");
 		JsonObject score = TsgHubUi.scoreFor(TsgHubUi.array(boardEvent, "teamScores"), ownTeamId());
 		JsonArray progressRows = TsgHubUi.array(score, "tasks");
+		TsgHubBingoBoard board = TsgHubBingoBoard.of(boardEvent);
 
 		List<JsonObject> open = new ArrayList<>();
 		List<JsonObject> done = new ArrayList<>();
@@ -1677,6 +1684,20 @@ final class TsgHubSidebarPanel extends PluginPanel
 			JsonObject task = tasks.get(i).getAsJsonObject();
 			boolean completed = TsgHubUi.bool(TsgHubUi.progressFor(progressRows, TsgHubUi.str(task, "id")), "completed");
 			(completed ? done : open).add(task);
+		}
+
+		boolean hasBoard = TsgHubBingoBoard.hasBoard(boardEvent);
+		boolean grid = hasBoard && tasks.size() > 0 && showGrid();
+		if (hasBoard && tasks.size() > 0)
+		{
+			tasksTab.add(TsgHubUi.fitHeight(viewToggle(grid)));
+			tasksTab.add(Box.createVerticalStrut(6));
+		}
+		if (grid)
+		{
+			renderGrid(board, tasks, progressRows, open.size());
+			refresh(tasksTab);
+			return;
 		}
 
 		JPanel controls = new JPanel(new BorderLayout());
@@ -1702,6 +1723,104 @@ final class TsgHubSidebarPanel extends PluginPanel
 			for (JsonObject task : done) addTaskCard(task, TsgHubUi.progressFor(progressRows, TsgHubUi.str(task, "id")));
 		}
 		refresh(tasksTab);
+	}
+
+	private boolean showGrid()
+	{
+		return !"list".equals(boardView);
+	}
+
+	private JPanel viewToggle(boolean grid)
+	{
+		JPanel toggle = new JPanel(new GridLayout(1, 2, 4, 0));
+		toggle.setOpaque(false);
+		JButton board = grid ? TsgHubUi.primaryButton("Board") : TsgHubUi.button("Board");
+		JButton list = grid ? TsgHubUi.button("List") : TsgHubUi.primaryButton("List");
+		board.setToolTipText("Tiles on a bingo card");
+		list.setToolTipText("Every task as a card");
+		board.addActionListener(e -> setBoardView("grid"));
+		list.addActionListener(e -> setBoardView("list"));
+		toggle.add(board);
+		toggle.add(list);
+		return toggle;
+	}
+
+	void selectTile(String taskId)
+	{
+		boardGrid.setSelectedTask(taskId);
+		renderTasks();
+	}
+
+	void boardOverlayChanged()
+	{
+		if (view == View.BOARD) renderTasks();
+	}
+
+	void setBoardView(String view)
+	{
+		boardView = view;
+		TsgHubSession.set("boardView", view);
+		renderTasks();
+	}
+
+	private void renderGrid(TsgHubBingoBoard board, JsonArray tasks, JsonArray progressRows, int left)
+	{
+		boardGrid.setData(TsgHubUi.str(boardEvent, "id") + ":" + ownTeamId(), board, tasks, progressRows);
+		Set<String> doneIds = new HashSet<>();
+		for (int i = 0; i < progressRows.size(); i++)
+		{
+			JsonObject row = progressRows.get(i).getAsJsonObject();
+			if (TsgHubUi.bool(row, "completed")) doneIds.add(TsgHubUi.str(row, "taskId"));
+		}
+		List<TsgHubBingoBoard.Line> completed = board.completedLines(doneIds);
+		int lines = completed.size();
+		int bonus = board.bonusFor(completed);
+		JPanel caption = new JPanel(new BorderLayout());
+		caption.setOpaque(false);
+		caption.add(TsgHubUi.label(board.size + "x" + board.size + " board", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont()), BorderLayout.WEST);
+		JLabel counts = TsgHubUi.label(left + " left · " + lines + (lines == 1 ? " line" : " lines") + (bonus > 0 ? " (+" + bonus + ")" : ""),
+			lines > 0 ? TsgHubBoardGrid.GOLD : TsgHubUi.MUTED, FontManager.getRunescapeSmallFont());
+		counts.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
+		caption.add(counts, BorderLayout.EAST);
+		tasksTab.add(TsgHubUi.fitHeight(caption));
+		tasksTab.add(Box.createVerticalStrut(4));
+		tasksTab.add(boardGrid);
+		tasksTab.add(Box.createVerticalStrut(board.hasBonus() ? 4 : 8));
+		if (board.hasBonus())
+		{
+			tasksTab.add(TsgHubUi.wrapped(board.bonusRule() + ".", TsgHubBoardGrid.GOLD, FontManager.getRunescapeSmallFont(), TEXT_W));
+			tasksTab.add(Box.createVerticalStrut(6));
+		}
+		boolean onScreen = plugin.boardOverlayEnabled();
+		JButton screen = TsgHubUi.button(onScreen ? "Hide board from screen" : "Show board on screen");
+		screen.setToolTipText("Show this board in game. Hold Alt and drag it to move it.");
+		screen.addActionListener(e -> plugin.setBoardOverlayEnabled(!onScreen));
+		tasksTab.add(TsgHubUi.fitHeight(fullWidth(screen)));
+		tasksTab.add(Box.createVerticalStrut(8));
+
+		JsonObject selected = null;
+		for (int i = 0; i < tasks.size(); i++)
+		{
+			JsonObject task = tasks.get(i).getAsJsonObject();
+			if (TsgHubUi.str(task, "id").equals(boardGrid.selectedTask())) selected = task;
+		}
+		if (selected == null)
+		{
+			boardGrid.setSelectedTask("");
+			tasksTab.add(TsgHubUi.wrapped("Click a tile to see its task.", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), TEXT_W));
+			tasksTab.add(Box.createVerticalStrut(5));
+		}
+		else addTaskCard(selected, TsgHubUi.progressFor(progressRows, TsgHubUi.str(selected, "id")));
+
+		if (board.unplaced.isEmpty()) return;
+		tasksTab.add(Box.createVerticalStrut(4));
+		tasksTab.add(TsgHubUi.label("Not on the board", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont()));
+		tasksTab.add(Box.createVerticalStrut(4));
+		for (int i = 0; i < tasks.size(); i++)
+		{
+			JsonObject task = tasks.get(i).getAsJsonObject();
+			if (board.unplaced.contains(TsgHubUi.str(task, "id"))) addTaskCard(task, TsgHubUi.progressFor(progressRows, TsgHubUi.str(task, "id")));
+		}
 	}
 
 	private void addTaskCard(JsonObject task, JsonObject progress)
@@ -1964,7 +2083,9 @@ final class TsgHubSidebarPanel extends PluginPanel
 			card.add(rank, BorderLayout.WEST);
 			JPanel text = TsgHubUi.stack();
 			text.add(TsgHubUi.label(TsgHubUi.html(TsgHubUi.escape(TsgHubUi.str(team, "name")), 120), TsgHubUi.TEXT, FontManager.getRunescapeFont()));
-			text.add(TsgHubUi.label(TsgHubUi.integer(score, "completedTasks", 0) + "/" + totalTasks + " tasks", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont()));
+			int lines = TsgHubUi.integer(score, "lines", 0);
+			int bonus = TsgHubUi.integer(score, "bonusPoints", 0);
+			text.add(TsgHubUi.label(TsgHubUi.integer(score, "completedTasks", 0) + "/" + totalTasks + " tasks" + (lines > 0 ? " · " + lines + (lines == 1 ? " line" : " lines") : "") + (bonus > 0 ? " (+" + bonus + ")" : ""), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont()));
 			card.add(text, BorderLayout.CENTER);
 			card.add(TsgHubUi.label(TsgHubUi.integer(score, "points", 0) + " pts", i == 0 ? TsgHubUi.ACCENT : TsgHubUi.TEXT, FontManager.getRunescapeBoldFont()), BorderLayout.EAST);
 			scoreboardTab.add(TsgHubUi.fitHeight(card));

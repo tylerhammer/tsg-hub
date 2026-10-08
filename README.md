@@ -8,7 +8,7 @@ Clan events for **Type Shiii Gaming** (TSG), right in your RuneLite sidebar. Joi
 
 ## Features
 
-- **Bingo boards** with team tasks that update automatically from kills, drops, raids and collection log unlocks.
+- **Bingo boards** with team tasks on a real bingo card that update automatically from kills, drops, raids and collection log unlocks.
 - **Skill of the Week** and **Boss of the Week** leaderboards you join with one click.
 - **Custom** events (drop parties, clan trips, anything else) announced with the time, world and location.
 - **Prizes**: events can list GP prizes for 1st, 2nd and 3rd place.
@@ -20,14 +20,25 @@ Clan events for **Type Shiii Gaming** (TSG), right in your RuneLite sidebar. Joi
 
 ## Bingo
 
-Your team's board opens straight from the sidebar. The header shows your team's rank, points and tasks done, plus the prize for each place. Every task shows its points, a progress bar, and who contributed what. Open tasks sort first; tick **Hide completed** to focus on what's left.
+Your team's board opens straight from the sidebar. The header shows your team's rank, points and tasks done, plus the prize for each place. Board bingos show your tasks as a bingo card: each tile shows the task's item icon, boss or raid icon, or name, a progress strip, and a tick once it's done. Finished rows, columns and diagonals light up gold, and the line count shows above the card. If the admins set line bonuses, each finished line also adds bonus points to your team's score: a fixed bonus, a hidden random one revealed when you finish the line, or both. The rule shows under the card. Click a tile to see its task details, submit proof, or check who contributed.
 
-**Scores** ranks every team, and **Team** lists your teammates. The board updates live while it's open.
+When you complete a tile, your board pops up in the middle of the game screen and a bingo dauber slams a red ink dot onto the tile, with a splash, a flash and its points floating up. If that tile finishes a line, a gold wave ripples across the line tile by tile, a gold strike runs through it, and a **BINGO!** stamp lands with the line bonus. Only the player who completed the tile sees it, so teammates aren't interrupted mid-fight. It never plays in the Wilderness, a PvP area or a PvP world; it waits until you're back somewhere safe. Click the board to skip it, or turn it off with **Tile reveal animation** under **Bingo** in the plugin settings.
+
+**Show board on screen** puts your team's board in the game view (hold Alt and drag to move it). Click a tile to flip it over and see its task, progress and points; it flips back after a few seconds, or when you click it again. Tiles there flip over as they complete too.
+
+Switch to **List** to see every task as a card instead, with its points, a progress bar, and who contributed what. Open tasks sort first; tick **Hide completed** to focus on what's left.
+
+Some bingos are task lists instead of boards. They show just the list, with no card, lines or dauber stamp; completing a task posts the usual chat message.
+
+**Scores** ranks every team and shows completed lines and bonus points, and **Team** lists your teammates. The board updates live while it's open.
 
 When you make progress, a message appears in **your own chatbox only**. When your team finishes a tile, teammates who are online in clan chat get a local alert too. TSG Hub never posts to public or clan chat.
 
+![Daubed tiles and a BINGO! stamp on the board](docs/images/reveal.png)
+
 <p>
-<img src="docs/images/board-tasks.png" width="320" alt="A team's bingo board with progress on each task">
+<img src="docs/images/board-grid.png" width="320" alt="A team's bingo card with a completed row and a selected tile">
+<img src="docs/images/board-tasks.png" width="320" alt="A team's bingo tasks as a list with progress on each task">
 <img src="docs/images/board-scores.png" width="320" alt="Team scoreboard">
 </p>
 
@@ -131,10 +142,13 @@ Once the key checks out, an admin button appears in the sidebar header. It opens
 
 Your in-game clan rank doesn't grant admin access. Owners and Deputy Owners keep admin tools through their Discord admin role, and their plugin keeps Discord rank roles in sync while they're logged in with sharing on.
 
-1. **New event**: pick bingo, Skill of the Week, Boss of the Week or a custom event, then set its name and its start and end date and time. Times are entered in your computer's time zone, shown next to the fields, and players see them converted to theirs. Custom events can leave the end time empty. You can add optional prizes for 1st, 2nd and 3rd place, in millions of GP, and hide scores from players until the end.
+1. **New event**: pick bingo, Skill of the Week, Boss of the Week or a custom event, then set its name and its start and end date and time. Times are entered in your computer's time zone, shown next to the fields, and players see them converted to theirs. Custom events can leave the end time empty. For bingo, choose **Bingo board** (a card with lines, line bonuses and the dauber stamp) or **Task list** (a plain list); you can switch until a published event starts. You can add optional prizes for 1st, 2nd and 3rd place, in millions of GP, and hide scores from players until the end.
 2. **Teams**: add teams. Each gets a permanent invite code; use **Copy code** to share it.
 3. **Tasks**: add tasks shared by every team. Item tasks have type-ahead search with icons and ready-made sets, and raid tasks let you choose each raid and mode.
-4. **Claims**: approve or reject manual submissions. The tab shows how many are waiting.
+4. **Board** (board bingos only): pick a size from 3 x 3 to 9 x 9 and **Shuffle** to place tasks on random tiles. **Same for every team** (the default) gives every team the same card, so lines are equally hard; **Different per team** shuffles each team's card separately. Click a tile, then another tile or empty cell, to swap them. **Reset** goes back to task order. The preview shows each team's progress and lines. Set a **Line bonus** for points per completed line, and a **Random bonus** range to give every line its own hidden bonus from that range (**Reroll** rolls new ones). Players see a random bonus only once they finish that line, and the rolls are listed under the preview for you. The line bonus can change any time; the random bonuses lock with the board. Fill every cell if you want every line to be winnable: a line through an empty cell can't be completed. The board locks once a published event starts. **Preview reveal** plays the dauber stamp players see.
+5. **Claims**: approve or reject manual submissions. The tab shows how many are waiting.
+
+![Board tab: size, layout, shuffle and a preview of the card](docs/images/admin-board.png)
 
 ![Pending manual claims awaiting review](docs/images/admin-claims.png)
 

@@ -122,8 +122,13 @@ public class ReadmeScreenshots
 		sidebar.showEventList();
 		BufferedImage eventList = shoot(sidebar, SIDEBAR_W, 480, "events");
 
-		sidebar.showBoard(data.getAsJsonObject("board").getAsJsonObject("event"), "Crab Legs", true);
-		BufferedImage board = shoot(sidebar, SIDEBAR_W, 712, "board-tasks");
+		JsonObject boardEvent = data.getAsJsonObject("board").getAsJsonObject("event");
+		sidebar.setBoardView("list");
+		sidebar.showBoard(boardEvent, "Crab Legs", true);
+		shoot(sidebar, SIDEBAR_W, 712, "board-tasks");
+		sidebar.setBoardView("grid");
+		sidebar.selectTile(TsgHubUi.str(boardEvent.getAsJsonArray("tasks").get(0).getAsJsonObject(), "id"));
+		BufferedImage board = shoot(sidebar, SIDEBAR_W, 560, "board-grid");
 		selectTab(sidebar, "Scores");
 		shoot(sidebar, SIDEBAR_W, 330, "board-scores");
 		selectTab(sidebar, "Team");
@@ -147,10 +152,44 @@ public class ReadmeScreenshots
 		shoot(organizer, 860, 300, "admin-teams");
 		selectTab(organizer, "Tasks");
 		shoot(organizer, 860, 580, "admin-tasks");
+		selectTab(organizer, "Board");
+		shoot(organizer, 860, 640, "admin-board");
 		selectTab(organizer, "Claims");
 		shoot(organizer, 860, 270, "admin-claims");
 
+		reveal(boardEvent, TsgHubUi.teamIdFor(boardEvent, "Crab Legs"));
+
 		hero(480, eventList, board, parties);
+	}
+
+	private static void reveal(JsonObject event, String teamId) throws Exception
+	{
+		TsgHubBingoBoard board = TsgHubBingoBoard.of(event);
+		java.util.Map<String, JsonObject> tasks = new java.util.HashMap<>();
+		JsonArray list = event.getAsJsonArray("tasks");
+		for (int i = 0; i < list.size(); i++) tasks.put(TsgHubUi.str(list.get(i).getAsJsonObject(), "id"), list.get(i).getAsJsonObject());
+		java.util.Map<String, JsonObject> progress = new java.util.HashMap<>();
+		java.util.Set<String> before = new java.util.HashSet<>();
+		JsonArray rows = TsgHubUi.array(TsgHubUi.scoreFor(event.getAsJsonArray("teamScores"), teamId), "tasks");
+		for (int i = 0; i < rows.size(); i++)
+		{
+			JsonObject row = rows.get(i).getAsJsonObject();
+			progress.put(TsgHubUi.str(row, "taskId"), row);
+			if (TsgHubUi.bool(row, "completed")) before.add(TsgHubUi.str(row, "taskId"));
+		}
+		String stamped = board.taskAt(1, 1);
+		before.remove(stamped);
+		TsgHubReveals.Moment moment = new TsgHubReveals.Moment(TsgHubUi.str(event, "name"), board, tasks, progress, before,
+			java.util.Collections.singletonList(stamped), java.util.Collections.singletonList(new TsgHubBingoBoard.Line(TsgHubBingoBoard.Direction.ROW, 1)));
+		TsgHubRevealOverlay overlay = new TsgHubRevealOverlay(null, new TsgHubTileIcons(ReadmeScreenshots::itemIcon, null));
+		BufferedImage image = new BufferedImage(765 * SCALE, 503 * SCALE, BufferedImage.TYPE_INT_RGB);
+		Graphics2D g = image.createGraphics();
+		g.scale(SCALE, SCALE);
+		g.setPaint(new java.awt.GradientPaint(0, 0, new java.awt.Color(74, 96, 58), 0, 503, new java.awt.Color(46, 60, 38)));
+		g.fillRect(0, 0, 765, 503);
+		overlay.paint(g, moment, TsgHubRevealOverlay.stampAt(moment) + TsgHubRevealOverlay.STAMP_MS + 400, 765, 503);
+		g.dispose();
+		ImageIO.write(image, "png", new File(out, "reveal.png"));
 	}
 
 	private static String str(String key)

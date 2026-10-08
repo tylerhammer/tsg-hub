@@ -91,10 +91,22 @@ final class TsgHubPanel extends JPanel
 	private final TsgHubUi.WidthTrackingPanel teamsTab = new TsgHubUi.WidthTrackingPanel();
 	private final TsgHubUi.WidthTrackingPanel tasksTab = new TsgHubUi.WidthTrackingPanel();
 	private final TsgHubUi.WidthTrackingPanel claimsTab = new TsgHubUi.WidthTrackingPanel();
+	private final TsgHubUi.WidthTrackingPanel boardTab = new TsgHubUi.WidthTrackingPanel();
+	private final JComboBox<String> boardSize = new JComboBox<>();
+	private final JComboBox<String> boardMode = new JComboBox<>(new String[] {"Same for every team", "Different per team"});
+	private final JComboBox<String> boardTeam = new JComboBox<>();
+	private final JTextField bonusLine = new JTextField(4);
+	private final JTextField bonusMin = new JTextField(4);
+	private final JTextField bonusMax = new JTextField(4);
+	private final List<String> boardTeamIds = new ArrayList<>();
+	private final TsgHubBoardGrid boardPreview;
+	private String boardSynced = "";
+	private boolean syncingBoard;
 	private MaterialTabGroup tabs;
 	private MaterialTab teamsTabButton;
 	private MaterialTab tasksTabButton;
 	private MaterialTab claimsTabButton;
+	private MaterialTab boardTabButton;
 	private MaterialTab leaderboardTabButton;
 	private MaterialTab detailsTabButton;
 	private final TsgHubUi.WidthTrackingPanel leaderboardTab = new TsgHubUi.WidthTrackingPanel();
@@ -119,6 +131,10 @@ final class TsgHubPanel extends JPanel
 	private final JComboBox<String> eventSkill = new JComboBox<>();
 	private final TsgHubBossPicker eventBoss = new TsgHubBossPicker("Boss", null);
 	private final JRadioButton eventSignalKc = new JRadioButton("Kill count message (recommended)", true);
+	private final JRadioButton styleBoard = new JRadioButton("Bingo board", true);
+	private final JRadioButton styleList = new JRadioButton("Task list");
+	private final JLabel styleHint = TsgHubUi.label("", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont());
+	private JPanel styleRow;
 	private final JRadioButton eventSignalLoot = new JRadioButton("Loot drop (bosses without a KC message)");
 	private final JTextField partyWorld = new JTextField();
 	private final JTextField partyLocation = new JTextField();
@@ -179,6 +195,10 @@ final class TsgHubPanel extends JPanel
 	{
 		this.plugin = plugin;
 		itemGroups.add(new ArrayList<>());
+		boardPreview = new TsgHubBoardGrid(plugin.tileIcons(), 64);
+		boardPreview.onSwap(this::swapTiles);
+		for (int size = TsgHubBingoBoard.MIN_SIZE; size <= TsgHubBingoBoard.MAX_SIZE; size++) boardSize.addItem(size + " x " + size);
+		boardTeam.addActionListener(e -> { if (!syncingBoard) renderBoard(); });
 		setLayout(new BorderLayout());
 		setBackground(TsgHubUi.BACKGROUND);
 
@@ -270,6 +290,13 @@ final class TsgHubPanel extends JPanel
 		form.add(bossRow2);
 		signalRow2 = radioField("Count kills using", eventSignalKc, eventSignalLoot);
 		form.add(signalRow2);
+		styleRow = TsgHubUi.stack();
+		styleRow.add(radioField("Style", styleBoard, styleList));
+		styleRow.add(styleHint);
+		styleRow.add(Box.createVerticalStrut(8));
+		styleBoard.addActionListener(e -> updateEventFormType());
+		styleList.addActionListener(e -> updateEventFormType());
+		form.add(styleRow);
 
 		partyRows = TsgHubUi.stack();
 		partyRows.add(field("World", partyWorld));
@@ -370,10 +397,12 @@ final class TsgHubPanel extends JPanel
 		teamsTabButton = new MaterialTab("Teams", tabs, TsgHubUi.scroll(teamsTab));
 		tasksTabButton = new MaterialTab("Tasks", tabs, TsgHubUi.scroll(tasksTab));
 		claimsTabButton = new MaterialTab("Claims", tabs, TsgHubUi.scroll(claimsTab));
+		boardTabButton = new MaterialTab("Board", tabs, TsgHubUi.scroll(boardTab));
 		leaderboardTabButton = new MaterialTab("Leaderboard", tabs, TsgHubUi.scroll(leaderboardTab));
 		detailsTabButton = new MaterialTab("Details", tabs, TsgHubUi.scroll(detailsTab));
 		tabs.addTab(teamsTabButton);
 		tabs.addTab(tasksTabButton);
+		tabs.addTab(boardTabButton);
 		tabs.addTab(claimsTabButton);
 		tabs.addTab(leaderboardTabButton);
 		tabs.addTab(detailsTabButton);
@@ -787,11 +816,14 @@ final class TsgHubPanel extends JPanel
 		teamsTabButton.setVisible(bingo);
 		tasksTabButton.setVisible(bingo);
 		claimsTabButton.setVisible(bingo);
+		boardTabButton.setVisible(bingo && TsgHubBingoBoard.hasBoard(event));
+		if (!boardTabButton.isVisible() && boardTabButton.isSelected()) tabs.select(tasksTabButton);
 		leaderboardTabButton.setVisible(competition);
 		detailsTabButton.setVisible("drop-party".equals(type));
 		renderTeams();
 		renderTasks();
 		renderClaims();
+		renderBoard();
 		renderLeaderboard();
 		renderDetails();
 	}
@@ -1191,6 +1223,209 @@ final class TsgHubPanel extends JPanel
 		return null;
 	}
 
+	private void renderBoard()
+	{
+		boardTab.removeAll();
+		String type = TsgHubUi.str(currentEvent, "type");
+		if (!type.isEmpty() && !"bingo".equals(type)) return;
+		JsonObject stored = currentEvent.has("board") && currentEvent.get("board").isJsonObject() ? currentEvent.getAsJsonObject("board") : new JsonObject();
+		syncBoardControls(stored);
+		boolean teamMode = "team".equals(TsgHubUi.str(stored, "mode"));
+		String teamId = boardTeam.getSelectedIndex() >= 0 && boardTeam.getSelectedIndex() < boardTeamIds.size() ? boardTeamIds.get(boardTeam.getSelectedIndex()) : "";
+		TsgHubBingoBoard board = TsgHubBingoBoard.of(currentEvent, teamMode ? teamId : "");
+		JsonArray tasks = TsgHubUi.array(currentEvent, "tasks");
+		Font small = FontManager.getRunescapeSmallFont();
+
+		String summary = board.auto ? "No layout yet. Tasks fill a " + board.size + " x " + board.size + " board in task order until you shuffle."
+			: board.size + " x " + board.size + " grid, " + (teamMode ? "a different layout for each team." : "the same layout for every team.");
+		boardTab.add(TsgHubUi.wrapped(summary, TsgHubUi.MUTED, small, DETAIL_TEXT_W));
+		boardTab.add(Box.createVerticalStrut(8));
+		if (board.locked)
+		{
+			JLabel locked = TsgHubUi.label("Locked: the event has started, so tiles stay where they are.", TsgHubUi.WARNING, small);
+			locked.setIcon(new TsgHubUi.LockIcon());
+			boardTab.add(locked);
+			boardTab.add(Box.createVerticalStrut(8));
+		}
+
+		JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+		controls.setOpaque(false);
+		controls.add(caption("Size"));
+		controls.add(boardSize);
+		controls.add(Box.createHorizontalStrut(6));
+		controls.add(caption("Layout"));
+		controls.add(boardMode);
+		JButton shuffle = TsgHubUi.primaryButton("Shuffle");
+		shuffle.setToolTipText("Place every task on a random tile");
+		shuffle.addActionListener(e -> plugin.shuffleBoard(selectedBoardSize(), selectedBoardMode()));
+		JButton save = TsgHubUi.button("Save");
+		save.setToolTipText("Keep the current tiles and change the size or layout");
+		save.addActionListener(e -> plugin.saveBoard(selectedBoardSize(), selectedBoardMode(), null, null));
+		JButton reset = TsgHubUi.button("Reset");
+		reset.setToolTipText("Go back to task order");
+		reset.addActionListener(e -> {
+			if (TsgHubUi.confirmDelete(this, "Reset board", "Remove the layout and line bonuses, and place tasks in task order?", "Reset")) plugin.resetBoard();
+		});
+		JButton preview = TsgHubUi.button("Preview reveal");
+		preview.setToolTipText("Play the card reveal players see when they complete a tile and a line");
+		preview.addActionListener(e -> plugin.previewReveal(currentEvent));
+		controls.add(Box.createHorizontalStrut(6));
+		controls.add(shuffle);
+		controls.add(save);
+		controls.add(reset);
+		controls.add(preview);
+		for (Component part : new Component[] {boardSize, boardMode, shuffle, save, reset}) part.setEnabled(!board.locked && tasks.size() > 0);
+		reset.setEnabled(!board.locked && !board.auto);
+		boardTab.add(TsgHubUi.fitHeight(controls));
+		boardTab.add(Box.createVerticalStrut(8));
+
+		JPanel bonusRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+		bonusRow.setOpaque(false);
+		bonusRow.add(caption("Line bonus"));
+		bonusRow.add(bonusLine);
+		bonusRow.add(Box.createHorizontalStrut(6));
+		bonusRow.add(caption("Random bonus"));
+		bonusRow.add(bonusMin);
+		bonusRow.add(caption("to"));
+		bonusRow.add(bonusMax);
+		JButton saveBonus = TsgHubUi.button("Save bonuses");
+		saveBonus.setToolTipText("Points added for each completed row, column or diagonal");
+		saveBonus.addActionListener(e -> submitBonuses(false));
+		JButton reroll = TsgHubUi.button("Reroll");
+		reroll.setToolTipText("Roll a new random bonus for every line");
+		reroll.addActionListener(e -> submitBonuses(true));
+		bonusRow.add(Box.createHorizontalStrut(6));
+		bonusRow.add(saveBonus);
+		bonusRow.add(reroll);
+		bonusMin.setEnabled(!board.locked);
+		bonusMax.setEnabled(!board.locked);
+		reroll.setEnabled(!board.locked && board.randomMax > 0);
+		boardTab.add(TsgHubUi.fitHeight(bonusRow));
+		boardTab.add(Box.createVerticalStrut(3));
+		boardTab.add(TsgHubUi.wrapped("Every completed line earns the line bonus plus its own random bonus from the range. Players only see a line's random bonus once they complete it. Set both to 0 for no bonus."
+			+ (board.locked ? " The random bonuses are locked, but you can still change the line bonus." : ""), TsgHubUi.MUTED, small, DETAIL_TEXT_W));
+		boardTab.add(Box.createVerticalStrut(8));
+
+		if (!boardTeamIds.isEmpty())
+		{
+			JPanel teamRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+			teamRow.setOpaque(false);
+			teamRow.add(caption(teamMode ? "Team layout" : "Show progress for"));
+			teamRow.add(boardTeam);
+			boardTab.add(TsgHubUi.fitHeight(teamRow));
+			boardTab.add(Box.createVerticalStrut(8));
+		}
+
+		if (tasks.size() == 0)
+		{
+			boardTab.add(TsgHubUi.wrapped("Add tasks first. Each task becomes a tile.", TsgHubUi.MUTED, FontManager.getRunescapeFont(), DETAIL_TEXT_W));
+			refresh(boardTab);
+			return;
+		}
+		JsonArray progressRows = TsgHubUi.array(TsgHubUi.scoreFor(TsgHubUi.array(currentEvent, "teamScores"), teamId), "tasks");
+		boardPreview.setCellSize(Math.min(72, 440 / board.size));
+		boardPreview.clearPick();
+		boardPreview.onSwap(board.locked ? null : this::swapTiles);
+		boardPreview.setData(TsgHubUi.str(currentEvent, "id") + ":" + teamId, board, tasks, progressRows);
+		if (!board.locked) boardTab.add(TsgHubUi.label("Click a tile, then another tile or empty cell, to swap them.", TsgHubUi.MUTED, small));
+		boardTab.add(Box.createVerticalStrut(6));
+		JPanel previewRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+		previewRow.setOpaque(false);
+		previewRow.add(boardPreview);
+		boardTab.add(TsgHubUi.fitHeight(previewRow));
+		boardTab.add(Box.createVerticalStrut(8));
+		if (board.randomMax > 0)
+		{
+			List<String> rolls = new ArrayList<>();
+			for (TsgHubBingoBoard.Line line : board.allLines())
+			{
+				Integer rolled = board.rolledBonus(line);
+				if (rolled != null) rolls.add(line.label() + " +" + rolled);
+			}
+			if (!rolls.isEmpty()) boardTab.add(TsgHubUi.wrapped("Hidden bonuses: " + String.join(" · ", rolls), TsgHubBoardGrid.GOLD, small, DETAIL_TEXT_W));
+		}
+		int empty = board.emptyCells();
+		if (empty > 0) boardTab.add(TsgHubUi.wrapped(plural(empty, "empty cell") + ". A line through an empty cell can't be completed.", TsgHubUi.MUTED, small, DETAIL_TEXT_W));
+		if (!board.unplaced.isEmpty()) boardTab.add(TsgHubUi.wrapped(plural(board.unplaced.size(), "task") + " don't fit on the board. Pick a bigger size.", TsgHubUi.WARNING, small, DETAIL_TEXT_W));
+		refresh(boardTab);
+	}
+
+	private void syncBoardControls(JsonObject stored)
+	{
+		syncingBoard = true;
+		String sync = selectedEventId + stored;
+		if (!sync.equals(boardSynced))
+		{
+			boardSynced = sync;
+			int size = TsgHubUi.integer(stored, "size", TsgHubBingoBoard.defaultSize(TsgHubUi.array(currentEvent, "tasks").size()));
+			boardSize.setSelectedIndex(Math.max(0, Math.min(boardSize.getItemCount() - 1, size - TsgHubBingoBoard.MIN_SIZE)));
+			boardMode.setSelectedIndex("team".equals(TsgHubUi.str(stored, "mode")) ? 1 : 0);
+			bonusLine.setText(String.valueOf(TsgHubUi.integer(stored, "lineBonus", 0)));
+			bonusMin.setText(String.valueOf(TsgHubUi.integer(stored, "randomMin", 0)));
+			bonusMax.setText(String.valueOf(TsgHubUi.integer(stored, "randomMax", 0)));
+		}
+		String selected = boardTeam.getSelectedIndex() >= 0 && boardTeam.getSelectedIndex() < boardTeamIds.size() ? boardTeamIds.get(boardTeam.getSelectedIndex()) : "";
+		boardTeam.removeAllItems();
+		boardTeamIds.clear();
+		JsonArray teams = TsgHubUi.array(currentEvent, "teams");
+		for (int i = 0; i < teams.size(); i++)
+		{
+			JsonObject team = teams.get(i).getAsJsonObject();
+			boardTeamIds.add(TsgHubUi.str(team, "id"));
+			boardTeam.addItem(TsgHubUi.str(team, "name"));
+		}
+		if (!boardTeamIds.isEmpty()) boardTeam.setSelectedIndex(Math.max(0, boardTeamIds.indexOf(selected)));
+		syncingBoard = false;
+	}
+
+	private void submitBonuses(boolean reroll)
+	{
+		int line = bonusPoints(bonusLine.getText());
+		int min = bonusPoints(bonusMin.getText());
+		int max = bonusPoints(bonusMax.getText());
+		if (line < 0 || min < 0 || max < 0)
+		{
+			setStatus("Bonuses must be whole numbers from 0 to 1000.", TsgHubUi.Tone.ERROR);
+			return;
+		}
+		if (min > max)
+		{
+			setStatus("The random bonus minimum can't be more than the maximum.", TsgHubUi.Tone.ERROR);
+			return;
+		}
+		plugin.saveBonuses(line, min, max, reroll);
+	}
+
+	private static int bonusPoints(String text)
+	{
+		try
+		{
+			int value = Integer.parseInt(text.trim().isEmpty() ? "0" : text.trim());
+			return value >= 0 && value <= 1000 ? value : -1;
+		}
+		catch (NumberFormatException e) { return -1; }
+	}
+
+	private int selectedBoardSize()
+	{
+		return TsgHubBingoBoard.MIN_SIZE + Math.max(0, boardSize.getSelectedIndex());
+	}
+
+	private String selectedBoardMode()
+	{
+		return boardMode.getSelectedIndex() == 1 ? "team" : "shared";
+	}
+
+	private void swapTiles(int row, int col, int otherRow, int otherCol)
+	{
+		TsgHubBingoBoard board = boardPreview.board();
+		if (board == null || currentEvent == null) return;
+		JsonObject stored = currentEvent.has("board") && currentEvent.get("board").isJsonObject() ? currentEvent.getAsJsonObject("board") : new JsonObject();
+		boolean teamMode = "team".equals(TsgHubUi.str(stored, "mode"));
+		String teamId = teamMode && boardTeam.getSelectedIndex() >= 0 ? boardTeamIds.get(boardTeam.getSelectedIndex()) : "";
+		plugin.saveBoard(board.size, board.mode, teamId, board.swap(row, col, otherRow, otherCol).tiles());
+	}
+
 	private void renderLeaderboard()
 	{
 		leaderboardTab.removeAll();
@@ -1411,6 +1646,9 @@ final class TsgHubPanel extends JPanel
 		eventSkill.setSelectedIndex(0);
 		eventBoss.setText("");
 		eventSignalKc.setSelected(true);
+		styleBoard.setSelected(true);
+		styleBoard.setEnabled(true);
+		styleList.setEnabled(true);
 		partyWorld.setText("");
 		partyLocation.setText("");
 		partyHost.setText(plugin.getDetectedPlayerName());
@@ -1443,6 +1681,11 @@ final class TsgHubPanel extends JPanel
 		eventBoss.setText(TsgHubUi.str(config, "npcName"));
 		if ("loot".equals(TsgHubUi.str(config, "signal"))) eventSignalLoot.setSelected(true);
 		else eventSignalKc.setSelected(true);
+		if ("board".equals(TsgHubUi.str(currentEvent, "style"))) styleBoard.setSelected(true);
+		else styleList.setSelected(true);
+		boolean styleLocked = !TsgHubUi.bool(currentEvent, "hidden") && !"scheduled".equals(TsgHubUi.str(currentEvent, "status"));
+		styleBoard.setEnabled(!styleLocked);
+		styleList.setEnabled(!styleLocked);
 		partyWorld.setText(TsgHubUi.integer(config, "world", 0) > 0 ? String.valueOf(TsgHubUi.integer(config, "world", 0)) : "");
 		partyLocation.setText(TsgHubUi.str(config, "location"));
 		partyHost.setText(TsgHubUi.str(config, "host"));
@@ -1500,8 +1743,9 @@ final class TsgHubPanel extends JPanel
 			if (gp > 0) prizes.add(gp);
 		}
 		eventFormError.setVisible(false);
-		if (editingEvent && currentEvent != null) plugin.updateEvent(TsgHubUi.str(currentEvent, "id"), name, start, end, eventHideScores.isSelected(), eventHidden.isSelected(), "bingo".equals(type) ? null : config, prizes);
-		else plugin.createEvent(name, start, end, eventHideScores.isSelected(), eventHidden.isSelected(), type, config, prizes);
+		String style = "bingo".equals(type) ? styleBoard.isSelected() ? "board" : "list" : null;
+		if (editingEvent && currentEvent != null) plugin.updateEvent(TsgHubUi.str(currentEvent, "id"), name, start, end, eventHideScores.isSelected(), eventHidden.isSelected(), "bingo".equals(type) ? null : config, prizes, style);
+		else plugin.createEvent(name, start, end, eventHideScores.isSelected(), eventHidden.isSelected(), type, config, prizes, style);
 	}
 
 	private void setEventTimes(ZonedDateTime start, ZonedDateTime end)
@@ -1543,6 +1787,11 @@ final class TsgHubPanel extends JPanel
 		signalRow2.setVisible("boss".equals(type));
 		partyRows.setVisible(dropParty);
 		nameRow.setVisible(!"skill".equals(type) && !"boss".equals(type));
+		styleRow.setVisible("bingo".equals(type));
+		styleHint.setText(TsgHubUi.html(TsgHubUi.escape(styleBoard.isSelected()
+			? "Tasks sit on a bingo card with lines, line bonuses and the dauber stamp when a tile completes."
+			: "Tasks show as a plain list. No card, lines or animation.")
+			+ (styleBoard.isEnabled() ? "" : " Locked now that the event has started."), 480));
 		hideScoresRow.setVisible(!dropParty);
 		endTimeCaption.setText(dropParty ? "End time (optional)" : "End time (HH:MM)");
 		eventZoneHint.setText(TsgHubUi.html(TsgHubUi.escape("Times are in your time zone, " + TsgHubUi.zoneLabel(ZoneId.systemDefault(), TsgHubUi.clock.instant())
