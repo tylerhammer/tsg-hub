@@ -81,7 +81,7 @@ Anyone in clan chat with sharing on appears in the list. Your area and activity 
 
 Online clanmates are listed first, including those in clan chat without TSG Hub, who show just their world. The rest of the clan is listed under **Offline**; tick **Show offline** to expand it. Offline members who use TSG Hub show how long ago they were last online.
 
-Admins with a hub key can right-click any member to edit their admin note. On Gnome Child characters it also sets whose alt they are; type part of a name to search the clan for their main. Alt links, notes and last seen times follow TSG Hub users through name changes. Hover a member's rank to see whose alt they are, or a main's alts. Admin notes show as a note icon with the note on hover, and only admins see them.
+Admins with a hub key can right-click any member to edit their admin note. On Gnome Child characters it also sets whose alt they are; type part of a name to search the clan for their main. Alt links, notes and last seen times follow TSG Hub users through name changes. Hover anywhere on a member to see their rank, whose alt they are or a main's alts, and for admins their admin note. Members with a note also show a note icon.
 
 <p>
 <img src="docs/images/members.png" width="320" alt="Online clan members with their world, area and activity">

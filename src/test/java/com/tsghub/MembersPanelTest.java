@@ -1,6 +1,7 @@
 package com.tsghub;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -23,19 +24,19 @@ public class MembersPanelTest
 	}
 
 	@Test
-	public void rankTooltip()
+	public void memberTooltip()
 	{
 		JsonArray none = new JsonArray();
-		assertEquals("", TsgHubSidebarPanel.rankTooltip("", "", none));
-		assertEquals("Gnome Child · Alt of Fenrir", TsgHubSidebarPanel.rankTooltip("Gnome Child", "Fenrir", none));
+		assertEquals("", TsgHubSidebarPanel.memberTooltip("", "", none, "", false, "", ""));
+		String alt = TsgHubSidebarPanel.memberTooltip("Gnome Child", "Fenrir", none, "", false, "", "");
+		assertTrue(alt.contains("<b>Gnome Child</b>") && alt.contains("Alt of <b>Fenrir</b>"));
 		JsonArray alts = new JsonArray();
 		alts.add("Iron Fenrir");
-		assertEquals("Owner · Alt: Iron Fenrir", TsgHubSidebarPanel.rankTooltip("Owner", "", alts));
-		alts.add("Pure Fenrir");
-		assertEquals("Alts: Iron Fenrir, Pure Fenrir", TsgHubSidebarPanel.rankTooltip("", "", alts));
-		JsonArray odd = new JsonArray();
-		odd.add(new JsonObject());
-		assertEquals("Owner", TsgHubSidebarPanel.rankTooltip("Owner", "", odd));
+		alts.add(new JsonObject());
+		assertTrue(TsgHubSidebarPanel.memberTooltip("Owner", "", alts, "", false, "", "").contains("Alt: Iron Fenrir"));
+		String full = TsgHubSidebarPanel.memberTooltip("", "", none, "Nex", true, "3d ago", "Owes <5m>");
+		assertTrue(full.contains("Nex") && full.contains("On your world") && full.contains("Last seen 3d ago"));
+		assertTrue(full.contains("Admin note") && full.contains("Owes &lt;5m&gt;"));
 	}
 
 	@Test

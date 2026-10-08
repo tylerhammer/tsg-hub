@@ -623,16 +623,13 @@ final class TsgHubSidebarPanel extends PluginPanel
 			label.setIcon(new javax.swing.ImageIcon(rankIcon));
 			label.setIconTextGap(4);
 		}
-		String tip = rankTooltip(TsgHubUi.str(member, "rank"), TsgHubUi.str(member, "altOf"), TsgHubUi.array(member, "alts"));
-		if (!tip.isEmpty()) label.setToolTipText(tip);
 		return label;
 	}
 
-	private static JLabel noteIcon(String note)
+	private void setMemberTip(JComponent card, JsonObject member, String detail, boolean sameWorld, String seen, String note)
 	{
-		JLabel label = new JLabel(new TsgHubUi.NoteIcon());
-		label.setToolTipText(TsgHubUi.html("Admin note<br>" + TsgHubUi.escape(note), 200));
-		return label;
+		String tip = memberTooltip(TsgHubUi.str(member, "rank"), TsgHubUi.str(member, "altOf"), TsgHubUi.array(member, "alts"), detail, sameWorld, seen, note);
+		if (!tip.isEmpty()) card.setToolTipText(tip);
 	}
 
 	private JPanel memberCard(JsonObject member, int myWorld)
@@ -650,19 +647,14 @@ final class TsgHubSidebarPanel extends PluginPanel
 		top.add(memberName(member, name, TsgHubUi.TEXT, FontManager.getRunescapeBoldFont()), BorderLayout.CENTER);
 		JPanel badges = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
 		badges.setOpaque(false);
+		boolean sameWorld = !self && world > 0 && world == myWorld;
 		if (!note.isEmpty())
 		{
-			JLabel noteLabel = noteIcon(note);
+			JLabel noteLabel = new JLabel(new TsgHubUi.NoteIcon());
 			noteLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
 			badges.add(noteLabel);
 		}
-		if (world > 0)
-		{
-			boolean sameWorld = !self && world == myWorld;
-			JLabel worldLabel = TsgHubUi.label("W" + world, sameWorld ? TsgHubUi.SUCCESS : TsgHubUi.MUTED, small);
-			if (sameWorld) worldLabel.setToolTipText("On your world");
-			badges.add(worldLabel);
-		}
+		if (world > 0) badges.add(TsgHubUi.label("W" + world, sameWorld ? TsgHubUi.SUCCESS : TsgHubUi.MUTED, small));
 		if (badges.getComponentCount() > 0) top.add(badges, BorderLayout.EAST);
 
 		JPanel text = TsgHubUi.stack();
@@ -672,13 +664,13 @@ final class TsgHubSidebarPanel extends PluginPanel
 		{
 			boolean active = !"Idle".equals(activity) && !"Online".equals(activity) && !activity.isEmpty();
 			JLabel detailLabel = TsgHubUi.shrinkable(TsgHubUi.label(detail, active ? TsgHubUi.SUCCESS : TsgHubUi.MUTED, small));
-			detailLabel.setToolTipText(detail);
 			JPanel bottom = TsgHubUi.row();
 			bottom.add(detailLabel, BorderLayout.CENTER);
 			text.add(Box.createVerticalStrut(3));
 			text.add(bottom);
 		}
 		card.add(text, BorderLayout.CENTER);
+		setMemberTip(card, member, detail, sameWorld, "", note);
 		addNoteMenu(card, member);
 		return TsgHubUi.fitHeight(card);
 	}
@@ -695,17 +687,13 @@ final class TsgHubSidebarPanel extends PluginPanel
 		badges.setOpaque(false);
 		if (!note.isEmpty())
 		{
-			JLabel noteLabel = noteIcon(note);
+			JLabel noteLabel = new JLabel(new TsgHubUi.NoteIcon());
 			if (!seen.isEmpty()) noteLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
 			badges.add(noteLabel);
 		}
-		if (!seen.isEmpty())
-		{
-			JLabel seenLabel = TsgHubUi.label(seen, TsgHubUi.MUTED, small);
-			seenLabel.setToolTipText("Last seen with TSG Hub");
-			badges.add(seenLabel);
-		}
+		if (!seen.isEmpty()) badges.add(TsgHubUi.label(seen, TsgHubUi.MUTED, small));
 		if (badges.getComponentCount() > 0) row.add(badges, BorderLayout.EAST);
+		setMemberTip(row, member, "", false, seen, note);
 		addNoteMenu(row, member);
 		return TsgHubUi.fitHeight(row);
 	}
@@ -755,15 +743,31 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 	}
 
-	static String rankTooltip(String rank, String altOf, JsonArray alts)
+	static String memberTooltip(String rank, String altOf, JsonArray alts, String detail, boolean sameWorld, String seen, String note)
 	{
-		List<String> parts = new ArrayList<>();
-		if (!rank.isEmpty()) parts.add(rank);
-		if (!altOf.isEmpty()) parts.add("Alt of " + altOf);
 		List<String> names = new ArrayList<>();
 		for (int i = 0; i < alts.size(); i++) if (alts.get(i).isJsonPrimitive()) names.add(alts.get(i).getAsString());
-		if (!names.isEmpty()) parts.add((names.size() == 1 ? "Alt: " : "Alts: ") + String.join(", ", names));
-		return String.join(" · ", parts);
+		List<String> lines = new ArrayList<>();
+		if (!rank.isEmpty()) lines.add("<b>" + TsgHubUi.escape(rank) + "</b>");
+		if (!altOf.isEmpty()) lines.add(tipLine(TsgHubUi.ACCENT, "Alt of <b>" + TsgHubUi.escape(altOf) + "</b>"));
+		if (!names.isEmpty()) lines.add(tipLine(TsgHubUi.MUTED, (names.size() == 1 ? "Alt: " : "Alts: ") + TsgHubUi.escape(String.join(", ", names))));
+		if (!detail.isEmpty()) lines.add(tipLine(TsgHubUi.MUTED, TsgHubUi.escape(detail)));
+		if (sameWorld) lines.add(tipLine(TsgHubUi.SUCCESS, "On your world"));
+		if (!seen.isEmpty()) lines.add(tipLine(TsgHubUi.MUTED, "Last seen " + seen));
+		if (lines.isEmpty() && note.isEmpty()) return "";
+		String body = "<div style='padding:2px'>" + String.join("<br>", lines);
+		if (!note.isEmpty())
+		{
+			body += "<div style='margin-top:" + (lines.isEmpty() ? 0 : 4) + "px'>" + tipLine(TsgHubUi.WARNING, "<b>Admin note</b>")
+				+ "<br>" + TsgHubUi.escape(note).replace("\n", "<br>") + "</div>";
+		}
+		body += "</div>";
+		return note.isEmpty() ? "<html>" + body + "</html>" : TsgHubUi.html(body, 200);
+	}
+
+	private static String tipLine(Color color, String html)
+	{
+		return "<font color='" + String.format("#%06x", color.getRGB() & 0xffffff) + "'>" + html + "</font>";
 	}
 
 	static boolean isAltRank(String rank)
