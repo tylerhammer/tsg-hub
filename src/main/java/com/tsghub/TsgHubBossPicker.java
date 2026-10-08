@@ -20,7 +20,6 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import net.runelite.client.hiscore.HiscoreSkill;
 import net.runelite.client.hiscore.HiscoreSkillType;
-import net.runelite.client.ui.FontManager;
 
 final class TsgHubBossPicker extends JPanel
 {
@@ -30,7 +29,7 @@ final class TsgHubBossPicker extends JPanel
 	private final DefaultListModel<String> results = new DefaultListModel<>();
 	private final JList<String> resultList = new JList<>(results);
 	private final JScrollPane resultScroll = new JScrollPane(resultList);
-	private final JLabel hint = TsgHubUi.label("", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont());
+	private final JLabel hint = TsgHubUi.caption("");
 	private final Runnable onChosen;
 
 	TsgHubBossPicker(String caption, Runnable onChosen)
@@ -39,7 +38,7 @@ final class TsgHubBossPicker extends JPanel
 		setLayout(new javax.swing.BoxLayout(this, javax.swing.BoxLayout.Y_AXIS));
 		setOpaque(false);
 		setAlignmentX(LEFT_ALIGNMENT);
-		JLabel label = TsgHubUi.label(caption, TsgHubUi.MUTED, FontManager.getRunescapeSmallFont());
+		JLabel label = TsgHubUi.caption(caption);
 		add(label);
 		add(Box.createVerticalStrut(3));
 
