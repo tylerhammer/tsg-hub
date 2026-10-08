@@ -1220,6 +1220,24 @@ final class TsgHubUi
 		}
 	}
 
+	static final class WarningIcon implements Icon
+	{
+		@Override public int getIconWidth() { return 12; }
+		@Override public int getIconHeight() { return 11; }
+		@Override public void paintIcon(Component component, Graphics graphics, int x, int y)
+		{
+			Graphics2D g = (Graphics2D) graphics.create();
+			g.translate(x, y);
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			g.setColor(ERROR);
+			g.fillPolygon(new int[] {6, 12, 0}, new int[] {0, 11, 11}, 3);
+			g.setColor(CARD);
+			g.fillRect(5, 3, 2, 4);
+			g.fillRect(5, 8, 2, 2);
+			g.dispose();
+		}
+	}
+
 	static final class NoteIcon implements Icon
 	{
 		@Override public int getIconWidth() { return 11; }

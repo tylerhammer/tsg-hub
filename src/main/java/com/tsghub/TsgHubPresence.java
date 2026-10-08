@@ -227,7 +227,7 @@ final class TsgHubPresence
 			JsonObject note = notes.get(TsgHubUi.playerKey(TsgHubUi.str(member, "displayName")));
 			if (note != null)
 			{
-				for (String field : new String[] {"altOf", "alts", "note", "lastSeenAt"})
+				for (String field : new String[] {"altOf", "alts", "note", "lastSeenAt", "warnings"})
 				{
 					if (note.has(field)) member.add(field, note.get(field));
 				}
@@ -239,19 +239,46 @@ final class TsgHubPresence
 
 	void saveNote(String displayName, String altOf, String note)
 	{
-		String token = key.get();
-		if (token.isEmpty() || executor.isShutdown()) return;
-		JsonObject body = new JsonObject();
-		body.addProperty("clanName", plugin.getDetectedClanName());
+		JsonObject body = adminBody();
 		body.addProperty("displayName", displayName);
 		body.addProperty("altOf", altOf);
 		body.addProperty("note", note);
+		adminWrite("PUT", "/v1/members/notes", body, "Saved " + displayName + ".");
+	}
+
+	void addWarning(String displayName, String reason, int expiresInDays)
+	{
+		JsonObject body = adminBody();
+		body.addProperty("displayName", displayName);
+		body.addProperty("reason", reason);
+		body.addProperty("expiresInDays", expiresInDays);
+		adminWrite("POST", "/v1/members/warnings", body, "Warned " + displayName + ".");
+	}
+
+	void revokeWarning(String displayName, String warningId, String reason)
+	{
+		JsonObject body = adminBody();
+		body.addProperty("reason", reason);
+		adminWrite("POST", "/v1/members/warnings/" + encode(warningId) + "/revoke", body, "Revoked a warning for " + displayName + ".");
+	}
+
+	private JsonObject adminBody()
+	{
+		JsonObject body = new JsonObject();
+		body.addProperty("clanName", plugin.getDetectedClanName());
+		return body;
+	}
+
+	private void adminWrite(String method, String path, JsonObject body, String success)
+	{
+		String token = key.get();
+		if (token.isEmpty() || executor.isShutdown()) return;
 		ui(s -> s.setBusy(true));
 		executor.submit(() -> {
 			try
 			{
-				api.get().request("PUT", "/v1/members/notes", token, body);
-				ui(s -> s.setStatus("Saved " + displayName + ".", Tone.SUCCESS));
+				api.get().request(method, path, token, body);
+				ui(s -> s.setStatus(success, Tone.SUCCESS));
 				loadMembers(true);
 			}
 			catch (Exception e) { ui(s -> s.setStatus("Couldn't save. " + TsgHubUi.friendlyError(e), Tone.ERROR)); }

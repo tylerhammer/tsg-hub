@@ -83,6 +83,8 @@ Online clanmates are listed first, including those in clan chat without TSG Hub,
 
 Admins with a hub key can right-click any member to edit their admin note. On Gnome Child characters it also sets whose alt they are; type part of a name to search the clan for their main. Alt links, notes and last seen times follow TSG Hub users through name changes. Hover anywhere on a member to see their rank, whose alt they are or a main's alts, and for admins their admin note. Members with a note also show a note icon.
 
+Admins can also right-click a member to **Add warning** with a reason and an expiry (30 days by default, 90 days, or never), or **Revoke a warning**. Members with an active warning show a red warning icon, and the hover lists each warning with its date, who issued it and when it expires. Revoked and expired warnings stay in the history, greyed out. Only admins see warnings.
+
 <p>
 <img src="docs/images/members.png" width="320" alt="Online clan members with their world, area and activity">
 </p>
