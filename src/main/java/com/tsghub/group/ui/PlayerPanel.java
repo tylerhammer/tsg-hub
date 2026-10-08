@@ -24,343 +24,249 @@
  */
 package com.tsghub.group.ui;
 
+import com.tsghub.group.GroupViewSettings;
+import com.tsghub.group.data.PartyPlayer;
+import com.tsghub.group.ui.equipment.PlayerEquipmentPanel;
+import com.tsghub.group.ui.prayer.PlayerPrayerPanel;
+import com.tsghub.group.ui.skills.PlayerSkillsPanel;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.image.BufferedImage;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JComponent;
+import javax.swing.JPanel;
 import lombok.Getter;
 import lombok.Setter;
-import net.runelite.api.EquipmentInventorySlot;
-import net.runelite.api.Prayer;
-import net.runelite.api.Skill;
-import net.runelite.api.gameval.SpriteID;
 import net.runelite.client.game.AlternateSprites;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.SpriteManager;
-import net.runelite.client.ui.ColorScheme;
-import net.runelite.client.ui.DynamicGridLayout;
+import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.components.materialtabs.MaterialTab;
 import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
-import net.runelite.client.util.AsyncBufferedImage;
 import net.runelite.client.util.ImageUtil;
-import com.tsghub.group.GroupViewSettings;
-import com.tsghub.group.data.GameItem;
-import com.tsghub.group.data.PartyPlayer;
-import com.tsghub.group.data.PrayerData;
-import com.tsghub.group.ui.equipment.EquipmentPanelSlot;
-import com.tsghub.group.ui.equipment.PlayerEquipmentPanel;
-import com.tsghub.group.ui.prayer.PlayerPrayerPanel;
-import com.tsghub.group.ui.prayer.PrayerSlot;
-import com.tsghub.group.ui.skills.PlayerSkillsPanel;
 
-import javax.swing.ImageIcon;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
-import javax.swing.border.CompoundBorder;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.MatteBorder;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Dimension;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.image.BufferedImage;
-import java.util.HashMap;
-import java.util.Map;
-
-@Getter
 public class PlayerPanel extends JPanel
 {
-	private static final Dimension IMAGE_SIZE = new Dimension(24, 24);
-	private static final Color BACKGROUND_COLOR = ColorScheme.DARK_GRAY_COLOR;
-	private static final Color BACKGROUND_HOVER_COLOR = ColorScheme.DARKER_GRAY_COLOR;
-
 	private static final int VENOM_THRESHOLD = 1000000;
-	private static final BufferedImage HEART_DISEASE;
-	private static final BufferedImage HEART_POISON;
-	private static final BufferedImage HEART_VENOM;
+	private static final BufferedImage HEART_DISEASE = ImageUtil.loadImageResource(AlternateSprites.class, AlternateSprites.DISEASE_HEART);
+	private static final BufferedImage HEART_POISON = ImageUtil.loadImageResource(AlternateSprites.class, AlternateSprites.POISON_HEART);
+	private static final BufferedImage HEART_VENOM = ImageUtil.loadImageResource(AlternateSprites.class, AlternateSprites.VENOM_HEART);
 
-	static
+	private enum Tab
 	{
-		HEART_DISEASE = ImageUtil.loadImageResource(AlternateSprites.class, AlternateSprites.DISEASE_HEART);
-		HEART_POISON = ImageUtil.loadImageResource(AlternateSprites.class, AlternateSprites.POISON_HEART);
-		HEART_VENOM = ImageUtil.loadImageResource(AlternateSprites.class, AlternateSprites.VENOM_HEART);
+		ITEMS, GEAR, PRAYER, SKILLS
 	}
 
+	@Getter
 	private PartyPlayer player;
-	private final SpriteManager spriteManager;
-	private final ItemManager itemManager;
-
+	private final GroupViewSettings config;
+	@Getter
 	private final PlayerBanner banner;
 	private final PlayerInventoryPanel inventoryPanel;
 	private final PlayerEquipmentPanel equipmentPanel;
 	private final PlayerSkillsPanel skillsPanel;
 	private final PlayerPrayerPanel prayersPanel;
+	private final JPanel details = new JPanel();
+	private Tab selected = Tab.ITEMS;
+	private boolean self;
+	private boolean hovered;
 
-	private final GroupViewSettings config;
-
+	@Getter
 	@Setter
 	private boolean showInfo;
-	private final Map<Integer, Boolean> tabMap = new HashMap<>();
 
-	public PlayerPanel(final PartyPlayer selectedPlayer, final GroupViewSettings config,
-					   final SpriteManager spriteManager, final ItemManager itemManager)
+	public PlayerPanel(PartyPlayer player, GroupViewSettings config, SpriteManager spriteManager, ItemManager itemManager)
 	{
-		this.player = selectedPlayer;
+		this.player = player;
 		this.config = config;
-		this.spriteManager = spriteManager;
-		this.itemManager = itemManager;
 		this.showInfo = config.autoExpandMembers();
-		this.banner = new PlayerBanner(selectedPlayer, showInfo, config.displayPlayerWorlds(), spriteManager);
-		this.inventoryPanel = new PlayerInventoryPanel(selectedPlayer.getInventory(), selectedPlayer.getRunesInPouch(), itemManager);
-		this.equipmentPanel = new PlayerEquipmentPanel(selectedPlayer.getEquipment(), selectedPlayer.getQuiver(), spriteManager, itemManager);
-		this.skillsPanel = new PlayerSkillsPanel(selectedPlayer, config.displayVirtualLevels(), spriteManager);
-		this.prayersPanel = new PlayerPrayerPanel(selectedPlayer, spriteManager);
+		this.banner = new PlayerBanner(player, config.displayPlayerWorlds(), spriteManager);
+		this.inventoryPanel = new PlayerInventoryPanel(player.getInventory(), player.getRunesInPouch(), itemManager);
+		this.equipmentPanel = new PlayerEquipmentPanel(player.getEquipment(), player.getQuiver(), spriteManager, itemManager);
+		this.skillsPanel = new PlayerSkillsPanel(player, config.displayVirtualLevels(), spriteManager);
+		this.prayersPanel = new PlayerPrayerPanel(player, spriteManager);
 
-		JPanel statsPanel = this.banner.getStatsPanel();
-		JLabel expandIcon = this.banner.getExpandIcon();
-		Component[] list = new Component[statsPanel.getComponentCount() + 1];
-		System.arraycopy(statsPanel.getComponents(), 0, list, 0, list.length - 1);
-		list[list.length - 1] = banner;
+		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+		banner.setAlignmentX(LEFT_ALIGNMENT);
+		add(banner);
+		buildDetails();
+		details.setAlignmentX(LEFT_ALIGNMENT);
+		add(details);
 
-		for (Component comp : list)
+		banner.setToolTipText("Show inventory, gear, prayers and skills");
+		addBannerListener(new MouseAdapter()
 		{
-			if (comp instanceof JPanel)
+			@Override
+			public void mouseReleased(MouseEvent e)
 			{
-				comp.addMouseListener(new MouseAdapter()
-				{
-					@Override
-					public void mousePressed(MouseEvent e)
-					{
-						if (e.getButton() == MouseEvent.BUTTON1)
-						{
-							ImageIcon retrieve = (ImageIcon) expandIcon.getIcon();
-							BufferedImage buffered = (BufferedImage) retrieve.getImage();
-
-							showInfo = !showInfo;
-							expandIcon.setIcon(new ImageIcon(ImageUtil.rotateImage(buffered, Math.PI)));
-							updatePanel();
-						}
-					}
-
-					@Override
-					public void mouseEntered(MouseEvent e)
-					{
-						banner.setBackground(BACKGROUND_HOVER_COLOR);
-						statsPanel.setBackground(BACKGROUND_HOVER_COLOR);
-					}
-
-					@Override
-					public void mouseExited(MouseEvent e)
-					{
-						banner.setBackground(BACKGROUND_COLOR);
-						statsPanel.setBackground(BACKGROUND_COLOR);
-					}
-				});
+				if (e.getButton() != MouseEvent.BUTTON1 || e.isPopupTrigger()) return;
+				showInfo = !showInfo;
+				updatePanel();
+				if (showInfo) updatePlayerData(PlayerPanel.this.player, false);
 			}
-		}
 
+			@Override
+			public void mouseEntered(MouseEvent e)
+			{
+				hovered = true;
+				paintState();
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e)
+			{
+				hovered = false;
+				paintState();
+			}
+		});
+		setCursorDeep(banner, Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		paintState();
 		updatePanel();
-
-		revalidate();
-		repaint();
 	}
 
-	private void addTab(final MaterialTabGroup tabGroup, final int spriteID, final JPanel panel, final String tooltip)
+	public void setSelf(boolean self)
 	{
-		spriteManager.getSpriteAsync(spriteID, 0, img ->
-				SwingUtilities.invokeLater(() ->
-				{
-					final MaterialTab tab = new MaterialTab(createImageIcon(img), tabGroup, panel);
-					tab.setToolTipText(tooltip);
-					tabGroup.addTab(tab);
-					tabGroup.revalidate();
-					tabGroup.repaint();
-
-					tabMap.put(spriteID, false);
-					tab.setOnSelectEvent(() ->
-					{
-						tabMap.replaceAll((k, v) -> false);
-						tabMap.put(spriteID, true);
-						updatePlayerData(player, false);
-						return true;
-					});
-
-					if (spriteID == SpriteID.SideiconsInterface.INVENTORY)
-					{
-						tabGroup.select(tab);
-						tabMap.put(spriteID, true);
-					}
-				}));
+		this.self = self;
+		paintState();
 	}
 
-	private ImageIcon createImageIcon(BufferedImage image)
+	public void addBannerListener(MouseListener listener)
 	{
-		return new ImageIcon(ImageUtil.resizeImage(image, IMAGE_SIZE.width, IMAGE_SIZE.height));
+		addListenerDeep(banner, listener);
+	}
+
+	private void buildDetails()
+	{
+		details.setOpaque(false);
+		details.setLayout(new BoxLayout(details, BoxLayout.Y_AXIS));
+
+		JComponent rule = new JPanel();
+		rule.setBackground(PartyStyle.DIVIDER);
+		rule.setMinimumSize(new Dimension(0, 1));
+		rule.setPreferredSize(new Dimension(10, 1));
+		rule.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+
+		JComponent[] contents = {inventoryPanel, equipmentPanel, prayersPanel, skillsPanel};
+		JPanel display = new JPanel(new BorderLayout())
+		{
+			@Override
+			public Dimension getPreferredSize()
+			{
+				Dimension size = super.getPreferredSize();
+				for (JComponent content : contents) size.height = Math.max(size.height, content.getPreferredSize().height);
+				return size;
+			}
+		};
+		display.setOpaque(false);
+		MaterialTabGroup tabs = new MaterialTabGroup(display);
+		tabs.setLayout(new FlowLayout(FlowLayout.CENTER, 0, 0));
+		tabs.setOpaque(false);
+		addTab(tabs, "Items", inventoryPanel, Tab.ITEMS);
+		addTab(tabs, "Gear", equipmentPanel, Tab.GEAR);
+		addTab(tabs, "Prayer", prayersPanel, Tab.PRAYER);
+		addTab(tabs, "Skills", skillsPanel, Tab.SKILLS);
+
+		for (JComponent c : new JComponent[]{rule, tabs, display}) c.setAlignmentX(LEFT_ALIGNMENT);
+		details.add(Box.createVerticalStrut(8));
+		details.add(rule);
+		details.add(Box.createVerticalStrut(2));
+		details.add(tabs);
+		details.add(Box.createVerticalStrut(6));
+		details.add(display);
+	}
+
+	private void addTab(MaterialTabGroup group, String name, JComponent content, Tab tab)
+	{
+		MaterialTab materialTab = new MaterialTab(name, group, content);
+		materialTab.setFont(FontManager.getRunescapeSmallFont());
+		materialTab.setOnSelectEvent(() -> {
+			selected = tab;
+			updatePlayerData(player, false);
+			return true;
+		});
+		group.addTab(materialTab);
+		if (tab == selected) group.select(materialTab);
 	}
 
 	public void updatePlayerData(PartyPlayer newPlayer, boolean hasBreakingBannerChange)
 	{
 		player = newPlayer;
-		banner.setPlayer(player);
-
-		if (hasBreakingBannerChange)
-		{
-			// Spellbook changes swap the sprite, so always refetch.
-			banner.updateSpellbookIcon(player.getSpellbook(), spriteManager);
-			banner.recreatePanel();
-		}
-
-		if (player.getStats() != null)
-		{
-			banner.refreshStats();
-		}
+		banner.update(player);
 
 		BufferedImage heart = null;
-		if (player.getPoison() >= VENOM_THRESHOLD)
+		if (player.getPoison() >= VENOM_THRESHOLD) heart = HEART_VENOM;
+		else if (player.getPoison() > 0) heart = HEART_POISON;
+		else if (player.getDisease() > 0) heart = HEART_DISEASE;
+		banner.setCurrentHeart(heart);
+		banner.setUsingStamIcon(player.getStamina() > 0);
+
+		if (!showInfo) return;
+		switch (selected)
 		{
-			heart = HEART_VENOM;
-		}
-		else if (player.getPoison() > 0)
-		{
-			heart = HEART_POISON;
-		}
-		else if (player.getDisease() > 0)
-		{
-			heart = HEART_DISEASE;
-		}
-		banner.setCurrentHeart(heart, spriteManager);
-		banner.setUsingStamIcon(player.getStamina() > 0, spriteManager);
-
-		if (!showInfo)
-		{
-			return;
-		}
-
-		if (tabMap.getOrDefault(SpriteID.SideiconsInterface.INVENTORY, false))
-		{
-			inventoryPanel.updateInventory(player.getInventory(), player.getRunesInPouch());
-		}
-
-		if (tabMap.getOrDefault(SpriteID.SideiconsInterface.INVENTORY, false))
-		{
-			for (final EquipmentInventorySlot equipSlot : EquipmentInventorySlot.values())
-			{
-				GameItem item = null;
-				if (player.getEquipment().length > equipSlot.getSlotIdx())
-				{
-					item = player.getEquipment()[equipSlot.getSlotIdx()];
-				}
-
-				final EquipmentPanelSlot slot = this.equipmentPanel.getPanelMap().get(equipSlot);
-				if (item != null && slot != null)
-				{
-					final AsyncBufferedImage img = itemManager.getImage(item.getId(), item.getQty(), item.isStackable());
-					slot.setGameItem(item, img);
-
-					final GameItem finalItem = item;
-					img.onLoaded(() -> slot.setGameItem(finalItem, img));
-				}
-				else if (slot != null)
-				{
-					slot.setGameItem(null, null);
-				}
-			}
-
-			this.equipmentPanel.setQuiver(player.getQuiver());
-		}
-
-		if (player.getStats() != null && tabMap.getOrDefault(SpriteID.SideiconsInterface.STATS, false))
-		{
-			int totalLevel = 0;
-			for (final Skill s : Skill.values())
-			{
-				totalLevel += player.getSkillRealLevel(s, config.displayVirtualLevels());
-
-				updateSkill(s);
-			}
-			skillsPanel.getTotalLevelPanel().updateTotalLevel(totalLevel);
-		}
-
-		if (player.getPrayers() != null && tabMap.getOrDefault(SpriteID.SideiconsInterface.PRAYER, false))
-		{
-			boolean unlockChanged = false;
-			for (final Map.Entry<Prayer, PrayerSlot> entry : prayersPanel.getSlotMap().entrySet())
-			{
-				PrayerSlot slot = entry.getValue();
-				final PrayerData data = player.getPrayers().getPrayerData().get(entry.getKey());
-				if (data != null)
-				{
-					unlockChanged = unlockChanged || data.isUnlocked() != slot.getData().isUnlocked();
-					entry.getValue().updatePrayerData(data);
-				}
-			}
-
-			if (unlockChanged)
-			{
-				prayersPanel.updateSlots();
-			}
-
-			prayersPanel.updatePrayerRemaining(player.getSkillBoostedLevel(Skill.PRAYER), player.getSkillRealLevel(Skill.PRAYER));
+			case ITEMS:
+				inventoryPanel.updateInventory(player.getInventory(), player.getRunesInPouch());
+				break;
+			case GEAR:
+				equipmentPanel.update(player.getEquipment(), player.getQuiver());
+				break;
+			case PRAYER:
+				if (player.getPrayers() != null) prayersPanel.update(player.getPrayers());
+				break;
+			case SKILLS:
+				if (player.getStats() != null) skillsPanel.update(player, config.displayVirtualLevels());
+				break;
 		}
 	}
 
 	public void updatePanel()
 	{
-		this.removeAll();
-		if (showInfo)
-		{
-			this.setBorder(new CompoundBorder(
-					new MatteBorder(2, 2, 2, 2, new Color(87, 80, 64)),
-					new EmptyBorder(0, 0, 5, 0)
-			));
-		}
-		else
-		{
-			this.setBorder(new MatteBorder(2, 2, 2, 2, new Color(87, 80, 64)));
-		}
-
-		final JPanel view = new JPanel();
-		view.setBorder(new EmptyBorder(5, 5, 0, 5));
-		final MaterialTabGroup tabGroup = new MaterialTabGroup(view);
-		tabGroup.setBorder(new EmptyBorder(10, 0, 4, 0));
-
-		tabMap.clear();
-		addTab(tabGroup, SpriteID.SideiconsInterface.INVENTORY, inventoryPanel, "Inventory");
-		addTab(tabGroup, SpriteID.SideiconsInterface.EQUIPMENT, equipmentPanel, "Equipment");
-		addTab(tabGroup, SpriteID.SideiconsInterface.PRAYER, prayersPanel, "Prayers");
-		addTab(tabGroup, SpriteID.SideiconsInterface.STATS, skillsPanel, "Skills");
-
-		setLayout(new DynamicGridLayout(0, 1));
-
-		add(banner);
-		if (this.showInfo)
-		{
-			add(tabGroup);
-			add(view);
-		}
-
+		details.setVisible(showInfo);
+		banner.setToolTipText(showInfo ? "Hide details" : "Show inventory, gear, prayers and skills");
 		revalidate();
 		repaint();
 	}
 
-	public void updateSkill(Skill s)
-	{
-		skillsPanel.updateSkill(player, s, config.displayVirtualLevels());
-	}
-
 	public void updateDisplayVirtualLevels()
 	{
-		int totalLevel = 0;
-		for (final Skill s : Skill.values())
-		{
-			totalLevel += player.getSkillRealLevel(s, config.displayVirtualLevels());
-
-			updateSkill(s);
-		}
-
-		skillsPanel.getTotalLevelPanel().updateTotalLevel(totalLevel);
+		if (player.getStats() != null) skillsPanel.update(player, config.displayVirtualLevels());
 	}
 
 	public void updateDisplayPlayerWorlds()
 	{
 		banner.updateWorld(player, config.displayPlayerWorlds());
+	}
+
+	private void paintState()
+	{
+		Color background = self ? (hovered ? PartyStyle.SELF_CARD_HOVER : PartyStyle.SELF_CARD) : (hovered ? PartyStyle.CARD_HOVER : PartyStyle.CARD);
+		setBackground(background);
+		setBorder(self
+			? BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(PartyStyle.SELF_BORDER), BorderFactory.createEmptyBorder(6, 7, 6, 7))
+			: BorderFactory.createEmptyBorder(7, 8, 7, 8));
+		repaint();
+	}
+
+	private static void addListenerDeep(Component component, MouseListener listener)
+	{
+		component.addMouseListener(listener);
+		if (component instanceof Container)
+			for (Component child : ((Container) component).getComponents()) addListenerDeep(child, listener);
+	}
+
+	private static void setCursorDeep(Component component, Cursor cursor)
+	{
+		component.setCursor(cursor);
+		if (component instanceof Container)
+			for (Component child : ((Container) component).getComponents()) setCursorDeep(child, cursor);
 	}
 }

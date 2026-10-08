@@ -24,52 +24,58 @@
  */
 package com.tsghub.group.ui.equipment;
 
+import com.tsghub.group.data.GameItem;
+import com.tsghub.group.ui.PartyStyle;
+import java.awt.AlphaComposite;
+import java.awt.Dimension;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import lombok.Getter;
-import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.QuantityFormatter;
-import com.tsghub.group.ImgUtil;
-import com.tsghub.group.data.GameItem;
 
 public class EquipmentPanelSlot extends JLabel
 {
-	private final int IMAGE_SIZE = 48; // 50% larger than the 32x32 background
-	private final BufferedImage background;
-	private final BufferedImage placeholder;
+	static final Dimension SIZE = new Dimension(48, 46);
+
+	private ImageIcon placeholder;
 	@Getter
-	private GameItem item = null;
+	private GameItem item;
 
-	EquipmentPanelSlot(final GameItem item, final BufferedImage image, final BufferedImage background, final BufferedImage placeholder)
+	EquipmentPanelSlot()
 	{
-		super();
-
-		this.background = background;
-		this.placeholder = ImageUtil.resizeImage(ImgUtil.overlapImages(placeholder, background, false), IMAGE_SIZE, IMAGE_SIZE);
-
-		setVerticalAlignment(JLabel.CENTER);
+		setOpaque(true);
+		setBackground(PartyStyle.SLOT);
+		setPreferredSize(SIZE);
+		setMinimumSize(SIZE);
 		setHorizontalAlignment(JLabel.CENTER);
-		setGameItem(item, image);
+		setVerticalAlignment(JLabel.CENTER);
+	}
+
+	void setPlaceholder(BufferedImage image)
+	{
+		BufferedImage faded = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g = faded.createGraphics();
+		g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.5f));
+		g.drawImage(image, 0, 0, null);
+		g.dispose();
+		placeholder = new ImageIcon(faded);
+		if (item == null) setIcon(placeholder);
 	}
 
 	public void setGameItem(final GameItem item, final BufferedImage image)
 	{
 		this.item = item;
-
 		if (item == null || image == null)
 		{
-			setIcon(new ImageIcon(placeholder));
+			setIcon(placeholder);
 			setToolTipText(null);
 			return;
 		}
-
-		setIcon(new ImageIcon(ImageUtil.resizeImage(ImgUtil.overlapImages(image, background, true), IMAGE_SIZE, IMAGE_SIZE)));
+		setIcon(new ImageIcon(image));
 		String name = item.getName();
-		if (item.getQty() > 1)
-		{
-			name += " x " + QuantityFormatter.formatNumber(item.getQty());
-		}
+		if (item.getQty() > 1) name += " x " + QuantityFormatter.formatNumber(item.getQty());
 		setToolTipText(name);
 	}
 }

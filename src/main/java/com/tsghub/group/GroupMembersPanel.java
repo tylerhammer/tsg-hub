@@ -8,7 +8,6 @@ import com.google.common.base.Strings;
 import com.tsghub.group.data.PartyPlayer;
 import com.tsghub.group.ui.PlayerPanel;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
@@ -75,10 +74,12 @@ public final class GroupMembersPanel extends JPanel
 		final PlayerPanel existing = panels.get(id);
 		if (existing != null)
 		{
+			existing.setSelf(id == selfId);
 			existing.updatePlayerData(player, bannerChanged);
 			return;
 		}
 		final PlayerPanel panel = new PlayerPanel(player, settings, spriteManager, itemManager);
+		panel.setSelf(self);
 		panel.updatePlayerData(player, true);
 		addMenu(panel, id);
 		panels.put(id, panel);
@@ -99,8 +100,8 @@ public final class GroupMembersPanel extends JPanel
 			if (expandChanged)
 			{
 				panel.setShowInfo(settings.autoExpandMembers());
-				panel.getBanner().setExpandIcon(settings.autoExpandMembers());
 				panel.updatePanel();
+				panel.updatePlayerData(panel.getPlayer(), false);
 			}
 			panel.updateDisplayVirtualLevels();
 			panel.updateDisplayPlayerWorlds();
@@ -180,8 +181,7 @@ public final class GroupMembersPanel extends JPanel
 				if (e.isPopupTrigger()) showMenu(e, id);
 			}
 		};
-		panel.getBanner().addMouseListener(listener);
-		for (Component c : panel.getBanner().getStatsPanel().getComponents()) c.addMouseListener(listener);
+		panel.addBannerListener(listener);
 	}
 
 	private void showMenu(MouseEvent e, long id)

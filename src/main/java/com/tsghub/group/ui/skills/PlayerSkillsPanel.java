@@ -26,21 +26,22 @@ package com.tsghub.group.ui.skills;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import lombok.Getter;
-import net.runelite.api.Skill;
-import net.runelite.api.gameval.SpriteID;
-import net.runelite.client.game.SpriteManager;
-import net.runelite.client.ui.DynamicGridLayout;
-import net.runelite.client.ui.PluginPanel;
 import com.tsghub.group.data.PartyPlayer;
-
-import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
-import java.awt.Color;
-import java.awt.Dimension;
+import com.tsghub.group.ui.PartyStyle;
+import java.awt.BorderLayout;
+import java.awt.GridLayout;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.swing.BorderFactory;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
+import net.runelite.api.Skill;
+import net.runelite.api.gameval.SpriteID;
+import net.runelite.client.game.SpriteManager;
+import net.runelite.client.ui.FontManager;
+import net.runelite.client.util.QuantityFormatter;
 
 import static net.runelite.api.Skill.AGILITY;
 import static net.runelite.api.Skill.ATTACK;
@@ -67,105 +68,89 @@ import static net.runelite.api.Skill.STRENGTH;
 import static net.runelite.api.Skill.THIEVING;
 import static net.runelite.api.Skill.WOODCUTTING;
 
-@Getter
 public class PlayerSkillsPanel extends JPanel
 {
 	private static final List<Skill> SKILLS = ImmutableList.of(
-			ATTACK, HITPOINTS, MINING,
-			STRENGTH, AGILITY, SMITHING,
-			DEFENCE, HERBLORE, FISHING,
-			RANGED, THIEVING, COOKING,
-			PRAYER, CRAFTING, FIREMAKING,
-			MAGIC, FLETCHING, WOODCUTTING,
-			RUNECRAFT, SLAYER, FARMING,
-			CONSTRUCTION, HUNTER, SAILING
+		ATTACK, HITPOINTS, MINING,
+		STRENGTH, AGILITY, SMITHING,
+		DEFENCE, HERBLORE, FISHING,
+		RANGED, THIEVING, COOKING,
+		PRAYER, CRAFTING, FIREMAKING,
+		MAGIC, FLETCHING, WOODCUTTING,
+		RUNECRAFT, SLAYER, FARMING,
+		CONSTRUCTION, HUNTER, SAILING
 	);
 
-	private static final ImmutableMap<Skill, Integer> SPRITE_MAP;
-
-	static
-	{
-		final ImmutableMap.Builder<Skill, Integer> map = ImmutableMap.builder();
-		map.put(Skill.ATTACK, SpriteID.Staticons.ATTACK);
-		map.put(Skill.STRENGTH, SpriteID.Staticons.STRENGTH);
-		map.put(Skill.DEFENCE, SpriteID.Staticons.DEFENCE);
-		map.put(Skill.RANGED, SpriteID.Staticons.RANGED);
-		map.put(Skill.PRAYER, SpriteID.Staticons.PRAYER);
-		map.put(Skill.MAGIC, SpriteID.Staticons.MAGIC);
-		map.put(Skill.HITPOINTS, SpriteID.Staticons.HITPOINTS);
-		map.put(Skill.AGILITY, SpriteID.Staticons.AGILITY);
-		map.put(Skill.HERBLORE, SpriteID.Staticons.HERBLORE);
-		map.put(Skill.THIEVING, SpriteID.Staticons.THIEVING);
-		map.put(Skill.CRAFTING, SpriteID.Staticons.CRAFTING);
-		map.put(Skill.FLETCHING, SpriteID.Staticons.FLETCHING);
-		map.put(Skill.MINING, SpriteID.Staticons.MINING);
-		map.put(Skill.SMITHING, SpriteID.Staticons.SMITHING);
-		map.put(Skill.FISHING, SpriteID.Staticons.FISHING);
-		map.put(Skill.COOKING, SpriteID.Staticons.COOKING);
-		map.put(Skill.FIREMAKING, SpriteID.Staticons.FIREMAKING);
-		map.put(Skill.WOODCUTTING, SpriteID.Staticons.WOODCUTTING);
-		map.put(Skill.RUNECRAFT, SpriteID.Staticons2.RUNECRAFT);
-		map.put(Skill.SLAYER, SpriteID.Staticons2.SLAYER);
-		map.put(Skill.FARMING, SpriteID.Staticons2.FARMING);
-		map.put(Skill.CONSTRUCTION, SpriteID.Staticons2.CONSTRUCTION);
-		map.put(Skill.HUNTER, SpriteID.Staticons2.HUNTER);
-		map.put(Skill.SAILING, SpriteID.Staticons2.SAILING);
-		SPRITE_MAP = map.build();
-	}
-
-	protected static final Dimension PANEL_SIZE = new Dimension(PluginPanel.PANEL_WIDTH - 14, 296);
+	private static final ImmutableMap<Skill, Integer> SPRITE_MAP = ImmutableMap.<Skill, Integer>builder()
+		.put(Skill.ATTACK, SpriteID.Staticons.ATTACK)
+		.put(Skill.STRENGTH, SpriteID.Staticons.STRENGTH)
+		.put(Skill.DEFENCE, SpriteID.Staticons.DEFENCE)
+		.put(Skill.RANGED, SpriteID.Staticons.RANGED)
+		.put(Skill.PRAYER, SpriteID.Staticons.PRAYER)
+		.put(Skill.MAGIC, SpriteID.Staticons.MAGIC)
+		.put(Skill.HITPOINTS, SpriteID.Staticons.HITPOINTS)
+		.put(Skill.AGILITY, SpriteID.Staticons.AGILITY)
+		.put(Skill.HERBLORE, SpriteID.Staticons.HERBLORE)
+		.put(Skill.THIEVING, SpriteID.Staticons.THIEVING)
+		.put(Skill.CRAFTING, SpriteID.Staticons.CRAFTING)
+		.put(Skill.FLETCHING, SpriteID.Staticons.FLETCHING)
+		.put(Skill.MINING, SpriteID.Staticons.MINING)
+		.put(Skill.SMITHING, SpriteID.Staticons.SMITHING)
+		.put(Skill.FISHING, SpriteID.Staticons.FISHING)
+		.put(Skill.COOKING, SpriteID.Staticons.COOKING)
+		.put(Skill.FIREMAKING, SpriteID.Staticons.FIREMAKING)
+		.put(Skill.WOODCUTTING, SpriteID.Staticons.WOODCUTTING)
+		.put(Skill.RUNECRAFT, SpriteID.Staticons2.RUNECRAFT)
+		.put(Skill.SLAYER, SpriteID.Staticons2.SLAYER)
+		.put(Skill.FARMING, SpriteID.Staticons2.FARMING)
+		.put(Skill.CONSTRUCTION, SpriteID.Staticons2.CONSTRUCTION)
+		.put(Skill.HUNTER, SpriteID.Staticons2.HUNTER)
+		.put(Skill.SAILING, SpriteID.Staticons2.SAILING)
+		.build();
 
 	private final Map<Skill, SkillPanelSlot> panelMap = new HashMap<>();
-	private final TotalPanelSlot totalLevelPanel;
-
-	private final JPanel skillsPanel = new JPanel();
+	private final JLabel totalLabel = new JLabel();
 
 	public PlayerSkillsPanel(final PartyPlayer player, final boolean displayVirtualLevels, final SpriteManager spriteManager)
 	{
-		super();
+		setOpaque(false);
+		setLayout(new BorderLayout(0, 6));
 
-		this.setMinimumSize(PANEL_SIZE);
-		this.setPreferredSize(PANEL_SIZE);
-		this.setBackground(new Color(62, 53, 41));
-
-		this.setLayout(new DynamicGridLayout(2, 1, 0, 0));
-
-		skillsPanel.setLayout(new DynamicGridLayout(8, 3, 2, 0));
-		skillsPanel.setBackground(new Color(62, 53, 41));
-		int totalLevel = 0;
-		for (final Skill s : SKILLS)
+		JPanel grid = new JPanel(new GridLayout(0, 3, 2, 2));
+		grid.setOpaque(false);
+		for (Skill skill : SKILLS)
 		{
-			int realLevel = player.getSkillRealLevel(s, displayVirtualLevels);
-			final SkillPanelSlot slot = new SkillPanelSlot(player.getSkillBoostedLevel(s), realLevel);
-			panelMap.put(s, slot);
-			skillsPanel.add(slot);
-			spriteManager.getSpriteAsync(SPRITE_MAP.get(s), 0, img -> SwingUtilities.invokeLater(() -> slot.initImages(img, spriteManager)));
-
-			updateSkill(player, s, displayVirtualLevels);
-
-			totalLevel += realLevel;
+			SkillPanelSlot slot = new SkillPanelSlot(skill.getName());
+			panelMap.put(skill, slot);
+			grid.add(slot);
+			spriteManager.getSpriteAsync(SPRITE_MAP.get(skill), 0, img -> SwingUtilities.invokeLater(() -> slot.setSkillIcon(img)));
 		}
-		this.add(skillsPanel);
 
-		// HP starts at 10.
-		totalLevel = player.getStats() == null ? (9 + Skill.values().length) : totalLevel;
-		totalLevelPanel = new TotalPanelSlot(totalLevel, spriteManager);
-		this.add(totalLevelPanel);
+		JLabel totalCaption = new JLabel("Total level");
+		totalCaption.setFont(FontManager.getRunescapeSmallFont());
+		totalCaption.setForeground(PartyStyle.MUTED);
+		totalLabel.setFont(FontManager.getRunescapeSmallFont());
+		totalLabel.setForeground(PartyStyle.TEXT);
+		JPanel total = new JPanel(new BorderLayout());
+		total.setOpaque(false);
+		total.setBorder(BorderFactory.createEmptyBorder(0, 1, 0, 1));
+		total.add(totalCaption, BorderLayout.CENTER);
+		total.add(totalLabel, BorderLayout.EAST);
+
+		add(grid, BorderLayout.CENTER);
+		add(total, BorderLayout.SOUTH);
+		update(player, displayVirtualLevels);
 	}
 
-	public void updateSkill(final PartyPlayer player, final Skill s, final boolean displayVirtualLevels)
+	public void update(PartyPlayer player, boolean displayVirtualLevels)
 	{
-		int boosted = s == Skill.HITPOINTS ? 10 : 1;
-		int baseLevel = s == Skill.HITPOINTS ? 10 : 1;
-		if (player.getStats() != null)
+		int total = 0;
+		for (Skill skill : SKILLS)
 		{
-			boosted = player.getSkillBoostedLevel(s);
-			baseLevel = player.getSkillRealLevel(s, displayVirtualLevels);
+			int base = player.getSkillRealLevel(skill, displayVirtualLevels);
+			total += base;
+			panelMap.get(skill).setLevels(player.getSkillBoostedLevel(skill), base);
 		}
-
-		final SkillPanelSlot panel = panelMap.get(s);
-		panel.updateBoostedLevel(boosted);
-		panel.updateBaseLevel(baseLevel);
-		panel.setToolTipText(s.getName());
+		totalLabel.setText(total > 0 ? QuantityFormatter.formatNumber(total) : "");
 	}
 }

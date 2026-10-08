@@ -1224,9 +1224,13 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 		else
 		{
-			for (int i = 0; i < groupList.size(); i++)
+			String currentId = current == null ? "" : TsgHubUi.str(current, "id");
+			List<JsonObject> sorted = new ArrayList<>();
+			for (int i = 0; i < groupList.size(); i++) sorted.add(groupList.get(i).getAsJsonObject());
+			sorted.sort(Comparator.comparing((JsonObject g) -> !TsgHubUi.str(g, "id").equals(currentId)));
+			for (JsonObject group : sorted)
 			{
-				groupsPage.add(groupCard(groupList.get(i).getAsJsonObject(), current));
+				groupsPage.add(groupCard(group, current));
 				groupsPage.add(Box.createVerticalStrut(5));
 			}
 		}
@@ -1249,6 +1253,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	private JPanel groupCard(JsonObject group, JsonObject current)
 	{
+		Font small = FontManager.getRunescapeSmallFont();
 		JsonArray members = TsgHubUi.array(group, "members");
 		String leader = TsgHubUi.str(group, "leaderName");
 		int world = 0;
@@ -1256,35 +1261,43 @@ final class TsgHubSidebarPanel extends PluginPanel
 		for (int i = 0; i < members.size(); i++)
 		{
 			JsonObject member = members.get(i).getAsJsonObject();
-			names.add(TsgHubUi.str(member, "displayName"));
-			if (TsgHubUi.samePlayer(TsgHubUi.str(member, "displayName"), leader)) world = TsgHubUi.integer(member, "world", 0);
+			String name = TsgHubUi.str(member, "displayName");
+			if (TsgHubUi.samePlayer(name, leader))
+			{
+				world = TsgHubUi.integer(member, "world", 0);
+				names.add(0, "<font color='#ffffff'>" + TsgHubUi.escape(name) + "</font>");
+			}
+			else names.add("<font color='" + hex(TsgHubUi.MUTED) + "'>" + TsgHubUi.escape(name) + "</font>");
 		}
 		JPanel card = TsgHubUi.card();
-		JPanel text = TsgHubUi.stack();
 		boolean mine = current != null && TsgHubUi.str(group, "id").equals(TsgHubUi.str(current, "id"));
+		if (mine) highlightSelf(card);
 		boolean locked = !mine && TsgHubUi.bool(group, "locked");
 		String title = mine ? currentTitle(group) : partyTitle(group);
-		boolean showLock = TsgHubUi.bool(group, "locked");
-		JLabel heading = TsgHubUi.label(TsgHubUi.html("<b>" + TsgHubUi.escape(title) + "</b>", CARD_TITLE_W - (showLock ? 15 : 0)), TsgHubUi.TEXT, FontManager.getRunescapeFont());
-		if (showLock)
+
+		JLabel heading = TsgHubUi.shrinkable(TsgHubUi.label(title, locked ? TsgHubUi.MUTED : TsgHubUi.TEXT, FontManager.getRunescapeBoldFont()));
+		if (TsgHubUi.bool(group, "locked"))
 		{
 			heading.setIcon(new TsgHubUi.LockIcon());
 			heading.setIconTextGap(5);
 		}
-		text.add(heading);
-		text.add(Box.createVerticalStrut(2));
-		Map.Entry<String, Integer> area = TsgHubUi.str(group, "activity").isEmpty() ? areaSummary(members) : null;
+		JPanel top = TsgHubUi.row();
+		top.add(heading, BorderLayout.CENTER);
+		if (!mine && !locked)
+			top.add(TsgHubUi.label(groupBusy ? "..." : current != null ? "Switch" : "Join", TsgHubUi.ACCENT, small), BorderLayout.EAST);
+
+		JPanel text = TsgHubUi.stack();
+		text.add(top);
+		text.add(Box.createVerticalStrut(3));
+		Map.Entry<String, Integer> area = areaSummary(members);
 		String here = area != null && area.getValue() < members.size() ? " · " + area.getValue() + " here" : "";
-		String meta = (members.size() == 1 ? "1 member" : members.size() + " members") + here + (world > 0 ? " · W" + world : "") + " · " + leader;
-		text.add(TsgHubUi.label(meta, TsgHubUi.MUTED, FontManager.getRunescapeSmallFont()));
-		text.add(TsgHubUi.wrapped(String.join(", ", names), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), CARD_TITLE_W));
+		String meta = TsgHubUi.escape((members.size() == 1 ? "1 member" : members.size() + " members") + here + (world > 0 ? " · W" + world : ""));
+		if (area != null && !area.getKey().equalsIgnoreCase(title))
+			meta += " · <font color='" + hex(TsgHubUi.SUCCESS) + "'>" + TsgHubUi.escape(area.getKey()) + "</font>";
+		text.add(TsgHubUi.label(TsgHubUi.html(meta, CARD_TEXT_W), TsgHubUi.MUTED, small));
+		text.add(Box.createVerticalStrut(4));
+		text.add(TsgHubUi.label(TsgHubUi.html(String.join(", ", names), CARD_TEXT_W), TsgHubUi.MUTED, small));
 		card.add(text, BorderLayout.CENTER);
-		JPanel east = new JPanel(new BorderLayout());
-		east.setOpaque(false);
-		east.add(mine ? TsgHubUi.badge("Yours", TsgHubUi.SUCCESS)
-			: locked ? new JLabel()
-			: TsgHubUi.label(groupBusy ? "..." : current != null ? "Switch" : "Join", TsgHubUi.ACCENT, FontManager.getRunescapeSmallFont()), BorderLayout.NORTH);
-		card.add(east, BorderLayout.EAST);
 		if (locked)
 		{
 			card.setToolTipText("The leader has locked this party");
@@ -1308,6 +1321,11 @@ final class TsgHubSidebarPanel extends PluginPanel
 			plugin.groups().join(TsgHubUi.str(group, "id"));
 		});
 		return TsgHubUi.fitHeight(card);
+	}
+
+	private static String hex(Color color)
+	{
+		return String.format("#%06x", color.getRGB() & 0xffffff);
 	}
 
 	static String partyTitle(JsonObject group)

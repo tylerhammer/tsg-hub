@@ -25,349 +25,222 @@
 package com.tsghub.group.ui;
 
 import com.google.common.base.Strings;
-import lombok.Getter;
-import lombok.Setter;
-import net.runelite.api.Constants;
-import net.runelite.api.Skill;
-import net.runelite.api.gameval.SpriteID;
-import net.runelite.client.game.SpriteManager;
-import net.runelite.client.ui.ColorScheme;
-import net.runelite.client.ui.PluginPanel;
-import net.runelite.client.util.ImageUtil;
 import com.tsghub.group.data.PartyPlayer;
-
+import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.GridLayout;
+import java.awt.image.BufferedImage;
 import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.MatteBorder;
-import java.awt.BorderLayout;
-import java.awt.Dimension;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.GridLayout;
-import java.awt.Insets;
-import java.awt.image.BufferedImage;
-import java.util.HashMap;
-import java.util.Map;
+import net.runelite.api.Skill;
+import net.runelite.api.gameval.SpriteID;
+import net.runelite.client.game.SpriteManager;
+import net.runelite.client.ui.FontManager;
+import net.runelite.client.util.ImageUtil;
 
 public class PlayerBanner extends JPanel
 {
-	private static final Dimension STAT_ICON_SIZE = new Dimension(18, 18);
-	private static final Dimension ICON_SIZE = new Dimension(Constants.ITEM_SPRITE_WIDTH - 4, Constants.ITEM_SPRITE_HEIGHT);
-	private static final BufferedImage EXPAND_ICON = ImageUtil.loadImageResource(PlayerPanel.class, "expand.png");
-	private static final String SPECIAL_ATTACK_NAME = "Special Attack";
-	private static final String RUN_ENERGY_NAME = "Run Energy";
+	private static final int STAT_ICON = 16;
+	private static final int AVATAR = 32;
 
-	@Getter
-	private final JPanel statsPanel = new JPanel();
-	private final JLabel iconLabel = new JLabel();
-	private final Map<String, JLabel> statLabels = new HashMap<>();
-	private final Map<String, JLabel> iconLabels = new HashMap<>();
-	@Getter
-	private final JLabel expandIcon = new JLabel();
+	private final SpriteManager spriteManager;
+	private final JLabel avatarLabel = new JLabel();
+	private final JLabel nameLabel = new JLabel();
 	private final JLabel worldLabel = new JLabel();
-	private final JLabel spellbookIcon = new JLabel();
+	private final JLabel areaLabel = new JLabel();
+	private final JLabel spellbookLabel = new JLabel();
+	private final JLabel hpLabel = statLabel("Hitpoints");
+	private final JLabel prayerLabel = statLabel("Prayer");
+	private final JLabel specLabel = statLabel("Special attack");
+	private final JLabel runLabel = statLabel("Run energy");
 
-	private final ImageIcon expandIconUp;
-	private final ImageIcon expandIconDown;
-
-	@Setter
-	@Getter
 	private PartyPlayer player;
-	private boolean checkIcon;
-
-	private BufferedImage currentHeart = null;
-	private boolean usingStamIcon;
 	private boolean displayWorld;
+	private BufferedImage avatar;
+	private BufferedImage currentHeart;
+	private boolean heartSet;
+	private Boolean usingStamIcon;
+	private int spellbook = Integer.MIN_VALUE;
 
-	public PlayerBanner(final PartyPlayer player, boolean expanded, boolean displayWorld, SpriteManager spriteManager)
+	public PlayerBanner(PartyPlayer player, boolean displayWorld, SpriteManager spriteManager)
 	{
-		super();
 		this.player = player;
 		this.displayWorld = displayWorld;
+		this.spriteManager = spriteManager;
+		setOpaque(false);
+		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
-		this.setLayout(new GridBagLayout());
-		this.setPreferredSize(new Dimension(PluginPanel.PANEL_WIDTH - 14, 75));
-		this.setBorder(new EmptyBorder(2, 5, 2, 5));
+		nameLabel.setFont(FontManager.getRunescapeBoldFont());
+		nameLabel.setMinimumSize(new Dimension(0, 0));
+		worldLabel.setFont(FontManager.getRunescapeSmallFont());
+		worldLabel.setForeground(PartyStyle.MUTED);
+		areaLabel.setFont(FontManager.getRunescapeSmallFont());
+		areaLabel.setMinimumSize(new Dimension(0, 0));
 
-		statsPanel.setPreferredSize(new Dimension(PluginPanel.PANEL_WIDTH, 25));
-		statsPanel.setLayout(new GridLayout(0, 4));
-		statsPanel.setBorder(new EmptyBorder(5, 0, 0, 0));
-		statsPanel.setOpaque(true);
+		JPanel top = row();
+		top.add(nameLabel, BorderLayout.CENTER);
+		top.add(worldLabel, BorderLayout.EAST);
+		JPanel bottom = row();
+		bottom.add(areaLabel, BorderLayout.CENTER);
+		bottom.add(spellbookLabel, BorderLayout.EAST);
+		JPanel ident = new JPanel();
+		ident.setOpaque(false);
+		ident.setLayout(new BoxLayout(ident, BoxLayout.Y_AXIS));
+		ident.add(top);
+		ident.add(Box.createVerticalStrut(3));
+		ident.add(bottom);
 
-		expandIconDown = new ImageIcon(EXPAND_ICON);
-		expandIconUp = new ImageIcon(ImageUtil.rotateImage(EXPAND_ICON, Math.PI));
-		if (expanded)
-		{
-			expandIcon.setIcon(expandIconUp);
-		}
-		else
-		{
-			expandIcon.setIcon(expandIconDown);
-		}
+		avatarLabel.setVerticalAlignment(JLabel.TOP);
+		JPanel header = new JPanel(new BorderLayout(6, 0));
+		header.setOpaque(false);
+		header.add(avatarLabel, BorderLayout.WEST);
+		header.add(ident, BorderLayout.CENTER);
 
-		worldLabel.setHorizontalTextPosition(JLabel.LEFT);
+		JPanel stats = new JPanel(new GridLayout(1, 4, 2, 0));
+		stats.setOpaque(false);
+		stats.add(hpLabel);
+		stats.add(prayerLabel);
+		stats.add(specLabel);
+		stats.add(runLabel);
 
-		usingStamIcon = player.getStamina() > 0;
-		statsPanel.add(createIconPanel(spriteManager, SpriteID.Staticons.HITPOINTS, Skill.HITPOINTS.getName(), String.valueOf(player.getSkillBoostedLevel(Skill.HITPOINTS))));
-		statsPanel.add(createIconPanel(spriteManager, SpriteID.Staticons.PRAYER, Skill.PRAYER.getName(), String.valueOf(player.getSkillBoostedLevel(Skill.PRAYER))));
-		statsPanel.add(createIconPanel(spriteManager, SpriteID.OVERLAY_MULTIWAY, SPECIAL_ATTACK_NAME, player.getStats() == null ? "0" : String.valueOf(player.getStats().getSpecialPercent())));
-		statsPanel.add(createIconPanel(spriteManager,
-				usingStamIcon ? SpriteID.OrbIcon.RUN_ICON_SLOWED_DEPLETION : SpriteID.OrbIcon.RUN,
-				RUN_ENERGY_NAME, player.getStats() == null ? "0" : String.valueOf(player.getStats().getRunEnergy()))
-		);
+		header.setAlignmentX(LEFT_ALIGNMENT);
+		stats.setAlignmentX(LEFT_ALIGNMENT);
+		add(header);
+		add(Box.createVerticalStrut(6));
+		add(stats);
 
-		updateSpellbookIcon(player.getSpellbook(), spriteManager);
-
-		recreatePanel();
+		setSprite(prayerLabel, SpriteID.Staticons.PRAYER);
+		setSprite(specLabel, SpriteID.OVERLAY_MULTIWAY);
+		update(player);
 	}
 
-	// true = arrow up
-	public void setExpandIcon(boolean direction)
+	public void setPlayer(PartyPlayer player)
 	{
-		if (direction)
-		{
-			expandIcon.setIcon(expandIconUp);
-		}
-		else
-		{
-			expandIcon.setIcon(expandIconDown);
-		}
+		this.player = player;
 	}
 
-	public void recreatePanel()
+	public void update(PartyPlayer player)
 	{
-		removeAll();
-
-		final GridBagConstraints c = new GridBagConstraints();
-		c.anchor = GridBagConstraints.NORTHWEST;
-		c.gridx = 0;
-		c.gridy = 0;
-		c.weightx = 0;
-		c.weighty = 0;
-		c.ipady = 4;
-
-		iconLabel.setBorder(new MatteBorder(1, 1, 1, 1, ColorScheme.DARKER_GRAY_HOVER_COLOR));
-		iconLabel.setPreferredSize(ICON_SIZE);
-		iconLabel.setMinimumSize(ICON_SIZE);
-		iconLabel.setOpaque(false);
-
-		checkIcon = player.getMember().getAvatar() == null;
-		if (!checkIcon)
-		{
-			addIcon();
-		}
-
-		final GridBagConstraints iconConstraints = (GridBagConstraints) c.clone();
-		iconConstraints.insets = new Insets(2, 0, 0, 0);
-		add(iconLabel, iconConstraints);
-		c.gridx++;
-
-		final JPanel nameContainer = new JPanel(new GridLayout(2, 1));
-		nameContainer.setBorder(new EmptyBorder(0, 5, 0, 0));
-		nameContainer.setOpaque(false);
-
-		final JLabel usernameLabel = new JLabel();
-		if (Strings.isNullOrEmpty(player.getUsername()))
-		{
-			usernameLabel.setText("Not logged in");
-		}
-		else
-		{
-			final String levelText = player.getStats() == null ? "" : " (level-" + player.getStats().getCombatLevel() + ")";
-			usernameLabel.setText(player.getUsername() + levelText);
-		}
-
+		this.player = player;
+		boolean online = !Strings.isNullOrEmpty(player.getUsername());
+		nameLabel.setText(online ? player.getUsername() : "Not logged in");
+		nameLabel.setForeground(online ? PartyStyle.TEXT : PartyStyle.MUTED);
+		nameLabel.setToolTipText(online && player.getStats() != null ? "Combat level " + player.getStats().getCombatLevel() : null);
 		updateWorld(player, displayWorld);
-
-		final JPanel topRow = new JPanel(new BorderLayout());
-		topRow.setOpaque(false);
-		topRow.add(usernameLabel, BorderLayout.WEST);
-		topRow.add(expandIcon, BorderLayout.EAST);
-
-		final JPanel bottomRow = new JPanel(new BorderLayout());
-		bottomRow.setOpaque(false);
-		bottomRow.add(worldLabel, BorderLayout.WEST);
-		bottomRow.add(spellbookIcon, BorderLayout.EAST);
-
-		nameContainer.add(topRow);
-		nameContainer.add(bottomRow);
-
-		c.weightx = 1.0;
-		c.fill = GridBagConstraints.HORIZONTAL;
-		add(nameContainer, c);
-
+		refreshAvatar();
 		refreshStats();
-		c.gridy++;
-		c.weightx = 0;
-		c.gridx = 0;
-		c.gridwidth = 2;
-		add(statsPanel, c);
-
-		c.weighty = 1.0;
-		add(Box.createGlue(), c);
-
-		revalidate();
-		repaint();
-	}
-
-	private void addIcon()
-	{
-		final BufferedImage resized = ImageUtil.resizeImage(player.getMember().getAvatar(), Constants.ITEM_SPRITE_WIDTH - 4, Constants.ITEM_SPRITE_HEIGHT);
-		iconLabel.setIcon(new ImageIcon(resized));
+		updateSpellbookIcon(player.getSpellbook());
 	}
 
 	public void refreshStats()
 	{
-		if (checkIcon)
-		{
-			if (player.getMember().getAvatar() != null)
-			{
-				addIcon();
-				checkIcon = false;
-			}
-		}
-
-		statLabels.getOrDefault(Skill.HITPOINTS.getName(), new JLabel()).setText(String.valueOf(player.getSkillBoostedLevel(Skill.HITPOINTS)));
-		statLabels.getOrDefault(Skill.PRAYER.getName(), new JLabel()).setText(String.valueOf(player.getSkillBoostedLevel(Skill.PRAYER)));
-		statLabels.getOrDefault(SPECIAL_ATTACK_NAME, new JLabel()).setText(player.getStats() == null ? "0" : String.valueOf(player.getStats().getSpecialPercent()));
-		statLabels.getOrDefault(RUN_ENERGY_NAME, new JLabel()).setText(player.getStats() == null ? "0" : String.valueOf(player.getStats().getRunEnergy()));
-
-		statsPanel.revalidate();
-		statsPanel.repaint();
-	}
-
-	private JPanel createIconPanel(final SpriteManager spriteManager, final int spriteID, final String name,
-								   final String value)
-	{
-		final JLabel iconLabel = new JLabel();
-		iconLabel.setPreferredSize(STAT_ICON_SIZE);
-		iconLabels.put(name, iconLabel);
-		setSpriteIcon(name, spriteID, spriteManager);
-
-		final JLabel textLabel = new JLabel(value);
-		textLabel.setHorizontalAlignment(JLabel.CENTER);
-		textLabel.setHorizontalTextPosition(JLabel.CENTER);
-		statLabels.put(name, textLabel);
-
-		final JPanel panel = new JPanel();
-		panel.setLayout(new BorderLayout());
-		panel.add(iconLabel, BorderLayout.WEST);
-		panel.add(textLabel, BorderLayout.CENTER);
-		panel.setOpaque(false);
-		panel.setToolTipText(name);
-
-		return panel;
-	}
-
-	private void setSpriteIcon(String statLabelKey, final int spriteID, final SpriteManager spriteManager)
-	{
-		final JLabel label = iconLabels.get(statLabelKey);
-		spriteManager.getSpriteAsync(spriteID, 0, img ->
-				SwingUtilities.invokeLater(() ->
-				{
-					if (spriteID == SpriteID.Staticons.PRAYER)
-					{
-						label.setIcon(new ImageIcon(ImageUtil.resizeImage(img, STAT_ICON_SIZE.width + 2, STAT_ICON_SIZE.height + 2)));
-					}
-					else
-					{
-						label.setIcon(new ImageIcon(ImageUtil.resizeImage(img, STAT_ICON_SIZE.width, STAT_ICON_SIZE.height)));
-					}
-					label.revalidate();
-					label.repaint();
-				}));
-	}
-
-	private void setBufferedIcon(String statLabelKey, final BufferedImage img)
-	{
-		final JLabel label = iconLabels.get(statLabelKey);
-		SwingUtilities.invokeLater(() ->
-		{
-			label.setIcon(new ImageIcon(ImageUtil.resizeImage(img, STAT_ICON_SIZE.width, STAT_ICON_SIZE.height)));
-			label.revalidate();
-			label.repaint();
-		});
-	}
-
-	public void setCurrentHeart(final BufferedImage img, SpriteManager spriteManager)
-	{
-		if ((img == null && currentHeart == null) || (img != null && img.equals(currentHeart)))
-		{
-			return;
-		}
-		currentHeart = img;
-		if (currentHeart == null)
-		{
-			setSpriteIcon(Skill.HITPOINTS.getName(), SpriteID.Staticons.HITPOINTS, spriteManager);
-		}
-		else
-		{
-			setBufferedIcon(Skill.HITPOINTS.getName(), currentHeart);
-		}
-		statsPanel.revalidate();
-		statsPanel.repaint();
-	}
-
-	public void setUsingStamIcon(final boolean isStaminaPotted, SpriteManager spriteManager)
-	{
-		if (isStaminaPotted == usingStamIcon)
-		{
-			return;
-		}
-
-		usingStamIcon = isStaminaPotted;
-		final int id = usingStamIcon ? SpriteID.OrbIcon.RUN_ICON_SLOWED_DEPLETION : SpriteID.OrbIcon.RUN;
-		setSpriteIcon(RUN_ENERGY_NAME, id, spriteManager);
-		statsPanel.revalidate();
-		statsPanel.repaint();
+		int hp = player.getSkillBoostedLevel(Skill.HITPOINTS);
+		int prayer = player.getSkillBoostedLevel(Skill.PRAYER);
+		hpLabel.setText(String.valueOf(hp));
+		hpLabel.setForeground(PartyStyle.levelColor(hp, player.getSkillRealLevel(Skill.HITPOINTS)));
+		prayerLabel.setText(String.valueOf(prayer));
+		prayerLabel.setForeground(PartyStyle.levelColor(prayer, player.getSkillRealLevel(Skill.PRAYER)));
+		specLabel.setText(player.getStats() == null ? "0" : String.valueOf(player.getStats().getSpecialPercent()));
+		runLabel.setText(player.getStats() == null ? "0" : String.valueOf(player.getStats().getRunEnergy()));
 	}
 
 	public void updateWorld(PartyPlayer player, boolean displayWorlds)
 	{
 		displayWorld = displayWorlds;
+		boolean online = !Strings.isNullOrEmpty(player.getUsername());
+		boolean inGame = online && player.getWorld() > 0;
+		worldLabel.setText(displayWorlds && inGame ? "W" + player.getWorld() : "");
 		String area = Strings.nullToEmpty(player.getArea());
-		String text;
-		if (Strings.isNullOrEmpty(player.getUsername())) text = "";
-		else if (player.getWorld() <= 0) text = displayWorlds ? "Not logged in" : "";
-		else if (!displayWorlds) text = area;
-		else text = area.isEmpty() ? "World " + player.getWorld() : "W" + player.getWorld() + " · " + area;
-		worldLabel.setVisible(!text.isEmpty());
-		worldLabel.setText(text);
-		worldLabel.setToolTipText(area.isEmpty() ? null : area);
+		String text = !online ? "Last seen stats" : !inGame ? "Not logged in" : area;
+		areaLabel.setText(text);
+		areaLabel.setForeground(inGame && !area.isEmpty() ? PartyStyle.SUCCESS : PartyStyle.MUTED);
+		areaLabel.setToolTipText(area.isEmpty() ? null : area);
 	}
 
-	void updateSpellbookIcon(int spellbook, SpriteManager spriteManager)
+	public void setCurrentHeart(BufferedImage img)
 	{
+		if (heartSet && img == currentHeart) return;
+		heartSet = true;
+		currentHeart = img;
+		if (img == null) setSprite(hpLabel, SpriteID.Staticons.HITPOINTS);
+		else hpLabel.setIcon(new ImageIcon(ImageUtil.resizeImage(img, STAT_ICON, STAT_ICON)));
+	}
+
+	public void setUsingStamIcon(boolean stamina)
+	{
+		if (usingStamIcon != null && usingStamIcon == stamina) return;
+		usingStamIcon = stamina;
+		setSprite(runLabel, stamina ? SpriteID.OrbIcon.RUN_ICON_SLOWED_DEPLETION : SpriteID.OrbIcon.RUN);
+	}
+
+	private void refreshAvatar()
+	{
+		BufferedImage next = player.getMember().getAvatar();
+		if (next == avatar) return;
+		avatar = next;
+		avatarLabel.setIcon(next == null ? null : new ImageIcon(ImageUtil.resizeImage(next, AVATAR, AVATAR)));
+		avatarLabel.setVisible(next != null);
+	}
+
+	private void updateSpellbookIcon(int book)
+	{
+		if (book == spellbook) return;
+		spellbook = book;
 		int spriteID;
 		String name;
-		switch (spellbook)
+		switch (book)
 		{
 			case 3:
 				spriteID = SpriteID.SideIcons.SPELLBOOK_ARCEUUS;
-				name = "Arceuus Spellbook";
+				name = "Arceuus spellbook";
 				break;
 			case 2:
 				spriteID = SpriteID.SideIcons.SPELLBOOK_LUNAR;
-				name = "Lunar Spellbook";
+				name = "Lunar spellbook";
 				break;
 			case 1:
 				spriteID = SpriteID.SideIcons.SPELLBOOK_ANCIENT_MAGICKS;
-				name = "Ancient Magick";
+				name = "Ancient spellbook";
 				break;
-			case 0:
 			default:
 				spriteID = SpriteID.SideIcons.MAGIC;
-				name = "Standard Spellbook";
+				name = "Standard spellbook";
 		}
-		spriteManager.getSpriteAsync(spriteID, 0, img ->
-		{
-			final BufferedImage resized = ImageUtil.resizeImage(img, 20, 20);
-			SwingUtilities.invokeLater(() -> spellbookIcon.setIcon(new ImageIcon(resized)));
-		});
-		spellbookIcon.setToolTipText(name);
+		setSprite(spellbookLabel, spriteID);
+		spellbookLabel.setToolTipText(name);
+	}
+
+	private void setSprite(JLabel label, int spriteID)
+	{
+		spriteManager.getSpriteAsync(spriteID, 0, img -> SwingUtilities.invokeLater(() ->
+			label.setIcon(new ImageIcon(ImageUtil.resizeImage(img, STAT_ICON, STAT_ICON)))));
+	}
+
+	private static JLabel statLabel(String tooltip)
+	{
+		JLabel label = new JLabel();
+		label.setFont(FontManager.getRunescapeFont());
+		label.setForeground(PartyStyle.TEXT);
+		label.setIconTextGap(3);
+		label.setToolTipText(tooltip);
+		return label;
+	}
+
+	private static JPanel row()
+	{
+		JPanel row = new JPanel(new BorderLayout(4, 0));
+		row.setOpaque(false);
+		row.setAlignmentX(LEFT_ALIGNMENT);
+		return row;
+	}
+
+	@Override
+	public Dimension getMaximumSize()
+	{
+		return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
 	}
 }
