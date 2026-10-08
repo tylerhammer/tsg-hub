@@ -5,6 +5,7 @@
 package com.tsghub.group;
 
 import com.google.common.base.Strings;
+import com.tsghub.PlayerNames;
 import com.tsghub.group.data.PartyPlayer;
 import com.tsghub.group.ui.PlayerPanel;
 import java.awt.Color;
@@ -16,7 +17,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 import javax.swing.JLabel;
@@ -55,8 +55,8 @@ public final class GroupMembersPanel extends JPanel
 
 	public void setOrder(List<String> names)
 	{
-		List<String> keys = preferred.stream().filter(k -> names.stream().anyMatch(n -> key(n).equals(k))).collect(Collectors.toList());
-		names.stream().map(GroupMembersPanel::key).filter(k -> !keys.contains(k)).forEach(keys::add);
+		List<String> keys = preferred.stream().filter(k -> names.stream().anyMatch(n -> PlayerNames.normalize(n).equals(k))).collect(Collectors.toList());
+		names.stream().map(PlayerNames::normalize).filter(k -> !keys.contains(k)).forEach(keys::add);
 		if (keys.equals(order)) return;
 		order = keys;
 		rebuild();
@@ -160,7 +160,7 @@ public final class GroupMembersPanel extends JPanel
 
 	private int position(PartyPlayer player)
 	{
-		int index = Strings.isNullOrEmpty(player.getUsername()) ? -1 : order.indexOf(key(player.getUsername()));
+		int index = Strings.isNullOrEmpty(player.getUsername()) ? -1 : order.indexOf(PlayerNames.normalize(player.getUsername()));
 		return index < 0 ? Integer.MAX_VALUE : index;
 	}
 
@@ -188,7 +188,7 @@ public final class GroupMembersPanel extends JPanel
 	{
 		PartyPlayer player = players.get(id);
 		if (player == null) return;
-		int index = Strings.isNullOrEmpty(player.getUsername()) ? -1 : order.indexOf(key(player.getUsername()));
+		int index = Strings.isNullOrEmpty(player.getUsername()) ? -1 : order.indexOf(PlayerNames.normalize(player.getUsername()));
 		if (index < 0 || order.size() < 2) return;
 		JPopupMenu menu = new JPopupMenu();
 		JMenuItem up = new JMenuItem("Move up");
@@ -214,10 +214,5 @@ public final class GroupMembersPanel extends JPanel
 	private static String name(PartyPlayer player)
 	{
 		return Strings.isNullOrEmpty(player.getUsername()) ? player.getMember().getDisplayName() : player.getUsername();
-	}
-
-	private static String key(String name)
-	{
-		return name == null ? "" : name.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
 	}
 }

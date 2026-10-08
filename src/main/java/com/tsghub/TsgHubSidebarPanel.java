@@ -12,6 +12,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
@@ -57,6 +58,15 @@ final class TsgHubSidebarPanel extends PluginPanel
 {
 	private static final int TEXT_W = 215;
 	private static final int CARD_TEXT_W = 185;
+	private static final String ALT_RANK = "Gnome Child";
+	private static final int MAX_WARNING_LENGTH = 300;
+	private static final int MAX_PAST_WARNINGS = 3;
+	private static final int[] EXPIRY_DAYS = {30, 90, 0};
+	private static final Color TIP_CARD = new Color(42, 42, 42);
+	private static final Color DIM = new Color(106, 106, 106);
+	private static final Color DIM_BAR = new Color(68, 68, 68);
+	private static final DateTimeFormatter WARNING_DAY = DateTimeFormatter.ofPattern("d MMM", java.util.Locale.ENGLISH);
+	private static final DateTimeFormatter WARNING_DAY_YEAR = DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale.ENGLISH);
 	private static final int CARD_TITLE_W = 150;
 	private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("h:mm a");
 
@@ -102,6 +112,9 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private volatile boolean groupsWanted;
 	private volatile boolean dropsWanted;
 	private JsonArray members;
+	private JsonArray offlineMembers = new JsonArray();
+	private boolean notesLoaded;
+	private final JCheckBox showOffline = new JCheckBox("Show offline");
 	private String update;
 	private JsonArray drops;
 	private JsonObject competitionEvent;
@@ -198,6 +211,13 @@ final class TsgHubSidebarPanel extends PluginPanel
 		joinError.setVisible(false);
 		createGroupButton.addActionListener(e -> submitCreateGroup());
 		groupError.setVisible(false);
+
+		plain(showOffline, MUTED).setFont(smallFont());
+		showOffline.setSelected("true".equals(TsgHubSession.get("showOffline")));
+		showOffline.addActionListener(e -> {
+			TsgHubSession.set("showOffline", showOffline.isSelected() ? "true" : "");
+			renderMembers();
+		});
 
 		plain(hideCompleted, MUTED).setFont(smallFont());
 		hideCompleted.setSelected("true".equals(TsgHubSession.get("hideCompleted")));
@@ -296,6 +316,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		organizer.setVisible(allowed);
 		title.setText(html(escape(titleText), titleWidth()));
+		if (view == View.MEMBERS) renderMembers();
 	}
 
 	private int titleWidth()
@@ -512,9 +533,11 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (view == View.MEMBERS) renderMembers();
 	}
 
-	void setMembers(JsonArray members)
+	void setMembers(JsonArray members, JsonArray offline, boolean notesLoaded)
 	{
 		this.members = members;
+		this.offlineMembers = offline;
+		this.notesLoaded = notesLoaded;
 		if (view == View.MEMBERS) renderMembers();
 		else if (view == View.HOME) renderHome();
 	}
@@ -533,20 +556,30 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (members == null)
 		{
 			page.add(caption("Loading members..."));
+			refreshPage();
+			return;
 		}
-		else if (members.size() == 0)
+		page.add(sectionHeading("Online (" + members.size() + ")", null));
+		if (members.size() == 0) page.add(hint("Nobody online right now."));
+		int myWorld = 0;
+		for (JsonObject member : objects(members))
+			if (samePlayer(str(member, "displayName"), plugin.getDetectedPlayerName())) myWorld = integer(member, "world", 0);
+		for (JsonObject member : objects(members))
 		{
-			page.add(errorPanel("Nobody online", "Clanmates show up here while they're in clan chat with TSG Hub sharing on."));
+			page.add(memberCard(member, myWorld));
+			page.add(Box.createVerticalStrut(6));
 		}
-		else
+		if (offlineMembers.size() > 0)
 		{
-			int myWorld = 0;
-			for (JsonObject member : objects(members))
-				if (samePlayer(str(member, "displayName"), plugin.getDetectedPlayerName())) myWorld = integer(member, "world", 0);
-			for (JsonObject member : objects(members))
+			page.add(Box.createVerticalStrut(4));
+			page.add(sectionHeading("Offline (" + offlineMembers.size() + ")", showOffline));
+			if (showOffline.isSelected())
 			{
-				page.add(memberCard(member, myWorld));
-				page.add(Box.createVerticalStrut(6));
+				for (JsonObject member : objects(offlineMembers))
+				{
+					page.add(offlineRow(member));
+					page.add(Box.createVerticalStrut(3));
+				}
 			}
 		}
 		page.add(Box.createVerticalStrut(8));
@@ -563,33 +596,70 @@ final class TsgHubSidebarPanel extends PluginPanel
 			BorderFactory.createEmptyBorder(6, 7, 6, 7)));
 	}
 
+	private JPanel sectionHeading(String text, JComponent right)
+	{
+		JPanel row = row();
+		row.setBorder(BorderFactory.createEmptyBorder(0, 2, 4, 0));
+		row.add(label(text.toUpperCase(), MUTED, smallFont()), BorderLayout.CENTER);
+		if (right != null) row.add(right, BorderLayout.EAST);
+		return fitHeight(row);
+	}
+
+	private JLabel memberName(JsonObject member, String text, Color color, Font font)
+	{
+		JLabel label = shrinkable(label(text, color, font));
+		BufferedImage rankIcon = plugin.presence().rankIcon(member);
+		if (rankIcon != null)
+		{
+			label.setIcon(new ImageIcon(rankIcon));
+			label.setIconTextGap(4);
+		}
+		return label;
+	}
+
+	private void setMemberTip(JComponent card, JsonObject member, String detail, boolean sameWorld, String seen, String note)
+	{
+		String tip = rosterTooltip(str(member, "rank"), str(member, "altOf"), array(member, "alts"), detail, sameWorld, seen, note,
+			visibleWarnings(member), clock.instant(), ZoneId.systemDefault());
+		if (!tip.isEmpty()) card.setToolTipText(tip);
+	}
+
+	private void addMemberBadges(JPanel badges, JsonObject member, String note, boolean more)
+	{
+		boolean warned = hasActiveWarning(visibleWarnings(member));
+		if (warned)
+		{
+			JLabel warning = new JLabel(new WarningIcon());
+			if (!note.isEmpty() || more) warning.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
+			badges.add(warning);
+		}
+		if (!note.isEmpty())
+		{
+			JLabel noteLabel = new JLabel(new NoteIcon());
+			if (more) noteLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
+			badges.add(noteLabel);
+		}
+	}
+
 	private JPanel memberCard(JsonObject member, int myWorld)
 	{
+		Font small = smallFont();
 		String name = str(member, "displayName");
 		String activity = str(member, "activity");
+		String note = visibleNote(member);
 		int world = integer(member, "world", 0);
 		boolean self = samePlayer(name, plugin.getDetectedPlayerName());
 		JPanel card = card();
 		if (self) highlightSelf(card);
 
-		JLabel nameLabel = shrinkable(boldLabel(name));
-		String rank = str(member, "rank");
-		BufferedImage rankIcon = plugin.presence().rankIcon(member);
-		if (rankIcon != null)
-		{
-			nameLabel.setIcon(new ImageIcon(rankIcon));
-			nameLabel.setIconTextGap(4);
-		}
-		if (!rank.isEmpty()) nameLabel.setToolTipText(rank);
 		JPanel top = row();
-		top.add(nameLabel, BorderLayout.CENTER);
-		if (world > 0)
-		{
-			boolean sameWorld = !self && world == myWorld;
-			JLabel worldLabel = label("W" + world, sameWorld ? SUCCESS : MUTED, smallFont());
-			if (sameWorld) worldLabel.setToolTipText("On your world");
-			top.add(worldLabel, BorderLayout.EAST);
-		}
+		top.add(memberName(member, name, TEXT, boldFont()), BorderLayout.CENTER);
+		JPanel badges = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+		badges.setOpaque(false);
+		boolean sameWorld = !self && world > 0 && world == myWorld;
+		addMemberBadges(badges, member, note, world > 0);
+		if (world > 0) badges.add(label("W" + world, sameWorld ? SUCCESS : MUTED, small));
+		if (badges.getComponentCount() > 0) top.add(badges, BorderLayout.EAST);
 
 		JPanel text = stack();
 		text.add(top);
@@ -597,15 +667,349 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (!detail.isEmpty())
 		{
 			boolean active = !"Idle".equals(activity) && !"Online".equals(activity) && !activity.isEmpty();
-			JLabel detailLabel = shrinkable(label(detail, active ? SUCCESS : MUTED, smallFont()));
-			detailLabel.setToolTipText(detail);
+			JLabel detailLabel = shrinkable(label(detail, active ? SUCCESS : MUTED, small));
 			JPanel bottom = row();
 			bottom.add(detailLabel, BorderLayout.CENTER);
 			text.add(Box.createVerticalStrut(3));
 			text.add(bottom);
 		}
 		card.add(text, BorderLayout.CENTER);
+		setMemberTip(card, member, detail, sameWorld, "", note);
+		addNoteMenu(card, member);
 		return fitHeight(card);
+	}
+
+	private JPanel offlineRow(JsonObject member)
+	{
+		Font small = smallFont();
+		String note = visibleNote(member);
+		String seen = lastSeen(str(member, "lastSeenAt"), clock.instant());
+		JPanel row = card();
+		row.setBorder(BorderFactory.createEmptyBorder(4, 7, 4, 7));
+		row.add(memberName(member, str(member, "displayName"), MUTED, small), BorderLayout.CENTER);
+		JPanel badges = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+		badges.setOpaque(false);
+		addMemberBadges(badges, member, note, !seen.isEmpty());
+		if (!seen.isEmpty()) badges.add(label(seen, MUTED, small));
+		if (badges.getComponentCount() > 0) row.add(badges, BorderLayout.EAST);
+		setMemberTip(row, member, "", false, seen, note);
+		addNoteMenu(row, member);
+		return fitHeight(row);
+	}
+
+	private String visibleNote(JsonObject member)
+	{
+		return plugin.canManageOrganizerUi() ? str(member, "note") : "";
+	}
+
+	private JsonArray visibleWarnings(JsonObject member)
+	{
+		return plugin.canManageOrganizerUi() ? array(member, "warnings") : new JsonArray();
+	}
+
+	static boolean hasActiveWarning(JsonArray warnings)
+	{
+		return !activeWarnings(warnings).isEmpty();
+	}
+
+	static List<JsonObject> activeWarnings(JsonArray warnings)
+	{
+		List<JsonObject> active = new ArrayList<>();
+		for (JsonObject warning : objects(warnings)) if (bool(warning, "active")) active.add(warning);
+		return active;
+	}
+
+	static String lastSeen(String iso, Instant now)
+	{
+		Instant then = instant(iso);
+		if (then == null) return "";
+		long minutes = Math.max(0, java.time.Duration.between(then, now).toMinutes());
+		if (minutes < 1) return "just now";
+		if (minutes < 60) return minutes + "m ago";
+		long hours = minutes / 60;
+		if (hours < 24) return hours + "h ago";
+		long days = hours / 24;
+		if (days < 14) return days + "d ago";
+		if (days < 60) return days / 7 + "w ago";
+		if (days < 365) return days / 30 + "mo ago";
+		return days / 365 + "y ago";
+	}
+
+	private void addNoteMenu(JComponent card, JsonObject member)
+	{
+		if (!plugin.canManageOrganizerUi() || !notesLoaded) return;
+		String name = str(member, "displayName");
+		String altOf = str(member, "altOf");
+		String note = str(member, "note");
+		boolean alt = isAltRank(str(member, "rank"));
+		List<JsonObject> active = activeWarnings(array(member, "warnings"));
+		javax.swing.JPopupMenu menu = new javax.swing.JPopupMenu();
+		javax.swing.JMenuItem edit = new javax.swing.JMenuItem(alt ? "Edit alt and admin note" : "Edit admin note");
+		edit.addActionListener(e -> promptMemberNote(name, alt, altOf, note));
+		menu.add(edit);
+		menu.addSeparator();
+		javax.swing.JMenuItem warn = new javax.swing.JMenuItem("Add warning...");
+		warn.addActionListener(e -> promptWarning(name, active.size()));
+		menu.add(warn);
+		if (!active.isEmpty())
+		{
+			javax.swing.JMenuItem revoke = new javax.swing.JMenuItem("Revoke a warning...");
+			revoke.addActionListener(e -> promptRevoke(name, active));
+			menu.add(revoke);
+		}
+		card.setComponentPopupMenu(menu);
+		inheritMenu(card);
+	}
+
+	private static void inheritMenu(java.awt.Container parent)
+	{
+		for (Component child : parent.getComponents())
+		{
+			if (child instanceof JComponent) ((JComponent) child).setInheritsPopupMenu(true);
+			if (child instanceof java.awt.Container) inheritMenu((java.awt.Container) child);
+		}
+	}
+
+	static String rosterTooltip(String rank, String altOf, JsonArray alts, String detail, boolean sameWorld, String seen, String note,
+		JsonArray warnings, Instant now, ZoneId zone)
+	{
+		List<String> names = new ArrayList<>();
+		for (int i = 0; i < alts.size(); i++) if (alts.get(i).isJsonPrimitive()) names.add(alts.get(i).getAsString());
+		List<String> lines = new ArrayList<>();
+		if (!rank.isEmpty()) lines.add("<b>" + escape(rank) + "</b>");
+		if (!altOf.isEmpty()) lines.add(tipLine(ACCENT, "Alt of <b>" + escape(altOf) + "</b>"));
+		if (!names.isEmpty()) lines.add(tipLine(MUTED, (names.size() == 1 ? "Alt: " : "Alts: ") + escape(String.join(", ", names))));
+		if (!detail.isEmpty()) lines.add(tipLine(MUTED, escape(detail)));
+		if (sameWorld) lines.add(tipLine(SUCCESS, "On your world"));
+		if (!seen.isEmpty()) lines.add(tipLine(MUTED, "Last seen " + seen));
+		String sections = "";
+		if (!note.isEmpty())
+		{
+			sections += tipSection(lines.isEmpty() && sections.isEmpty(), tipLine(WARNING, "<b>ADMIN NOTE</b>"))
+				+ tipCard(TIP_CARD, escape(note).replace("\n", "<br>"));
+		}
+		List<JsonObject> history = objects(warnings);
+		if (!history.isEmpty())
+		{
+			sections += tipSection(lines.isEmpty() && sections.isEmpty(), tipLine(TsgHubUi.ERROR, "<b>WARNINGS</b>") + " " + tipLine(MUTED, warningSummary(history)))
+				+ warningCards(history, now, zone);
+		}
+		if (lines.isEmpty() && sections.isEmpty()) return "";
+		String body = "<div style='padding:2px'>" + String.join("<br>", lines) + sections + "</div>";
+		return sections.isEmpty() ? "<html>" + body + "</html>" : html(body, 240);
+	}
+
+	private static String tipSection(boolean first, String heading)
+	{
+		return "<div style='margin-top:" + (first ? 0 : 6) + "px'>" + heading + "</div>";
+	}
+
+	private static String tipCard(Color bar, String inner)
+	{
+		return "<table cellspacing='0' cellpadding='0' width='100%' style='margin-top:2px'><tr><td bgcolor='" + hex(bar) + "' width='2'></td>"
+			+ "<td bgcolor='" + hex(TIP_CARD) + "' style='padding:3px 6px'>" + inner + "</td></tr></table>";
+	}
+
+	private static String warningSummary(List<JsonObject> warnings)
+	{
+		int active = 0, expired = 0, revoked = 0;
+		for (JsonObject warning : warnings)
+		{
+			if (bool(warning, "active")) active++;
+			else if (!str(warning, "revokedAt").isEmpty()) revoked++;
+			else expired++;
+		}
+		List<String> parts = new ArrayList<>();
+		parts.add(active + " active");
+		if (expired > 0) parts.add(expired + " expired");
+		if (revoked > 0) parts.add(revoked + " revoked");
+		return String.join(" · ", parts);
+	}
+
+	private static String warningCards(List<JsonObject> warnings, Instant now, ZoneId zone)
+	{
+		List<JsonObject> ordered = new ArrayList<>();
+		List<JsonObject> past = new ArrayList<>();
+		for (JsonObject warning : warnings) (bool(warning, "active") ? ordered : past).add(warning);
+		int inactive = past.size();
+		ordered.addAll(past.subList(0, Math.min(inactive, MAX_PAST_WARNINGS)));
+		StringBuilder out = new StringBuilder();
+		for (JsonObject warning : ordered)
+		{
+			boolean active = bool(warning, "active");
+			String meta = warningDate(str(warning, "issuedAt"), now, zone) + " · " + escape(str(warning, "issuedBy")) + " · " + warningStatus(warning, now, zone);
+			Color text = active ? TEXT : DIM;
+			out.append(tipCard(active ? TsgHubUi.ERROR : DIM_BAR, tipLine(text, escape(str(warning, "reason"))) + "<br>" + tipLine(active ? MUTED : DIM, meta)));
+		}
+		if (inactive > MAX_PAST_WARNINGS) out.append(tipLine(DIM, "+" + (inactive - MAX_PAST_WARNINGS) + " older"));
+		return out.toString();
+	}
+
+	static String warningStatus(JsonObject warning, Instant now, ZoneId zone)
+	{
+		if (!str(warning, "revokedAt").isEmpty()) return "revoked by " + escape(str(warning, "revokedBy"));
+		String expires = str(warning, "expiresAt");
+		if (expires.isEmpty()) return "no expiry";
+		return bool(warning, "active") ? "expires " + warningDate(expires, now, zone) : "expired";
+	}
+
+	static String warningDate(String iso, Instant now, ZoneId zone)
+	{
+		Instant at = instant(iso);
+		if (at == null) return "";
+		LocalDate day = at.atZone(zone).toLocalDate();
+		return day.format(day.getYear() == now.atZone(zone).getYear() ? WARNING_DAY : WARNING_DAY_YEAR);
+	}
+
+	private static String hex(Color color)
+	{
+		return String.format("#%06x", color.getRGB() & 0xffffff);
+	}
+
+	private void promptWarning(String name, int active)
+	{
+		javax.swing.JTextArea reason = new javax.swing.JTextArea(3, 22);
+		reason.setLineWrap(true);
+		reason.setWrapStyleWord(true);
+		javax.swing.JComboBox<String> expiry = new javax.swing.JComboBox<>(new String[] {"After 30 days", "After 90 days", "Never"});
+		expiry.setAlignmentX(Component.LEFT_ALIGNMENT);
+		JPanel form = stack();
+		form.add(label(active == 0 ? name + " has no active warnings." : name + " has " + active + " active warning" + (active == 1 ? "." : "s."), MUTED, smallFont()));
+		form.add(Box.createVerticalStrut(8));
+		form.add(new JLabel("Reason"));
+		form.add(new javax.swing.JScrollPane(reason));
+		form.add(Box.createVerticalStrut(8));
+		form.add(new JLabel("Expires"));
+		form.add(expiry);
+		form.add(Box.createVerticalStrut(8));
+		form.add(label("Only admins see warnings.", MUTED, smallFont()));
+		Object[] options = {"Add warning", "Cancel"};
+		if (JOptionPane.showOptionDialog(this, form, "Warn " + name, JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, options, options[0]) != 0) return;
+		String text = reason.getText().trim();
+		if (text.isEmpty())
+		{
+			setStatus("Add a reason for the warning.", Tone.ERROR);
+			return;
+		}
+		if (text.length() > MAX_WARNING_LENGTH)
+		{
+			setStatus("Keep the reason to " + MAX_WARNING_LENGTH + " characters.", Tone.ERROR);
+			return;
+		}
+		plugin.presence().addWarning(name, text, EXPIRY_DAYS[expiry.getSelectedIndex()]);
+	}
+
+	private void promptRevoke(String name, List<JsonObject> active)
+	{
+		Instant now = clock.instant();
+		ZoneId zone = ZoneId.systemDefault();
+		javax.swing.ButtonGroup group = new javax.swing.ButtonGroup();
+		List<javax.swing.JRadioButton> choices = new ArrayList<>();
+		JPanel form = stack();
+		for (JsonObject warning : active)
+		{
+			String meta = warningDate(str(warning, "issuedAt"), now, zone) + " · " + escape(str(warning, "issuedBy"));
+			javax.swing.JRadioButton choice = plain(new javax.swing.JRadioButton(html(escape(str(warning, "reason")) + "<br>" + tipLine(MUTED, meta), 220)), TEXT);
+			choice.setSelected(choices.isEmpty());
+			group.add(choice);
+			choices.add(choice);
+			form.add(choice);
+			form.add(Box.createVerticalStrut(4));
+		}
+		JTextField reason = new JTextField(22);
+		form.add(Box.createVerticalStrut(4));
+		form.add(new JLabel("Reason for revoking (optional)"));
+		form.add(reason);
+		Object[] options = {"Revoke", "Cancel"};
+		if (JOptionPane.showOptionDialog(this, form, "Revoke a warning for " + name, JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, options, options[0]) != 0) return;
+		for (int i = 0; i < choices.size(); i++)
+		{
+			if (choices.get(i).isSelected()) plugin.presence().revokeWarning(name, str(active.get(i), "id"), reason.getText().trim());
+		}
+	}
+
+	private static String tipLine(Color color, String html)
+	{
+		return "<font color='" + String.format("#%06x", color.getRGB() & 0xffffff) + "'>" + html + "</font>";
+	}
+
+	static boolean isAltRank(String rank)
+	{
+		return ALT_RANK.equalsIgnoreCase(rank.trim());
+	}
+
+	private void promptMemberNote(String name, boolean alt, String altOf, String note)
+	{
+		List<String> candidates = mainCandidates(name);
+		TsgHubMemberPicker main = new TsgHubMemberPicker(candidates, altOf);
+		javax.swing.JTextArea notes = new javax.swing.JTextArea(note, 4, 20);
+		notes.setLineWrap(true);
+		notes.setWrapStyleWord(true);
+		JPanel form = stack();
+		if (alt)
+		{
+			form.add(new JLabel("Alt of (main character)"));
+			form.add(main);
+			form.add(Box.createVerticalStrut(8));
+		}
+		form.add(new JLabel("Admin note (only admins see this)"));
+		form.add(new javax.swing.JScrollPane(notes));
+		if (JOptionPane.showConfirmDialog(this, form, name, JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) != JOptionPane.OK_OPTION) return;
+		String typed = main.getText();
+		String nextMain = typed.equals(altOf) ? altOf : resolveName(candidates, typed);
+		String nextNote = notes.getText().trim();
+		if (samePlayer(nextMain, name))
+		{
+			setStatus("A character can't be its own alt.", Tone.ERROR);
+			return;
+		}
+		if (nextNote.length() > 500)
+		{
+			setStatus("Keep the note to 500 characters.", Tone.ERROR);
+			return;
+		}
+		if (nextMain.equals(altOf) && nextNote.equals(note)) return;
+		plugin.presence().saveNote(name, nextMain, nextNote);
+	}
+
+	private List<String> mainCandidates(String alt)
+	{
+		List<String> names = new ArrayList<>();
+		for (JsonArray list : new JsonArray[] {members, offlineMembers})
+		{
+			if (list == null) continue;
+			for (int i = 0; i < list.size(); i++)
+			{
+				JsonObject member = list.get(i).getAsJsonObject();
+				String candidate = str(member, "displayName");
+				if (!samePlayer(candidate, alt) && !isAltRank(str(member, "rank"))) names.add(candidate);
+			}
+		}
+		names.sort(String.CASE_INSENSITIVE_ORDER);
+		return names;
+	}
+
+	static List<String> matchNames(List<String> names, String query, int limit)
+	{
+		String needle = playerKey(query);
+		List<String> prefix = new ArrayList<>();
+		List<String> contains = new ArrayList<>();
+		for (String name : names)
+		{
+			String key = playerKey(name);
+			if (key.startsWith(needle)) prefix.add(name);
+			else if (key.contains(needle)) contains.add(name);
+		}
+		prefix.addAll(contains);
+		return prefix.size() > limit ? prefix.subList(0, limit) : prefix;
+	}
+
+	static String resolveName(List<String> names, String typed)
+	{
+		if (typed.isEmpty()) return typed;
+		for (String name : names) if (samePlayer(name, typed)) return name;
+		List<String> matches = matchNames(names, typed, 2);
+		return matches.size() == 1 ? matches.get(0) : typed;
 	}
 
 	static String activityDetail(String activity, String area)
