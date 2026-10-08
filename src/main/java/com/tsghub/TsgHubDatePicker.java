@@ -21,7 +21,6 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.SwingConstants;
-import net.runelite.client.ui.FontManager;
 
 final class TsgHubDatePicker extends JButton
 {
@@ -30,7 +29,7 @@ final class TsgHubDatePicker extends JButton
 	private YearMonth shownMonth = YearMonth.now();
 	private final List<Runnable> listeners = new ArrayList<>();
 	private final JPopupMenu popup = new JPopupMenu();
-	private final JLabel monthLabel = TsgHubUi.label("", TsgHubUi.TEXT, FontManager.getRunescapeBoldFont());
+	private final JLabel monthLabel = TsgHubUi.boldLabel("");
 	private final JPanel grid = new JPanel(new GridLayout(0, 7, 2, 2));
 
 	TsgHubDatePicker()
@@ -112,7 +111,7 @@ final class TsgHubDatePicker extends JButton
 		for (int i = 0; i < 7; i++)
 		{
 			DayOfWeek day = DayOfWeek.SUNDAY.plus(i);
-			JLabel name = TsgHubUi.label(day.getDisplayName(TextStyle.SHORT, Locale.getDefault()).substring(0, 2), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont());
+			JLabel name = TsgHubUi.caption(day.getDisplayName(TextStyle.SHORT, Locale.getDefault()).substring(0, 2));
 			name.setHorizontalAlignment(SwingConstants.CENTER);
 			grid.add(name);
 		}
