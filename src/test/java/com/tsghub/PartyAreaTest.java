@@ -1,9 +1,12 @@
 package com.tsghub;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import net.runelite.api.Skill;
 import net.runelite.api.coords.WorldPoint;
 import org.junit.Test;
 
@@ -45,6 +48,38 @@ public class PartyAreaTest
 		activity.onOpponent("King Black Dragon", 1_000);
 		assertEquals("Bossing - King Black Dragon", activity.activity(AreaNames.forRegion(9033), 2_000));
 		assertEquals("Minigame - Nightmare Zone", activity.activity(AreaNames.forRegion(9033), 1_000 + ActivityDetector.RECENT_MILLIS));
+	}
+
+	@Test
+	public void slayerCombat()
+	{
+		long recent = ActivityDetector.RECENT_MILLIS;
+		ActivityDetector activity = new ActivityDetector();
+		activity.onXp(Skill.HITPOINTS, 100, 0);
+		activity.onSlayerTask(1, 50, null, 0);
+		assertTrue(activity.needsSlayerTaskName());
+		activity.onXp(Skill.SLAYER, 100, 0);
+		activity.onXp(Skill.SLAYER, 200, 500);
+		activity.onXp(Skill.HITPOINTS, 110, 1_000);
+		assertEquals("Combat", activity.activity(null, 1_000));
+
+		activity.onSlayerTask(1, 49, "Abyssal demons", 2_000);
+		assertFalse(activity.needsSlayerTaskName());
+		activity.onXp(Skill.HITPOINTS, 120, 200_000);
+		assertEquals("Slayer - Abyssal demons", activity.activity(null, 200_000));
+		assertEquals("Idle", activity.activity(null, 200_000 + recent));
+
+		activity.onSlayerTask(1, 48, "Abyssal demons", 300_000);
+		assertEquals("Slayer - Abyssal demons", activity.activity(null, 300_000 + recent - 1));
+		assertEquals("Idle", activity.activity(null, 300_000 + recent));
+
+		activity.onSlayerTask(1, 0, null, 400_000);
+		activity.onXp(Skill.HITPOINTS, 130, 400_000);
+		assertEquals("Combat", activity.activity(null, 400_000));
+
+		activity.onSlayerTask(2, 30, "Dust devils", 500_000);
+		activity.onSlayerTask(2, 30, "Dust devils", 501_000);
+		assertEquals("Idle", activity.activity(null, 501_000));
 	}
 
 	@Test

@@ -55,7 +55,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final TsgHubPlugin plugin;
 	private final JButton back = TsgHubUi.iconButton(new TsgHubUi.BackIcon(), "Back to events");
 	private final JLabel title = TsgHubUi.label("TSG Hub", TsgHubUi.TEXT, FontManager.getRunescapeBoldFont());
-	private final JLabel subtitle = TsgHubUi.label("", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont());
+	private final JLabel subtitle = TsgHubUi.label(" ", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont());
+	private String titleText = "TSG Hub";
 	private final TsgHubUi.RefreshIcon refreshIcon = new TsgHubUi.RefreshIcon();
 	private final JButton refresh = TsgHubUi.iconButton(refreshIcon, "Refresh");
 	private final JButton organizer = TsgHubUi.iconButton(new TsgHubUi.OrganizerIcon(), "Admin tools");
@@ -107,6 +108,30 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final GroupMembersPanel groupMembers;
 	private static final String WILDERNESS = "Wilderness lvl ";
 	private static final int DROP_ICON_W = 40;
+	private static final DateTimeFormatter CLOCK_TIME = DateTimeFormatter.ofPattern("HH:mm");
+	private static final Color SELF_CARD = new Color(43, 36, 22);
+	private static final Color SELF_BORDER = new Color(122, 82, 8);
+	private static final String SELF_TEXT = "#e0a82e";
+	private static final Color TAG_DEFAULT = new Color(195, 140, 255);
+	private static final Map<String, Color> TAG_COLORS = Map.of(
+		"Log", new Color(55, 240, 70),
+		"CoX", new Color(111, 179, 255),
+		"ToB", new Color(255, 122, 122),
+		"ToA", new Color(224, 180, 76),
+		"Pet", new Color(255, 138, 216),
+		"Dupe pet", new Color(255, 138, 216));
+	private static final java.util.Set<String> COX_ITEMS = java.util.Set.of(
+		"Dexterous prayer scroll", "Arcane prayer scroll", "Twisted buckler", "Dragon hunter crossbow",
+		"Dinh's bulwark", "Ancestral hat", "Ancestral robe top", "Ancestral robe bottom", "Dragon claws",
+		"Elder maul", "Kodai insignia", "Twisted bow", "Olmlet", "Metamorphic dust", "Twisted ancestral colour kit");
+	private static final java.util.Set<String> TOB_ITEMS = java.util.Set.of(
+		"Avernic defender hilt", "Ghrazi rapier", "Sanguinesti staff", "Justiciar faceguard", "Justiciar chestguard",
+		"Justiciar legguards", "Scythe of vitur", "Lil' zik", "Sanguine dust", "Sanguine ornament kit", "Holy ornament kit");
+	private static final java.util.Set<String> TOA_ITEMS = java.util.Set.of(
+		"Osmumten's fang", "Lightbearer", "Elidinis' ward", "Masori mask", "Masori body", "Masori chaps",
+		"Tumeken's shadow", "Tumeken's guardian", "Thread of Elidinis", "Breach of the scarab", "Eye of the corruptor",
+		"Jewel of the sun", "Menaphite ornament kit", "Remnant of Akkha",
+		"Remnant of Ba-Ba", "Remnant of Kephri", "Remnant of Zebak", "Ancient remnant");
 	private final JButton createGroupButton = TsgHubUi.primaryButton("New party");
 	private final JLabel groupError = TsgHubUi.label("", TsgHubUi.ERROR, FontManager.getRunescapeSmallFont());
 	private JsonArray groupList;
@@ -204,7 +229,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 		JPanel titles = TsgHubUi.stack();
 		titles.add(title);
-		titles.add(subtitle);
+		titles.add(TsgHubUi.shrinkable(subtitle));
 		JPanel titleSlot = new JPanel(new java.awt.GridBagLayout());
 		titleSlot.setOpaque(false);
 		java.awt.GridBagConstraints fill = new java.awt.GridBagConstraints();
@@ -277,6 +302,12 @@ final class TsgHubSidebarPanel extends PluginPanel
 	void setOrganizerAccess(boolean allowed)
 	{
 		organizer.setVisible(allowed);
+		title.setText(TsgHubUi.html(TsgHubUi.escape(titleText), titleWidth()));
+	}
+
+	private int titleWidth()
+	{
+		return 150 - (organizer.isVisible() ? organizer.getPreferredSize().width + 2 : 0);
 	}
 
 	void setStatus(String message, TsgHubUi.Tone tone)
@@ -525,10 +556,16 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 		else
 		{
+			int myWorld = 0;
 			for (int i = 0; i < members.size(); i++)
 			{
-				page.add(memberCard(members.get(i).getAsJsonObject()));
-				page.add(Box.createVerticalStrut(5));
+				JsonObject member = members.get(i).getAsJsonObject();
+				if (TsgHubUi.samePlayer(TsgHubUi.str(member, "displayName"), plugin.getDetectedPlayerName())) myWorld = TsgHubUi.integer(member, "world", 0);
+			}
+			for (int i = 0; i < members.size(); i++)
+			{
+				page.add(memberCard(members.get(i).getAsJsonObject(), myWorld));
+				page.add(Box.createVerticalStrut(6));
 			}
 		}
 		page.add(Box.createVerticalStrut(8));
@@ -537,50 +574,67 @@ final class TsgHubSidebarPanel extends PluginPanel
 		refreshPage();
 	}
 
-	private JPanel memberCard(JsonObject member)
+	private static void highlightSelf(JPanel card)
 	{
+		card.setBackground(SELF_CARD);
+		card.setBorder(BorderFactory.createCompoundBorder(
+			BorderFactory.createLineBorder(SELF_BORDER),
+			BorderFactory.createEmptyBorder(6, 7, 6, 7)));
+	}
+
+	private JPanel memberCard(JsonObject member, int myWorld)
+	{
+		Font small = FontManager.getRunescapeSmallFont();
 		String name = TsgHubUi.str(member, "displayName");
 		String activity = TsgHubUi.str(member, "activity");
-		String area = TsgHubUi.str(member, "area");
 		int world = TsgHubUi.integer(member, "world", 0);
+		boolean self = TsgHubUi.samePlayer(name, plugin.getDetectedPlayerName());
 		JPanel card = TsgHubUi.card();
-		JPanel text = TsgHubUi.stack();
+		if (self) highlightSelf(card);
+
+		JLabel nameLabel = TsgHubUi.shrinkable(TsgHubUi.label(name, TsgHubUi.TEXT, FontManager.getRunescapeBoldFont()));
 		String rank = TsgHubUi.str(member, "rank");
 		java.awt.image.BufferedImage rankIcon = plugin.presence().rankIcon(member);
-		JLabel nameLabel = TsgHubUi.label(TsgHubUi.html("<b>" + TsgHubUi.escape(name) + "</b>", CARD_TITLE_W - (rankIcon == null ? 0 : rankIcon.getWidth() + 4)), TsgHubUi.TEXT, FontManager.getRunescapeFont());
 		if (rankIcon != null)
 		{
 			nameLabel.setIcon(new javax.swing.ImageIcon(rankIcon));
 			nameLabel.setIconTextGap(4);
-			nameLabel.setToolTipText(rank);
 		}
-		text.add(nameLabel);
-		text.add(Box.createVerticalStrut(2));
-		if (!activity.isEmpty())
-			text.add(TsgHubUi.wrapped(activity, "Idle".equals(activity) ? TsgHubUi.MUTED : TsgHubUi.SUCCESS, FontManager.getRunescapeSmallFont(), CARD_TITLE_W));
-		List<String> where = new ArrayList<>();
-		if (world > 0) where.add("W" + world);
-		if (!area.isEmpty() && !activity.endsWith(area)) where.add(area);
-		if (!where.isEmpty()) text.add(TsgHubUi.wrapped(String.join(" · ", where), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), CARD_TITLE_W));
-		card.add(text, BorderLayout.CENTER);
-		boolean rankText = rankIcon == null && !rank.isEmpty();
-		boolean self = TsgHubUi.samePlayer(name, plugin.getDetectedPlayerName());
-		if (rankText || self)
+		if (!rank.isEmpty()) nameLabel.setToolTipText(rank);
+		JPanel top = TsgHubUi.row();
+		top.add(nameLabel, BorderLayout.CENTER);
+		if (world > 0)
 		{
-			JPanel east = TsgHubUi.stack();
-			if (rankText) east.add(TsgHubUi.label(rank, TsgHubUi.ACCENT, FontManager.getRunescapeSmallFont()));
-			if (self)
-			{
-				if (rankText) east.add(Box.createVerticalStrut(3));
-				east.add(TsgHubUi.badge("You", TsgHubUi.SUCCESS));
-			}
-			for (java.awt.Component part : east.getComponents()) ((javax.swing.JComponent) part).setAlignmentX(RIGHT_ALIGNMENT);
-			JPanel wrap = new JPanel(new BorderLayout());
-			wrap.setOpaque(false);
-			wrap.add(east, BorderLayout.NORTH);
-			card.add(wrap, BorderLayout.EAST);
+			boolean sameWorld = !self && world == myWorld;
+			JLabel worldLabel = TsgHubUi.label("W" + world, sameWorld ? TsgHubUi.SUCCESS : TsgHubUi.MUTED, small);
+			if (sameWorld) worldLabel.setToolTipText("On your world");
+			top.add(worldLabel, BorderLayout.EAST);
 		}
+
+		JPanel text = TsgHubUi.stack();
+		text.add(top);
+		String detail = activityDetail(activity, TsgHubUi.str(member, "area"));
+		if (!detail.isEmpty())
+		{
+			boolean active = !"Idle".equals(activity) && !"Online".equals(activity) && !activity.isEmpty();
+			JLabel detailLabel = TsgHubUi.shrinkable(TsgHubUi.label(detail, active ? TsgHubUi.SUCCESS : TsgHubUi.MUTED, small));
+			detailLabel.setToolTipText(detail);
+			JPanel bottom = TsgHubUi.row();
+			bottom.add(detailLabel, BorderLayout.CENTER);
+			text.add(Box.createVerticalStrut(3));
+			text.add(bottom);
+		}
+		card.add(text, BorderLayout.CENTER);
 		return TsgHubUi.fitHeight(card);
+	}
+
+	static String activityDetail(String activity, String area)
+	{
+		if (activity.isEmpty()) activity = "Online";
+		int dash = activity.indexOf(" - ");
+		String detail = dash < 0 ? activity : activity.startsWith("Slayer - ") ? "Slayer: " + activity.substring(dash + 3) : activity.substring(dash + 3);
+		if (area.isEmpty() || area.equals(detail)) return detail;
+		return detail + " · " + area;
 	}
 
 	void setDrops(JsonArray drops)
@@ -612,52 +666,65 @@ final class TsgHubSidebarPanel extends PluginPanel
 		else
 		{
 			Instant now = TsgHubUi.clock.instant();
+			java.time.ZoneId zone = java.time.ZoneId.systemDefault();
+			String day = null;
 			for (int i = 0; i < drops.size(); i++)
 			{
-				page.add(dropCard(drops.get(i).getAsJsonObject(), now));
-				page.add(Box.createVerticalStrut(5));
+				JsonObject drop = drops.get(i).getAsJsonObject();
+				String nextDay = dropDay(TsgHubUi.str(drop, "receivedAt"), now, zone);
+				if (!nextDay.equals(day))
+				{
+					JLabel heading = TsgHubUi.label(nextDay.toUpperCase(), TsgHubUi.MUTED, small);
+					heading.setBorder(BorderFactory.createEmptyBorder(i == 0 ? 0 : 6, 2, 4, 0));
+					page.add(heading);
+					day = nextDay;
+				}
+				page.add(dropCard(drop, now, zone));
+				page.add(Box.createVerticalStrut(6));
 			}
 		}
 		refreshPage();
 	}
 
-	private JPanel dropCard(JsonObject drop, Instant now)
+	private JPanel dropCard(JsonObject drop, Instant now, java.time.ZoneId zone)
 	{
 		Font small = FontManager.getRunescapeSmallFont();
+		String player = TsgHubUi.str(drop, "player");
+		boolean self = TsgHubUi.samePlayer(player, plugin.getDetectedPlayerName());
 		JPanel card = TsgHubUi.card();
+		if (self) highlightSelf(card);
 		JLabel icon = dropIcon(TsgHubUi.integer(drop, "itemId", 0));
-		int textW = CARD_TITLE_W - (icon == null ? 0 : DROP_ICON_W);
 		if (icon != null) card.add(icon, BorderLayout.WEST);
-		JPanel text = TsgHubUi.stack();
-		JLabel name = TsgHubUi.label(TsgHubUi.html("<b>" + TsgHubUi.escape(dropItem(drop)) + "</b>", textW), TsgHubUi.TEXT, FontManager.getRunescapeFont());
+
+		JLabel name = TsgHubUi.shrinkable(TsgHubUi.label(dropItem(drop), TsgHubUi.TEXT, FontManager.getRunescapeBoldFont()));
 		name.setToolTipText(TsgHubUi.str(drop, "item"));
-		text.add(name);
-		text.add(Box.createVerticalStrut(2));
-		text.add(TsgHubUi.wrapped(TsgHubUi.str(drop, "player"), TsgHubUi.ACCENT, small, textW));
-		List<String> meta = new ArrayList<>();
-		String value = formatGp(drop.has("value") ? drop.get("value").getAsLong() : 0);
-		if (!value.isEmpty()) meta.add(value);
-		String age = dropAge(TsgHubUi.str(drop, "receivedAt"), now);
-		if (!age.isEmpty()) meta.add(age);
-		if (!meta.isEmpty()) text.add(TsgHubUi.wrapped(String.join(" · ", meta), TsgHubUi.MUTED, small, textW));
-		card.add(text, BorderLayout.CENTER);
-		List<String> badges = dropBadges(drop);
-		if (!badges.isEmpty())
-		{
-			JPanel east = TsgHubUi.stack();
-			for (String badge : badges)
-			{
-				if (east.getComponentCount() > 0) east.add(Box.createVerticalStrut(3));
-				east.add(TsgHubUi.badge(badge, TsgHubUi.SUCCESS));
-			}
-			for (java.awt.Component part : east.getComponents()) ((javax.swing.JComponent) part).setAlignmentX(RIGHT_ALIGNMENT);
-			JPanel wrap = new JPanel(new BorderLayout());
-			wrap.setOpaque(false);
-			wrap.add(east, BorderLayout.NORTH);
-			card.add(wrap, BorderLayout.EAST);
-		}
+		JPanel top = TsgHubUi.row();
+		top.add(name, BorderLayout.CENTER);
+		top.add(TsgHubUi.label(dropWhen(TsgHubUi.str(drop, "receivedAt"), now, zone), TsgHubUi.MUTED, small), BorderLayout.EAST);
+
+		JPanel bottom = TsgHubUi.row();
+		bottom.add(TsgHubUi.shrinkable(TsgHubUi.label(player, TsgHubUi.ACCENT, small)), BorderLayout.CENTER);
+		JPanel extras = new JPanel(new FlowLayout(FlowLayout.RIGHT, 3, 0));
+		extras.setOpaque(false);
+		for (String tag : dropTags(drop)) extras.add(TsgHubUi.badge(tag, TAG_COLORS.getOrDefault(tag, TAG_DEFAULT)));
+		long value = drop.has("value") ? drop.get("value").getAsLong() : 0;
+		if (value > 0) extras.add(TsgHubUi.label(TsgHubUi.formatGp(value), TsgHubUi.coinColor(value), small));
+		bottom.add(extras, BorderLayout.EAST);
+
+		JPanel text = TsgHubUi.stack();
+		text.add(top);
+		text.add(Box.createVerticalStrut(3));
+		text.add(bottom);
+		JPanel center = new JPanel(new java.awt.GridBagLayout());
+		center.setOpaque(false);
+		java.awt.GridBagConstraints fill = new java.awt.GridBagConstraints();
+		fill.fill = java.awt.GridBagConstraints.HORIZONTAL;
+		fill.weightx = 1;
+		center.add(text, fill);
+		card.add(center, BorderLayout.CENTER);
 		return TsgHubUi.fitHeight(card);
 	}
+
 
 	private JLabel dropIcon(int itemId)
 	{
@@ -665,19 +732,30 @@ final class TsgHubSidebarPanel extends PluginPanel
 		net.runelite.client.util.AsyncBufferedImage image = plugin.getItemImage(itemId);
 		if (image == null) return null;
 		JLabel label = new JLabel();
-		label.setVerticalAlignment(JLabel.TOP);
+		label.setVerticalAlignment(JLabel.CENTER);
 		label.setPreferredSize(new java.awt.Dimension(DROP_ICON_W, 32));
 		image.addTo(label);
 		return label;
 	}
 
-	static List<String> dropBadges(JsonObject drop)
+	static List<String> dropTags(JsonObject drop)
 	{
-		List<String> badges = new ArrayList<>();
-		String kind = dropKind(TsgHubUi.str(drop, "kind"));
-		if (!kind.isEmpty()) badges.add(kind);
-		if (TsgHubUi.bool(drop, "newLog") || "clog".equals(TsgHubUi.str(drop, "kind"))) badges.add("New log");
-		return badges;
+		List<String> tags = new ArrayList<>();
+		String kind = TsgHubUi.str(drop, "kind");
+		if ("raid".equals(kind)) tags.add(raidName(TsgHubUi.str(drop, "item")));
+		else if ("pet".equals(kind)) tags.add("Pet");
+		else if ("dupe".equals(kind)) tags.add("Dupe pet");
+		if (TsgHubUi.bool(drop, "newLog") || "clog".equals(kind)) tags.add("Log");
+		return tags;
+	}
+
+	static String raidName(String item)
+	{
+		String base = item.replaceAll("(\\s*\\([^)]*\\))+$", "");
+		if (COX_ITEMS.contains(base)) return "CoX";
+		if (TOB_ITEMS.contains(base)) return "ToB";
+		if (TOA_ITEMS.contains(base)) return "ToA";
+		return "Raid";
 	}
 
 	static String dropItem(JsonObject drop)
@@ -698,20 +776,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 	}
 
-	static String formatGp(long value)
-	{
-		if (value <= 0) return "";
-		if (value >= 1_000_000_000L) return trimDecimal(value / 1_000_000_000.0) + "B";
-		if (value >= 1_000_000L) return trimDecimal(value / 1_000_000.0) + "M";
-		if (value >= 1_000L) return trimDecimal(value / 1_000.0) + "K";
-		return value + " gp";
-	}
-
-	private static String trimDecimal(double value)
-	{
-		String text = String.format(java.util.Locale.ROOT, "%.1f", Math.floor(value * 10) / 10);
-		return text.endsWith(".0") ? text.substring(0, text.length() - 2) : text;
-	}
 
 	static String dropAge(String iso, Instant now)
 	{
@@ -719,13 +783,31 @@ final class TsgHubSidebarPanel extends PluginPanel
 		try { then = Instant.parse(iso); }
 		catch (Exception e) { return ""; }
 		long minutes = Math.max(0, Duration.between(then, now).toMinutes());
-		if (minutes < 1) return "just now";
-		if (minutes < 60) return minutes + "m ago";
+		if (minutes < 1) return "now";
+		if (minutes < 60) return minutes + "m";
 		long hours = minutes / 60;
-		if (hours < 24) return hours + "h ago";
-		long days = hours / 24;
-		if (days < 30) return days + "d ago";
-		return TsgHubUi.localDate(then, java.time.ZoneId.systemDefault());
+		if (hours < 24) return hours + "h";
+		return hours / 24 + "d";
+	}
+
+	static String dropWhen(String iso, Instant now, java.time.ZoneId zone)
+	{
+		String day = dropDay(iso, now, zone);
+		if ("Earlier".equals(day)) return "";
+		if ("Today".equals(day)) return dropAge(iso, now);
+		return Instant.parse(iso).atZone(zone).format(CLOCK_TIME);
+	}
+
+	static String dropDay(String iso, Instant now, java.time.ZoneId zone)
+	{
+		Instant then;
+		try { then = Instant.parse(iso); }
+		catch (Exception e) { return "Earlier"; }
+		java.time.LocalDate day = then.atZone(zone).toLocalDate();
+		java.time.LocalDate today = now.atZone(zone).toLocalDate();
+		if (!day.isBefore(today)) return "Today";
+		if (day.equals(today.minusDays(1))) return "Yesterday";
+		return TsgHubUi.localDate(then, zone);
 	}
 
 	private void openEvents()
@@ -772,18 +854,14 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		competitionEvent = event;
 		setView(View.COMPETITION_PREVIEW);
-		setHeader(TsgHubUi.str(event, "name"), TsgHubUi.statusLabel(TsgHubUi.str(event, "status")) + " · " + TsgHubUi.eventSchedule(event), true, false);
+		setEventHeader(event, true, false);
 		page.removeAll();
 		Font small = FontManager.getRunescapeSmallFont();
 		JsonObject config = TsgHubUi.eventConfig(event);
 		boolean skill = "skill".equals(TsgHubUi.str(event, "type"));
-		String what = skill ? "Gain the most " + TsgHubUi.skillName(TsgHubUi.str(config, "skill")) + " XP" : "Get the most " + TsgHubUi.str(config, "npcName") + " kills";
-		page.add(TsgHubUi.label(TsgHubUi.eventTypeLabel(event), TsgHubUi.ACCENT, FontManager.getRunescapeBoldFont()));
-		page.add(Box.createVerticalStrut(4));
-		page.add(TsgHubUi.wrapped(what + " from " + TsgHubUi.eventWhen(event) + ".", TsgHubUi.TEXT, FontManager.getRunescapeFont(), TEXT_W));
-		String description = TsgHubUi.str(event, "description").trim();
-		if (!description.isEmpty()) { page.add(Box.createVerticalStrut(4)); page.add(TsgHubUi.wrapped(description, TsgHubUi.MUTED, small, TEXT_W)); }
-		page.add(Box.createVerticalStrut(10));
+		String subject = skill ? TsgHubUi.skillName(TsgHubUi.str(config, "skill")) : TsgHubUi.str(config, "npcName");
+		page.add(eventSummaryCard(event, subject, skill ? "Most " + subject + " XP gained wins." : "Most " + subject + " kills wins."));
+		page.add(Box.createVerticalStrut(12));
 		competitionJoinButton.setEnabled(true);
 		competitionJoinButton.setText("Join");
 		for (java.awt.event.ActionListener l : competitionJoinButton.getActionListeners()) competitionJoinButton.removeActionListener(l);
@@ -821,7 +899,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		setView(View.COMPETITION);
 		openCompetitionId = TsgHubUi.str(event, "id");
 		refresh.setToolTipText("Refresh (updated " + LocalTime.now().format(TIME) + ")");
-		setHeader(TsgHubUi.str(event, "name"), TsgHubUi.statusLabel(TsgHubUi.str(event, "status")) + " · " + TsgHubUi.eventSchedule(event), true, true);
+		setEventHeader(event, true, true);
 		page.removeAll();
 		Font small = FontManager.getRunescapeSmallFont();
 		JsonObject config = TsgHubUi.eventConfig(event);
@@ -832,18 +910,39 @@ final class TsgHubSidebarPanel extends PluginPanel
 		for (int i = 0; i < rows.size(); i++)
 			if (TsgHubUi.str(rows.get(i).getAsJsonObject(), "displayName").equalsIgnoreCase(competitionName)) mine = rows.get(i).getAsJsonObject();
 
-		JPanel summary = TsgHubUi.card();
-		JPanel top = new JPanel(new BorderLayout(6, 0));
-		top.setOpaque(false);
-		top.add(TsgHubUi.label(TsgHubUi.html("<b>" + TsgHubUi.escape(skill ? TsgHubUi.skillName(TsgHubUi.str(config, "skill")) : TsgHubUi.str(config, "npcName")) + "</b>", CARD_TITLE_W), TsgHubUi.TEXT, FontManager.getRunescapeFont()), BorderLayout.CENTER);
-		if (mine != null && mine.has("rank") && !hidden)
-			top.add(TsgHubUi.label("#" + TsgHubUi.integer(mine, "rank", 0) + " of " + TsgHubUi.integer(event, "participants", rows.size()), TsgHubUi.integer(mine, "rank", 0) == 1 ? TsgHubUi.ACCENT : TsgHubUi.MUTED, FontManager.getRunescapeBoldFont()), BorderLayout.EAST);
-		summary.add(top, BorderLayout.NORTH);
-		JPanel lines = TsgHubUi.stack();
+		boolean started = !"scheduled".equals(TsgHubUi.str(event, "status"));
 		boolean tracking = mine != null && TsgHubUi.bool(mine, "tracking");
-		lines.add(TsgHubUi.label("You: +" + String.format("%,d", mine == null ? 0 : TsgHubUi.integer(mine, "gained", 0)) + " " + unit(), TsgHubUi.SUCCESS, FontManager.getRunescapeBoldFont()));
-		if (!tracking)
-			lines.add(TsgHubUi.wrapped(skill ? "Starts counting the next time you gain XP." : "Starts counting at your next kill.", TsgHubUi.MUTED, small, CARD_TEXT_W));
+		JPanel summary = TsgHubUi.card();
+		JPanel top = TsgHubUi.row();
+		top.add(TsgHubUi.shrinkable(TsgHubUi.label(skill ? TsgHubUi.skillName(TsgHubUi.str(config, "skill")) : TsgHubUi.str(config, "npcName"), TsgHubUi.TEXT, FontManager.getRunescapeBoldFont())), BorderLayout.CENTER);
+		if (started && mine != null && mine.has("rank") && !hidden)
+		{
+			int rank = TsgHubUi.integer(mine, "rank", 0);
+			top.add(TsgHubUi.label("#" + rank + " of " + TsgHubUi.integer(event, "participants", rows.size()), rank == 1 ? TsgHubUi.ACCENT : TsgHubUi.MUTED, small), BorderLayout.EAST);
+		}
+		JPanel lines = TsgHubUi.stack();
+		lines.add(top);
+		lines.add(Box.createVerticalStrut(3));
+		if (!started)
+		{
+			String start = TsgHubUi.eventStartWhen(event);
+			lines.add(TsgHubUi.wrapped(start.isEmpty() ? "Counting starts when the event begins." : "Counting starts " + start + ".", TsgHubUi.MUTED, small, CARD_TEXT_W));
+		}
+		else
+		{
+			lines.add(TsgHubUi.label("+" + String.format("%,d", mine == null ? 0 : TsgHubUi.integer(mine, "gained", 0)) + " " + unit(), TsgHubUi.SUCCESS, FontManager.getRunescapeBoldFont()));
+			if (!tracking)
+			{
+				lines.add(Box.createVerticalStrut(2));
+				lines.add(TsgHubUi.wrapped(skill ? "Starts counting the next time you gain XP." : "Starts counting at your next kill.", TsgHubUi.MUTED, small, CARD_TEXT_W));
+			}
+		}
+		JPanel prizes = TsgHubUi.prizeRow(event, small);
+		if (prizes != null)
+		{
+			lines.add(Box.createVerticalStrut(4));
+			lines.add(prizes);
+		}
 		summary.add(lines, BorderLayout.CENTER);
 		page.add(TsgHubUi.fitHeight(summary));
 		page.add(Box.createVerticalStrut(8));
@@ -854,7 +953,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 		else
 		{
-			page.add(TsgHubUi.label(TsgHubUi.integer(event, "participants", rows.size()) + " taking part", TsgHubUi.MUTED, small));
+			page.add(TsgHubUi.label(TsgHubUi.integer(event, "participants", rows.size()) + (started ? " taking part" : " signed up"), TsgHubUi.MUTED, small));
 			page.add(Box.createVerticalStrut(4));
 			for (int i = 0; i < rows.size(); i++)
 			{
@@ -863,13 +962,16 @@ final class TsgHubSidebarPanel extends PluginPanel
 				int rank = TsgHubUi.integer(row, "rank", i + 1);
 				JPanel card = TsgHubUi.card();
 				card.setLayout(new BorderLayout(8, 0));
-				if (me) card.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0, 3, 0, 0, TsgHubUi.ACCENT), BorderFactory.createEmptyBorder(7, 5, 7, 8)));
-				JLabel rankLabel = TsgHubUi.label(String.valueOf(rank), rank == 1 ? TsgHubUi.ACCENT : TsgHubUi.MUTED, FontManager.getRunescapeBoldFont());
-				rankLabel.setPreferredSize(new Dimension(18, rankLabel.getPreferredSize().height));
-				card.add(rankLabel, BorderLayout.WEST);
-				card.add(TsgHubUi.label(TsgHubUi.html(TsgHubUi.escape(TsgHubUi.str(row, "displayName")) + (me ? " <font color='#8f8f8f'>(you)</font>" : ""), 110), TsgHubUi.TEXT, FontManager.getRunescapeFont()), BorderLayout.CENTER);
+				if (me) highlightSelf(card);
+				if (started)
+				{
+					JLabel rankLabel = TsgHubUi.label(String.valueOf(rank), rank == 1 ? TsgHubUi.ACCENT : TsgHubUi.MUTED, FontManager.getRunescapeBoldFont());
+					rankLabel.setPreferredSize(new Dimension(18, rankLabel.getPreferredSize().height));
+					card.add(rankLabel, BorderLayout.WEST);
+				}
+				card.add(TsgHubUi.label(TsgHubUi.html(TsgHubUi.escape(TsgHubUi.str(row, "displayName")), 110), TsgHubUi.TEXT, FontManager.getRunescapeFont()), BorderLayout.CENTER);
 				String gained = TsgHubUi.bool(row, "tracking") ? String.format("%,d", TsgHubUi.integer(row, "gained", 0)) : "-";
-				card.add(TsgHubUi.label(gained, rank == 1 ? TsgHubUi.ACCENT : TsgHubUi.TEXT, FontManager.getRunescapeBoldFont()), BorderLayout.EAST);
+				if (started) card.add(TsgHubUi.label(gained, rank == 1 ? TsgHubUi.ACCENT : TsgHubUi.TEXT, FontManager.getRunescapeBoldFont()), BorderLayout.EAST);
 				page.add(TsgHubUi.fitHeight(card));
 				page.add(Box.createVerticalStrut(4));
 			}
@@ -878,7 +980,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		JButton leave = TsgHubUi.button("Leave competition");
 		leave.setForeground(TsgHubUi.ERROR);
 		leave.addActionListener(e -> {
-			int choice = JOptionPane.showConfirmDialog(this, "Leave \"" + TsgHubUi.str(event, "name") + "\"?\nYou'll drop off the leaderboard on this device. You can rejoin while it's running.",
+			int choice = JOptionPane.showConfirmDialog(this, "Leave \"" + TsgHubUi.eventName(event) + "\"?\nYou'll drop off the leaderboard on this device. You can rejoin while it's running.",
 				"Leave competition", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
 			if (choice == JOptionPane.OK_OPTION) plugin.leaveEvent(TsgHubUi.str(event, "id"));
 		});
@@ -889,7 +991,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private void showDropParty(JsonObject event)
 	{
 		setView(View.DROP_PARTY);
-		setHeader(TsgHubUi.str(event, "name"), "Custom", true, false);
+		setHeader(TsgHubUi.eventName(event), "Custom", true, false);
 		page.removeAll();
 		JsonObject config = TsgHubUi.eventConfig(event);
 		Font small = FontManager.getRunescapeSmallFont();
@@ -902,6 +1004,12 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (TsgHubUi.integer(config, "world", 0) > 0) lines.add(detail("World", String.valueOf(TsgHubUi.integer(config, "world", 0))));
 		if (!TsgHubUi.str(config, "location").isEmpty()) lines.add(detail("Where", TsgHubUi.str(config, "location")));
 		if (!TsgHubUi.str(config, "host").isEmpty()) lines.add(detail("Host", TsgHubUi.str(config, "host")));
+		JPanel prizes = TsgHubUi.prizeRow(event, small);
+		if (prizes != null)
+		{
+			lines.add(Box.createVerticalStrut(4));
+			lines.add(prizes);
+		}
 		card.add(lines, BorderLayout.CENTER);
 		page.add(TsgHubUi.fitHeight(card));
 		String notes = TsgHubUi.str(config, "notes");
@@ -1314,11 +1422,20 @@ final class TsgHubSidebarPanel extends PluginPanel
 		return footer;
 	}
 
+	private void setEventHeader(JsonObject event, boolean showBack, boolean showRefresh)
+	{
+		String relative = TsgHubUi.eventRelative(event);
+		setHeader(TsgHubUi.eventName(event), relative.isEmpty() ? TsgHubUi.statusLabel(TsgHubUi.str(event, "status")) : TsgHubUi.capitalize(relative), showBack, showRefresh);
+		subtitle.setToolTipText(TsgHubUi.eventWhen(event));
+	}
+
 	private void setHeader(String titleText, String subtitleText, boolean showBack, boolean showRefresh)
 	{
-		title.setText(TsgHubUi.html(TsgHubUi.escape(titleText), 150));
-		subtitle.setText(subtitleText.isEmpty() ? "" : TsgHubUi.html(TsgHubUi.escape(subtitleText), 150));
+		this.titleText = titleText;
+		title.setText(TsgHubUi.html(TsgHubUi.escape(titleText), titleWidth()));
+		subtitle.setText(subtitleText);
 		subtitle.setVisible(!subtitleText.isEmpty());
+		subtitle.setToolTipText(null);
 		back.setVisible(showBack);
 		refresh.setVisible(showRefresh);
 	}
@@ -1352,10 +1469,20 @@ final class TsgHubSidebarPanel extends PluginPanel
 			{
 				page.add(errorPanel("No events yet", "When an admin creates an event, it will show up here."));
 			}
+			Font small = FontManager.getRunescapeSmallFont();
+			String section = null;
 			for (JsonObject event : visible)
 			{
+				String next = "active".equals(TsgHubUi.str(event, "status")) ? "Live" : "Upcoming";
+				if (!next.equals(section))
+				{
+					JLabel heading = TsgHubUi.label(next.toUpperCase(), TsgHubUi.MUTED, small);
+					heading.setBorder(BorderFactory.createEmptyBorder(section == null ? 0 : 6, 2, 4, 0));
+					page.add(heading);
+					section = next;
+				}
 				page.add(eventCard(event));
-				page.add(Box.createVerticalStrut(5));
+				page.add(Box.createVerticalStrut(6));
 			}
 		}
 		refreshPage();
@@ -1363,38 +1490,37 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	private JPanel eventCard(JsonObject event)
 	{
-		String state = TsgHubUi.str(event, "status");
+		Font small = FontManager.getRunescapeSmallFont();
+		boolean live = "active".equals(TsgHubUi.str(event, "status"));
 		boolean joined = TsgHubUi.bool(event, "joined");
 		JPanel card = TsgHubUi.card();
+		if (joined) highlightSelf(card);
+
+		JPanel top = TsgHubUi.row();
+		top.add(TsgHubUi.shrinkable(TsgHubUi.label(TsgHubUi.eventName(event), TsgHubUi.TEXT, FontManager.getRunescapeBoldFont())), BorderLayout.CENTER);
+		top.add(TsgHubUi.label(TsgHubUi.eventCountdown(event), live ? TsgHubUi.SUCCESS : TsgHubUi.MUTED, small), BorderLayout.EAST);
+
+		JPanel bottom = TsgHubUi.row();
+		bottom.add(TsgHubUi.shrinkable(TsgHubUi.label(TsgHubUi.eventDetail(event), TsgHubUi.MUTED, small)), BorderLayout.CENTER);
+		JPanel extras = new JPanel(new FlowLayout(FlowLayout.RIGHT, 3, 0));
+		extras.setOpaque(false);
+		if (TsgHubUi.bool(event, "hidden")) extras.add(TsgHubUi.badge("Hidden", TsgHubUi.MUTED));
+		JLabel prize = TsgHubUi.prizeLabel(event, small, plugin::getCoinImage);
+		if (prize != null) extras.add(prize);
+		bottom.add(extras, BorderLayout.EAST);
+
 		JPanel text = TsgHubUi.stack();
-		text.add(TsgHubUi.label(TsgHubUi.html("<b>" + TsgHubUi.escape(TsgHubUi.str(event, "name")) + "</b>", CARD_TITLE_W), TsgHubUi.TEXT, FontManager.getRunescapeFont()));
-		JPanel meta = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-		meta.setOpaque(false);
-		meta.add(TsgHubUi.badge(TsgHubUi.statusLabel(state), TsgHubUi.statusColor(state)));
-		meta.add(Box.createHorizontalStrut(5));
-		if (TsgHubUi.bool(event, "hidden"))
-		{
-			meta.add(TsgHubUi.badge("Hidden", TsgHubUi.MUTED));
-			meta.add(Box.createHorizontalStrut(5));
-		}
-		meta.add(TsgHubUi.label(TsgHubUi.capitalize(TsgHubUi.eventRelative(event)), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont()));
+		text.add(top);
 		text.add(Box.createVerticalStrut(3));
-		text.add(meta);
-		text.add(Box.createVerticalStrut(2));
-		text.add(TsgHubUi.wrapped(TsgHubUi.eventWhen(event), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), CARD_TITLE_W));
-		text.add(Box.createVerticalStrut(2));
-		text.add(TsgHubUi.wrapped(TsgHubUi.eventTypeLine(event), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), CARD_TITLE_W));
+		text.add(bottom);
 		card.add(text, BorderLayout.CENTER);
+
 		String type = TsgHubUi.str(event, "type");
 		boolean dropParty = "drop-party".equals(type);
 		boolean competition = "skill".equals(type) || "boss".equals(type);
-		JPanel east = new JPanel(new BorderLayout());
-		east.setOpaque(false);
-		east.add(joined ? TsgHubUi.badge("Joined", TsgHubUi.SUCCESS)
-			: TsgHubUi.label(dropParty ? "Details" : "Join", TsgHubUi.ACCENT, FontManager.getRunescapeSmallFont()), BorderLayout.NORTH);
-		card.add(east, BorderLayout.EAST);
-		card.setToolTipText(dropParty ? "See when and where" : joined ? (competition ? "Open the leaderboard" : "Open your team's board")
-			: competition ? "Join this competition" : "Join this event with a team code");
+		String action = dropParty ? "See when and where" : joined ? (competition ? "Open the leaderboard" : "Open your team's board")
+			: competition ? "Join this competition" : "Join this event with a team code";
+		card.setToolTipText("<html>" + TsgHubUi.escape(TsgHubUi.eventWhen(event)) + "<br>" + action + "</html>");
 		TsgHubUi.clickable(card, () -> {
 			String id = TsgHubUi.str(event, "id");
 			if (dropParty) showDropParty(event);
@@ -1406,14 +1532,42 @@ final class TsgHubSidebarPanel extends PluginPanel
 		return TsgHubUi.fitHeight(card);
 	}
 
+	private JPanel eventSummaryCard(JsonObject event, String subject, String goal)
+	{
+		Font small = FontManager.getRunescapeSmallFont();
+		JPanel card = TsgHubUi.card();
+		JPanel lines = TsgHubUi.stack();
+		lines.add(TsgHubUi.shrinkable(TsgHubUi.label(subject, TsgHubUi.TEXT, FontManager.getRunescapeBoldFont())));
+		lines.add(Box.createVerticalStrut(3));
+		lines.add(TsgHubUi.wrapped(goal, TsgHubUi.TEXT, small, CARD_TEXT_W));
+		lines.add(Box.createVerticalStrut(2));
+		lines.add(TsgHubUi.wrapped(TsgHubUi.eventWhen(event), TsgHubUi.MUTED, small, CARD_TEXT_W));
+		String description = TsgHubUi.str(event, "description").trim();
+		if (!description.isEmpty())
+		{
+			lines.add(Box.createVerticalStrut(4));
+			lines.add(TsgHubUi.wrapped(description, TsgHubUi.MUTED, small, CARD_TEXT_W));
+		}
+		JPanel prizes = TsgHubUi.prizeRow(event, small);
+		if (prizes != null)
+		{
+			lines.add(Box.createVerticalStrut(6));
+			lines.add(prizes);
+		}
+		card.add(lines, BorderLayout.CENTER);
+		return TsgHubUi.fitHeight(card);
+	}
+
 	private void showPreview(JsonObject event)
 	{
 		previewEvent = event;
 		setView(View.PREVIEW);
-		setHeader(TsgHubUi.str(event, "name"), TsgHubUi.statusLabel(TsgHubUi.str(event, "status")) + " · " + TsgHubUi.eventSchedule(event), true, false);
+		setEventHeader(event, true, false);
 		page.removeAll();
-		page.add(TsgHubUi.wrapped("Enter the team code an admin gave you.", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), TEXT_W));
-		page.add(Box.createVerticalStrut(6));
+		page.add(eventSummaryCard(event, "Bingo", "Complete tasks with your team for points. Most points wins."));
+		page.add(Box.createVerticalStrut(12));
+		page.add(TsgHubUi.label("Team code", TsgHubUi.TEXT, FontManager.getRunescapeSmallFont()));
+		page.add(Box.createVerticalStrut(4));
 		codeField.setText("");
 		page.add(TsgHubUi.fitHeight(codeField));
 		joinError.setVisible(false);
@@ -1422,8 +1576,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 		joinButton.setEnabled(true);
 		joinButton.setText("Join event");
 		page.add(TsgHubUi.fitHeight(fullWidth(joinButton)));
-		page.add(Box.createVerticalStrut(8));
-		page.add(TsgHubUi.wrapped("Your team is set by the code and can't be changed after you join.", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), TEXT_W));
+		page.add(Box.createVerticalStrut(6));
+		page.add(TsgHubUi.wrapped("Ask an admin for your team's code. Your team can't be changed after you join.", TsgHubUi.MUTED, FontManager.getRunescapeSmallFont(), TEXT_W));
 		refreshPage();
 		SwingUtilities.invokeLater(codeField::requestFocusInWindow);
 	}
@@ -1445,7 +1599,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private void renderBoard()
 	{
 		JsonObject event = boardEvent;
-		setHeader(TsgHubUi.str(event, "name"), TsgHubUi.statusLabel(TsgHubUi.str(event, "status")) + " · " + TsgHubUi.eventSchedule(event), true, true);
+		setEventHeader(event, true, true);
 		renderSummary();
 		renderTasks();
 		renderScoreboard();
@@ -1503,6 +1657,12 @@ final class TsgHubSidebarPanel extends PluginPanel
 		bar.setLeftLabel(TsgHubUi.integer(score, "points", 0) + " pts");
 		bar.setRightLabel(completed + "/" + totalTasks + " tasks");
 		card.add(bar, BorderLayout.CENTER);
+		JPanel prizes = TsgHubUi.prizeRow(boardEvent, FontManager.getRunescapeSmallFont());
+		if (prizes != null)
+		{
+			prizes.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0));
+			card.add(prizes, BorderLayout.SOUTH);
+		}
 		boardSummary.add(TsgHubUi.fitHeight(card));
 		boardSummary.revalidate();
 		boardSummary.repaint();
@@ -1861,7 +2021,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			for (JsonObject member : sorted)
 			{
 				String name = TsgHubUi.escape(TsgHubUi.str(member, "displayName"));
-				if (TsgHubUi.str(member, "displayName").equalsIgnoreCase(boardDisplayName)) name += " (you)";
+				if (TsgHubUi.str(member, "displayName").equalsIgnoreCase(boardDisplayName)) name = "<font color='" + SELF_TEXT + "'>" + name + "</font>";
 				int have = TsgHubUi.integer(member, "progress", 0);
 				int need = TsgHubUi.integer(member, "target", 1);
 				if (solo) waiting.add(name + " " + have + "/" + need);
@@ -1917,12 +2077,12 @@ final class TsgHubSidebarPanel extends PluginPanel
 			boolean mine = TsgHubUi.str(team, "id").equals(ownTeam);
 			JPanel card = TsgHubUi.card();
 			card.setLayout(new BorderLayout(8, 0));
-			if (mine) card.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0, 3, 0, 0, TsgHubUi.ACCENT), BorderFactory.createEmptyBorder(7, 5, 7, 8)));
+			if (mine) highlightSelf(card);
 			JLabel rank = TsgHubUi.label(String.valueOf(i + 1), i == 0 ? TsgHubUi.ACCENT : TsgHubUi.MUTED, FontManager.getRunescapeBoldFont());
 			rank.setPreferredSize(new Dimension(14, rank.getPreferredSize().height));
 			card.add(rank, BorderLayout.WEST);
 			JPanel text = TsgHubUi.stack();
-			text.add(TsgHubUi.label(TsgHubUi.html(TsgHubUi.escape(TsgHubUi.str(team, "name")) + (mine ? " <font color='#8f8f8f'>(you)</font>" : ""), 120), TsgHubUi.TEXT, FontManager.getRunescapeFont()));
+			text.add(TsgHubUi.label(TsgHubUi.html(TsgHubUi.escape(TsgHubUi.str(team, "name")), 120), TsgHubUi.TEXT, FontManager.getRunescapeFont()));
 			int lines = TsgHubUi.integer(score, "lines", 0);
 			int bonus = TsgHubUi.integer(score, "bonusPoints", 0);
 			text.add(TsgHubUi.label(TsgHubUi.integer(score, "completedTasks", 0) + "/" + totalTasks + " tasks" + (lines > 0 ? " · " + lines + (lines == 1 ? " line" : " lines") : "") + (bonus > 0 ? " (+" + bonus + ")" : ""), TsgHubUi.MUTED, FontManager.getRunescapeSmallFont()));
@@ -1946,8 +2106,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 		{
 			boolean mine = TsgHubUi.str(team, "id").equals(ownTeam);
 			JPanel card = TsgHubUi.card();
-			if (mine) card.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0, 3, 0, 0, TsgHubUi.ACCENT), BorderFactory.createEmptyBorder(7, 5, 7, 8)));
-			card.add(TsgHubUi.label(TsgHubUi.html(TsgHubUi.escape(TsgHubUi.str(team, "name")) + (mine ? " <font color='#8f8f8f'>(you)</font>" : ""), CARD_TEXT_W), TsgHubUi.TEXT, FontManager.getRunescapeFont()), BorderLayout.CENTER);
+			if (mine) highlightSelf(card);
+			card.add(TsgHubUi.label(TsgHubUi.html(TsgHubUi.escape(TsgHubUi.str(team, "name")), CARD_TEXT_W), TsgHubUi.TEXT, FontManager.getRunescapeFont()), BorderLayout.CENTER);
 			scoreboardTab.add(TsgHubUi.fitHeight(card));
 			scoreboardTab.add(Box.createVerticalStrut(4));
 		}
@@ -1971,8 +2131,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 		for (String name : teammates)
 		{
 			JPanel row = TsgHubUi.card();
-			boolean me = name.equalsIgnoreCase(boardDisplayName);
-			row.add(TsgHubUi.label(TsgHubUi.html(TsgHubUi.escape(name) + (me ? " <font color='#8f8f8f'>(you)</font>" : ""), CARD_TEXT_W), TsgHubUi.TEXT, FontManager.getRunescapeFont()), BorderLayout.CENTER);
+			if (name.equalsIgnoreCase(boardDisplayName)) highlightSelf(row);
+			row.add(TsgHubUi.label(TsgHubUi.html(TsgHubUi.escape(name), CARD_TEXT_W), TsgHubUi.TEXT, FontManager.getRunescapeFont()), BorderLayout.CENTER);
 			teamTab.add(TsgHubUi.fitHeight(row));
 			teamTab.add(Box.createVerticalStrut(3));
 		}
@@ -1990,7 +2150,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		if (boardEvent == null) return;
 		int choice = JOptionPane.showConfirmDialog(this,
-			"Stop tracking \"" + TsgHubUi.str(boardEvent, "name") + "\" on this device?\nYour team keeps its progress and you can rejoin with your team code.",
+			"Stop tracking \"" + TsgHubUi.eventName(boardEvent) + "\" on this device?\nYour team keeps its progress and you can rejoin with your team code.",
 			"Disconnect from event", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
 		if (choice == JOptionPane.OK_OPTION) plugin.leaveEvent(TsgHubUi.str(boardEvent, "id"));
 	}

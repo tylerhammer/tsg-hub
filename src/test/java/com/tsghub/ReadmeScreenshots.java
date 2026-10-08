@@ -69,6 +69,23 @@ public class ReadmeScreenshots
 			{
 				return itemIcon(itemId);
 			}
+
+			@Override
+			AsyncBufferedImage getCoinImage(long gp)
+			{
+				AsyncBufferedImage icon = itemIcon(995);
+				if (icon == null) return null;
+				AsyncBufferedImage coins = new AsyncBufferedImage(null, icon.getWidth(), icon.getHeight(), BufferedImage.TYPE_INT_ARGB)
+				{
+					@Override
+					public void onLoaded(Runnable runnable)
+					{
+						runnable.run();
+					}
+				};
+				coins.getGraphics().drawImage(icon, 0, 0, null);
+				return coins;
+			}
 		};
 		set(plugin, "config", stub(TsgHubConfig.class));
 		set(plugin, "detectedClanName", "TSGaming");
@@ -138,7 +155,7 @@ public class ReadmeScreenshots
 		selectTab(organizer, "Board");
 		shoot(organizer, 860, 640, "admin-board");
 		selectTab(organizer, "Claims");
-		shoot(organizer, 860, 240, "admin-claims");
+		shoot(organizer, 860, 270, "admin-claims");
 
 		reveal(boardEvent, TsgHubUi.teamIdFor(boardEvent, "Crab Legs"));
 

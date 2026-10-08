@@ -63,6 +63,10 @@ final class TsgHubUi
 	static final Color ERROR = ColorScheme.PROGRESS_ERROR_COLOR;
 	static final Color WARNING = new Color(230, 180, 60);
 	private static final DateTimeFormatter DATE_WITH_YEAR = DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale.US);
+	private static final int COIN_ICON_W = 18;
+	private static final int COIN_ICON_H = 16;
+	private static final Color COIN_LOW = new Color(255, 255, 0);
+	private static final Color COIN_HIGH = new Color(0, 255, 128);
 	private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("EEE d MMM", java.util.Locale.US);
 	private static final DateTimeFormatter DAY_WITH_YEAR = DateTimeFormatter.ofPattern("EEE d MMM yyyy", java.util.Locale.US);
 	private static final DateTimeFormatter HOUR = DateTimeFormatter.ofPattern("h", java.util.Locale.US);
@@ -157,6 +161,21 @@ final class TsgHubUi
 		panel.setOpaque(false);
 		panel.setAlignmentX(Component.LEFT_ALIGNMENT);
 		return panel;
+	}
+
+	static JPanel row()
+	{
+		JPanel row = new JPanel(new BorderLayout(6, 0));
+		row.setOpaque(false);
+		return row;
+	}
+
+	static JLabel shrinkable(JLabel label)
+	{
+		int height = label.getPreferredSize().height;
+		label.setMinimumSize(new Dimension(0, height));
+		label.setPreferredSize(new Dimension(0, height));
+		return label;
 	}
 
 	static JPanel card()
@@ -483,6 +502,163 @@ final class TsgHubUi
 	{
 		if ("ended".equals(str(event, "status"))) return "ended";
 		return relativeTime(eventStart(event), eventEnd(event), clock.instant());
+	}
+
+	static String eventName(JsonObject event)
+	{
+		String type = str(event, "type");
+		if ("skill".equals(type) || "boss".equals(type)) return eventTypeLabel(event);
+		return str(event, "name");
+	}
+
+	static String eventCountdown(JsonObject event)
+	{
+		String relative = eventRelative(event);
+		if (relative.startsWith("ends in ")) return relative.substring(8) + " left";
+		if (relative.startsWith("starts ")) return relative.substring(7);
+		return relative.isEmpty() ? "TBD" : capitalize(relative);
+	}
+
+	static String eventDetail(JsonObject event)
+	{
+		JsonObject config = eventConfig(event);
+		switch (str(event, "type"))
+		{
+			case "skill": return skillName(str(config, "skill"));
+			case "boss": return str(config, "npcName");
+			case "drop-party":
+				List<String> where = new ArrayList<>();
+				if (integer(config, "world", 0) > 0) where.add("W" + integer(config, "world", 0));
+				if (!str(config, "location").isEmpty()) where.add(str(config, "location"));
+				return String.join(" · ", where);
+			default: return eventDay(event);
+		}
+	}
+
+	static JLabel prizeLabel(JsonObject event, Font font, java.util.function.LongFunction<net.runelite.client.util.AsyncBufferedImage> coins)
+	{
+		List<Long> prizes = eventPrizes(event);
+		if (prizes.isEmpty()) return null;
+		long total = prizeTotal(prizes);
+		JLabel label = label(formatGp(total), coinColor(total), font);
+		label.setToolTipText("Prize pool: " + prizeSummary(prizes));
+		label.setIconTextGap(2);
+		net.runelite.client.util.AsyncBufferedImage image = coins.apply(total);
+		if (image != null)
+		{
+			Runnable apply = () -> label.setIcon(new javax.swing.ImageIcon(net.runelite.client.util.ImageUtil.resizeImage(image, COIN_ICON_W, COIN_ICON_H)));
+			apply.run();
+			image.onLoaded(apply);
+		}
+		return label;
+	}
+
+	static long prizeTotal(List<Long> prizes)
+	{
+		long total = 0;
+		for (long prize : prizes) total += prize;
+		return total;
+	}
+
+	static JPanel prizeRow(JsonObject event, Font font)
+	{
+		List<Long> prizes = eventPrizes(event);
+		if (prizes.isEmpty()) return null;
+		JPanel row = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 0, 0));
+		row.setOpaque(false);
+		row.setAlignmentX(Component.LEFT_ALIGNMENT);
+		row.add(label("Prizes ", MUTED, font));
+		for (int i = 0; i < prizes.size(); i++)
+		{
+			row.add(label((i == 0 ? "" : " · ") + place(i + 1) + " ", MUTED, font));
+			row.add(label(formatGp(prizes.get(i)), coinColor(prizes.get(i)), font));
+		}
+		return fitHeight(row);
+	}
+
+	static List<Long> eventPrizes(JsonObject event)
+	{
+		List<Long> prizes = new ArrayList<>();
+		for (JsonElement item : array(event, "prizes"))
+			if (item.isJsonPrimitive() && item.getAsJsonPrimitive().isNumber() && item.getAsLong() > 0) prizes.add(item.getAsLong());
+		return prizes;
+	}
+
+	static String prizeSummary(List<Long> prizes)
+	{
+		List<String> parts = new ArrayList<>();
+		for (int i = 0; i < prizes.size(); i++) parts.add(place(i + 1) + " " + formatGp(prizes.get(i)));
+		return String.join(" · ", parts);
+	}
+
+	static String place(int place)
+	{
+		if (place % 100 >= 11 && place % 100 <= 13) return place + "th";
+		switch (place % 10)
+		{
+			case 1: return place + "st";
+			case 2: return place + "nd";
+			case 3: return place + "rd";
+			default: return place + "th";
+		}
+	}
+
+	static long parseMillions(String text)
+	{
+		String value = text.trim().replace(",", "");
+		if (value.isEmpty()) return 0;
+		try
+		{
+			java.math.BigDecimal amount = new java.math.BigDecimal(value).multiply(java.math.BigDecimal.valueOf(1_000_000L));
+			if (amount.signum() <= 0 || amount.stripTrailingZeros().scale() > 0) return -1;
+			return amount.longValueExact();
+		}
+		catch (NumberFormatException | ArithmeticException e)
+		{
+			return -1;
+		}
+	}
+
+	static String millions(long gp)
+	{
+		return java.math.BigDecimal.valueOf(gp).divide(java.math.BigDecimal.valueOf(1_000_000L)).stripTrailingZeros().toPlainString();
+	}
+
+	static String formatGp(long value)
+	{
+		if (value <= 0) return "";
+		if (value >= 1_000_000_000L) return trimDecimal(value / 1_000_000_000.0) + "B";
+		if (value >= 1_000_000L) return trimDecimal(value / 1_000_000.0) + "M";
+		if (value >= 1_000L) return trimDecimal(value / 1_000.0) + "K";
+		return value + " gp";
+	}
+
+	private static String trimDecimal(double value)
+	{
+		String text = String.format(java.util.Locale.ROOT, "%.1f", Math.floor(value * 10) / 10);
+		return text.endsWith(".0") ? text.substring(0, text.length() - 2) : text;
+	}
+	static Color coinColor(long value)
+	{
+		if (value < 100_000) return COIN_LOW;
+		if (value < 10_000_000) return TsgHubUi.TEXT;
+		return COIN_HIGH;
+	}
+	static String eventStartWhen(JsonObject event)
+	{
+		Instant start = eventStart(event);
+		if (start == null) return "";
+		ZonedDateTime from = start.atZone(ZoneId.systemDefault());
+		return when(from, clock.instant()) + " " + zoneName(from);
+	}
+
+	static String eventDay(JsonObject event)
+	{
+		Instant now = clock.instant();
+		boolean started = "active".equals(str(event, "status"));
+		Instant at = started ? eventEnd(event) : eventStart(event);
+		if (at == null) return "";
+		return (started ? "Ends " : "Starts ") + day(at.atZone(ZoneId.systemDefault()), now);
 	}
 
 	static String eventSchedule(JsonObject event)

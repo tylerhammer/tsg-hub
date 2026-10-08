@@ -20,10 +20,10 @@ public interface TsgHubConfig extends Config
 	@ConfigSection(name = "Party", description = "How clan parties look in the TSG Hub sidebar.", position = 10)
 	String partySection = "party";
 
-	@ConfigSection(name = "Admin", description = "Access to TSG Hub admin tools.", position = 20)
-	String adminSection = "admin";
+	@ConfigSection(name = "Discord", description = "Link your Discord account and unlock admin tools.", position = 20)
+	String discordSection = "admin";
 
-	@ConfigItem(keyName = "dataSharingOptIn", position = 0, section = sharingSection, name = "Share game and clan progress", description = "Opt in to send your RuneScape name, detected clan and rank, PvM progress, loot received during events you join, submitted claims, and clan chat presence and world (so clanmates see you as online in the Members list), and clan drop, pet and collection log broadcasts to the TSG Hub service. Progress and tile-completion notices are local to your chatbox; no other game chat is sent.")
+	@ConfigItem(keyName = "dataSharingOptIn", position = 0, section = sharingSection, name = "Share game and clan progress", description = "Opt in to send your RuneScape name, detected clan and rank, PvM progress, loot received during events you join, submitted claims, and clan chat presence and world (so clanmates see you as online in the Members list), clan drop, pet and collection log broadcasts, and, for the Owner and Deputy Owners with an admin hub key, clan members' ranks to the TSG Hub service. Progress and tile-completion notices are local to your chatbox; no other game chat is sent.")
 	default boolean dataSharingOptIn()
 	{
 		return false;
@@ -77,8 +77,8 @@ public interface TsgHubConfig extends Config
 		return true;
 	}
 
-	@ConfigItem(keyName = "adminKey", position = 0, section = adminSection, secret = true, name = "Admin key", description = "Your admin key from /hub key in the clan Discord. Unlocks the admin tools. Leave blank if you're not an admin.")
-	default String adminKey()
+	@ConfigItem(keyName = "hubKey", position = 0, section = discordSection, secret = true, name = "Hub key", description = "Your key from /hub key in the clan Discord. Links your Discord account to this RuneScape account so your Discord roles follow your clan rank, and unlocks the admin tools if you're a Discord admin.")
+	default String hubKey()
 	{
 		return "";
 	}

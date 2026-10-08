@@ -91,6 +91,11 @@
     "type": "bingo",
     "config": {},
     "description": "Three weeks, eight tiles, bragging rights.",
+    "prizes": [
+     500000000,
+     250000000,
+     100000000
+    ],
     "style": "board"
    },
    {
@@ -103,7 +108,12 @@
     "config": {
      "skill": "MINING"
     },
-    "description": ""
+    "description": "",
+    "prizes": [
+     20000000,
+     10000000,
+     5000000
+    ]
    },
    {
     "id": "60eab8cc-451f-49ed-9af9-68364ec0e7e5",
@@ -116,7 +126,10 @@
      "npcName": "Vardorvis",
      "signal": "chat"
     },
-    "description": ""
+    "description": "",
+    "prizes": [
+     25000000
+    ]
    },
    {
     "id": "68bae018-5dfd-4854-87a8-2839192ce00f",
@@ -895,12 +908,16 @@
      "reviewedAt": null
     }
    ],
+   "prizes": [
+    500000000,
+    250000000,
+    100000000
+   ],
    "board": {
     "type": "grid",
     "size": 3,
     "mode": "shared",
     "auto": false,
-    "locked": true,
     "tiles": [
      {
       "taskId": "68c47d80-a886-4ef7-8dd8-5213b6bffc0f",
@@ -947,6 +964,7 @@
     "lineBonus": 5,
     "randomMin": 1,
     "randomMax": 10,
+    "locked": true,
     "bonuses": {
      "ROW:1": 7
     }
@@ -2608,12 +2626,16 @@
     "reviewerNote": ""
    }
   ],
+  "prizes": [
+   500000000,
+   250000000,
+   100000000
+  ],
   "board": {
    "type": "grid",
    "size": 3,
    "mode": "shared",
    "auto": false,
-   "locked": false,
    "tiles": [
     {
      "taskId": "68c47d80-a886-4ef7-8dd8-5213b6bffc0f",
@@ -2660,6 +2682,7 @@
    "lineBonus": 5,
    "randomMin": 1,
    "randomMax": 10,
+   "locked": false,
    "bonuses": {
     "ROW:0": 4,
     "ROW:1": 7,
@@ -2683,6 +2706,12 @@
     "endsAt": "2026-10-11T08:00:00Z",
     "status": "active",
     "type": "bingo",
+    "prizes": [
+     500000000,
+     250000000,
+     100000000
+    ],
+    "config": {},
     "style": "board"
    },
    {
@@ -2692,7 +2721,15 @@
     "startsAt": "2026-09-28T09:00:00Z",
     "endsAt": "2026-10-05T08:00:00Z",
     "status": "active",
-    "type": "skill"
+    "type": "skill",
+    "prizes": [
+     20000000,
+     10000000,
+     5000000
+    ],
+    "config": {
+     "skill": "MINING"
+    }
    },
    {
     "id": "60eab8cc-451f-49ed-9af9-68364ec0e7e5",
@@ -2701,7 +2738,14 @@
     "startsAt": "2026-10-05T08:00:00Z",
     "endsAt": "2026-10-12T08:00:00Z",
     "status": "scheduled",
-    "type": "boss"
+    "type": "boss",
+    "prizes": [
+     25000000
+    ],
+    "config": {
+     "npcName": "Vardorvis",
+     "signal": "chat"
+    }
    },
    {
     "id": "68bae018-5dfd-4854-87a8-2839192ce00f",
@@ -2710,7 +2754,14 @@
     "startsAt": "2026-10-04T08:00:00Z",
     "endsAt": "2026-10-04T10:00:00Z",
     "status": "scheduled",
-    "type": "drop-party"
+    "type": "drop-party",
+    "config": {
+     "startsAt": "2026-10-04T08:00:00Z",
+     "world": 420,
+     "location": "Falador Party Room",
+     "host": "TSG Admin",
+     "notes": "Bring inventory space. Balloons at 7, big drop at 7:30."
+    }
    }
   ]
  },
@@ -2785,7 +2836,12 @@
      "teamId": null
     }
    ],
-   "claims": []
+   "claims": [],
+   "prizes": [
+    20000000,
+    10000000,
+    5000000
+   ]
   }
  },
  "dropBoard": {
