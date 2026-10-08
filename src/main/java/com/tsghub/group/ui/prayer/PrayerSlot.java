@@ -24,25 +24,27 @@
  */
 package com.tsghub.group.ui.prayer;
 
+import com.tsghub.group.data.PrayerData;
+import com.tsghub.group.ui.PartyStyle;
+import java.awt.AlphaComposite;
 import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
-import javax.swing.ImageIcon;
-import javax.swing.JLabel;
+import javax.swing.JComponent;
+import javax.swing.SwingUtilities;
 import lombok.Getter;
-import net.runelite.api.gameval.SpriteID;
 import net.runelite.client.game.SpriteManager;
 import net.runelite.client.util.Text;
-import com.tsghub.group.ImgUtil;
-import com.tsghub.group.data.PrayerData;
+
 import static com.tsghub.group.data.Prayers.isUnlockedByDefault;
 
-public class PrayerSlot extends JLabel
+public class PrayerSlot extends JComponent
 {
-	private static final Dimension SIZE = new Dimension(40, 40);
+	private static final Dimension SIZE = new Dimension(38, 34);
 
 	private BufferedImage unavailableImage;
 	private BufferedImage availableImage;
-	private BufferedImage activatedImage;
 
 	@Getter
 	private PrayerData data;
@@ -50,60 +52,41 @@ public class PrayerSlot extends JLabel
 	public PrayerSlot(final PrayerSprites sprites, final SpriteManager spriteManager)
 	{
 		data = new PrayerData(sprites.getPrayer(), false, false, isUnlockedByDefault(sprites.getPrayer()));
-
-		spriteManager.getSpriteAsync(sprites.getUnavailable(), 0, img -> unavailableImage = img);
-		spriteManager.getSpriteAsync(sprites.getAvailable(), 0, img ->
-		{
+		spriteManager.getSpriteAsync(sprites.getUnavailable(), 0, img -> SwingUtilities.invokeLater(() -> {
+			unavailableImage = img;
+			repaint();
+		}));
+		spriteManager.getSpriteAsync(sprites.getAvailable(), 0, img -> SwingUtilities.invokeLater(() -> {
 			availableImage = img;
-			updateActivatedImage();
-		});
-
-		spriteManager.getSpriteAsync(SpriteID.Prayerglow.ACTIVATED, 0, img ->
-		{
-			activatedImage = img;
-			updateActivatedImage();
-		});
-
+			repaint();
+		}));
 		setToolTipText(Text.titleCase(sprites.getPrayer()));
-		setVerticalAlignment(JLabel.CENTER);
-		setHorizontalAlignment(JLabel.CENTER);
 		setPreferredSize(SIZE);
-		setMaximumSize(SIZE);
 		setMinimumSize(SIZE);
-
-		updatePrayerData(data);
-	}
-
-	private void updateActivatedImage()
-	{
-		if (availableImage != null && activatedImage != null)
-		{
-			activatedImage = ImgUtil.overlapImages(availableImage, activatedImage, false);
-			updatePrayerData(data);
-		}
 	}
 
 	public void updatePrayerData(final PrayerData updatedData)
 	{
-		if (!data.getPrayer().equals(updatedData.getPrayer()))
-		{
-			return;
-		}
-
+		if (!data.getPrayer().equals(updatedData.getPrayer())) return;
 		data = updatedData;
-
-		BufferedImage icon = data.isAvailable() ? availableImage : unavailableImage;
-		if (data.isEnabled())
-		{
-			icon = activatedImage;
-		}
-
-		if (icon != null)
-		{
-			setIcon(new ImageIcon(icon));
-		}
-
-		revalidate();
 		repaint();
+	}
+
+	@Override
+	protected void paintComponent(Graphics g0)
+	{
+		Graphics2D g = (Graphics2D) g0.create();
+		boolean active = data.isEnabled();
+		g.setColor(active ? PartyStyle.PRAYER_ACTIVE : PartyStyle.SLOT);
+		g.fillRect(0, 0, getWidth(), getHeight());
+		if (active)
+		{
+			g.setColor(PartyStyle.PRAYER_ACTIVE_BORDER);
+			g.drawRect(0, 0, getWidth() - 1, getHeight() - 1);
+		}
+		else g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.35f));
+		BufferedImage icon = data.isAvailable() || active ? availableImage : unavailableImage;
+		if (icon != null) g.drawImage(icon, (getWidth() - icon.getWidth()) / 2, (getHeight() - icon.getHeight()) / 2, null);
+		g.dispose();
 	}
 }

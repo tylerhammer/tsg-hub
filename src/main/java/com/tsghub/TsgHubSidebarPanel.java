@@ -1,11 +1,13 @@
 package com.tsghub;
 
 import static com.tsghub.TsgHubUi.*;
+import static net.runelite.client.util.ColorUtil.toHexColor;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.tsghub.group.GroupMembersPanel;
 import com.tsghub.group.data.PartyPlayer;
+import com.tsghub.group.ui.PartyStyle;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
@@ -130,8 +132,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private static final String WILDERNESS = "Wilderness lvl ";
 	private static final int DROP_ICON_W = 40;
 	private static final DateTimeFormatter CLOCK_TIME = DateTimeFormatter.ofPattern("HH:mm");
-	private static final Color SELF_CARD = new Color(43, 36, 22);
-	private static final Color SELF_BORDER = new Color(122, 82, 8);
 	private static final String SELF_TEXT = "#e0a82e";
 	private static final Color TAG_DEFAULT = new Color(195, 140, 255);
 	private static final Map<String, Color> TAG_COLORS = Map.of(
@@ -590,10 +590,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	private static void highlightSelf(JPanel card)
 	{
-		card.setBackground(SELF_CARD);
-		card.setBorder(BorderFactory.createCompoundBorder(
-			BorderFactory.createLineBorder(SELF_BORDER),
-			BorderFactory.createEmptyBorder(6, 7, 6, 7)));
+		card.setBackground(PartyStyle.SELF_CARD);
+		card.setBorder(PartyStyle.selfBorder());
 	}
 
 	private JPanel sectionHeading(String text, JComponent right)
@@ -1573,7 +1571,10 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 		else
 		{
-			for (JsonObject group : objects(groupList))
+			String currentId = current == null ? "" : str(current, "id");
+			List<JsonObject> sorted = objects(groupList);
+			sorted.sort(Comparator.comparing((JsonObject g) -> !str(g, "id").equals(currentId)));
+			for (JsonObject group : sorted)
 			{
 				groupsPage.add(groupCard(group, current));
 				groupsPage.add(Box.createVerticalStrut(5));
@@ -1600,35 +1601,50 @@ final class TsgHubSidebarPanel extends PluginPanel
 		JsonArray members = array(group, "members");
 		String leader = str(group, "leaderName");
 		int world = 0;
+		boolean leaderListed = false;
 		List<String> names = new ArrayList<>();
 		for (JsonObject member : objects(members))
 		{
-			names.add(str(member, "displayName"));
-			if (samePlayer(str(member, "displayName"), leader)) world = integer(member, "world", 0);
+			String name = str(member, "displayName");
+			if (samePlayer(name, leader))
+			{
+				world = integer(member, "world", 0);
+				leaderListed = true;
+				names.add(0, "<font color='" + toHexColor(TEXT) + "'>" + escape(name) + "</font>");
+			}
+			else names.add(escape(name));
 		}
 		JPanel card = card();
-		JPanel text = stack();
 		boolean mine = current != null && str(group, "id").equals(str(current, "id"));
+		if (mine) highlightSelf(card);
 		boolean locked = !mine && bool(group, "locked");
 		String title = mine ? currentTitle(group) : partyTitle(group);
-		boolean showLock = bool(group, "locked");
-		JLabel heading = label(html("<b>" + escape(title) + "</b>", CARD_TITLE_W - (showLock ? 15 : 0)), TEXT, plainFont());
-		if (showLock)
+
+		JLabel heading = shrinkable(label(title, locked ? MUTED : TEXT, boldFont()));
+		heading.putClientProperty("html.disable", Boolean.TRUE);
+		if (bool(group, "locked"))
 		{
 			heading.setIcon(new LockIcon());
 			heading.setIconTextGap(5);
 		}
-		text.add(heading);
-		text.add(Box.createVerticalStrut(2));
-		Map.Entry<String, Integer> area = str(group, "activity").isEmpty() ? areaSummary(members) : null;
-		String here = area != null && area.getValue() < members.size() ? " · " + area.getValue() + " here" : "";
-		String meta = (members.size() == 1 ? "1 member" : members.size() + " members") + here + (world > 0 ? " · W" + world : "") + " · " + leader;
-		text.add(caption(meta));
-		text.add(wrapped(String.join(", ", names), MUTED, smallFont(), CARD_TITLE_W));
+		int myWorld = myPartyWorld();
+		boolean sameWorld = !mine && world > 0 && world == myWorld;
+		JPanel top = world > 0 ? row(heading, label("W" + world, sameWorld ? SUCCESS : MUTED, smallFont())) : row(heading, new JLabel());
+
+		Map.Entry<String, Integer> area = areaSummary(members);
+		boolean showArea = area != null && !area.getKey().equalsIgnoreCase(title) && (area.getValue() >= 2 || members.size() == 1);
+		String extra = showArea ? area.getKey() : leaderListed || leader.isEmpty() ? "" : "Led by " + leader;
+		JLabel detail = shrinkable(showArea ? label(extra, SUCCESS, smallFont()) : caption(extra));
+		detail.putClientProperty("html.disable", Boolean.TRUE);
+		JLabel who = label(html(String.join(", ", names), CARD_TEXT_W), MUTED, smallFont());
+		JPanel text = extra.isEmpty() ? twoLines(top, who) : twoLines(top, detail);
+		if (!extra.isEmpty())
+		{
+			text.add(Box.createVerticalStrut(2));
+			text.add(who);
+		}
 		card.add(text, BorderLayout.CENTER);
-		card.add(north(mine ? badge("Yours", SUCCESS)
-			: locked ? new JLabel()
-			: label(groupBusy ? "..." : current != null ? "Switch" : "Join", ACCENT, smallFont())), BorderLayout.EAST);
+
 		if (locked)
 		{
 			card.setToolTipText("The leader has locked this party");
@@ -1652,6 +1668,15 @@ final class TsgHubSidebarPanel extends PluginPanel
 			plugin.groups().join(str(group, "id"));
 		});
 		return fitHeight(card);
+	}
+
+	private int myPartyWorld()
+	{
+		if (groupList == null) return 0;
+		for (JsonObject group : objects(groupList))
+			for (JsonObject member : objects(array(group, "members")))
+				if (samePlayer(str(member, "displayName"), plugin.getDetectedPlayerName())) return integer(member, "world", 0);
+		return 0;
 	}
 
 	static String partyTitle(JsonObject group)

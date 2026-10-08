@@ -24,150 +24,69 @@
  */
 package com.tsghub.group.ui.skills;
 
-import net.runelite.api.Constants;
-import net.runelite.api.gameval.SpriteID;
-import net.runelite.client.game.SpriteManager;
-import net.runelite.client.ui.FontManager;
-import net.runelite.client.util.ImageUtil;
-import com.tsghub.group.ImgUtil;
-
+import com.tsghub.group.ui.PartyStyle;
+import java.awt.Color;
+import java.awt.image.BufferedImage;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Graphics;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.image.BufferedImage;
-import java.util.Objects;
+import net.runelite.client.ui.FontManager;
+import net.runelite.client.util.ImageUtil;
 
 public class SkillPanelSlot extends JPanel
 {
-	private static final Dimension PANEL_HALF_SIZE = new Dimension(Constants.ITEM_SPRITE_WIDTH, Constants.ITEM_SPRITE_HEIGHT + 3);
-	static final Dimension PANEL_FULL_SIZE = new Dimension(PANEL_HALF_SIZE.width * 2, PANEL_HALF_SIZE.height);
+	private static final Color BOOSTED = new Color(76, 217, 100);
 
-	private final JLabel boostedLabel = new JLabel();
+	private final String name;
+	private final JLabel levelLabel = new JLabel();
 	private final JLabel baseLabel = new JLabel();
-	private BufferedImage background;
-	private BufferedImage skillHalf;
-	private BufferedImage statHalf;
+	private int boosted = -1;
+	private int base = -1;
 
-	@Override
-	protected void paintComponent(Graphics g)
+	SkillPanelSlot(String name)
 	{
-		super.paintComponent(g);
-		if (background == null)
-		{
-			return;
-		}
-
-		g.drawImage(background, 0, 0, null);
-	}
-
-	private void updateBackgroundImage()
-	{
-		if (skillHalf != null && statHalf != null)
-		{
-			background = ImgUtil.combineImages(skillHalf, statHalf);
-			this.repaint();
-		}
-	}
-
-	SkillPanelSlot(final int boostedLevel, final int baseLevel)
-	{
-		super();
-		setOpaque(false);
-
-		setPreferredSize(PANEL_FULL_SIZE);
-		setLayout(new BorderLayout());
-
-		final JPanel textPanel = new JPanel();
-		textPanel.setLayout(new GridBagLayout());
-		textPanel.setPreferredSize(PANEL_HALF_SIZE);
-		textPanel.setOpaque(false);
-
-		final GridBagConstraints c = new GridBagConstraints();
-		c.gridx = 0;
-		c.gridy = 0;
-		c.weighty = .5;
-		c.weightx = 1;
-		c.fill = GridBagConstraints.BOTH;
-
-		boostedLabel.setText(String.valueOf(boostedLevel));
-		boostedLabel.setVerticalAlignment(JLabel.CENTER);
-		boostedLabel.setHorizontalAlignment(JLabel.LEFT);
-		boostedLabel.setFont(FontManager.getRunescapeSmallFont());
-		boostedLabel.setForeground(Color.YELLOW);
-		boostedLabel.setBorder(new EmptyBorder(6, 3, 0, 0));
-		c.anchor = GridBagConstraints.NORTHWEST;
-		textPanel.add(boostedLabel, c);
-
-		baseLabel.setVerticalAlignment(JLabel.CENTER);
-		baseLabel.setHorizontalAlignment(JLabel.RIGHT);
+		this.name = name;
+		setOpaque(true);
+		setBackground(PartyStyle.SLOT);
+		setBorder(new EmptyBorder(3, 3, 3, 1));
+		setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
+		levelLabel.setFont(FontManager.getRunescapeFont());
+		levelLabel.setForeground(PartyStyle.TEXT);
+		levelLabel.setIconTextGap(3);
 		baseLabel.setFont(FontManager.getRunescapeSmallFont());
-		baseLabel.setForeground(Color.YELLOW);
-		updateBaseLevel(baseLevel);
-
-		c.anchor = GridBagConstraints.SOUTHEAST;
-		c.gridy++;
-		textPanel.add(baseLabel, c);
-
-		add(textPanel, BorderLayout.EAST);
+		baseLabel.setForeground(PartyStyle.MUTED);
+		add(levelLabel);
+		add(baseLabel);
+		add(Box.createHorizontalGlue());
+		setToolTipText(name);
 	}
 
-	void initImages(final BufferedImage skillIcon, final SpriteManager spriteManager)
+	void setSkillIcon(BufferedImage icon)
 	{
-		spriteManager.getSpriteAsync(SpriteID.Miscgraphics.STATS_TILE_HALF_LEFT, 0, img ->
-		{
-			skillHalf = ImgUtil.overlapImages(skillIcon, SkillPanelSlot.resize(img), false);
-			updateBackgroundImage();
-		});
-		spriteManager.getSpriteAsync(SpriteID.Miscgraphics.STATS_TILE_HALF_RIGHT_WITH_SLASH, 0, img ->
-		{
-			statHalf = SkillPanelSlot.resize(img);
-			updateBackgroundImage();
-		});
+		levelLabel.setIcon(new ImageIcon(ImageUtil.resizeImage(icon, 16, 16)));
 	}
 
-	static BufferedImage resize(final BufferedImage img)
+	void clear()
 	{
-		return ImageUtil.resizeImage(img, PANEL_HALF_SIZE.width, PANEL_HALF_SIZE.height);
+		boosted = -1;
+		base = -1;
+		levelLabel.setText("");
+		baseLabel.setText("");
+		setToolTipText(name);
 	}
 
-	public void updateBaseLevel(final int baseLevel)
+	void setLevels(int boostedLevel, int baseLevel)
 	{
-		final String levelAsString = String.valueOf(baseLevel);
-		if (Objects.equals(levelAsString, baseLabel.getText()))
-		{
-			return;
-		}
-
-		int rightPadding = 8;
-		if (baseLevel > 99)
-		{
-			rightPadding = 1;
-		}
-		else if (baseLevel > 9)
-		{
-			rightPadding = 4;
-		}
-
-		baseLabel.setText(levelAsString);
-		baseLabel.setBorder(new EmptyBorder(0, 0, 4, rightPadding));
-		baseLabel.repaint();
-	}
-
-	public void updateBoostedLevel(final int boostedLevel)
-	{
-		final String levelAsString = String.valueOf(boostedLevel);
-		if (Objects.equals(levelAsString, boostedLabel.getText()))
-		{
-			return;
-		}
-
-		boostedLabel.setText(levelAsString);
-		boostedLabel.repaint();
+		if (boostedLevel == boosted && baseLevel == base) return;
+		boosted = boostedLevel;
+		base = baseLevel;
+		boolean changed = boostedLevel != baseLevel;
+		levelLabel.setText(String.valueOf(boostedLevel));
+		levelLabel.setForeground(!changed ? PartyStyle.TEXT : boostedLevel > baseLevel ? BOOSTED : PartyStyle.LOW);
+		baseLabel.setText(changed ? "/" + baseLevel : "");
+		setToolTipText(name + " " + boostedLevel + "/" + baseLevel);
 	}
 }

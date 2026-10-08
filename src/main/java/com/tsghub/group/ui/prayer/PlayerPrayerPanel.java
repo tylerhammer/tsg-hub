@@ -24,149 +24,53 @@
  */
 package com.tsghub.group.ui.prayer;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.util.HashMap;
-import java.util.Map;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.border.EmptyBorder;
-import lombok.Getter;
-import net.runelite.api.Prayer;
-import net.runelite.api.Skill;
-import net.runelite.api.gameval.SpriteID;
-import net.runelite.client.game.SpriteManager;
-import net.runelite.client.ui.ColorScheme;
-import net.runelite.client.ui.FontManager;
-import net.runelite.client.ui.PluginPanel;
 import com.tsghub.group.data.PartyPlayer;
 import com.tsghub.group.data.PrayerData;
 import com.tsghub.group.data.Prayers;
+import java.awt.GridLayout;
+import java.util.HashMap;
+import java.util.Map;
+import javax.swing.JPanel;
+import lombok.Getter;
+import net.runelite.api.Prayer;
+import net.runelite.client.game.SpriteManager;
 
 public class PlayerPrayerPanel extends JPanel
 {
-	private static final Dimension PANEL_SIZE = new Dimension(PluginPanel.PANEL_WIDTH - 14, 296);
-	private static final Color BACKGROUND = new Color(62, 53, 41);
-
-	private static final int MAX_COLUMNS = 5;
-
 	@Getter
 	private final Map<Prayer, PrayerSlot> slotMap = new HashMap<>();
-	private final JLabel remainingLabel = new JLabel();
-	private final JPanel prayerContainer = new JPanel();
 
 	public PlayerPrayerPanel(final PartyPlayer player, final SpriteManager spriteManager)
 	{
-		super();
-
-		setLayout(new BorderLayout());
-
-		setBackground(BACKGROUND);
-		setPreferredSize(PANEL_SIZE);
-
-		prayerContainer.setLayout(new GridBagLayout());
-		prayerContainer.setPreferredSize(new Dimension(PANEL_SIZE.width, PANEL_SIZE.height - 25));
-		prayerContainer.setOpaque(false);
-
-		createPrayerSlots(player.getPrayers(), spriteManager);
-
-		add(prayerContainer, BorderLayout.NORTH);
-		add(createPrayerRemainingPanel(spriteManager), BorderLayout.SOUTH);
-		updatePrayerRemaining(player.getSkillBoostedLevel(Skill.PRAYER), player.getSkillRealLevel(Skill.PRAYER));
+		setOpaque(false);
+		setLayout(new GridLayout(0, 5, 2, 2));
+		for (PrayerSprites p : PrayerSprites.values()) slotMap.put(p.getPrayer(), new PrayerSlot(p, spriteManager));
+		if (player.getPrayers() != null) update(player.getPrayers());
+		else updateSlots();
 	}
 
-	private void createPrayerSlots(final Prayers prayers, final SpriteManager spriteManager)
+	public void update(Prayers prayers)
 	{
-		for (final PrayerSprites p : PrayerSprites.values())
+		boolean unlockChanged = false;
+		for (Map.Entry<Prayer, PrayerSlot> entry : slotMap.entrySet())
 		{
-			final PrayerSlot slot = new PrayerSlot(p, spriteManager);
-
-			if (prayers != null)
-			{
-				final PrayerData data = prayers.getPrayerData().get(p.getPrayer());
-				if (data != null)
-				{
-					slot.updatePrayerData(data);
-				}
-			}
-
-			slotMap.put(p.getPrayer(), slot);
+			PrayerData data = prayers.getPrayerData().get(entry.getKey());
+			if (data == null) continue;
+			unlockChanged |= data.isUnlocked() != entry.getValue().getData().isUnlocked();
+			entry.getValue().updatePrayerData(data);
 		}
-		updateSlots();
+		if (unlockChanged || getComponentCount() == 0) updateSlots();
 	}
 
-	private JPanel createPrayerRemainingPanel(final SpriteManager spriteManager)
+	private void updateSlots()
 	{
-		final GridBagConstraints c = new GridBagConstraints();
-		c.anchor = GridBagConstraints.CENTER;
-		c.fill = GridBagConstraints.HORIZONTAL;
-		c.gridx = 0;
-		c.gridy = 0;
-		c.ipady = 4;
-		c.gridwidth = 1;
-
-		final JPanel panel = new JPanel();
-		panel.setLayout(new GridBagLayout());
-		panel.setOpaque(false);
-		panel.setPreferredSize(new Dimension(PANEL_SIZE.width, 25));
-
-		final JLabel iconLabel = new JLabel();
-		iconLabel.setOpaque(false);
-		spriteManager.addSpriteTo(iconLabel, SpriteID.OptionsIconsSmall.PRAYER, 0);
-		iconLabel.setHorizontalAlignment(JLabel.RIGHT);
-
-		remainingLabel.setFont(FontManager.getRunescapeSmallFont());
-		remainingLabel.setForeground(ColorScheme.BRAND_ORANGE);
-		remainingLabel.setVerticalAlignment(JLabel.CENTER);
-		remainingLabel.setHorizontalTextPosition(JLabel.LEFT);
-		remainingLabel.setBorder(new EmptyBorder(0, 4, 0, 0));
-		remainingLabel.setOpaque(false);
-
-		panel.add(iconLabel, c);
-		c.gridx++;
-		panel.add(remainingLabel, c);
-
-		return panel;
-	}
-
-	public void updatePrayerRemaining(final int remaining, final int maximum)
-	{
-		remainingLabel.setText(remaining + "/" + maximum);
-	}
-
-	public void updateSlots()
-	{
-		prayerContainer.removeAll();
-
-		final GridBagConstraints c = new GridBagConstraints();
-		c.gridx = 0;
-		c.gridy = 0;
-		c.weighty = .5;
-		c.weightx = .5;
-		c.ipadx = 2;
-		c.ipady = 2;
-		c.anchor = GridBagConstraints.CENTER;
-
-		for (final PrayerSprites prayerSprites : PrayerSprites.values())
+		removeAll();
+		for (PrayerSprites p : PrayerSprites.values())
 		{
-			final PrayerSlot slot = slotMap.get(prayerSprites.getPrayer());
-			if (!slot.getData().isUnlocked())
-			{
-				continue;
-
-			}
-
-			if (c.gridx == MAX_COLUMNS)
-			{
-				c.gridx = 0;
-				c.gridy++;
-			}
-
-			prayerContainer.add(slot, c);
-			c.gridx++;
+			PrayerSlot slot = slotMap.get(p.getPrayer());
+			if (slot.getData().isUnlocked()) add(slot);
 		}
+		revalidate();
+		repaint();
 	}
 }

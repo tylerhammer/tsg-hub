@@ -24,83 +24,74 @@
  */
 package com.tsghub.group.ui;
 
-import java.awt.Color;
+import com.tsghub.group.GroupTracker;
+import com.tsghub.group.data.GameItem;
 import java.awt.Dimension;
+import java.awt.GridLayout;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 import net.runelite.client.game.ItemManager;
-import net.runelite.client.ui.DynamicGridLayout;
-import net.runelite.client.ui.PluginPanel;
+import net.runelite.client.util.AsyncBufferedImage;
 import org.apache.commons.lang3.ArrayUtils;
-import com.tsghub.group.GroupTracker;
-import com.tsghub.group.data.GameItem;
 
 public class PlayerInventoryPanel extends JPanel
 {
-	private static final Dimension INVI_SLOT_SIZE = new Dimension(50, 42);
-	private static final Dimension PANEL_SIZE = new Dimension(PluginPanel.PANEL_WIDTH - 14, 296);
-	private static final Color INVI_BACKGROUND = new Color(62, 53, 41);
+	private static final Dimension SLOT_SIZE = new Dimension(48, 36);
+	private static final int SLOTS = 28;
 
 	private final ItemManager itemManager;
+	private final JLabel[] slots = new JLabel[SLOTS];
+	private final AsyncBufferedImage[] images = new AsyncBufferedImage[SLOTS];
 
 	public PlayerInventoryPanel(final GameItem[] items, final GameItem[] runePouchContents, final ItemManager itemManager)
 	{
-		super();
-
 		this.itemManager = itemManager;
-
-		setLayout(new DynamicGridLayout(7, 4, 2, 2));
-		setBackground(INVI_BACKGROUND);
-		setPreferredSize(PANEL_SIZE);
-
+		setOpaque(false);
+		setLayout(new GridLayout(7, 4, 2, 2));
+		for (int i = 0; i < SLOTS; i++)
+		{
+			JLabel label = new JLabel();
+			label.setOpaque(true);
+			label.setBackground(PartyStyle.SLOT);
+			label.setPreferredSize(SLOT_SIZE);
+			label.setHorizontalAlignment(JLabel.CENTER);
+			label.setVerticalAlignment(JLabel.CENTER);
+			slots[i] = label;
+			add(label);
+		}
 		updateInventory(items, runePouchContents);
 	}
 
 	public void updateInventory(final GameItem[] items, final GameItem[] runePouchContents)
 	{
-		this.removeAll();
-
-		for (final GameItem i : items)
+		for (int i = 0; i < SLOTS; i++)
 		{
-			final JLabel label = new JLabel();
-			label.setMinimumSize(INVI_SLOT_SIZE);
-			label.setPreferredSize(INVI_SLOT_SIZE);
-			label.setVerticalAlignment(JLabel.CENTER);
-			label.setHorizontalAlignment(JLabel.CENTER);
-
-			if (i != null)
+			JLabel label = slots[i];
+			GameItem item = items != null && i < items.length ? items[i] : null;
+			if (item == null)
 			{
-				String tooltip;
-				if (ArrayUtils.contains(GroupTracker.RUNEPOUCH_ITEM_IDS, i.getId()))
-				{
-					tooltip = getRunePouchHoverText(i, runePouchContents);
-				}
-				else
-				{
-					tooltip = i.getDisplayName();
-				}
-				label.setToolTipText(tooltip);
-				itemManager.getImage(i.getId(), i.getQty(), i.isStackable()).addTo(label);
+				images[i] = null;
+				label.setIcon(null);
+				label.setToolTipText(null);
+				continue;
 			}
-
-			add(label);
+			label.setToolTipText(ArrayUtils.contains(GroupTracker.RUNEPOUCH_ITEM_IDS, item.getId())
+				? getRunePouchHoverText(item, runePouchContents)
+				: item.getDisplayName());
+			if (itemManager == null) continue;
+			AsyncBufferedImage image = itemManager.getImage(item.getId(), item.getQty(), item.isStackable());
+			int slot = i;
+			images[slot] = image;
+			label.setIcon(new ImageIcon(image));
+			image.onLoaded(() -> SwingUtilities.invokeLater(() -> {
+				if (images[slot] == image) label.setIcon(new ImageIcon(image));
+			}));
 		}
-
-		for (int i = getComponentCount(); i < 28; i++)
-		{
-			final JLabel label = new JLabel();
-			label.setMinimumSize(INVI_SLOT_SIZE);
-			label.setPreferredSize(INVI_SLOT_SIZE);
-			label.setVerticalAlignment(JLabel.CENTER);
-			label.setHorizontalAlignment(JLabel.CENTER);
-			add(label);
-		}
-
-		revalidate();
-		repaint();
 	}
 
 	public String getRunePouchHoverText(final GameItem runePouch, final GameItem[] contents)
