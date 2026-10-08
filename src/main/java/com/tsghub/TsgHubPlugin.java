@@ -42,7 +42,6 @@ import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.WidgetClosed;
 import net.runelite.api.events.WidgetLoaded;
-import net.runelite.api.events.ScriptPostFired;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.Item;
 import net.runelite.api.NPC;
@@ -139,7 +138,6 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubGroups groups;
 	private TsgHubPresence presence;
 	private TsgHubDrops drops;
-	private TsgHubRanks ranks;
 	private com.tsghub.group.GroupTracker groupTracker;
 
 	@Override
@@ -193,7 +191,6 @@ public class TsgHubPlugin extends Plugin
 		executor.scheduleAtFixedRate(unlessLive(presence::autoRefresh), TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
 		drops = new TsgHubDrops(this, client, clientThread, executor, this::api, () -> sidebar);
 		executor.scheduleAtFixedRate(unlessLive(drops::autoRefresh), TsgHubDrops.REFRESH_SECONDS, TsgHubDrops.REFRESH_SECONDS, TimeUnit.SECONDS);
-		ranks = new TsgHubRanks(this, client, executor, this::api, this::adminKey);
 		boardOverlay = new TsgHubBoardOverlay(client);
 		overlayManager.add(boardOverlay);
 		mouseManager.registerMouseListener(boardOverlay);
@@ -227,7 +224,6 @@ public class TsgHubPlugin extends Plugin
 		}
 		if (hubWindow != null) SwingUtilities.invokeLater(hubWindow::dispose);
 		if (presence != null) presence.shutDown();
-		if (ranks != null) ranks.shutDown();
 		if (socket != null) socket.disconnect();
 		if (executor != null) executor.shutdownNow();
 		if (itemSearchExecutor != null) itemSearchExecutor.shutdownNow();
@@ -451,7 +447,6 @@ public class TsgHubPlugin extends Plugin
 		// Loading screens and world hops aren't logouts.
 		if (state != GameState.LOGIN_SCREEN && state != GameState.LOGIN_SCREEN_AUTHENTICATOR) return;
 		if (presence != null) presence.onLoggedOut();
-		if (ranks != null) ranks.reset();
 		detectedPlayerName = "";
 		detectedClanName = "";
 		detectedClanRank = -1;
@@ -478,14 +473,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		String previousClan = detectedClanName;
 		refreshDetectedClan();
-		if (ranks != null) ranks.onClanChannelChanged();
 		if (config.dataSharingOptIn() && sidebarRouted && !detectedClanName.equals(previousClan)) loadClanEvents();
-	}
-
-	@net.runelite.client.eventbus.Subscribe
-	public void onScriptPostFired(ScriptPostFired event)
-	{
-		if (ranks != null) ranks.onScriptPostFired(event.getScriptId());
 	}
 
 	@net.runelite.client.eventbus.Subscribe
@@ -516,7 +504,6 @@ public class TsgHubPlugin extends Plugin
 			keyCheckAttempts = 0;
 			announceKey = !configuredKey().isEmpty();
 			if (adminVerified) setAdminVerified(false);
-			if (ranks != null) ranks.reset();
 			checkHubKey();
 			return;
 		}
@@ -578,7 +565,6 @@ public class TsgHubPlugin extends Plugin
 		attemptedXpClaims.clear();
 		syncedClanRanks.clear();
 		syncedIdentity = "";
-		if (ranks != null) ranks.reset();
 		if (competitions != null) competitions.clear();
 		clearTaskCache();
 		if (boardOverlay != null) boardOverlay.setVisible(false);
@@ -1644,7 +1630,6 @@ public class TsgHubPlugin extends Plugin
 	public void onGameTick(GameTick tick)
 	{
 		if (presence != null) presence.onGameTick();
-		if (ranks != null) ranks.onGameTick();
 		if (clanCheckTicks > 0)
 		{
 			clanCheckTicks--;
