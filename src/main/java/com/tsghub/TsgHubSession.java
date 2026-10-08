@@ -76,6 +76,11 @@ final class TsgHubSession
 		return keys;
 	}
 
+	static void clear(String... keys)
+	{
+		for (String key : keys) set(key, "");
+	}
+
 	static void removePrefix(String prefix)
 	{
 		for (String key : keysWithPrefix(prefix)) set(key, "");

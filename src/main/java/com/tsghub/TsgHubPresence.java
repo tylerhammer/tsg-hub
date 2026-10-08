@@ -189,7 +189,7 @@ final class TsgHubPresence
 		{
 			if (!notes.get(i).isJsonObject()) continue;
 			JsonObject note = notes.get(i).getAsJsonObject();
-			byName.put(PlayerNames.normalize(TsgHubUi.str(note, "displayName")), note);
+			byName.put(TsgHubUi.playerKey(TsgHubUi.str(note, "displayName")), note);
 		}
 		List<JsonObject> online = new ArrayList<>();
 		Set<String> seen = new HashSet<>();
@@ -197,11 +197,11 @@ final class TsgHubPresence
 		{
 			if (!presence.get(i).isJsonObject()) continue;
 			JsonObject member = presence.get(i).getAsJsonObject();
-			if (seen.add(PlayerNames.normalize(TsgHubUi.str(member, "displayName")))) online.add(member);
+			if (seen.add(TsgHubUi.playerKey(TsgHubUi.str(member, "displayName")))) online.add(member);
 		}
 		for (Map.Entry<String, Integer> entry : chatWorlds.entrySet())
 		{
-			if (!seen.add(PlayerNames.normalize(entry.getKey()))) continue;
+			if (!seen.add(TsgHubUi.playerKey(entry.getKey()))) continue;
 			JsonObject member = new JsonObject();
 			member.addProperty("displayName", entry.getKey());
 			if (entry.getValue() > 0) member.addProperty("world", entry.getValue());
@@ -210,7 +210,7 @@ final class TsgHubPresence
 		List<JsonObject> offline = new ArrayList<>();
 		for (String name : clanNames)
 		{
-			if (!seen.add(PlayerNames.normalize(name))) continue;
+			if (!seen.add(TsgHubUi.playerKey(name))) continue;
 			JsonObject member = new JsonObject();
 			member.addProperty("displayName", name);
 			offline.add(member);
@@ -224,7 +224,7 @@ final class TsgHubPresence
 		JsonArray out = new JsonArray();
 		for (JsonObject member : members)
 		{
-			JsonObject note = notes.get(PlayerNames.normalize(TsgHubUi.str(member, "displayName")));
+			JsonObject note = notes.get(TsgHubUi.playerKey(TsgHubUi.str(member, "displayName")));
 			if (note != null)
 			{
 				for (String field : new String[] {"altOf", "alts", "note", "lastSeenAt"})
