@@ -1208,7 +1208,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 				leaderListed = true;
 				names.add(0, "<font color='" + toHexColor(TEXT) + "'>" + escape(name) + "</font>");
 			}
-			else names.add("<font color='" + toHexColor(MUTED) + "'>" + escape(name) + "</font>");
+			else names.add(escape(name));
 		}
 		JPanel card = card();
 		boolean mine = current != null && str(group, "id").equals(str(current, "id"));
@@ -1223,24 +1223,24 @@ final class TsgHubSidebarPanel extends PluginPanel
 			heading.setIcon(new LockIcon());
 			heading.setIconTextGap(5);
 		}
-		JPanel top = row();
-		top.add(heading, BorderLayout.CENTER);
-		if (!mine && !locked)
-			top.add(label(groupBusy ? "..." : current != null ? "Switch" : "Join", ACCENT, smallFont()), BorderLayout.EAST);
+		int myWorld = myPartyWorld();
+		boolean sameWorld = !mine && world > 0 && world == myWorld;
+		JPanel top = world > 0 ? row(heading, label("W" + world, sameWorld ? SUCCESS : MUTED, smallFont())) : row(heading, new JLabel());
 
-		JPanel text = stack();
-		text.add(top);
-		text.add(Box.createVerticalStrut(3));
 		Map.Entry<String, Integer> area = areaSummary(members);
-		String here = area != null && area.getValue() < members.size() ? " · " + area.getValue() + " here" : "";
-		String meta = escape((members.size() == 1 ? "1 member" : members.size() + " members") + here + (world > 0 ? " · W" + world : "")
-			+ (!leaderListed && !leader.isEmpty() ? " · led by " + leader : ""));
-		if (area != null && !area.getKey().equalsIgnoreCase(title))
-			meta += " · <font color='" + toHexColor(SUCCESS) + "'>" + escape(area.getKey()) + "</font>";
-		text.add(label(html(meta, CARD_TEXT_W), MUTED, smallFont()));
-		text.add(Box.createVerticalStrut(4));
-		text.add(label(html(String.join(", ", names), CARD_TEXT_W), MUTED, smallFont()));
+		boolean showArea = area != null && !area.getKey().equalsIgnoreCase(title) && (area.getValue() >= 2 || members.size() == 1);
+		String extra = showArea ? area.getKey() : leaderListed || leader.isEmpty() ? "" : "Led by " + leader;
+		JLabel detail = shrinkable(showArea ? label(extra, SUCCESS, smallFont()) : caption(extra));
+		detail.putClientProperty("html.disable", Boolean.TRUE);
+		JLabel who = label(html(String.join(", ", names), CARD_TEXT_W), MUTED, smallFont());
+		JPanel text = extra.isEmpty() ? twoLines(top, who) : twoLines(top, detail);
+		if (!extra.isEmpty())
+		{
+			text.add(Box.createVerticalStrut(2));
+			text.add(who);
+		}
 		card.add(text, BorderLayout.CENTER);
+
 		if (locked)
 		{
 			card.setToolTipText("The leader has locked this party");
@@ -1264,6 +1264,15 @@ final class TsgHubSidebarPanel extends PluginPanel
 			plugin.groups().join(str(group, "id"));
 		});
 		return fitHeight(card);
+	}
+
+	private int myPartyWorld()
+	{
+		if (groupList == null) return 0;
+		for (JsonObject group : objects(groupList))
+			for (JsonObject member : objects(array(group, "members")))
+				if (samePlayer(str(member, "displayName"), plugin.getDetectedPlayerName())) return integer(member, "world", 0);
+		return 0;
 	}
 
 	static String partyTitle(JsonObject group)
