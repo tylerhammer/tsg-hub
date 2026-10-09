@@ -27,6 +27,7 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
@@ -75,6 +76,9 @@ import net.runelite.client.game.ChatIconManager;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.ItemStack;
 import net.runelite.client.game.SpriteManager;
+import net.runelite.client.game.WorldService;
+import net.runelite.client.hiscore.HiscoreClient;
+import net.runelite.client.hiscore.HiscoreResult;
 import net.runelite.client.party.PartyService;
 import net.runelite.client.party.WSClient;
 import net.runelite.client.plugins.Plugin;
@@ -108,6 +112,8 @@ public class TsgHubPlugin extends Plugin
 	@Inject private PartyService partyService;
 	@Inject private WSClient wsClient;
 	@Inject private SpriteManager spriteManager;
+	@Inject private WorldService worldService;
+	@Inject private HiscoreClient hiscoreClient;
 	@Inject private EventBus eventBus;
 	@Inject @Named("developerMode") private boolean developerMode;
 	private TsgHubPanel panel;
@@ -153,6 +159,7 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubGroups groups;
 	private TsgHubPresence presence;
 	private TsgHubDrops drops;
+	private TsgHubHopper hopper;
 	private GroupTracker groupTracker;
 
 	@Override
@@ -199,6 +206,7 @@ public class TsgHubPlugin extends Plugin
 		presence = new TsgHubPresence(this, client, clientThread, chatIconManager, spriteManager, executor, this::api, () -> sidebar, socket, this::adminKey);
 		executor.scheduleAtFixedRate(unlessLive(presence::autoRefresh), TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
 		drops = new TsgHubDrops(this, client, clientThread, executor, this::api, () -> sidebar);
+		hopper = new TsgHubHopper(client, clientThread, worldService);
 		executor.scheduleAtFixedRate(unlessLive(drops::autoRefresh), TsgHubDrops.REFRESH_SECONDS, TsgHubDrops.REFRESH_SECONDS, TimeUnit.SECONDS);
 		navigationButton = NavigationButton.builder()
 			.tooltip("TSG Hub")
@@ -276,6 +284,9 @@ public class TsgHubPlugin extends Plugin
 	TsgHubGroups groups() { return groups; }
 	TsgHubPresence presence() { return presence; }
 	TsgHubDrops drops() { return drops; }
+	void hopTo(int world) { if (hopper != null) hopper.hop(world); }
+	SpriteManager sprites() { return spriteManager; }
+	CompletableFuture<HiscoreResult> lookupHiscores(String name, int accountType) { return hiscoreClient.lookupAsync(name, TsgHubHiscores.endpoint(accountType)); }
 
 	String currentArea() { return presence == null ? "" : presence.area(); }
 	boolean inClanChat() { return inClanChat; }
@@ -1553,6 +1564,7 @@ public class TsgHubPlugin extends Plugin
 	public void onGameTick(GameTick tick)
 	{
 		if (presence != null) presence.onGameTick();
+		if (hopper != null) hopper.onGameTick();
 		if (clanCheckTicks > 0)
 		{
 			clanCheckTicks--;
