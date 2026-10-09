@@ -607,7 +607,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	private void setMemberTip(JComponent card, JsonObject member, String note)
 	{
-		String tip = rosterTooltip(str(member, "rank"), TsgHubPresence.accountTypeName(member), str(member, "altOf"), array(member, "alts"), note,
+		String tip = rosterTooltip(array(member, "previousNames"), str(member, "altOf"), array(member, "alts"), note,
 			visibleWarnings(member), clock.instant(), ZoneId.systemDefault());
 		fullTextTooltip(card, () -> tip);
 	}
@@ -758,16 +758,20 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 	}
 
-	static String rosterTooltip(String rank, String accountType, String altOf, JsonArray alts, String note, JsonArray warnings, Instant now, ZoneId zone)
+	static String rosterTooltip(JsonArray previousNames, String altOf, JsonArray alts, String note, JsonArray warnings, Instant now, ZoneId zone)
 	{
-		List<String> names = new ArrayList<>();
-		for (int i = 0; i < alts.size(); i++) if (alts.get(i).isJsonPrimitive()) names.add(alts.get(i).getAsString());
+		List<String> names = strings(alts);
+		List<String> formerly = strings(previousNames);
+		Collections.reverse(formerly);
 		List<String> lines = new ArrayList<>();
-		if (!rank.isEmpty()) lines.add("<b>" + escape(rank) + "</b>");
-		if (!accountType.isEmpty()) lines.add(tipLine(MUTED, escape(accountType)));
 		if (!altOf.isEmpty()) lines.add(tipLine(ACCENT, "Alt of <b>" + escape(altOf) + "</b>"));
 		if (!names.isEmpty()) lines.add(tipLine(MUTED, (names.size() == 1 ? "Alt: " : "Alts: ") + escape(String.join(", ", names))));
 		String sections = "";
+		if (!formerly.isEmpty())
+		{
+			sections += tipSection(lines.isEmpty(), tipLine(MUTED, "<b>PREVIOUS NAMES</b>"))
+				+ tipCard(TIP_CARD, escape(String.join("\n", formerly)).replace("\n", "<br>"));
+		}
 		if (!note.isEmpty())
 		{
 			sections += tipSection(lines.isEmpty() && sections.isEmpty(), tipLine(WARNING, "<b>ADMIN NOTE</b>"))
@@ -781,6 +785,13 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 		if (lines.isEmpty() && sections.isEmpty()) return "";
 		return String.join("<br>", lines) + sections;
+	}
+
+	private static List<String> strings(JsonArray array)
+	{
+		List<String> out = new ArrayList<>();
+		for (int i = 0; i < array.size(); i++) if (array.get(i).isJsonPrimitive()) out.add(array.get(i).getAsString());
+		return out;
 	}
 
 	private static String tipSection(boolean first, String heading)

@@ -48,7 +48,6 @@ final class TsgHubPresence
 	private static final long HEARTBEAT_MILLIS = 30_000;
 	private static final long MIN_GAP_MILLIS = 5_000;
 	private static final int SLAYER_BOSS_TARGET = 98;
-	private static final String[] ACCOUNT_TYPES = {"", "Ironman", "Ultimate Ironman", "Hardcore Ironman", "Group Ironman", "Hardcore Group Ironman", "Unranked Group Ironman"};
 	private static final IconID[] ACCOUNT_ICONS = {null, IconID.IRONMAN, IconID.ULTIMATE_IRONMAN, IconID.HARDCORE_IRONMAN, IconID.GROUP_IRONMAN, IconID.HARDCORE_GROUP_IRONMAN, IconID.UNRANKED_GROUP_IRONMAN};
 
 	private final TsgHubPlugin plugin;
@@ -239,7 +238,7 @@ final class TsgHubPresence
 			JsonObject note = notes.get(TsgHubUi.playerKey(TsgHubUi.str(member, "displayName")));
 			if (note != null)
 			{
-				for (String field : new String[] {"altOf", "alts", "note", "lastSeenAt", "warnings", "accountType"})
+				for (String field : new String[] {"altOf", "alts", "note", "lastSeenAt", "warnings", "accountType", "previousNames"})
 				{
 					if (note.has(field)) member.add(field, note.get(field));
 				}
@@ -356,12 +355,7 @@ final class TsgHubPresence
 	static int accountType(JsonObject member)
 	{
 		int type = TsgHubUi.integer(member, "accountType", 0);
-		return type > 0 && type < ACCOUNT_TYPES.length ? type : 0;
-	}
-
-	static String accountTypeName(JsonObject member)
-	{
-		return ACCOUNT_TYPES[accountType(member)];
+		return type > 0 && type < ACCOUNT_ICONS.length ? type : 0;
 	}
 
 	private JsonObject snapshot()
