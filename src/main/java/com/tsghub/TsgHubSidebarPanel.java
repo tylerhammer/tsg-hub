@@ -2051,14 +2051,13 @@ final class TsgHubSidebarPanel extends PluginPanel
 		boolean manual = "manual".equals(str(task, "type"));
 
 		JPanel card = card();
-		JLabel name = label(html(escape(str(task, "title")), CARD_TEXT_W - (completed ? 18 : 0)),
+		JLabel name = label(html(escape(str(task, "title")), CARD_TITLE_W - (completed ? 18 : 0)),
 			completed ? MUTED : TEXT, boldFont());
 		if (completed) name.setIcon(new CheckIcon());
-		card.add(name, BorderLayout.NORTH);
+		card.add(row(name, north(badge(integer(task, "points", 1) + " pts", completed ? MUTED : ACCENT))), BorderLayout.NORTH);
 
 		JPanel body = stack();
-		JLabel type = caption(taskTypeLabel(task) + (individual ? " · Everyone" : solo ? " · Solo" : " · Team"));
-		body.add(fitHeight(row(type, badge(integer(task, "points", 1) + " pts", completed ? MUTED : ACCENT))));
+		body.add(caption(taskTypeLabel(task) + (individual ? " · Everyone" : solo ? " · Solo" : " · Team")));
 		String description = str(task, "description").trim();
 		if (!description.isEmpty() && !completed) body.add(cardNote(description));
 
