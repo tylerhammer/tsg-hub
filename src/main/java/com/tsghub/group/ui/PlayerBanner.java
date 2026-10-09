@@ -48,9 +48,9 @@ public class PlayerBanner extends JPanel
 	private static final String SPRITE_KEY = "tsghub.sprite";
 
 	private final SpriteManager spriteManager;
-	private final JLabel nameLabel = new JLabel();
+	private final JLabel nameLabel = TsgHubTheme.fullTextLabel();
 	private final JLabel worldLabel = new JLabel();
-	private final JLabel areaLabel = new JLabel();
+	private final JLabel areaLabel = TsgHubTheme.fullTextLabel();
 	private final JLabel spellbookLabel = new JLabel();
 	private final JLabel hpLabel = statLabel("Hitpoints");
 	private final JLabel prayerLabel = statLabel("Prayer");
@@ -145,7 +145,6 @@ public class PlayerBanner extends JPanel
 		String text = !online ? "Last seen stats" : !inGame ? "Not logged in" : area;
 		areaLabel.setText(text);
 		areaLabel.setForeground(inGame && !area.isEmpty() ? TsgHubTheme.SUCCESS : TsgHubTheme.MUTED);
-		areaLabel.setToolTipText(area.isEmpty() ? null : PartyStyle.plainTooltip(area));
 	}
 
 	public void setCurrentHeart(BufferedImage img)

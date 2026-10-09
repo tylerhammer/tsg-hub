@@ -69,6 +69,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private static final DateTimeFormatter WARNING_DAY = DateTimeFormatter.ofPattern("d MMM", java.util.Locale.ENGLISH);
 	private static final DateTimeFormatter WARNING_DAY_YEAR = DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale.ENGLISH);
 	private static final int CARD_TITLE_W = 150;
+	private static final int CARD_CONTRIBUTORS = 2;
 	private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("h:mm a");
 
 	private enum View { LOGGED_OUT, NOT_IN_CLAN, SHARING_OFF, HOME, EVENTS, PREVIEW, BOARD, COMPETITION_PREVIEW, COMPETITION, DROP_PARTY, GROUPS, MEMBERS, DROPS }
@@ -161,16 +162,14 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private static final class Section
 	{
 		private final String name;
-		private final String tooltip;
 		private final Icon icon;
 		private final Runnable open;
 		private final Supplier<String> summary;
 		private final BooleanSupplier live;
 
-		Section(String name, String tooltip, Icon icon, Runnable open, Supplier<String> summary, BooleanSupplier live)
+		Section(String name, Icon icon, Runnable open, Supplier<String> summary, BooleanSupplier live)
 		{
 			this.name = name;
-			this.tooltip = tooltip;
 			this.icon = icon;
 			this.open = open;
 			this.summary = summary;
@@ -184,10 +183,10 @@ final class TsgHubSidebarPanel extends PluginPanel
 		this.plugin = plugin;
 		this.groupMembers = groupMembers;
 		sections = Arrays.asList(
-			new Section("Events", "Clan events and your team's board", new CalendarIcon(), this::openEvents, this::eventsSummary, () -> liveEvents() > 0),
-			new Section("Parties", "Join a clanmate's party or start one", new PartyIcon(), this::showParties, this::partiesSummary, () -> plugin.groups().inGroup()),
-			new Section("Members", "See what clanmates are up to", new MembersIcon(), this::showMembers, this::membersSummary, () -> onlineCount() > 0),
-			new Section("Drops", "Recent big drops across the clan", new DropsIcon(), this::showDrops, () -> "", () -> false));
+			new Section("Events", new CalendarIcon(), this::openEvents, this::eventsSummary, () -> liveEvents() > 0),
+			new Section("Parties", new PartyIcon(), this::showParties, this::partiesSummary, () -> plugin.groups().inGroup()),
+			new Section("Members", new MembersIcon(), this::showMembers, this::membersSummary, () -> onlineCount() > 0),
+			new Section("Drops", new DropsIcon(), this::showDrops, () -> "", () -> false));
 		setLayout(new BorderLayout(0, 6));
 		setBackground(BACKGROUND);
 		setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -442,7 +441,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			page.add(Box.createVerticalStrut(GAP_S));
 			JLabel notice = label("Update available. Restart RuneLite.", WARNING, smallFont());
 			notice.setHorizontalAlignment(JLabel.CENTER);
-			notice.setToolTipText("TSG Hub " + update + " is available. Restart RuneLite to update.");
+			notice.setToolTipText("Version " + update);
 			page.add(fitHeight(notice));
 		}
 		refreshPage();
@@ -474,7 +473,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 			((JComponent) part).setAlignmentX(CENTER_ALIGNMENT);
 			if (part instanceof JLabel) ((JLabel) part).setHorizontalAlignment(JLabel.CENTER);
 		}
-		tile.setToolTipText(section.tooltip);
 		clickable(tile, section.open);
 		return tile;
 	}
@@ -607,11 +605,11 @@ final class TsgHubSidebarPanel extends PluginPanel
 		return label;
 	}
 
-	private void setMemberTip(JComponent card, JsonObject member, String detail, boolean sameWorld, String seen, String note)
+	private void setMemberTip(JComponent card, JsonObject member, String note)
 	{
-		String tip = rosterTooltip(str(member, "rank"), str(member, "altOf"), array(member, "alts"), detail, sameWorld, seen, note,
+		String tip = rosterTooltip(str(member, "rank"), str(member, "altOf"), array(member, "alts"), note,
 			visibleWarnings(member), clock.instant(), ZoneId.systemDefault());
-		if (!tip.isEmpty()) card.setToolTipText(tip);
+		fullTextTooltip(card, () -> tip);
 	}
 
 	private void addMemberBadges(JPanel badges, JsonObject member, String note, boolean more)
@@ -664,7 +662,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			text.add(bottom);
 		}
 		card.add(text, BorderLayout.CENTER);
-		setMemberTip(card, member, detail, sameWorld, "", note);
+		setMemberTip(card, member, note);
 		addNoteMenu(card, member);
 		return fitHeight(card);
 	}
@@ -682,7 +680,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		addMemberBadges(badges, member, note, !seen.isEmpty());
 		if (!seen.isEmpty()) badges.add(label(seen, MUTED, small));
 		if (badges.getComponentCount() > 0) row.add(badges, BorderLayout.EAST);
-		setMemberTip(row, member, "", false, seen, note);
+		setMemberTip(row, member, note);
 		addNoteMenu(row, member);
 		return fitHeight(row);
 	}
@@ -760,8 +758,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 	}
 
-	static String rosterTooltip(String rank, String altOf, JsonArray alts, String detail, boolean sameWorld, String seen, String note,
-		JsonArray warnings, Instant now, ZoneId zone)
+	static String rosterTooltip(String rank, String altOf, JsonArray alts, String note, JsonArray warnings, Instant now, ZoneId zone)
 	{
 		List<String> names = new ArrayList<>();
 		for (int i = 0; i < alts.size(); i++) if (alts.get(i).isJsonPrimitive()) names.add(alts.get(i).getAsString());
@@ -769,9 +766,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (!rank.isEmpty()) lines.add("<b>" + escape(rank) + "</b>");
 		if (!altOf.isEmpty()) lines.add(tipLine(ACCENT, "Alt of <b>" + escape(altOf) + "</b>"));
 		if (!names.isEmpty()) lines.add(tipLine(MUTED, (names.size() == 1 ? "Alt: " : "Alts: ") + escape(String.join(", ", names))));
-		if (!detail.isEmpty()) lines.add(tipLine(MUTED, escape(detail)));
-		if (sameWorld) lines.add(tipLine(SUCCESS, "On your world"));
-		if (!seen.isEmpty()) lines.add(tipLine(MUTED, "Last seen " + seen));
 		String sections = "";
 		if (!note.isEmpty())
 		{
@@ -785,8 +779,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 				+ warningCards(history, now, zone);
 		}
 		if (lines.isEmpty() && sections.isEmpty()) return "";
-		String body = "<div style='padding:2px'>" + String.join("<br>", lines) + sections + "</div>";
-		return sections.isEmpty() ? "<html>" + body + "</html>" : html(body, 240);
+		return String.join("<br>", lines) + sections;
 	}
 
 	private static String tipSection(boolean first, String heading)
@@ -1067,7 +1060,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (icon != null) card.add(icon, BorderLayout.WEST);
 
 		JLabel name = shrinkable(boldLabel(dropItem(drop)));
-		name.setToolTipText(str(drop, "item"));
 		JPanel extras = panel(new FlowLayout(FlowLayout.RIGHT, 3, 0));
 		for (String tag : dropTags(drop)) extras.add(badge(tag, TAG_COLORS.getOrDefault(tag, TAG_DEFAULT)));
 		long value = drop.has("value") ? drop.get("value").getAsLong() : 0;
@@ -1075,6 +1067,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		card.add(fillWidth(twoLines(
 			row(name, caption(dropWhen(str(drop, "receivedAt"), now, zone))),
 			row(shrinkable(label(player, ACCENT, smallFont())), extras))), BorderLayout.CENTER);
+		fullTextTooltip(card, null);
 		return fitHeight(card);
 	}
 
@@ -1662,12 +1655,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 		card.add(text, BorderLayout.CENTER);
 
-		if (locked)
-		{
-			card.setToolTipText("The leader has locked this party");
-			return fitHeight(card);
-		}
-		card.setToolTipText(mine ? "Back to your party" : (current != null ? "Switch to " : "Join ") + title);
+		fullTextTooltip(card, null);
+		if (locked) return fitHeight(card);
 		clickable(card, () -> {
 			if (mine)
 			{
@@ -1871,9 +1860,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		String type = str(event, "type");
 		boolean dropParty = "drop-party".equals(type);
 		boolean competition = "skill".equals(type) || "boss".equals(type);
-		String action = dropParty ? "See when and where" : joined ? (competition ? "Open the leaderboard" : "Open your team's board")
-			: competition ? "Join this competition" : "Join this event with a team code";
-		card.setToolTipText("<html>" + escape(eventWhen(event)) + "<br>" + action + "</html>");
+		fullTextTooltip(card, () -> escape(eventWhen(event)));
 		clickable(card, () -> {
 			String id = str(event, "id");
 			if (dropParty) showDropParty(event);
@@ -2116,7 +2103,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		boolean setTile = array(progress, "alternatives").size() > 0 || progress.has("items");
 		if (!individual && !solo && (!setTile || completed))
 		{
-			String amounts = contributorsHtml(progress, " · ", 2, boardDisplayName);
+			String amounts = contributorsHtml(progress, " · ", CARD_CONTRIBUTORS, boardDisplayName);
 			if (!amounts.isEmpty()) body.add(cardNoteHtml(amounts));
 		}
 		if (pending && !completed) body.add(label("Awaiting admin review", WARNING, smallFont()));
@@ -2124,8 +2111,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		addLineSpacing(body);
 		addScopeIcon(body, solo, individual);
 		card.add(body, BorderLayout.CENTER);
-		String detail = taskDetail(progress, individual, solo, completed);
-		card.setToolTipText("<html><b>" + escape(str(task, "title")) + "</b>" + (detail == null ? "" : "<br>" + detail) + "</html>");
+		lazyTooltip(card, () -> taskTooltip(task, progress, truncated(name)));
 		return fitHeight(card);
 	}
 
@@ -2228,48 +2214,60 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 	}
 
-	private String taskDetail(JsonObject progress, boolean individual, boolean solo, boolean completed)
+	private String taskTooltip(JsonObject task, JsonObject progress, boolean titleCut)
 	{
-		String members = memberTooltip(progress, individual, solo);
-		if (completed || individual || solo || array(progress, "alternatives").size() == 0 && !progress.has("items")) return members;
-		List<String> lines = new ArrayList<>();
+		boolean completed = bool(progress, "completed");
+		boolean individual = "individual".equals(str(task, "scope"));
+		boolean solo = "solo".equals(str(task, "scope"));
+		String head = titleCut ? "<b>" + escape(str(task, "title")) + "</b>" : "";
+		String description = str(task, "description").trim();
+		if (completed && !description.isEmpty()) head += (head.isEmpty() ? "" : "<br>") + escape(description).replace("\n", "<br>");
+
+		String sections = "";
+		if (!completed && !individual && !solo) sections += setSections(progress, head.isEmpty());
+		if (individual || solo) sections += memberSections(progress, solo, head.isEmpty());
+		else if (sections.isEmpty() && array(progress, "contributors").size() > CARD_CONTRIBUTORS)
+		{
+			sections += tipSection(head.isEmpty(), tipLine(MUTED, "<b>CONTRIBUTORS</b>")) + tipCard(TIP_CARD, contributorsHtml(progress, "<br>", 50, boardDisplayName));
+		}
+		if (head.isEmpty() && sections.isEmpty()) return null;
+		return html("<div style='padding:2px'>" + head + sections + "</div>", 240);
+	}
+
+	private String setSections(JsonObject progress, boolean first)
+	{
+		if (array(progress, "alternatives").size() == 0 && !progress.has("items")) return "";
+		StringBuilder out = new StringBuilder();
 		for (SetLine set : setLines(progress, true))
 		{
 			if (set.have == 0) continue;
-			lines.add("<b>" + escape(set.name) + " " + set.have + "/" + set.target + "</b>");
-			lines.add("Have: " + set.foundHtml(boardDisplayName));
-			if (!set.needed.isEmpty()) lines.add("Need: " + escape(String.join(", ", set.needed)));
+			if (set.found.isEmpty()) continue;
+			out.append(tipCard(ACCENT, "<b>" + escape(set.name) + "</b><br>" + set.foundHtml(boardDisplayName)));
 		}
-		return lines.isEmpty() ? members : String.join("<br>", lines);
+		return out.length() == 0 ? "" : tipSection(first, tipLine(MUTED, "<b>FOUND</b>")) + out;
 	}
 
-	private String memberTooltip(JsonObject progress, boolean individual, boolean solo)
+	private String memberSections(JsonObject progress, boolean solo, boolean first)
 	{
-		JsonArray members = array(progress, "members");
-		if (individual || solo)
+		List<JsonObject> members = objects(array(progress, "members"));
+		if (members.isEmpty()) return "";
+		members.sort((a, b) -> integer(b, "progress", 0) - integer(a, "progress", 0));
+		List<String> done = new ArrayList<>();
+		List<String> waiting = new ArrayList<>();
+		for (JsonObject member : members)
 		{
-			if (members.size() == 0) return null;
-			List<JsonObject> sorted = objects(members);
-			sorted.sort((a, b) -> integer(b, "progress", 0) - integer(a, "progress", 0));
-			List<String> done = new ArrayList<>();
-			List<String> waiting = new ArrayList<>();
-			for (JsonObject member : sorted)
-			{
-				String name = nameHtml(str(member, "displayName"), boardDisplayName);
-				int have = integer(member, "progress", 0);
-				int need = integer(member, "target", 1);
-				if (solo) waiting.add(name + " " + have + "/" + need);
-				else if (bool(member, "completed")) done.add(name);
-				else waiting.add(need > 1 ? name + " " + have + "/" + need : name);
-			}
-			if (solo) return String.join("<br>", waiting);
-			StringBuilder text = new StringBuilder();
-			text.append("<b>Done:</b> ").append(done.isEmpty() ? "nobody yet" : String.join(", ", done));
-			text.append("<br><b>Still need:</b> ").append(waiting.isEmpty() ? "nobody" : String.join(", ", waiting));
-			return text.toString();
+			String name = nameHtml(str(member, "displayName"), boardDisplayName);
+			int have = integer(member, "progress", 0);
+			int need = integer(member, "target", 1);
+			if (solo) waiting.add(name + " " + tipLine(MUTED, have + "/" + need));
+			else if (bool(member, "completed")) done.add(name);
+			else waiting.add(need > 1 ? name + " " + tipLine(MUTED, have + "/" + need) : name);
 		}
-		String contributors = contributorsHtml(progress, "<br>", 50, boardDisplayName);
-		return contributors.isEmpty() ? null : "<b>Contributors</b><br>" + contributors;
+		if (solo) return tipSection(first, tipLine(MUTED, "<b>STANDINGS</b>")) + tipCard(TIP_CARD, String.join("<br>", waiting));
+		String out = "";
+		if (!done.isEmpty()) out += tipSection(first, tipLine(SUCCESS, "<b>DONE</b> ") + tipLine(MUTED, String.valueOf(done.size()))) + tipCard(SUCCESS, String.join("<br>", done));
+		if (!waiting.isEmpty()) out += tipSection(first && done.isEmpty(), tipLine(MUTED, "<b>STILL NEED</b> " + waiting.size())) + tipCard(TIP_CARD, String.join("<br>", waiting));
+		return out;
 	}
 
 	private void addSoloLeader(JPanel body, JsonObject progress)

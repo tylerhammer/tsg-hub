@@ -659,7 +659,7 @@ final class TsgHubPanel extends JPanel
 			if (selected) card.setBorder(selectedBorder(true, CARD_HOVER));
 			card.setBackground(selected ? CARD_HOVER : BACKGROUND);
 			card.add(eventLines(event, plugin::getCoinImage), BorderLayout.CENTER);
-			card.setToolTipText(eventWhen(event));
+			fullTextTooltip(card, () -> escape(eventWhen(event)));
 			clickable(card, () -> {
 				selectedEventId = id;
 				setManagedEvents(managedEvents);

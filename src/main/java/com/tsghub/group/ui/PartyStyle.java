@@ -15,11 +15,6 @@ public final class PartyStyle
 	{
 	}
 
-	public static String plainTooltip(String text)
-	{
-		return "<html>" + text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") + "</html>";
-	}
-
 	public static Color levelColor(int current, int max)
 	{
 		if (max <= 0) return TsgHubTheme.TEXT;

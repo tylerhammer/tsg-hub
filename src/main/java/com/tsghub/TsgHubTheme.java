@@ -3,7 +3,11 @@ package com.tsghub;
 import java.awt.Color;
 import java.awt.Font;
 import javax.swing.BorderFactory;
+import java.awt.event.MouseEvent;
+import javax.swing.Icon;
 import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.ToolTipManager;
 import javax.swing.border.Border;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
@@ -82,6 +86,36 @@ public final class TsgHubTheme
 	{
 		return BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0, SELECTED_BAR, 0, 0, selected ? ACCENT : idle),
 			BorderFactory.createEmptyBorder(CARD_PAD_V, CARD_PAD_H - SELECTED_BAR, CARD_PAD_V, CARD_PAD_H));
+	}
+
+	public static boolean truncated(JLabel label)
+	{
+		String text = label.getText();
+		if (text == null || text.isEmpty() || text.startsWith("<html") || label.getWidth() <= 0) return false;
+		Icon icon = label.getIcon();
+		int needed = label.getFontMetrics(label.getFont()).stringWidth(text) + (icon == null ? 0 : icon.getIconWidth() + label.getIconTextGap());
+		return needed > label.getWidth();
+	}
+
+	public static JLabel fullTextLabel()
+	{
+		JLabel label = new JLabel()
+		{
+			@Override
+			public String getToolTipText(MouseEvent event)
+			{
+				String extra = super.getToolTipText(event);
+				if (!truncated(this)) return extra;
+				return "<html><b>" + escape(getText()) + "</b>" + (extra == null ? "" : "<br>" + escape(extra)) + "</html>";
+			}
+		};
+		ToolTipManager.sharedInstance().registerComponent(label);
+		return label;
+	}
+
+	private static String escape(String text)
+	{
+		return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
 	}
 
 	public static void highlightSelf(JComponent card)

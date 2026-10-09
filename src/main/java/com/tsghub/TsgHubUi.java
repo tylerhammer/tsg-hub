@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.LongFunction;
+import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
@@ -61,6 +62,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JToolTip;
 import javax.swing.Scrollable;
 import javax.swing.Timer;
+import javax.swing.ToolTipManager;
 import javax.swing.border.Border;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.ui.ColorScheme;
@@ -71,6 +73,7 @@ import net.runelite.client.util.SwingUtil;
 @Slf4j
 final class TsgHubUi
 {
+	private static final String LAZY_TOOLTIP = "tsgHub.lazyTooltip";
 	private static final DateTimeFormatter DATE_WITH_YEAR = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.US);
 	private static final int COIN_ICON_W = 18;
 	private static final int COIN_ICON_H = 16;
@@ -265,6 +268,14 @@ final class TsgHubUi
 	{
 		JPanel panel = new JPanel(new BorderLayout(6, 4))
 		{
+			@Override
+			@SuppressWarnings("unchecked")
+			public String getToolTipText(MouseEvent event)
+			{
+				Object tip = getClientProperty(LAZY_TOOLTIP);
+				return tip instanceof Supplier ? ((Supplier<String>) tip).get() : super.getToolTipText(event);
+			}
+
 			// Anchor tooltips beside the card so they don't follow the mouse.
 			@Override
 			public Point getToolTipLocation(MouseEvent event)
@@ -280,6 +291,34 @@ final class TsgHubUi
 		panel.setBorder(cardBorder());
 		panel.setAlignmentX(Component.LEFT_ALIGNMENT);
 		return panel;
+	}
+
+	static void lazyTooltip(JComponent component, Supplier<String> tip)
+	{
+		component.putClientProperty(LAZY_TOOLTIP, tip);
+		ToolTipManager.sharedInstance().registerComponent(component);
+	}
+
+	static void fullTextTooltip(JComponent card, Supplier<String> extra)
+	{
+		lazyTooltip(card, () -> {
+			List<String> parts = new ArrayList<>();
+			collectCut(card, parts);
+			String more = extra == null ? null : extra.get();
+			if (more != null && !more.isEmpty()) parts.add(more);
+			if (parts.isEmpty()) return null;
+			String body = String.join("<br>", parts);
+			return body.contains("<table") ? html("<div style='padding:2px'>" + body + "</div>", 240) : "<html>" + body + "</html>";
+		});
+	}
+
+	private static void collectCut(Container parent, List<String> parts)
+	{
+		for (Component child : parent.getComponents())
+		{
+			if (child instanceof JLabel && truncated((JLabel) child)) parts.add(parts.isEmpty() ? "<b>" + escape(((JLabel) child).getText()) + "</b>" : escape(((JLabel) child).getText()));
+			else if (child instanceof Container) collectCut((Container) child, parts);
+		}
 	}
 
 	static <T extends JComponent> T fitHeight(T component)
