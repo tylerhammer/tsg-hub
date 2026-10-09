@@ -4,8 +4,10 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
@@ -32,6 +34,10 @@ final class TsgHubSocket
 		void onAnnouncement(String text);
 
 		void onUpdateAvailable(String version);
+
+		void onSubscribed(String eventId);
+
+		void onProgress(String eventId, long gained, Long rank);
 	}
 
 	private static final int CLOSE_NORMAL = 1000;
@@ -74,6 +80,7 @@ final class TsgHubSocket
 	private final Listener listener;
 	private final Map<String, Subscription> subscriptions = new HashMap<>();
 	private final Map<String, String> rejectedTokens = new HashMap<>();
+	private final Set<String> confirmed = new HashSet<>();
 	private WebSocket socket;
 	private JsonObject presence;
 	private String adminToken = "";
@@ -113,6 +120,7 @@ final class TsgHubSocket
 		rejectedClan = "";
 		subscriptions.clear();
 		rejectedTokens.clear();
+		confirmed.clear();
 		presence = null;
 		adminToken = "";
 	}
@@ -121,6 +129,7 @@ final class TsgHubSocket
 	{
 		subscriptions.keySet().removeIf(eventId -> {
 			if (tokens.containsKey(eventId)) return false;
+			confirmed.remove(eventId);
 			send("unsubscribe", eventId, null, false);
 			return true;
 		});
@@ -129,6 +138,7 @@ final class TsgHubSocket
 			Subscription wanted = new Subscription(entry.getValue(), inClanChat);
 			if (wanted.equals(subscriptions.get(entry.getKey())) || wanted.token.equals(rejectedTokens.get(entry.getKey()))) continue;
 			subscriptions.put(entry.getKey(), wanted);
+			confirmed.remove(entry.getKey());
 			send("subscribe", entry.getKey(), wanted.token, wanted.inClanChat);
 		}
 	}
@@ -145,6 +155,33 @@ final class TsgHubSocket
 		presence = payload;
 		if (live) sendPresence();
 		return live;
+	}
+
+	synchronized boolean streaming(String eventId)
+	{
+		return ready && socket != null && confirmed.contains(eventId);
+	}
+
+	synchronized boolean xp(String skill, int xp, int tick)
+	{
+		if (!ready || socket == null || confirmed.isEmpty()) return false;
+		JsonObject message = new JsonObject();
+		message.addProperty("type", "xp");
+		message.addProperty("skill", skill);
+		message.addProperty("xp", xp);
+		message.addProperty("tick", tick);
+		return socket.send(message.toString());
+	}
+
+	synchronized void rewardInterface(int group, boolean open, int tick)
+	{
+		if (!ready || socket == null || confirmed.isEmpty()) return;
+		JsonObject message = new JsonObject();
+		message.addProperty("type", "interface");
+		message.addProperty("group", group);
+		message.addProperty("open", open);
+		message.addProperty("tick", tick);
+		socket.send(message.toString());
 	}
 
 	synchronized void admin(String token)
@@ -184,6 +221,7 @@ final class TsgHubSocket
 		if (socket != null) socket.close(CLOSE_NORMAL, null);
 		socket = null;
 		ready = false;
+		confirmed.clear();
 	}
 
 	private void send(String type, String eventId, String token, boolean inClanChat)
@@ -217,8 +255,16 @@ final class TsgHubSocket
 	private synchronized void rejected(WebSocket ws, String eventId)
 	{
 		if (ws != socket) return;
+		confirmed.remove(eventId);
 		Subscription subscription = subscriptions.remove(eventId);
 		if (subscription != null) rejectedTokens.put(eventId, subscription.token);
+	}
+
+	private synchronized void subscribed(WebSocket ws, String eventId)
+	{
+		if (ws != socket || !subscriptions.containsKey(eventId)) return;
+		confirmed.add(eventId);
+		executor.execute(() -> listener.onSubscribed(eventId));
 	}
 
 	private synchronized void adminRevoked(WebSocket ws)
@@ -234,6 +280,7 @@ final class TsgHubSocket
 		if (ws != socket) return;
 		socket = null;
 		ready = false;
+		confirmed.clear();
 		if (clanName.isEmpty() || executor.isShutdown()) return;
 		if (status == 403)
 		{
@@ -286,6 +333,12 @@ final class TsgHubSocket
 					String topic = string(message, "topic");
 					executor.execute(() -> listener.onChanged(topic, eventId));
 					break;
+				case "subscribed":
+					subscribed(ws, eventId);
+					break;
+				case "progress":
+					progress(eventId, message);
+					break;
 				case "admin.revoked":
 					adminRevoked(ws);
 					break;
@@ -325,6 +378,18 @@ final class TsgHubSocket
 			log.debug("TSG Hub socket failed", error);
 			dropped(ws, 0, response == null ? 0 : response.code());
 		}
+	}
+
+	private void progress(String eventId, JsonObject message)
+	{
+		try
+		{
+			long gained = Long.parseLong(string(message, "gained"));
+			String rank = string(message, "rank");
+			Long parsedRank = rank.isEmpty() ? null : Long.parseLong(rank);
+			if (!eventId.isEmpty()) executor.execute(() -> listener.onProgress(eventId, gained, parsedRank));
+		}
+		catch (NumberFormatException e) { return; }
 	}
 
 	private static String string(JsonObject object, String key)

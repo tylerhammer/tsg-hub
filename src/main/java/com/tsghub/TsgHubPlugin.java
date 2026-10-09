@@ -173,10 +173,12 @@ public class TsgHubPlugin extends Plugin
 			@Override public void onAdminRevoked(String token) { recheckHubKey(token); }
 			@Override public void onAnnouncement(String text) { announce(text); }
 			@Override public void onUpdateAvailable(String version) { updateAvailable(version); }
+			@Override public void onSubscribed(String eventId) { if (competitions != null) competitions.onSubscribed(eventId); }
+			@Override public void onProgress(String eventId, long gained, Long rank) { SwingUtilities.invokeLater(() -> sidebar.competitionProgress(eventId, gained, rank)); }
 		});
 		executor.scheduleAtFixedRate(this::socketTick, 2, 5, TimeUnit.SECONDS);
 		executor.scheduleAtFixedRate(unlessLive(this::autoRefreshBoard), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
-		competitions = new TsgHubCompetitionTracker(this::api, executor, client, clientThread);
+		competitions = new TsgHubCompetitionTracker(this::api, executor, client, clientThread, socket);
 		itemSearchExecutor = Executors.newFixedThreadPool(2, daemon("tsg-hub-item-search"));
 		panel = new TsgHubPanel(this);
 		GroupMembersPanel groupMembers = new GroupMembersPanel(new GroupViewSettings()
@@ -752,6 +754,11 @@ public class TsgHubPlugin extends Plugin
 		String competitionId = sidebar == null ? null : sidebar.openCompetitionId();
 		String memberToken = competitionId == null ? "" : TsgHubSession.get("memberToken:" + competitionId);
 		if (!memberToken.isEmpty()) tokens.putIfAbsent(competitionId, memberToken);
+		for (String joinedId : competitions.joinedIds())
+		{
+			String joinedToken = TsgHubSession.get("memberToken:" + joinedId);
+			if (!joinedToken.isEmpty()) tokens.putIfAbsent(joinedId, joinedToken);
+		}
 		String organizerEventId = adminWindowOpen() ? getOrganizerEventId() : "";
 		String organizerToken = organizerEventId.isEmpty() ? "" : organizerCredential(organizerEventId);
 		if (!organizerToken.isEmpty()) tokens.putIfAbsent(organizerEventId, organizerToken);
