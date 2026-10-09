@@ -86,7 +86,7 @@ public class DropsPanelTest
 	public void coinColor()
 	{
 		assertEquals(new Color(255, 255, 0), TsgHubUi.coinColor(99_999));
-		assertEquals(Color.WHITE, TsgHubUi.coinColor(803_300));
+		assertEquals(TsgHubTheme.TEXT, TsgHubUi.coinColor(803_300));
 		assertEquals(new Color(0, 255, 128), TsgHubUi.coinColor(10_000_000));
 	}
 
