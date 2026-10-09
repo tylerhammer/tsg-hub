@@ -968,7 +968,7 @@ final class TsgHubUi
 			JsonObject entry = contributors.get(i).getAsJsonObject();
 			parts.add(name.apply(str(entry, "displayName")) + " " + integer(entry, "amount", 1));
 		}
-		if (contributors.size() > max) parts.add("+" + (contributors.size() - max) + " more");
+		if (contributors.size() > max) parts.add("+" + (contributors.size() - max));
 		return String.join(separator, parts);
 	}
 

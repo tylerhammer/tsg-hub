@@ -2051,61 +2051,64 @@ final class TsgHubSidebarPanel extends PluginPanel
 		boolean manual = "manual".equals(str(task, "type"));
 
 		JPanel card = card();
-		JLabel name = label(html(escape(str(task, "title")), CARD_TITLE_W - (completed ? 18 : 0)),
-			completed ? MUTED : TEXT, boldFont());
+		JLabel name = shrinkable(label(str(task, "title"), completed ? MUTED : TEXT, boldFont()));
+		name.putClientProperty("html.disable", Boolean.TRUE);
 		if (completed) name.setIcon(new CheckIcon());
-		card.add(row(name, north(badge(integer(task, "points", 1) + " pts", completed ? MUTED : ACCENT))), BorderLayout.NORTH);
+		JLabel points = label(integer(task, "points", 1) + " pts", completed ? MUTED : ACCENT, smallFont());
+		card.add(row(name, north(points)), BorderLayout.NORTH);
 
 		JPanel body = stack();
-		body.add(caption(taskTypeLabel(task) + (individual ? " · Everyone" : solo ? " · Solo" : " · Team")));
 		String description = str(task, "description").trim();
 		if (!description.isEmpty() && !completed) body.add(cardNote(description));
 
 		int value = integer(progress, "progress", 0);
 		int target = Math.max(1, integer(progress, "target", 1));
+		JsonObject mine = individual || solo ? myEntry(progress) : null;
 		if (completed)
 		{
 			boolean creditedToOrganizer = bool(progress, "override") && !bool(progress, "overrideCredited");
-			body.add(label(creditedToOrganizer ? "Marked complete by an admin" : completedLine(progress), SUCCESS, smallFont()));
+			String line = creditedToOrganizer ? "Marked complete by an admin" : completedLine(progress);
+			if (!"Completed".equals(line)) body.add(label(line, SUCCESS, smallFont()));
 		}
-		else if (addSetProgress(body, individual || solo ? myEntry(progress) : progress, individual || solo))
+		else if (addSetProgress(body, individual || solo ? mine : progress, individual || solo))
 		{
-			if (individual) body.add(caption(value + " of " + target + " teammates done"));
+			if (individual) body.add(teammatesLine(mine, value, target));
 			if (solo) addSoloLeader(body, progress);
 		}
 		else if (solo)
 		{
-			JsonObject mine = myEntry(progress);
 			int have = mine == null ? 0 : integer(mine, "progress", 0);
 			if (target > 1) addBar(body, have, target, "You: " + have + "/" + target);
 			addSoloLeader(body, progress);
 		}
 		else if (individual)
 		{
-			JsonObject mine = myEntry(progress);
 			int have = mine == null ? 0 : integer(mine, "progress", 0);
 			int need = mine == null ? 1 : integer(mine, "target", 1);
 			if (mine != null && need > 1 && !bool(mine, "completed")) addBar(body, have, need, "You: " + have + "/" + need);
-			else if (mine != null && bool(mine, "completed")) body.add(label("You're done", SUCCESS, smallFont()));
-			body.add(caption(value + " of " + target + " teammates done"));
+			body.add(teammatesLine(mine, value, target));
 		}
 		else if (target > 1) addBar(body, value, target, value + " / " + target);
 		boolean setTile = array(progress, "alternatives").size() > 0 || progress.has("items");
 		if (!individual && !solo && (!setTile || completed))
 		{
-			String amounts = contributorsHtml(progress, " · ", 4, boardDisplayName);
+			String amounts = contributorsHtml(progress, " · ", 2, boardDisplayName);
 			if (!amounts.isEmpty()) body.add(cardNoteHtml(amounts));
 		}
-		if (pending && !completed)
-		{
-			body.add(Box.createVerticalStrut(GAP_S));
-			body.add(badge("Awaiting admin review", WARNING));
-		}
+		if (pending && !completed) body.add(label("Awaiting admin review", WARNING, smallFont()));
 		if (manual && !completed && !pending) addManualSubmit(body, taskId);
 		addLineSpacing(body);
-		card.add(body, BorderLayout.CENTER);
-		card.setToolTipText(memberTooltip(progress, individual, solo));
+		if (body.getComponentCount() > 0) card.add(body, BorderLayout.CENTER);
+		String detail = taskDetail(progress, individual, solo, completed);
+		card.setToolTipText("<html><b>" + escape(str(task, "title")) + "</b>" + (detail == null ? "" : "<br>" + detail) + "</html>");
 		return fitHeight(card);
+	}
+
+	private JLabel teammatesLine(JsonObject mine, int value, int target)
+	{
+		String count = value + " of " + target + " teammates done";
+		if (mine == null || !bool(mine, "completed")) return caption(count);
+		return label(html("<font color='" + toHexColor(SUCCESS) + "'>You're done</font> · " + count, CARD_TEXT_W), MUTED, smallFont());
 	}
 
 	private void addManualSubmit(JPanel body, String taskId)
@@ -2167,7 +2170,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 			body.add(Box.createVerticalStrut(GAP_S));
 			body.add(bar);
 			body.add(Box.createVerticalStrut(GAP_XS));
-			if (!set.found.isEmpty()) body.add(cardNoteHtml("Have: " + set.foundHtml(boardDisplayName)));
 			if (!set.needed.isEmpty()) body.add(cardNote("Need: " + String.join(", ", set.needed)));
 		}
 		int notStarted = sets.size() - shown.size();
@@ -2179,12 +2181,29 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		Component[] parts = body.getComponents();
 		body.removeAll();
-		for (int i = 0; i < parts.length; i++)
+		int first = 0;
+		while (first < parts.length && parts[first] instanceof Box.Filler) first++;
+		for (int i = first; i < parts.length; i++)
 		{
 			body.add(parts[i]);
 			boolean next = i + 1 < parts.length;
 			if (next && parts[i] instanceof JLabel && parts[i + 1] instanceof JLabel) body.add(Box.createVerticalStrut(GAP_XS));
 		}
+	}
+
+	private String taskDetail(JsonObject progress, boolean individual, boolean solo, boolean completed)
+	{
+		String members = memberTooltip(progress, individual, solo);
+		if (completed || individual || solo || array(progress, "alternatives").size() == 0 && !progress.has("items")) return members;
+		List<String> lines = new ArrayList<>();
+		for (SetLine set : setLines(progress, true))
+		{
+			if (set.have == 0) continue;
+			lines.add("<b>" + escape(set.name) + " " + set.have + "/" + set.target + "</b>");
+			lines.add("Have: " + set.foundHtml(boardDisplayName));
+			if (!set.needed.isEmpty()) lines.add("Need: " + escape(String.join(", ", set.needed)));
+		}
+		return lines.isEmpty() ? members : String.join("<br>", lines);
 	}
 
 	private String memberTooltip(JsonObject progress, boolean individual, boolean solo)
@@ -2206,14 +2225,14 @@ final class TsgHubSidebarPanel extends PluginPanel
 				else if (bool(member, "completed")) done.add(name);
 				else waiting.add(need > 1 ? name + " " + have + "/" + need : name);
 			}
-			if (solo) return "<html>" + String.join("<br>", waiting) + "</html>";
-			StringBuilder text = new StringBuilder("<html>");
+			if (solo) return String.join("<br>", waiting);
+			StringBuilder text = new StringBuilder();
 			text.append("<b>Done:</b> ").append(done.isEmpty() ? "nobody yet" : String.join(", ", done));
 			text.append("<br><b>Still need:</b> ").append(waiting.isEmpty() ? "nobody" : String.join(", ", waiting));
-			return text.append("</html>").toString();
+			return text.toString();
 		}
 		String contributors = contributorsHtml(progress, "<br>", 50, boardDisplayName);
-		return contributors.isEmpty() ? null : "<html><b>Contributors</b><br>" + contributors + "</html>";
+		return contributors.isEmpty() ? null : "<b>Contributors</b><br>" + contributors;
 	}
 
 	private void addSoloLeader(JPanel body, JsonObject progress)
