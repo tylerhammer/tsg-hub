@@ -24,10 +24,10 @@
  */
 package com.tsghub.group.ui.skills;
 
+import com.tsghub.TsgHubTheme;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.tsghub.group.data.PartyPlayer;
-import com.tsghub.group.ui.PartyStyle;
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.util.HashMap;
@@ -40,7 +40,6 @@ import javax.swing.SwingUtilities;
 import net.runelite.api.Skill;
 import net.runelite.api.gameval.SpriteID;
 import net.runelite.client.game.SpriteManager;
-import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.QuantityFormatter;
 
 import static net.runelite.api.Skill.AGILITY;
@@ -127,10 +126,10 @@ public class PlayerSkillsPanel extends JPanel
 		}
 
 		JLabel totalCaption = new JLabel("Total level");
-		totalCaption.setFont(FontManager.getRunescapeSmallFont());
-		totalCaption.setForeground(PartyStyle.MUTED);
-		totalLabel.setFont(FontManager.getRunescapeSmallFont());
-		totalLabel.setForeground(PartyStyle.TEXT);
+		totalCaption.setFont(TsgHubTheme.smallFont());
+		totalCaption.setForeground(TsgHubTheme.MUTED);
+		totalLabel.setFont(TsgHubTheme.smallFont());
+		totalLabel.setForeground(TsgHubTheme.TEXT);
 		JPanel total = new JPanel(new BorderLayout());
 		total.setOpaque(false);
 		total.setBorder(BorderFactory.createEmptyBorder(0, 1, 0, 1));

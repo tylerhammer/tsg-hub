@@ -40,7 +40,7 @@ final class TsgHubBossPicker extends JPanel
 		setAlignmentX(LEFT_ALIGNMENT);
 		JLabel label = TsgHubUi.caption(caption);
 		add(label);
-		add(Box.createVerticalStrut(3));
+		add(Box.createVerticalStrut(TsgHubTheme.GAP_XS));
 
 		field.putClientProperty("JTextField.placeholderText", "e.g. Vorkath");
 		field.setAlignmentX(LEFT_ALIGNMENT);
@@ -72,13 +72,13 @@ final class TsgHubBossPicker extends JPanel
 
 		resultList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		resultList.setVisibleRowCount(6);
-		resultList.setBackground(TsgHubUi.CARD);
+		resultList.setBackground(TsgHubTheme.CARD);
 		resultList.setCellRenderer((list, value, index, selected, focus) -> {
 			JLabel row = new JLabel(value);
 			row.setOpaque(true);
 			row.setBorder(BorderFactory.createEmptyBorder(3, 6, 3, 6));
-			row.setBackground(selected ? TsgHubUi.CARD_HOVER : TsgHubUi.CARD);
-			row.setForeground(TsgHubUi.TEXT);
+			row.setBackground(selected ? TsgHubTheme.CARD_HOVER : TsgHubTheme.CARD);
+			row.setForeground(TsgHubTheme.TEXT);
 			return row;
 		});
 		resultList.addMouseListener(new MouseAdapter()
@@ -89,7 +89,7 @@ final class TsgHubBossPicker extends JPanel
 				if (index >= 0 && resultList.getCellBounds(index, index).contains(e.getPoint())) choose(results.get(index));
 			}
 		});
-		resultScroll.setBorder(BorderFactory.createLineBorder(TsgHubUi.BORDER));
+		resultScroll.setBorder(BorderFactory.createLineBorder(TsgHubTheme.BORDER));
 		resultScroll.setAlignmentX(LEFT_ALIGNMENT);
 		resultScroll.setVisible(false);
 		add(resultScroll);

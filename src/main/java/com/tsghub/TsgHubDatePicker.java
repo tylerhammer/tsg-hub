@@ -69,7 +69,7 @@ final class TsgHubDatePicker extends JButton
 	private void buildPopup()
 	{
 		JPanel panel = new JPanel(new BorderLayout(0, 6));
-		panel.setBackground(TsgHubUi.CARD);
+		panel.setBackground(TsgHubTheme.CARD);
 		panel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 		JPanel header = new JPanel(new BorderLayout());
 		header.setOpaque(false);
@@ -82,7 +82,7 @@ final class TsgHubDatePicker extends JButton
 		panel.add(header, BorderLayout.NORTH);
 		grid.setOpaque(false);
 		panel.add(grid, BorderLayout.CENTER);
-		popup.setBorder(BorderFactory.createLineBorder(TsgHubUi.BORDER));
+		popup.setBorder(BorderFactory.createLineBorder(TsgHubTheme.BORDER));
 		popup.add(panel);
 	}
 
@@ -127,9 +127,9 @@ final class TsgHubDatePicker extends JButton
 			cell.setPreferredSize(new Dimension(34, 26));
 			cell.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 			boolean selected = day.equals(date);
-			cell.setBackground(selected ? TsgHubUi.ACCENT.darker() : TsgHubUi.BACKGROUND);
-			cell.setForeground(selected ? Color.WHITE : TsgHubUi.TEXT);
-			if (day.equals(today) && !selected) cell.setBorder(BorderFactory.createLineBorder(TsgHubUi.ACCENT));
+			cell.setBackground(selected ? TsgHubTheme.ACCENT.darker() : TsgHubTheme.BACKGROUND);
+			cell.setForeground(selected ? Color.WHITE : TsgHubTheme.TEXT);
+			if (day.equals(today) && !selected) cell.setBorder(BorderFactory.createLineBorder(TsgHubTheme.ACCENT));
 			cell.addActionListener(e -> {
 				date = day;
 				refreshText();
@@ -151,7 +151,7 @@ final class TsgHubDatePicker extends JButton
 		{
 			Graphics2D g = (Graphics2D) graphics.create();
 			g.translate(x, y);
-			g.setColor(TsgHubUi.MUTED);
+			g.setColor(TsgHubTheme.MUTED);
 			g.drawRect(1, 2, 12, 11);
 			g.fillRect(1, 2, 13, 3);
 			g.fillRect(4, 0, 2, 3);

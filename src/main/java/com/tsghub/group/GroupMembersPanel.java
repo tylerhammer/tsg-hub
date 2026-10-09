@@ -4,11 +4,11 @@
  */
 package com.tsghub.group;
 
+import com.tsghub.TsgHubTheme;
 import com.google.common.base.Strings;
 import com.tsghub.PlayerNames;
 import com.tsghub.group.data.PartyPlayer;
 import com.tsghub.group.ui.PlayerPanel;
-import java.awt.Color;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
@@ -25,7 +25,6 @@ import javax.swing.JPopupMenu;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.SpriteManager;
 import net.runelite.client.ui.DynamicGridLayout;
-import net.runelite.client.ui.FontManager;
 
 // Swing thread only.
 public final class GroupMembersPanel extends JPanel
@@ -45,10 +44,10 @@ public final class GroupMembersPanel extends JPanel
 		this.settings = settings;
 		this.spriteManager = spriteManager;
 		this.itemManager = itemManager;
-		setLayout(new DynamicGridLayout(0, 1, 0, 5));
+		setLayout(new DynamicGridLayout(0, 1, 0, TsgHubTheme.LIST_GAP));
 		setOpaque(false);
-		empty.setForeground(new Color(0x8f8f8f));
-		empty.setFont(FontManager.getRunescapeSmallFont());
+		empty.setForeground(TsgHubTheme.MUTED);
+		empty.setFont(TsgHubTheme.smallFont());
 		add(empty);
 	}
 

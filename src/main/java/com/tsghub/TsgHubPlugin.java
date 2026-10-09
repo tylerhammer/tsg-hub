@@ -1885,7 +1885,7 @@ public class TsgHubPlugin extends Plugin
 		ChatMessageBuilder message = new ChatMessageBuilder();
 		if (complete || mine != null && TsgHubUi.bool(mine, "completed"))
 		{
-			message.append(TsgHubUi.SUCCESS.darker(), complete ? "Task complete: " : "Your part is done: ")
+			message.append(TsgHubTheme.SUCCESS.darker(), complete ? "Task complete: " : "Your part is done: ")
 				.append(ChatColorType.HIGHLIGHT).append(title)
 				.append(ChatColorType.NORMAL).append(" (" + count + ")");
 		}
@@ -1909,7 +1909,7 @@ public class TsgHubPlugin extends Plugin
 
 	private void showLocalChatMessage(ChatMessageBuilder body)
 	{
-		String message = new ChatMessageBuilder().append(TsgHubUi.ACCENT.darker(), "[TSG Hub] ").build() + body.build();
+		String message = new ChatMessageBuilder().append(TsgHubTheme.ACCENT.darker(), "[TSG Hub] ").build() + body.build();
 		chatMessageManager.queue(QueuedMessage.builder().type(ChatMessageType.GAMEMESSAGE).runeLiteFormattedMessage(message).build());
 	}
 
