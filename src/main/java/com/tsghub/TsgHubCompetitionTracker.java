@@ -157,7 +157,7 @@ final class TsgHubCompetitionTracker
 
 	private boolean rewardActive(int tick)
 	{
-		return !openRewards.isEmpty() || tick - rewardTick <= REWARD_TICKS;
+		return !openRewards.isEmpty() || (long) tick - rewardTick <= REWARD_TICKS;
 	}
 
 	private void excludeXp(Skill skill, int xp)
