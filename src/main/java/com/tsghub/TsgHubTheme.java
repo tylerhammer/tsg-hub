@@ -9,28 +9,29 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.ToolTipManager;
 import javax.swing.border.Border;
-import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
+import net.runelite.client.ui.components.materialtabs.MaterialTab;
+import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
 import net.runelite.client.util.ColorUtil;
 
 public final class TsgHubTheme
 {
-	public static final Color BACKGROUND = ColorScheme.DARK_GRAY_COLOR;
-	public static final Color CARD = ColorScheme.DARKER_GRAY_COLOR;
-	public static final Color CARD_HOVER = ColorScheme.DARKER_GRAY_HOVER_COLOR;
-	public static final Color BORDER = ColorScheme.MEDIUM_GRAY_COLOR;
-	public static final Color ACCENT = ColorScheme.BRAND_ORANGE;
-	public static final Color TEXT = Color.WHITE;
-	public static final Color MUTED = ColorScheme.LIGHT_GRAY_COLOR;
-	public static final Color DIM = new Color(106, 106, 106);
-	public static final Color SUCCESS = ColorScheme.PROGRESS_COMPLETE_COLOR;
-	public static final Color ERROR = ColorScheme.PROGRESS_ERROR_COLOR;
-	public static final Color WARNING = new Color(230, 180, 60);
+	public static final Color BACKGROUND = new Color(0x28262B);
+	public static final Color CARD = new Color(0x1F1D22);
+	public static final Color CARD_HOVER = new Color(0x2E2B33);
+	public static final Color BORDER = new Color(0x3B3741);
+	public static final Color ACCENT = new Color(0xA98BF0);
+	public static final Color TEXT = new Color(0xF2EFF5);
+	public static final Color MUTED = new Color(0xA29CAB);
+	public static final Color DIM = new Color(0x6C6774);
+	public static final Color SUCCESS = new Color(0x6BD68A);
+	public static final Color ERROR = new Color(0xE86060);
+	public static final Color WARNING = new Color(0xE8BE5A);
 
-	public static final Color SELF_CARD = new Color(43, 36, 22);
-	public static final Color SELF_CARD_HOVER = new Color(53, 45, 28);
-	public static final Color SELF_BORDER = new Color(122, 82, 8);
-	public static final Color SELF_TEXT = new Color(224, 168, 46);
+	public static final Color SELF_CARD = new Color(0x2A2238);
+	public static final Color SELF_CARD_HOVER = new Color(0x342A45);
+	public static final Color SELF_BORDER = new Color(0x664C9E);
+	public static final Color SELF_TEXT = ACCENT;
 
 	public static final int GAP_XS = 3;
 	public static final int GAP_S = 4;
@@ -127,5 +128,28 @@ public final class TsgHubTheme
 	public static String selfName(String escapedName)
 	{
 		return "<font color='" + ColorUtil.toHexColor(SELF_TEXT) + "'>" + escapedName + "</font>";
+	}
+
+	public static MaterialTab themedTab(String name, MaterialTabGroup group, JComponent content)
+	{
+		return new MaterialTab(name, group, content)
+		{
+			@Override
+			public boolean select()
+			{
+				if (!super.select()) return false;
+				setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, ACCENT),
+					BorderFactory.createEmptyBorder(5, 10, 4, 10)));
+				setForeground(TEXT);
+				return true;
+			}
+
+			@Override
+			public void unselect()
+			{
+				super.unselect();
+				setForeground(MUTED);
+			}
+		};
 	}
 }
