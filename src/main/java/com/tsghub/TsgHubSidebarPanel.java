@@ -596,10 +596,10 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private JLabel memberName(JsonObject member, String text, Color color, Font font)
 	{
 		JLabel label = shrinkable(label(text, color, font));
-		BufferedImage rankIcon = plugin.presence().rankIcon(member);
-		if (rankIcon != null)
+		BufferedImage icon = plugin.presence().nameIcon(member);
+		if (icon != null)
 		{
-			label.setIcon(new ImageIcon(rankIcon));
+			label.setIcon(new ImageIcon(icon));
 			label.setIconTextGap(4);
 		}
 		return label;
@@ -607,7 +607,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	private void setMemberTip(JComponent card, JsonObject member, String note)
 	{
-		String tip = rosterTooltip(str(member, "rank"), str(member, "altOf"), array(member, "alts"), note,
+		String tip = rosterTooltip(str(member, "rank"), TsgHubPresence.accountTypeName(member), str(member, "altOf"), array(member, "alts"), note,
 			visibleWarnings(member), clock.instant(), ZoneId.systemDefault());
 		fullTextTooltip(card, () -> tip);
 	}
@@ -758,12 +758,13 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 	}
 
-	static String rosterTooltip(String rank, String altOf, JsonArray alts, String note, JsonArray warnings, Instant now, ZoneId zone)
+	static String rosterTooltip(String rank, String accountType, String altOf, JsonArray alts, String note, JsonArray warnings, Instant now, ZoneId zone)
 	{
 		List<String> names = new ArrayList<>();
 		for (int i = 0; i < alts.size(); i++) if (alts.get(i).isJsonPrimitive()) names.add(alts.get(i).getAsString());
 		List<String> lines = new ArrayList<>();
 		if (!rank.isEmpty()) lines.add("<b>" + escape(rank) + "</b>");
+		if (!accountType.isEmpty()) lines.add(tipLine(MUTED, escape(accountType)));
 		if (!altOf.isEmpty()) lines.add(tipLine(ACCENT, "Alt of <b>" + escape(altOf) + "</b>"));
 		if (!names.isEmpty()) lines.add(tipLine(MUTED, (names.size() == 1 ? "Alt: " : "Alts: ") + escape(String.join(", ", names))));
 		String sections = "";

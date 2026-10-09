@@ -25,7 +25,7 @@ public class MembersPanelTest
 
 	private static String tip(String rank, String altOf, JsonArray alts, String note, JsonArray warnings)
 	{
-		return TsgHubSidebarPanel.rosterTooltip(rank, altOf, alts, note, warnings, NOW, java.time.ZoneOffset.UTC);
+		return TsgHubSidebarPanel.rosterTooltip(rank, "", altOf, alts, note, warnings, NOW, java.time.ZoneOffset.UTC);
 	}
 
 	private static final java.time.Instant NOW = java.time.Instant.parse("2026-10-08T12:00:00Z");
@@ -58,6 +58,7 @@ public class MembersPanelTest
 		alts.add("Iron Fenrir");
 		alts.add(new JsonObject());
 		assertTrue(tip("Owner", "", alts, "", none).contains("Alt: Iron Fenrir"));
+		assertTrue(TsgHubSidebarPanel.rosterTooltip("", "Hardcore Ironman", "", none, "", none, NOW, java.time.ZoneOffset.UTC).contains("Hardcore Ironman"));
 		String full = tip("", "", none, "Owes <5m>", none);
 		assertTrue(full.contains("ADMIN NOTE") && full.contains("Owes &lt;5m&gt;"));
 	}
@@ -114,6 +115,7 @@ public class MembersPanelTest
 		JsonObject note = new JsonObject();
 		note.addProperty("displayName", "iron alt");
 		note.addProperty("altOf", "Bob");
+		note.addProperty("accountType", 2);
 		notes.add(note);
 
 		JsonArray[] roster = TsgHubPresence.roster(presence, chat, Arrays.asList("Bob", "Zezima", "Iron Alt", "Alice"), notes);
@@ -125,6 +127,8 @@ public class MembersPanelTest
 		assertEquals(2, roster[1].size());
 		assertEquals("Alice", roster[1].get(0).getAsJsonObject().get("displayName").getAsString());
 		assertEquals("Bob", roster[1].get(1).getAsJsonObject().get("altOf").getAsString());
+		assertEquals("Ultimate Ironman", TsgHubPresence.accountTypeName(roster[1].get(1).getAsJsonObject()));
+		assertEquals("", TsgHubPresence.accountTypeName(roster[1].get(0).getAsJsonObject()));
 	}
 
 	@Test
