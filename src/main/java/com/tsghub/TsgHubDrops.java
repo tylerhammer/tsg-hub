@@ -88,7 +88,7 @@ final class TsgHubDrops
 
 	private void addItemIds(JsonArray drops)
 	{
-		if (itemIds == null) itemIds = itemIndex();
+		if (itemIds == null || itemIds.isEmpty()) itemIds = itemIndex();
 		for (int i = 0; i < drops.size(); i++)
 		{
 			JsonObject drop = drops.get(i).getAsJsonObject();
