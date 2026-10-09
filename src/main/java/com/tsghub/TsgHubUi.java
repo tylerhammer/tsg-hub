@@ -74,6 +74,7 @@ import net.runelite.client.util.SwingUtil;
 final class TsgHubUi
 {
 	private static final String LAZY_TOOLTIP = "tsgHub.lazyTooltip";
+	private static final String NO_FULL_TEXT = "tsgHub.noFullText";
 	private static final DateTimeFormatter DATE_WITH_YEAR = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.US);
 	private static final int COIN_ICON_W = 18;
 	private static final int COIN_ICON_H = 16;
@@ -312,10 +313,17 @@ final class TsgHubUi
 		});
 	}
 
+	static <T extends JComponent> T noFullText(T component)
+	{
+		component.putClientProperty(NO_FULL_TEXT, true);
+		return component;
+	}
+
 	private static void collectCut(Container parent, List<String> parts)
 	{
 		for (Component child : parent.getComponents())
 		{
+			if (child instanceof JComponent && ((JComponent) child).getClientProperty(NO_FULL_TEXT) != null) continue;
 			if (child instanceof JLabel && truncated((JLabel) child)) parts.add(parts.isEmpty() ? "<b>" + escape(((JLabel) child).getText()) + "</b>" : escape(((JLabel) child).getText()));
 			else if (child instanceof Container) collectCut((Container) child, parts);
 		}

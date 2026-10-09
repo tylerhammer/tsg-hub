@@ -25,7 +25,7 @@ public class MembersPanelTest
 
 	private static String tip(String altOf, JsonArray alts, String note, JsonArray warnings)
 	{
-		return TsgHubSidebarPanel.rosterTooltip(new JsonArray(), altOf, alts, note, warnings, NOW, java.time.ZoneOffset.UTC);
+		return TsgHubSidebarPanel.rosterTooltip("", new JsonArray(), altOf, alts, note, warnings, NOW, java.time.ZoneOffset.UTC);
 	}
 
 	private static final java.time.Instant NOW = java.time.Instant.parse("2026-10-08T12:00:00Z");
@@ -57,12 +57,15 @@ public class MembersPanelTest
 		JsonArray alts = new JsonArray();
 		alts.add("Iron Fenrir");
 		alts.add(new JsonObject());
-		assertTrue(tip("", alts, "", none).contains("Alt: Iron Fenrir"));
+		assertTrue(tip("", alts, "", none).contains("Alt: <b>Iron Fenrir</b>"));
 		JsonArray formerly = new JsonArray();
 		formerly.add("First");
 		formerly.add("Second");
-		String renamed = TsgHubSidebarPanel.rosterTooltip(formerly, "", none, "", none, NOW, java.time.ZoneOffset.UTC);
+		String renamed = TsgHubSidebarPanel.rosterTooltip("", formerly, "", none, "", none, NOW, java.time.ZoneOffset.UTC);
 		assertTrue(renamed.contains("PREVIOUS NAMES") && renamed.contains("Second<br>First"));
+		String location = TsgHubSidebarPanel.locationTip("Slayer - Nechryael", "Catacombs of Kourend");
+		assertTrue(location.contains(">Slayer: Nechryael<") && location.contains("<br>") && !location.contains("<b>"));
+		assertEquals(false, TsgHubSidebarPanel.locationTip("Online", "").contains("<br>"));
 		String full = tip("", none, "Owes <5m>", none);
 		assertTrue(full.contains("ADMIN NOTE") && full.contains("Owes &lt;5m&gt;"));
 	}

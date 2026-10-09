@@ -605,11 +605,18 @@ final class TsgHubSidebarPanel extends PluginPanel
 		return label;
 	}
 
-	private void setMemberTip(JComponent card, JsonObject member, String note)
+	private void setMemberTip(JComponent card, JsonObject member, String note, JLabel detail)
 	{
-		String tip = rosterTooltip(array(member, "previousNames"), str(member, "altOf"), array(member, "alts"), note,
-			visibleWarnings(member), clock.instant(), ZoneId.systemDefault());
-		fullTextTooltip(card, () -> tip);
+		fullTextTooltip(card, () -> rosterTooltip(detail != null && truncated(detail) ? locationTip(str(member, "activity"), str(member, "area")) : "",
+			array(member, "previousNames"), str(member, "altOf"), array(member, "alts"), note, visibleWarnings(member), clock.instant(), ZoneId.systemDefault()));
+	}
+
+	static String locationTip(String activity, String area)
+	{
+		String detail = activityDetail(activity, "");
+		boolean active = !"Idle".equals(activity) && !"Online".equals(activity) && !activity.isEmpty();
+		String html = tipLine(active ? SUCCESS : MUTED, escape(detail));
+		return area.isEmpty() || area.equals(detail) ? html : html + "<br>" + tipLine(MUTED, escape(area));
 	}
 
 	private void addMemberBadges(JPanel badges, JsonObject member, String note, boolean more)
@@ -652,17 +659,18 @@ final class TsgHubSidebarPanel extends PluginPanel
 		JPanel text = stack();
 		text.add(top);
 		String detail = activityDetail(activity, str(member, "area"));
+		JLabel detailLabel = null;
 		if (!detail.isEmpty())
 		{
 			boolean active = !"Idle".equals(activity) && !"Online".equals(activity) && !activity.isEmpty();
-			JLabel detailLabel = shrinkable(label(detail, active ? SUCCESS : MUTED, small));
+			detailLabel = noFullText(shrinkable(label(detail, active ? SUCCESS : MUTED, small)));
 			JPanel bottom = row();
 			bottom.add(detailLabel, BorderLayout.CENTER);
 			text.add(Box.createVerticalStrut(GAP_XS));
 			text.add(bottom);
 		}
 		card.add(text, BorderLayout.CENTER);
-		setMemberTip(card, member, note);
+		setMemberTip(card, member, note, detailLabel);
 		addNoteMenu(card, member);
 		return fitHeight(card);
 	}
@@ -680,7 +688,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		addMemberBadges(badges, member, note, !seen.isEmpty());
 		if (!seen.isEmpty()) badges.add(label(seen, MUTED, small));
 		if (badges.getComponentCount() > 0) row.add(badges, BorderLayout.EAST);
-		setMemberTip(row, member, note);
+		setMemberTip(row, member, note, null);
 		addNoteMenu(row, member);
 		return fitHeight(row);
 	}
@@ -758,33 +766,34 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 	}
 
-	static String rosterTooltip(JsonArray previousNames, String altOf, JsonArray alts, String note, JsonArray warnings, Instant now, ZoneId zone)
+	static String rosterTooltip(String location, JsonArray previousNames, String altOf, JsonArray alts, String note, JsonArray warnings, Instant now, ZoneId zone)
 	{
 		List<String> names = strings(alts);
 		List<String> formerly = strings(previousNames);
 		Collections.reverse(formerly);
 		List<String> lines = new ArrayList<>();
 		if (!altOf.isEmpty()) lines.add(tipLine(ACCENT, "Alt of <b>" + escape(altOf) + "</b>"));
-		if (!names.isEmpty()) lines.add(tipLine(MUTED, (names.size() == 1 ? "Alt: " : "Alts: ") + escape(String.join(", ", names))));
+		if (!names.isEmpty()) lines.add(tipLine(ACCENT, (names.size() == 1 ? "Alt: " : "Alts: ") + "<b>" + escape(String.join(", ", names)) + "</b>"));
+		String head = String.join("<br>", lines);
+		if (!location.isEmpty()) head = head.isEmpty() ? location : location + tipSection(false, head);
 		String sections = "";
 		if (!formerly.isEmpty())
 		{
-			sections += tipSection(lines.isEmpty(), tipLine(MUTED, "<b>PREVIOUS NAMES</b>"))
+			sections += tipSection(head.isEmpty(), tipLine(MUTED, "<b>PREVIOUS NAMES</b>"))
 				+ tipCard(TIP_CARD, escape(String.join("\n", formerly)).replace("\n", "<br>"));
 		}
 		if (!note.isEmpty())
 		{
-			sections += tipSection(lines.isEmpty() && sections.isEmpty(), tipLine(WARNING, "<b>ADMIN NOTE</b>"))
+			sections += tipSection(head.isEmpty() && sections.isEmpty(), tipLine(WARNING, "<b>ADMIN NOTE</b>"))
 				+ tipCard(TIP_CARD, escape(note).replace("\n", "<br>"));
 		}
 		List<JsonObject> history = objects(warnings);
 		if (!history.isEmpty())
 		{
-			sections += tipSection(lines.isEmpty() && sections.isEmpty(), tipLine(TsgHubTheme.ERROR, "<b>WARNINGS</b>") + " " + tipLine(MUTED, warningSummary(history)))
+			sections += tipSection(head.isEmpty() && sections.isEmpty(), tipLine(TsgHubTheme.ERROR, "<b>WARNINGS</b>") + " " + tipLine(MUTED, warningSummary(history)))
 				+ warningCards(history, now, zone);
 		}
-		if (lines.isEmpty() && sections.isEmpty()) return "";
-		return String.join("<br>", lines) + sections;
+		return head + sections;
 	}
 
 	private static List<String> strings(JsonArray array)
