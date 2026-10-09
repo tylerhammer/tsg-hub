@@ -64,8 +64,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private static final int MAX_WARNING_LENGTH = 300;
 	private static final int MAX_PAST_WARNINGS = 3;
 	private static final int[] EXPIRY_DAYS = {30, 90, 0};
-	private static final Color TIP_CARD = new Color(42, 42, 42);
-	private static final Color DIM_BAR = new Color(68, 68, 68);
+	private static final Color TIP_CARD = new Color(0x2E2B33);
+	private static final Color DIM_BAR = new Color(0x3B3741);
 	private static final DateTimeFormatter WARNING_DAY = DateTimeFormatter.ofPattern("d MMM", java.util.Locale.ENGLISH);
 	private static final DateTimeFormatter WARNING_DAY_YEAR = DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale.ENGLISH);
 	private static final int CARD_TITLE_W = 150;
@@ -294,10 +294,10 @@ final class TsgHubSidebarPanel extends PluginPanel
 		MaterialTabGroup tabs = new MaterialTabGroup(display);
 		tabs.setLayout(new GridLayout(1, 3, 4, 0));
 		tabs.setOpaque(false);
-		MaterialTab tasks = new MaterialTab("Tasks", tabs, scroll(tasksTab));
+		MaterialTab tasks = themedTab("Tasks", tabs, scroll(tasksTab));
 		tabs.addTab(tasks);
-		tabs.addTab(new MaterialTab("Scores", tabs, scroll(scoreboardTab)));
-		tabs.addTab(new MaterialTab("Team", tabs, scroll(teamTab)));
+		tabs.addTab(themedTab("Scores", tabs, scroll(scoreboardTab)));
+		tabs.addTab(themedTab("Team", tabs, scroll(teamTab)));
 		tabs.select(tasks);
 
 		JPanel north = stack();

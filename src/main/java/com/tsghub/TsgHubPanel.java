@@ -382,7 +382,7 @@ final class TsgHubPanel extends JPanel
 
 	private MaterialTab tab(String name, JComponent content)
 	{
-		MaterialTab tab = new MaterialTab(name, tabs, scroll(content));
+		MaterialTab tab = themedTab(name, tabs, scroll(content));
 		tabs.addTab(tab);
 		return tab;
 	}

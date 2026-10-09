@@ -187,7 +187,7 @@ public class PlayerPanel extends JPanel
 
 	private void addTab(MaterialTabGroup group, String name, JComponent content, Tab tab)
 	{
-		MaterialTab materialTab = new MaterialTab(name, group, content);
+		MaterialTab materialTab = TsgHubTheme.themedTab(name, group, content);
 		materialTab.setFont(TsgHubTheme.smallFont());
 		materialTab.setOnSelectEvent(() -> {
 			selected = tab;
