@@ -1,5 +1,7 @@
 package com.tsghub;
 
+import static com.tsghub.TsgHubTheme.*;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
@@ -43,6 +45,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.LongFunction;
+import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -58,10 +62,10 @@ import javax.swing.JScrollPane;
 import javax.swing.JToolTip;
 import javax.swing.Scrollable;
 import javax.swing.Timer;
+import javax.swing.ToolTipManager;
 import javax.swing.border.Border;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.ui.ColorScheme;
-import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.AsyncBufferedImage;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.SwingUtil;
@@ -69,16 +73,7 @@ import net.runelite.client.util.SwingUtil;
 @Slf4j
 final class TsgHubUi
 {
-	static final Color BACKGROUND = ColorScheme.DARK_GRAY_COLOR;
-	static final Color CARD = ColorScheme.DARKER_GRAY_COLOR;
-	static final Color CARD_HOVER = ColorScheme.DARKER_GRAY_HOVER_COLOR;
-	static final Color BORDER = ColorScheme.MEDIUM_GRAY_COLOR;
-	static final Color ACCENT = ColorScheme.BRAND_ORANGE;
-	static final Color TEXT = Color.WHITE;
-	static final Color MUTED = ColorScheme.LIGHT_GRAY_COLOR;
-	static final Color SUCCESS = ColorScheme.PROGRESS_COMPLETE_COLOR;
-	static final Color ERROR = ColorScheme.PROGRESS_ERROR_COLOR;
-	static final Color WARNING = new Color(230, 180, 60);
+	private static final String LAZY_TOOLTIP = "tsgHub.lazyTooltip";
 	private static final DateTimeFormatter DATE_WITH_YEAR = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.US);
 	private static final int COIN_ICON_W = 18;
 	private static final int COIN_ICON_H = 16;
@@ -101,21 +96,6 @@ final class TsgHubUi
 	static Color toneColor(Tone tone)
 	{
 		return tone == Tone.ERROR ? ERROR : tone == Tone.SUCCESS ? SUCCESS : MUTED;
-	}
-
-	static Font smallFont()
-	{
-		return FontManager.getRunescapeSmallFont();
-	}
-
-	static Font boldFont()
-	{
-		return FontManager.getRunescapeBoldFont();
-	}
-
-	static Font plainFont()
-	{
-		return FontManager.getRunescapeFont();
 	}
 
 	static String escape(String text)
@@ -189,7 +169,7 @@ final class TsgHubUi
 		text.setAlignmentX(Component.CENTER_ALIGNMENT);
 		text.setHorizontalAlignment(JLabel.CENTER);
 		panel.add(title);
-		panel.add(Box.createVerticalStrut(8));
+		panel.add(Box.createVerticalStrut(GAP_M));
 		panel.add(text);
 		panel.setAlignmentX(Component.LEFT_ALIGNMENT);
 		panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, panel.getPreferredSize().height));
@@ -260,7 +240,7 @@ final class TsgHubUi
 	{
 		JPanel text = stack();
 		text.add(top);
-		text.add(Box.createVerticalStrut(3));
+		text.add(Box.createVerticalStrut(GAP_XS));
 		text.add(bottom);
 		return text;
 	}
@@ -288,6 +268,14 @@ final class TsgHubUi
 	{
 		JPanel panel = new JPanel(new BorderLayout(6, 4))
 		{
+			@Override
+			@SuppressWarnings("unchecked")
+			public String getToolTipText(MouseEvent event)
+			{
+				Object tip = getClientProperty(LAZY_TOOLTIP);
+				return tip instanceof Supplier ? ((Supplier<String>) tip).get() : super.getToolTipText(event);
+			}
+
 			// Anchor tooltips beside the card so they don't follow the mouse.
 			@Override
 			public Point getToolTipLocation(MouseEvent event)
@@ -300,9 +288,37 @@ final class TsgHubUi
 			}
 		};
 		panel.setBackground(CARD);
-		panel.setBorder(BorderFactory.createEmptyBorder(7, 8, 7, 8));
+		panel.setBorder(cardBorder());
 		panel.setAlignmentX(Component.LEFT_ALIGNMENT);
 		return panel;
+	}
+
+	static void lazyTooltip(JComponent component, Supplier<String> tip)
+	{
+		component.putClientProperty(LAZY_TOOLTIP, tip);
+		ToolTipManager.sharedInstance().registerComponent(component);
+	}
+
+	static void fullTextTooltip(JComponent card, Supplier<String> extra)
+	{
+		lazyTooltip(card, () -> {
+			List<String> parts = new ArrayList<>();
+			collectCut(card, parts);
+			String more = extra == null ? null : extra.get();
+			if (more != null && !more.isEmpty()) parts.add(more);
+			if (parts.isEmpty()) return null;
+			String body = String.join("<br>", parts);
+			return body.contains("<table") ? html("<div style='padding:2px'>" + body + "</div>", 240) : "<html>" + body + "</html>";
+		});
+	}
+
+	private static void collectCut(Container parent, List<String> parts)
+	{
+		for (Component child : parent.getComponents())
+		{
+			if (child instanceof JLabel && truncated((JLabel) child)) parts.add(parts.isEmpty() ? "<b>" + escape(((JLabel) child).getText()) + "</b>" : escape(((JLabel) child).getText()));
+			else if (child instanceof Container) collectCut((Container) child, parts);
+		}
 	}
 
 	static <T extends JComponent> T fitHeight(T component)
@@ -891,14 +907,33 @@ final class TsgHubUi
 		final String name;
 		final int have;
 		final int target;
-		final List<String> found = new ArrayList<>();   // "helm (Demo Lynx)" or "helm"
-		final List<String> needed = new ArrayList<>();  // "flail"
+		final List<String> found = new ArrayList<>();
+		final List<String> finders = new ArrayList<>();
+		final List<String> needed = new ArrayList<>();
 
 		SetLine(String name, int have, int target)
 		{
 			this.name = name;
 			this.have = have;
 			this.target = target;
+		}
+
+		String foundText()
+		{
+			List<String> parts = new ArrayList<>();
+			for (int i = 0; i < found.size(); i++) parts.add(finders.get(i).isEmpty() ? found.get(i) : found.get(i) + " (" + finders.get(i) + ")");
+			return String.join(", ", parts);
+		}
+
+		String foundHtml(String self)
+		{
+			List<String> parts = new ArrayList<>();
+			for (int i = 0; i < found.size(); i++)
+			{
+				String piece = escape(found.get(i));
+				parts.add(finders.get(i).isEmpty() ? piece : piece + " (" + nameHtml(finders.get(i), self) + ")");
+			}
+			return String.join(", ", parts);
 		}
 	}
 
@@ -930,8 +965,8 @@ final class TsgHubUi
 				if (!prefix.isEmpty() && piece.toLowerCase(Locale.ROOT).startsWith(prefix.toLowerCase(Locale.ROOT))) piece = piece.substring(prefix.length());
 				if (bool(item, "complete"))
 				{
-					String who = str(item, "obtainedBy");
-					line.found.add(withFinders && !who.isEmpty() ? piece + " (" + who + ")" : piece);
+					line.found.add(piece);
+					line.finders.add(withFinders ? str(item, "obtainedBy") : "");
 				}
 				else line.needed.add(piece);
 			}
@@ -947,7 +982,22 @@ final class TsgHubUi
 		return missing;
 	}
 
+	static String nameHtml(String name, String self)
+	{
+		return samePlayer(name, self) ? selfName(escape(name)) : escape(name);
+	}
+
 	static String contributorsText(JsonObject progress, String separator, int max)
+	{
+		return contributors(progress, separator, max, name -> name);
+	}
+
+	static String contributorsHtml(JsonObject progress, String separator, int max, String self)
+	{
+		return contributors(progress, separator, max, name -> nameHtml(name, self));
+	}
+
+	private static String contributors(JsonObject progress, String separator, int max, UnaryOperator<String> name)
 	{
 		JsonArray contributors = array(progress, "contributors");
 		if (contributors.size() == 0) return "";
@@ -955,9 +1005,9 @@ final class TsgHubUi
 		for (int i = 0; i < Math.min(max, contributors.size()); i++)
 		{
 			JsonObject entry = contributors.get(i).getAsJsonObject();
-			parts.add(str(entry, "displayName") + " " + integer(entry, "amount", 1));
+			parts.add(name.apply(str(entry, "displayName")) + " " + integer(entry, "amount", 1));
 		}
-		if (contributors.size() > max) parts.add("+" + (contributors.size() - max) + " more");
+		if (contributors.size() > max) parts.add("+" + (contributors.size() - max));
 		return String.join(separator, parts);
 	}
 
@@ -1252,6 +1302,33 @@ final class TsgHubUi
 			g.drawPolygon(new int[] {1, 7, 10, 10, 1}, new int[] {1, 1, 4, 12, 12}, 5);
 			g.drawLine(3, 6, 8, 6);
 			g.drawLine(3, 9, 8, 9);
+			g.dispose();
+		}
+	}
+
+	static final class ScopeIcon implements Icon
+	{
+		private final int people;
+
+		ScopeIcon(int people) { this.people = people; }
+		@Override public int getIconWidth() { return (int) Math.ceil((8 + (people - 1) * 5) * 0.75); }
+		@Override public int getIconHeight() { return 9; }
+		@Override public void paintIcon(Component component, Graphics graphics, int x, int y)
+		{
+			Graphics2D g = (Graphics2D) graphics.create();
+			g.translate(x, y);
+			g.scale(0.75, 0.75);
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			for (int i = people - 1; i >= 0; i--)
+			{
+				int left = i * 5;
+				g.setColor(CARD);
+				g.fillOval(left - 1, -1, 6, 6);
+				g.fillArc(left - 2, 5, 12, 13, 0, 180);
+				g.setColor(MUTED);
+				g.fillOval(left + 2, 0, 4, 4);
+				g.fillArc(left, 6, 8, 10, 0, 180);
+			}
 			g.dispose();
 		}
 	}

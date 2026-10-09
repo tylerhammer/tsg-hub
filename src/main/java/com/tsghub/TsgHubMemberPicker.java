@@ -68,13 +68,13 @@ final class TsgHubMemberPicker extends JPanel
 		add(TsgHubUi.fitHeight(field));
 
 		resultList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-		resultList.setBackground(TsgHubUi.CARD);
+		resultList.setBackground(TsgHubTheme.CARD);
 		resultList.setCellRenderer((list, name, index, selected, focus) -> {
 			JLabel row = new JLabel(name);
 			row.setOpaque(true);
 			row.setBorder(BorderFactory.createEmptyBorder(3, 6, 3, 6));
-			row.setBackground(selected ? TsgHubUi.CARD_HOVER : TsgHubUi.CARD);
-			row.setForeground(TsgHubUi.TEXT);
+			row.setBackground(selected ? TsgHubTheme.CARD_HOVER : TsgHubTheme.CARD);
+			row.setForeground(TsgHubTheme.TEXT);
 			return row;
 		});
 		resultList.addMouseListener(new MouseAdapter()
@@ -85,7 +85,7 @@ final class TsgHubMemberPicker extends JPanel
 				if (index >= 0 && resultList.getCellBounds(index, index).contains(e.getPoint())) choose(results.get(index));
 			}
 		});
-		resultScroll.setBorder(BorderFactory.createLineBorder(TsgHubUi.BORDER));
+		resultScroll.setBorder(BorderFactory.createLineBorder(TsgHubTheme.BORDER));
 		resultScroll.setAlignmentX(LEFT_ALIGNMENT);
 		resultScroll.setVisible(false);
 		add(resultScroll);

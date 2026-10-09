@@ -24,6 +24,7 @@
  */
 package com.tsghub.group.ui;
 
+import com.tsghub.TsgHubTheme;
 import com.google.common.base.Strings;
 import com.tsghub.group.data.PartyPlayer;
 import java.awt.BorderLayout;
@@ -39,7 +40,6 @@ import javax.swing.SwingUtilities;
 import net.runelite.api.Skill;
 import net.runelite.api.gameval.SpriteID;
 import net.runelite.client.game.SpriteManager;
-import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
 
 public class PlayerBanner extends JPanel
@@ -48,9 +48,9 @@ public class PlayerBanner extends JPanel
 	private static final String SPRITE_KEY = "tsghub.sprite";
 
 	private final SpriteManager spriteManager;
-	private final JLabel nameLabel = new JLabel();
+	private final JLabel nameLabel = TsgHubTheme.fullTextLabel();
 	private final JLabel worldLabel = new JLabel();
-	private final JLabel areaLabel = new JLabel();
+	private final JLabel areaLabel = TsgHubTheme.fullTextLabel();
 	private final JLabel spellbookLabel = new JLabel();
 	private final JLabel hpLabel = statLabel("Hitpoints");
 	private final JLabel prayerLabel = statLabel("Prayer");
@@ -72,12 +72,12 @@ public class PlayerBanner extends JPanel
 		setOpaque(false);
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
-		nameLabel.setFont(FontManager.getRunescapeBoldFont());
+		nameLabel.setFont(TsgHubTheme.boldFont());
 		nameLabel.setMinimumSize(new Dimension(0, 0));
 		nameLabel.putClientProperty("html.disable", Boolean.TRUE);
-		worldLabel.setFont(FontManager.getRunescapeSmallFont());
-		worldLabel.setForeground(PartyStyle.MUTED);
-		areaLabel.setFont(FontManager.getRunescapeSmallFont());
+		worldLabel.setFont(TsgHubTheme.smallFont());
+		worldLabel.setForeground(TsgHubTheme.MUTED);
+		areaLabel.setFont(TsgHubTheme.smallFont());
 		areaLabel.setMinimumSize(new Dimension(0, 0));
 		areaLabel.putClientProperty("html.disable", Boolean.TRUE);
 
@@ -96,9 +96,9 @@ public class PlayerBanner extends JPanel
 
 		stats.setAlignmentX(LEFT_ALIGNMENT);
 		add(top);
-		add(Box.createVerticalStrut(3));
+		add(Box.createVerticalStrut(TsgHubTheme.GAP_XS));
 		add(bottom);
-		add(Box.createVerticalStrut(6));
+		add(Box.createVerticalStrut(TsgHubTheme.GAP_S));
 		add(stats);
 
 		setSprite(prayerLabel, SpriteID.Staticons.PRAYER);
@@ -116,7 +116,7 @@ public class PlayerBanner extends JPanel
 		this.player = player;
 		boolean online = !Strings.isNullOrEmpty(player.getUsername());
 		nameLabel.setText(online ? player.getUsername() : "Not logged in");
-		nameLabel.setForeground(online ? PartyStyle.TEXT : PartyStyle.MUTED);
+		nameLabel.setForeground(online ? TsgHubTheme.TEXT : TsgHubTheme.MUTED);
 		nameLabel.setToolTipText(online && player.getStats() != null ? "Combat level " + player.getStats().getCombatLevel() : null);
 		updateWorld(player, displayWorld);
 		refreshStats();
@@ -144,8 +144,7 @@ public class PlayerBanner extends JPanel
 		String area = Strings.nullToEmpty(player.getArea());
 		String text = !online ? "Last seen stats" : !inGame ? "Not logged in" : area;
 		areaLabel.setText(text);
-		areaLabel.setForeground(inGame && !area.isEmpty() ? PartyStyle.SUCCESS : PartyStyle.MUTED);
-		areaLabel.setToolTipText(area.isEmpty() ? null : PartyStyle.plainTooltip(area));
+		areaLabel.setForeground(inGame && !area.isEmpty() ? TsgHubTheme.SUCCESS : TsgHubTheme.MUTED);
 	}
 
 	public void setCurrentHeart(BufferedImage img)
@@ -209,8 +208,8 @@ public class PlayerBanner extends JPanel
 	private static JLabel statLabel(String tooltip)
 	{
 		JLabel label = new JLabel();
-		label.setFont(FontManager.getRunescapeFont());
-		label.setForeground(PartyStyle.TEXT);
+		label.setFont(TsgHubTheme.plainFont());
+		label.setForeground(TsgHubTheme.TEXT);
 		label.setIconTextGap(3);
 		label.setToolTipText(tooltip);
 		return label;

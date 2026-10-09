@@ -24,8 +24,8 @@
  */
 package com.tsghub.group.ui.skills;
 
+import com.tsghub.TsgHubTheme;
 import com.tsghub.group.ui.PartyStyle;
-import java.awt.Color;
 import java.awt.image.BufferedImage;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -33,13 +33,10 @@ import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
-import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
 
 public class SkillPanelSlot extends JPanel
 {
-	private static final Color BOOSTED = new Color(76, 217, 100);
-
 	private final String name;
 	private final JLabel levelLabel = new JLabel();
 	private final JLabel baseLabel = new JLabel();
@@ -53,11 +50,11 @@ public class SkillPanelSlot extends JPanel
 		setBackground(PartyStyle.SLOT);
 		setBorder(new EmptyBorder(3, 3, 3, 1));
 		setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
-		levelLabel.setFont(FontManager.getRunescapeFont());
-		levelLabel.setForeground(PartyStyle.TEXT);
+		levelLabel.setFont(TsgHubTheme.plainFont());
+		levelLabel.setForeground(TsgHubTheme.TEXT);
 		levelLabel.setIconTextGap(3);
-		baseLabel.setFont(FontManager.getRunescapeSmallFont());
-		baseLabel.setForeground(PartyStyle.MUTED);
+		baseLabel.setFont(TsgHubTheme.smallFont());
+		baseLabel.setForeground(TsgHubTheme.MUTED);
 		add(levelLabel);
 		add(baseLabel);
 		add(Box.createHorizontalGlue());
@@ -85,7 +82,7 @@ public class SkillPanelSlot extends JPanel
 		base = baseLevel;
 		boolean changed = boostedLevel != baseLevel;
 		levelLabel.setText(String.valueOf(boostedLevel));
-		levelLabel.setForeground(!changed ? PartyStyle.TEXT : boostedLevel > baseLevel ? BOOSTED : PartyStyle.LOW);
+		levelLabel.setForeground(!changed ? TsgHubTheme.TEXT : boostedLevel > baseLevel ? TsgHubTheme.SUCCESS : PartyStyle.LOW);
 		baseLabel.setText(changed ? "/" + baseLevel : "");
 		setToolTipText(name + " " + boostedLevel + "/" + baseLevel);
 	}

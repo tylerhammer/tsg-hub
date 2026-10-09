@@ -24,6 +24,7 @@
  */
 package com.tsghub.group.ui;
 
+import com.tsghub.TsgHubTheme;
 import com.tsghub.group.GroupViewSettings;
 import com.tsghub.group.data.PartyPlayer;
 import com.tsghub.group.ui.equipment.PlayerEquipmentPanel;
@@ -50,7 +51,6 @@ import lombok.Setter;
 import net.runelite.client.game.AlternateSprites;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.SpriteManager;
-import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.components.materialtabs.MaterialTab;
 import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
 import net.runelite.client.util.ImageUtil;
@@ -177,18 +177,18 @@ public class PlayerPanel extends JPanel
 		addTab(tabs, "Skills", skillsPanel, Tab.SKILLS);
 
 		for (JComponent c : new JComponent[]{rule, tabs, display}) c.setAlignmentX(LEFT_ALIGNMENT);
-		details.add(Box.createVerticalStrut(8));
+		details.add(Box.createVerticalStrut(TsgHubTheme.GAP_M));
 		details.add(rule);
-		details.add(Box.createVerticalStrut(2));
+		details.add(Box.createVerticalStrut(TsgHubTheme.GAP_XS));
 		details.add(tabs);
-		details.add(Box.createVerticalStrut(6));
+		details.add(Box.createVerticalStrut(TsgHubTheme.GAP_S));
 		details.add(display);
 	}
 
 	private void addTab(MaterialTabGroup group, String name, JComponent content, Tab tab)
 	{
 		MaterialTab materialTab = new MaterialTab(name, group, content);
-		materialTab.setFont(FontManager.getRunescapeSmallFont());
+		materialTab.setFont(TsgHubTheme.smallFont());
 		materialTab.setOnSelectEvent(() -> {
 			selected = tab;
 			updatePlayerData(player, false);
@@ -248,9 +248,9 @@ public class PlayerPanel extends JPanel
 
 	private void paintState()
 	{
-		Color background = self ? (hovered ? PartyStyle.SELF_CARD_HOVER : PartyStyle.SELF_CARD) : (hovered ? PartyStyle.CARD_HOVER : PartyStyle.CARD);
+		Color background = self ? (hovered ? TsgHubTheme.SELF_CARD_HOVER : TsgHubTheme.SELF_CARD) : (hovered ? TsgHubTheme.CARD_HOVER : TsgHubTheme.CARD);
 		setBackground(background);
-		setBorder(self ? PartyStyle.selfBorder() : PartyStyle.cardBorder());
+		setBorder(self ? TsgHubTheme.selfBorder() : TsgHubTheme.cardBorder());
 		repaint();
 	}
 
