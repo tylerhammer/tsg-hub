@@ -1329,6 +1329,30 @@ final class TsgHubSidebarPanel extends PluginPanel
 		refreshPage();
 	}
 
+	void competitionProgress(String eventId, long gained, Long rank)
+	{
+		if (view != View.COMPETITION || competitionEvent == null || !eventId.equals(openCompetitionId)) return;
+		List<JsonObject> rows = new ArrayList<>(objects(array(competitionEvent, "leaderboard")));
+		JsonObject mine = null;
+		for (JsonObject row : rows) if (str(row, "displayName").equalsIgnoreCase(competitionName)) mine = row;
+		if (mine == null) return;
+		mine.addProperty("gained", gained);
+		mine.addProperty("tracking", true);
+		if (rank != null)
+		{
+			rows.sort(Comparator.comparingLong((JsonObject row) -> -integer(row, "gained", 0)).thenComparing(row -> str(row, "displayName")));
+			JsonArray sorted = new JsonArray();
+			for (int i = 0; i < rows.size(); i++)
+			{
+				rows.get(i).addProperty("rank", i + 1);
+				sorted.add(rows.get(i));
+			}
+			mine.addProperty("rank", rank);
+			competitionEvent.add("leaderboard", sorted);
+		}
+		showCompetition(competitionEvent, competitionName, false);
+	}
+
 	private void showDropParty(JsonObject event)
 	{
 		setView(View.DROP_PARTY);

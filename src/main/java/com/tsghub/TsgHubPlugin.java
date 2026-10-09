@@ -53,7 +53,6 @@ import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.ClanChannelChanged;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
-import net.runelite.api.events.ScriptPostFired;
 import net.runelite.api.events.StatChanged;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.events.WidgetClosed;
@@ -154,7 +153,6 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubGroups groups;
 	private TsgHubPresence presence;
 	private TsgHubDrops drops;
-	private TsgHubRanks ranks;
 	private GroupTracker groupTracker;
 
 	@Override
@@ -175,10 +173,12 @@ public class TsgHubPlugin extends Plugin
 			@Override public void onAdminRevoked(String token) { recheckHubKey(token); }
 			@Override public void onAnnouncement(String text) { announce(text); }
 			@Override public void onUpdateAvailable(String version) { updateAvailable(version); }
+			@Override public void onSubscribed(String eventId) { if (competitions != null) competitions.onSubscribed(eventId); }
+			@Override public void onProgress(String eventId, long gained, Long rank) { SwingUtilities.invokeLater(() -> sidebar.competitionProgress(eventId, gained, rank)); }
 		});
 		executor.scheduleAtFixedRate(this::socketTick, 2, 5, TimeUnit.SECONDS);
 		executor.scheduleAtFixedRate(unlessLive(this::autoRefreshBoard), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
-		competitions = new TsgHubCompetitionTracker(this::api, executor, client, clientThread);
+		competitions = new TsgHubCompetitionTracker(this::api, executor, client, clientThread, socket);
 		itemSearchExecutor = Executors.newFixedThreadPool(2, daemon("tsg-hub-item-search"));
 		panel = new TsgHubPanel(this);
 		GroupMembersPanel groupMembers = new GroupMembersPanel(new GroupViewSettings()
@@ -200,7 +200,6 @@ public class TsgHubPlugin extends Plugin
 		executor.scheduleAtFixedRate(unlessLive(presence::autoRefresh), TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
 		drops = new TsgHubDrops(this, client, clientThread, executor, this::api, () -> sidebar);
 		executor.scheduleAtFixedRate(unlessLive(drops::autoRefresh), TsgHubDrops.REFRESH_SECONDS, TsgHubDrops.REFRESH_SECONDS, TimeUnit.SECONDS);
-		ranks = new TsgHubRanks(this, client, executor, this::api, this::adminKey);
 		navigationButton = NavigationButton.builder()
 			.tooltip("TSG Hub")
 			.icon(ImageUtil.loadImageResource(getClass(), "icon.png"))
@@ -234,7 +233,6 @@ public class TsgHubPlugin extends Plugin
 		if (groups != null && groupTracker != null && groupTracker.isSharing()) partyService.changeParty(null);
 		if (hubWindow != null) SwingUtilities.invokeLater(hubWindow::dispose);
 		if (presence != null) presence.shutDown();
-		if (ranks != null) ranks.shutDown();
 		if (socket != null) socket.disconnect();
 		if (executor != null) executor.shutdownNow();
 		if (itemSearchExecutor != null) itemSearchExecutor.shutdownNow();
@@ -438,7 +436,6 @@ public class TsgHubPlugin extends Plugin
 		// Loading screens and world hops aren't logouts.
 		if (state != GameState.LOGIN_SCREEN && state != GameState.LOGIN_SCREEN_AUTHENTICATOR) return;
 		if (presence != null) presence.onLoggedOut();
-		if (ranks != null) ranks.reset();
 		detectedPlayerName = "";
 		detectedClanName = "";
 		detectedClanRank = -1;
@@ -465,14 +462,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		String previousClan = detectedClanName;
 		refreshDetectedClan();
-		if (ranks != null) ranks.onClanChannelChanged();
 		if (config.dataSharingOptIn() && sidebarRouted && !detectedClanName.equals(previousClan)) loadClanEvents();
-	}
-
-	@Subscribe
-	public void onScriptPostFired(ScriptPostFired event)
-	{
-		if (ranks != null) ranks.onScriptPostFired(event.getScriptId());
 	}
 
 	@Subscribe
@@ -503,7 +493,6 @@ public class TsgHubPlugin extends Plugin
 			keyCheckAttempts = 0;
 			announceKey = !configuredKey().isEmpty();
 			if (adminVerified) setAdminVerified(false);
-			if (ranks != null) ranks.reset();
 			checkHubKey();
 			return;
 		}
@@ -562,7 +551,6 @@ public class TsgHubPlugin extends Plugin
 		attemptedXpClaims.clear();
 		syncedClanRanks.clear();
 		syncedIdentity = "";
-		if (ranks != null) ranks.reset();
 		if (competitions != null) competitions.clear();
 		clearTaskCache();
 		syncSocketNow();
@@ -766,6 +754,11 @@ public class TsgHubPlugin extends Plugin
 		String competitionId = sidebar == null ? null : sidebar.openCompetitionId();
 		String memberToken = competitionId == null ? "" : TsgHubSession.get("memberToken:" + competitionId);
 		if (!memberToken.isEmpty()) tokens.putIfAbsent(competitionId, memberToken);
+		for (String joinedId : competitions.joinedIds())
+		{
+			String joinedToken = TsgHubSession.get("memberToken:" + joinedId);
+			if (!joinedToken.isEmpty()) tokens.putIfAbsent(joinedId, joinedToken);
+		}
 		String organizerEventId = adminWindowOpen() ? getOrganizerEventId() : "";
 		String organizerToken = organizerEventId.isEmpty() ? "" : organizerCredential(organizerEventId);
 		if (!organizerToken.isEmpty()) tokens.putIfAbsent(organizerEventId, organizerToken);
@@ -1560,7 +1553,6 @@ public class TsgHubPlugin extends Plugin
 	public void onGameTick(GameTick tick)
 	{
 		if (presence != null) presence.onGameTick();
-		if (ranks != null) ranks.onGameTick();
 		if (clanCheckTicks > 0)
 		{
 			clanCheckTicks--;
