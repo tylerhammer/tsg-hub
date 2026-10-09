@@ -2098,10 +2098,23 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (pending && !completed) body.add(label("Awaiting admin review", WARNING, smallFont()));
 		if (manual && !completed && !pending) addManualSubmit(body, taskId);
 		addLineSpacing(body);
-		if (body.getComponentCount() > 0) card.add(body, BorderLayout.CENTER);
+		addScopeIcon(body, solo, individual);
+		card.add(body, BorderLayout.CENTER);
 		String detail = taskDetail(progress, individual, solo, completed);
 		card.setToolTipText("<html><b>" + escape(str(task, "title")) + "</b>" + (detail == null ? "" : "<br>" + detail) + "</html>");
 		return fitHeight(card);
+	}
+
+	private static void addScopeIcon(JPanel body, boolean solo, boolean individual)
+	{
+		JLabel scope = new JLabel(new ScopeIcon(solo ? 1 : individual ? 3 : 2));
+		scope.setToolTipText(solo ? "Solo: one player completes it" : individual ? "Everyone: each teammate completes it" : "Team: progress is shared");
+		JPanel corner = panel(new BorderLayout());
+		corner.add(scope, BorderLayout.SOUTH);
+		int last = body.getComponentCount() - 1;
+		Component line = last >= 0 && body.getComponent(last) instanceof JLabel ? body.getComponent(last) : new JLabel();
+		if (line.getParent() == body) body.remove(last);
+		body.add(fitHeight(row(line, corner)));
 	}
 
 	private JLabel teammatesLine(JsonObject mine, int value, int target)

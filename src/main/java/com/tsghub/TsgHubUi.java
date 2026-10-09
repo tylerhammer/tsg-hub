@@ -1267,6 +1267,33 @@ final class TsgHubUi
 		}
 	}
 
+	static final class ScopeIcon implements Icon
+	{
+		private final int people;
+
+		ScopeIcon(int people) { this.people = people; }
+		@Override public int getIconWidth() { return (int) Math.ceil((8 + (people - 1) * 5) * 0.75); }
+		@Override public int getIconHeight() { return 9; }
+		@Override public void paintIcon(Component component, Graphics graphics, int x, int y)
+		{
+			Graphics2D g = (Graphics2D) graphics.create();
+			g.translate(x, y);
+			g.scale(0.75, 0.75);
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			for (int i = people - 1; i >= 0; i--)
+			{
+				int left = i * 5;
+				g.setColor(CARD);
+				g.fillOval(left - 1, -1, 6, 6);
+				g.fillArc(left - 2, 5, 12, 13, 0, 180);
+				g.setColor(MUTED);
+				g.fillOval(left + 2, 0, 4, 4);
+				g.fillArc(left, 6, 8, 10, 0, 180);
+			}
+			g.dispose();
+		}
+	}
+
 	static final class LockIcon implements Icon
 	{
 		@Override public int getIconWidth() { return 10; }
