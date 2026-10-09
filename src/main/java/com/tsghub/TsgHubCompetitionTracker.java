@@ -5,14 +5,11 @@ import com.google.gson.JsonObject;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -28,7 +25,6 @@ final class TsgHubCompetitionTracker
 	static final Pattern KILL_COUNT = Pattern.compile("(?:kill count|kill-count)[^0-9]*([0-9][0-9,]*)");
 	private static final long XP_FLUSH_SECONDS = 10;
 	private static final long SCHEDULE_CHECK_SECONDS = 60;
-	private static final int REWARD_TICKS = 2;
 	static final Set<Integer> REWARD_INTERFACES = Set.of(
 		InterfaceID.QUESTSCROLL,
 		InterfaceID.XPREWARD,
@@ -42,21 +38,19 @@ final class TsgHubCompetitionTracker
 	private final ScheduledExecutorService executor;
 	private final Client client;
 	private final ClientThread clientThread;
+	private final TsgHubSocket socket;
 	private volatile List<JsonObject> tracked = Collections.emptyList();
 	private volatile List<JsonObject> joined = Collections.emptyList();
 	// Flushed on a delay so each XP drop doesn't send a request.
 	private final Map<String, PendingXp> pendingXp = new ConcurrentHashMap<>();
-	private final Map<Skill, Integer> lastXp = new ConcurrentHashMap<>();
-	private final Deque<XpGain> recentGains = new ConcurrentLinkedDeque<>();
-	private final Set<Integer> openRewards = ConcurrentHashMap.newKeySet();
-	private volatile int rewardTick = Integer.MIN_VALUE;
 
-	TsgHubCompetitionTracker(Supplier<TsgHubApi> api, ScheduledExecutorService executor, Client client, ClientThread clientThread)
+	TsgHubCompetitionTracker(Supplier<TsgHubApi> api, ScheduledExecutorService executor, Client client, ClientThread clientThread, TsgHubSocket socket)
 	{
 		this.api = api;
 		this.executor = executor;
 		this.client = client;
 		this.clientThread = clientThread;
+		this.socket = socket;
 		executor.scheduleAtFixedRate(this::checkSchedule, SCHEDULE_CHECK_SECONDS, SCHEDULE_CHECK_SECONDS, TimeUnit.SECONDS);
 	}
 
@@ -81,10 +75,11 @@ final class TsgHubCompetitionTracker
 		tracked = Collections.emptyList();
 		joined = Collections.emptyList();
 		pendingXp.clear();
-		lastXp.clear();
-		recentGains.clear();
-		openRewards.clear();
-		rewardTick = Integer.MIN_VALUE;
+	}
+
+	List<String> joinedIds()
+	{
+		return ids(joined);
 	}
 
 	private void checkSchedule()
@@ -121,51 +116,49 @@ final class TsgHubCompetitionTracker
 			{
 				if (!"skill".equals(TsgHubUi.str(event, "type"))) continue;
 				Skill skill = skill(event);
-				if (skill != null) queueXp(event, client.getSkillExperience(skill), 0);
+				if (skill != null) report(event, skill, client.getSkillExperience(skill));
 			}
 		});
 	}
 
+	void onSubscribed(String eventId)
+	{
+		for (JsonObject event : joined)
+		{
+			if (!eventId.equals(TsgHubUi.str(event, "id")) || !"skill".equals(TsgHubUi.str(event, "type"))) continue;
+			Skill skill = skill(event);
+			if (skill == null) continue;
+			clientThread.invokeLater(() -> {
+				if (client.getLocalPlayer() != null) socket.xp(skill.name(), client.getSkillExperience(skill), client.getTickCount());
+			});
+		}
+	}
+
 	void onXp(Skill skill, int xp)
 	{
-		Integer previous = lastXp.put(skill, xp);
-		int tick = client.getTickCount();
-		if (previous != null && xp > previous)
-		{
-			if (rewardActive(tick)) excludeXp(skill, xp - previous);
-			else recentGains.addLast(new XpGain(tick, skill, xp - previous));
-		}
-		while (!recentGains.isEmpty() && tick - recentGains.peekFirst().tick > REWARD_TICKS) recentGains.pollFirst();
+		boolean streamed = false;
 		for (JsonObject event : joined)
-			if ("skill".equals(TsgHubUi.str(event, "type")) && skill == skill(event)) queueXp(event, xp, 0);
+		{
+			if (!"skill".equals(TsgHubUi.str(event, "type")) || skill != skill(event)) continue;
+			if (!socket.streaming(TsgHubUi.str(event, "id"))) queueXp(event, xp);
+			else if (!streamed) streamed = socket.xp(skill.name(), xp, client.getTickCount());
+		}
 	}
 
 	void onInterfaceOpened(int groupId)
 	{
-		if (!REWARD_INTERFACES.contains(groupId)) return;
-		openRewards.add(groupId);
-		int tick = client.getTickCount();
-		rewardTick = tick;
-		for (XpGain gain; (gain = recentGains.pollFirst()) != null; )
-			if (tick - gain.tick <= REWARD_TICKS) excludeXp(gain.skill, gain.xp);
+		if (REWARD_INTERFACES.contains(groupId)) socket.rewardInterface(groupId, true, client.getTickCount());
 	}
 
 	void onInterfaceClosed(int groupId)
 	{
-		if (openRewards.remove(groupId)) rewardTick = client.getTickCount();
+		if (REWARD_INTERFACES.contains(groupId)) socket.rewardInterface(groupId, false, client.getTickCount());
 	}
 
-	private boolean rewardActive(int tick)
+	private void report(JsonObject event, Skill skill, int xp)
 	{
-		return !openRewards.isEmpty() || (long) tick - rewardTick <= REWARD_TICKS;
-	}
-
-	private void excludeXp(Skill skill, int xp)
-	{
-		Integer total = lastXp.get(skill);
-		if (total == null) return;
-		for (JsonObject event : joined)
-			if ("skill".equals(TsgHubUi.str(event, "type")) && skill == skill(event)) queueXp(event, total, xp);
+		if (socket.streaming(TsgHubUi.str(event, "id"))) socket.xp(skill.name(), xp, client.getTickCount());
+		else queueXp(event, xp);
 	}
 
 	void onChat(String message)
@@ -202,7 +195,7 @@ final class TsgHubCompetitionTracker
 		}
 	}
 
-	private void queueXp(JsonObject event, int xp, int excluded)
+	private void queueXp(JsonObject event, int xp)
 	{
 		String id = TsgHubUi.str(event, "id");
 		String token = token(event);
@@ -210,7 +203,7 @@ final class TsgHubCompetitionTracker
 		boolean[] schedule = {false};
 		pendingXp.compute(id, (key, previous) -> {
 			schedule[0] = previous == null;
-			return new PendingXp(Math.max(xp, previous == null ? 0 : previous.xp), token, excluded + (previous == null ? 0 : previous.excluded));
+			return new PendingXp(Math.max(xp, previous == null ? 0 : previous.xp), token);
 		});
 		if (!schedule[0]) return;
 		executor.schedule(() -> {
@@ -218,11 +211,6 @@ final class TsgHubCompetitionTracker
 			if (latest == null) return;
 			JsonObject body = new JsonObject();
 			body.addProperty("value", latest.xp);
-			if (latest.excluded > 0)
-			{
-				body.addProperty("excluded", latest.excluded);
-				body.addProperty("evidenceId", "reward-" + UUID.randomUUID());
-			}
 			send(event, latest.token, body);
 		}, XP_FLUSH_SECONDS, TimeUnit.SECONDS);
 	}
@@ -259,15 +247,6 @@ final class TsgHubCompetitionTracker
 	{
 		private final int xp;
 		private final String token;
-		private final int excluded;
-		private PendingXp(int xp, String token, int excluded) { this.xp = xp; this.token = token; this.excluded = excluded; }
-	}
-
-	private static final class XpGain
-	{
-		private final int tick;
-		private final Skill skill;
-		private final int xp;
-		private XpGain(int tick, Skill skill, int xp) { this.tick = tick; this.skill = skill; this.xp = xp; }
+		private PendingXp(int xp, String token) { this.xp = xp; this.token = token; }
 	}
 }
