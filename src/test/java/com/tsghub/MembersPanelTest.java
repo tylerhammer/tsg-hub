@@ -23,9 +23,9 @@ public class MembersPanelTest
 		assertEquals("Online", TsgHubSidebarPanel.activityDetail("", ""));
 	}
 
-	private static String tip(String rank, String altOf, JsonArray alts, String note, JsonArray warnings)
+	private static String tip(String altOf, JsonArray alts, String note, JsonArray warnings)
 	{
-		return TsgHubSidebarPanel.rosterTooltip(rank, altOf, alts, note, warnings, NOW, java.time.ZoneOffset.UTC);
+		return TsgHubSidebarPanel.rosterTooltip("", new JsonArray(), altOf, alts, note, warnings, NOW, java.time.ZoneOffset.UTC);
 	}
 
 	private static final java.time.Instant NOW = java.time.Instant.parse("2026-10-08T12:00:00Z");
@@ -51,14 +51,22 @@ public class MembersPanelTest
 	public void rosterTooltip()
 	{
 		JsonArray none = new JsonArray();
-		assertEquals("", tip("", "", none, "", none));
-		String alt = tip("Gnome Child", "Fenrir", none, "", none);
-		assertTrue(alt.contains("<b>Gnome Child</b>") && alt.contains("Alt of <b>Fenrir</b>"));
+		assertEquals("", tip("", none, "", none));
+		String alt = tip("Fenrir", none, "", none);
+		assertTrue(alt.contains("Alt of <b>Fenrir</b>") && !alt.contains("Gnome Child"));
 		JsonArray alts = new JsonArray();
 		alts.add("Iron Fenrir");
 		alts.add(new JsonObject());
-		assertTrue(tip("Owner", "", alts, "", none).contains("Alt: Iron Fenrir"));
-		String full = tip("", "", none, "Owes <5m>", none);
+		assertTrue(tip("", alts, "", none).contains("Alt: <b>Iron Fenrir</b>"));
+		JsonArray formerly = new JsonArray();
+		formerly.add("First");
+		formerly.add("Second");
+		String renamed = TsgHubSidebarPanel.rosterTooltip("", formerly, "", none, "", none, NOW, java.time.ZoneOffset.UTC);
+		assertTrue(renamed.contains("PREVIOUS NAMES") && renamed.contains("Second<br>First"));
+		String location = TsgHubSidebarPanel.locationTip("Slayer - Nechryael", "Catacombs of Kourend");
+		assertTrue(location.contains(">Slayer: Nechryael<") && location.contains("<br>") && !location.contains("<b>"));
+		assertEquals(false, TsgHubSidebarPanel.locationTip("Online", "").contains("<br>"));
+		String full = tip("", none, "Owes <5m>", none);
 		assertTrue(full.contains("ADMIN NOTE") && full.contains("Owes &lt;5m&gt;"));
 	}
 
@@ -69,7 +77,7 @@ public class MembersPanelTest
 		warnings.add(warning("Spam <chat>", true, "2026-12-11T10:00:00Z", null));
 		warnings.add(warning("Old one", false, "2026-06-01T10:00:00Z", null));
 		warnings.add(warning("Mistake", false, null, "Crab Legs"));
-		String html = tip("Captain", "", new JsonArray(), "", warnings);
+		String html = tip("", new JsonArray(), "", warnings);
 		assertTrue(html.contains("WARNINGS") && html.contains("1 active · 1 expired · 1 revoked"));
 		assertTrue(html.contains("Spam &lt;chat&gt;") && html.contains("12 Sep · Fenrir · expires 11 Dec"));
 		assertTrue(html.contains("Fenrir · expired") && html.contains("revoked by Crab Legs"));
@@ -77,7 +85,7 @@ public class MembersPanelTest
 
 		JsonArray many = new JsonArray();
 		for (int i = 0; i < 5; i++) many.add(warning("Past " + i, false, "2026-06-01T10:00:00Z", null));
-		assertTrue(tip("", "", new JsonArray(), "", many).contains("+2 older"));
+		assertTrue(tip("", new JsonArray(), "", many).contains("+2 older"));
 		assertTrue(TsgHubSidebarPanel.hasActiveWarning(warnings));
 		assertEquals(false, TsgHubSidebarPanel.hasActiveWarning(many));
 	}
@@ -114,6 +122,7 @@ public class MembersPanelTest
 		JsonObject note = new JsonObject();
 		note.addProperty("displayName", "iron alt");
 		note.addProperty("altOf", "Bob");
+		note.addProperty("accountType", 2);
 		notes.add(note);
 
 		JsonArray[] roster = TsgHubPresence.roster(presence, chat, Arrays.asList("Bob", "Zezima", "Iron Alt", "Alice"), notes);
@@ -125,6 +134,8 @@ public class MembersPanelTest
 		assertEquals(2, roster[1].size());
 		assertEquals("Alice", roster[1].get(0).getAsJsonObject().get("displayName").getAsString());
 		assertEquals("Bob", roster[1].get(1).getAsJsonObject().get("altOf").getAsString());
+		assertEquals(2, TsgHubPresence.accountType(roster[1].get(1).getAsJsonObject()));
+		assertEquals(0, TsgHubPresence.accountType(roster[1].get(0).getAsJsonObject()));
 	}
 
 	@Test

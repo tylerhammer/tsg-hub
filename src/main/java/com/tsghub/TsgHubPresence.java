@@ -3,6 +3,7 @@ package com.tsghub;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.tsghub.TsgHubUi.Tone;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -21,6 +22,7 @@ import javax.swing.SwingUtilities;
 import net.runelite.api.Client;
 import net.runelite.api.Actor;
 import net.runelite.api.GameState;
+import net.runelite.api.IconID;
 import net.runelite.api.NPC;
 import net.runelite.api.Player;
 import net.runelite.api.WorldView;
@@ -32,10 +34,12 @@ import net.runelite.api.clan.ClanSettings;
 import net.runelite.api.clan.ClanTitle;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.gameval.DBTableID;
+import net.runelite.api.gameval.SpriteID;
 import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.api.gameval.VarbitID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.game.ChatIconManager;
+import net.runelite.client.game.SpriteManager;
 import net.runelite.client.util.Text;
 
 final class TsgHubPresence
@@ -44,12 +48,16 @@ final class TsgHubPresence
 	private static final long HEARTBEAT_MILLIS = 30_000;
 	private static final long MIN_GAP_MILLIS = 5_000;
 	private static final int SLAYER_BOSS_TARGET = 98;
+	private static final IconID[] ACCOUNT_ICONS = {null, IconID.IRONMAN, IconID.ULTIMATE_IRONMAN, IconID.HARDCORE_IRONMAN, IconID.GROUP_IRONMAN, IconID.HARDCORE_GROUP_IRONMAN, IconID.UNRANKED_GROUP_IRONMAN};
 
 	private final TsgHubPlugin plugin;
 	private final Client client;
 	private final ClientThread clientThread;
 	private final ChatIconManager chatIcons;
+	private final SpriteManager sprites;
 	private final Map<Integer, BufferedImage> rankIcons = new ConcurrentHashMap<>();
+	private final Map<Integer, BufferedImage> accountIcons = new ConcurrentHashMap<>();
+	private final Map<String, BufferedImage> nameIcons = new ConcurrentHashMap<>();
 	private final ScheduledExecutorService executor;
 	private final Supplier<TsgHubApi> api;
 	private final Supplier<TsgHubSidebarPanel> sidebar;
@@ -62,7 +70,7 @@ final class TsgHubPresence
 	private volatile AreaNames.Area area;
 	private boolean slayerDirty = true;
 
-	TsgHubPresence(TsgHubPlugin plugin, Client client, ClientThread clientThread, ChatIconManager chatIcons, ScheduledExecutorService executor,
+	TsgHubPresence(TsgHubPlugin plugin, Client client, ClientThread clientThread, ChatIconManager chatIcons, SpriteManager sprites, ScheduledExecutorService executor,
 		Supplier<TsgHubApi> api, Supplier<TsgHubSidebarPanel> sidebar, TsgHubSocket socket, Supplier<String> key)
 	{
 		this.key = key;
@@ -71,6 +79,7 @@ final class TsgHubPresence
 		this.client = client;
 		this.clientThread = clientThread;
 		this.chatIcons = chatIcons;
+		this.sprites = sprites;
 		this.executor = executor;
 		this.api = api;
 		this.sidebar = sidebar;
@@ -144,6 +153,8 @@ final class TsgHubPresence
 					JsonArray[] roster = roster(members, chatWorlds(), clanNames(), known == null ? new JsonArray() : known);
 					addRanks(roster[0]);
 					addRanks(roster[1]);
+					loadAccountIcons(roster[0]);
+					loadAccountIcons(roster[1]);
 					ui(s -> s.setMembers(roster[0], roster[1], known != null));
 				});
 			}
@@ -227,7 +238,7 @@ final class TsgHubPresence
 			JsonObject note = notes.get(TsgHubUi.playerKey(TsgHubUi.str(member, "displayName")));
 			if (note != null)
 			{
-				for (String field : new String[] {"altOf", "alts", "note", "lastSeenAt", "warnings"})
+				for (String field : new String[] {"altOf", "alts", "note", "lastSeenAt", "warnings", "accountType", "previousNames"})
 				{
 					if (note.has(field)) member.add(field, note.get(field));
 				}
@@ -310,9 +321,41 @@ final class TsgHubPresence
 		}
 	}
 
-	BufferedImage rankIcon(JsonObject member)
+	private void loadAccountIcons(JsonArray members)
 	{
-		return member.has("rankId") ? rankIcons.get(TsgHubUi.integer(member, "rankId", 0)) : null;
+		for (int i = 0; i < members.size(); i++)
+		{
+			int type = accountType(members.get(i).getAsJsonObject());
+			if (type == 0 || accountIcons.containsKey(type)) continue;
+			BufferedImage icon = sprites.getSprite(SpriteID.MOD_ICONS, ACCOUNT_ICONS[type].getIndex());
+			if (icon != null) accountIcons.put(type, icon);
+		}
+	}
+
+	BufferedImage nameIcon(JsonObject member)
+	{
+		BufferedImage rank = member.has("rankId") ? rankIcons.get(TsgHubUi.integer(member, "rankId", 0)) : null;
+		int type = accountType(member);
+		BufferedImage account = accountIcons.get(type);
+		if (account == null) return rank;
+		if (rank == null) return account;
+		return nameIcons.computeIfAbsent(TsgHubUi.integer(member, "rankId", 0) + ":" + type, k -> sideBySide(rank, account));
+	}
+
+	private static BufferedImage sideBySide(BufferedImage left, BufferedImage right)
+	{
+		BufferedImage out = new BufferedImage(left.getWidth() + 2 + right.getWidth(), Math.max(left.getHeight(), right.getHeight()), BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g = out.createGraphics();
+		g.drawImage(left, 0, (out.getHeight() - left.getHeight()) / 2, null);
+		g.drawImage(right, left.getWidth() + 2, (out.getHeight() - right.getHeight()) / 2, null);
+		g.dispose();
+		return out;
+	}
+
+	static int accountType(JsonObject member)
+	{
+		int type = TsgHubUi.integer(member, "accountType", 0);
+		return type > 0 && type < ACCOUNT_ICONS.length ? type : 0;
 	}
 
 	private JsonObject snapshot()
@@ -330,6 +373,7 @@ final class TsgHubPresence
 		payload.addProperty("displayName", name);
 		payload.addProperty("accountHash", Long.toString(hash));
 		payload.addProperty("world", client.getWorld());
+		payload.addProperty("accountType", client.getVarbitValue(VarbitID.IRONMAN));
 		payload.addProperty("area", area == null ? "" : area.name);
 		payload.addProperty("activity", detailed ? activity.activity(area, System.currentTimeMillis()) : "Online");
 		return payload;
