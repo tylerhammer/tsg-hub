@@ -239,10 +239,10 @@ final class TsgHubGroups implements GroupTracker.Listener
 	}
 
 	@Override
-	public void memberUpdated(PartyPlayer player, boolean bannerChanged, boolean self)
+	public void memberUpdated(PartyPlayer player, boolean self)
 	{
 		TsgHubSidebarPanel s = sidebar.get();
-		if (s != null) s.groupMemberUpdated(player, bannerChanged, self);
+		if (s != null) s.groupMemberUpdated(player, self);
 	}
 
 	@Override

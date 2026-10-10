@@ -77,8 +77,7 @@ final class TsgHubDrops
 			try
 			{
 				JsonArray drops = api.get().request("GET", "/v1/drops?clanName=" + clan, null, null).getAsJsonArray("drops");
-				if (clientThread == null) ui(s -> s.setDrops(drops));
-				else clientThread.invoke(() -> {
+				clientThread.invoke(() -> {
 					if (!indexItems()) return false;
 					addItemIds(drops);
 					ui(s -> s.setDrops(drops));

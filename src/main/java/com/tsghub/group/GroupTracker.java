@@ -48,7 +48,6 @@ import net.runelite.api.gameval.VarbitID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.PartyChanged;
-import net.runelite.client.events.PartyMemberAvatar;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.ItemVariationMapping;
 import net.runelite.client.party.PartyService;
@@ -82,7 +81,7 @@ public final class GroupTracker
 	// Member callbacks run on the Swing thread.
 	public interface Listener
 	{
-		void memberUpdated(PartyPlayer player, boolean bannerChanged, boolean self);
+		void memberUpdated(PartyPlayer player, boolean self);
 
 		void memberRemoved(PartyPlayer player);
 
@@ -190,11 +189,6 @@ public final class GroupTracker
 	{
 		return client.getGameState() == GameState.LOGIN_SCREEN && lastLogout != null
 			&& lastLogout.isBefore(Instant.now().minus(IDLE_MINUTES, ChronoUnit.MINUTES));
-	}
-
-	public List<PartyPlayer> getMembers()
-	{
-		return new ArrayList<>(partyMembers.values());
 	}
 
 	private boolean isLocalPlayer(long id)
@@ -480,24 +474,14 @@ public final class GroupTracker
 		clientThread.invoke(() ->
 		{
 			e.process(player, itemManager);
-			final boolean bannerChanged = e.hasBreakingBannerChange();
 			final boolean areaChanged = e.hasAreaChange();
 			SwingUtilities.invokeLater(() ->
 			{
 				if (partyMembers.get(e.getMemberId()) != player) return;
-				listener.memberUpdated(player, bannerChanged, false);
+				listener.memberUpdated(player, false);
 				if (areaChanged) listener.areasChanged();
 			});
 		});
-	}
-
-	@Subscribe
-	public void onPartyMemberAvatar(final PartyMemberAvatar e)
-	{
-		final PartyPlayer player = partyMembers.get(e.getMemberId());
-		if (isLocalPlayer(e.getMemberId()) || player == null) return;
-		player.getMember().setAvatar(e.getImage());
-		SwingUtilities.invokeLater(() -> { if (partyMembers.get(e.getMemberId()) == player) listener.memberUpdated(player, true, false); });
 	}
 
 	private void sendUpdate(final TsgGroupUpdate update)
@@ -526,8 +510,7 @@ public final class GroupTracker
 		clientThread.invoke(() ->
 		{
 			update.process(self, itemManager);
-			final boolean bannerChanged = update.hasBreakingBannerChange();
-			SwingUtilities.invokeLater(() -> { if (selfView == self && showSelf.getAsBoolean()) listener.memberUpdated(self, bannerChanged, true); });
+			SwingUtilities.invokeLater(() -> { if (selfView == self && showSelf.getAsBoolean()) listener.memberUpdated(self, true); });
 		});
 	}
 

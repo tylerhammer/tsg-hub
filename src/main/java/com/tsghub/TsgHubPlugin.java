@@ -287,7 +287,6 @@ public class TsgHubPlugin extends Plugin
 	boolean inClanChat() { return inClanChat; }
 	String getDetectedPlayerName() { return detectedPlayerName; }
 	int getDetectedClanRank() { return detectedClanRank; }
-	String getCurrentEventId() { return TsgHubSession.get("eventId"); }
 	AsyncBufferedImage getItemImage(int itemId) { return itemManager == null ? null : itemManager.getImage(itemId); }
 
 	AsyncBufferedImage getCoinImage(long gp) { return itemManager == null ? null : itemManager.getImage(ItemID.COINS, (int) Math.min(gp, Integer.MAX_VALUE), false); }

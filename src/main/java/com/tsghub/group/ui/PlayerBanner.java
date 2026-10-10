@@ -106,11 +106,6 @@ public class PlayerBanner extends JPanel
 		update(player);
 	}
 
-	public void setPlayer(PartyPlayer player)
-	{
-		this.player = player;
-	}
-
 	public void update(PartyPlayer player)
 	{
 		this.player = player;

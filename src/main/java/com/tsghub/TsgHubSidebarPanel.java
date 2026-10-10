@@ -1594,9 +1594,9 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (shows(View.GROUPS)) renderGroups();
 	}
 
-	void groupMemberUpdated(PartyPlayer player, boolean bannerChanged, boolean self)
+	void groupMemberUpdated(PartyPlayer player, boolean self)
 	{
-		groupMembers.update(player, bannerChanged, self);
+		groupMembers.update(player, self);
 	}
 
 	void groupMemberRemoved(PartyPlayer player)
