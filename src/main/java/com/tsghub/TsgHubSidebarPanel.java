@@ -685,7 +685,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 		card.add(text, BorderLayout.CENTER);
 		setMemberTip(card, member, note, detailLabel);
-		addMemberMenu(card, member, sameWorld || self ? 0 : world);
+		addMemberMenu(card, member);
 		return fitHeight(card);
 	}
 
@@ -703,7 +703,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (!seen.isEmpty()) badges.add(label(seen, MUTED, small));
 		if (badges.getComponentCount() > 0) row.add(badges, BorderLayout.EAST);
 		setMemberTip(row, member, note, null);
-		addMemberMenu(row, member, 0);
+		addMemberMenu(row, member);
 		return fitHeight(row);
 	}
 
@@ -745,19 +745,13 @@ final class TsgHubSidebarPanel extends PluginPanel
 		return days / 365 + "y ago";
 	}
 
-	private void addMemberMenu(JComponent card, JsonObject member, int hopWorld)
+	private void addMemberMenu(JComponent card, JsonObject member)
 	{
 		String name = str(member, "displayName");
 		javax.swing.JPopupMenu menu = new javax.swing.JPopupMenu();
 		javax.swing.JMenuItem lookup = new javax.swing.JMenuItem("Lookup");
 		lookup.addActionListener(e -> showLookup(name, TsgHubPresence.accountType(member)));
 		menu.add(lookup);
-		if (hopWorld > 0)
-		{
-			javax.swing.JMenuItem hop = new javax.swing.JMenuItem("Hop to W" + hopWorld);
-			hop.addActionListener(e -> plugin.hopTo(hopWorld));
-			menu.add(hop);
-		}
 		if (plugin.canManageOrganizerUi() && notesLoaded) addNoteItems(menu, member);
 		card.setComponentPopupMenu(menu);
 		inheritMenu(card);
