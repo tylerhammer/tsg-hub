@@ -59,7 +59,6 @@ public class Stats
 		combatLevel = 3;
 		specialPercent = 0;
 		runEnergy = 0;
-		combatLevel = 0;
 		totalLevel = 0;
 	}
 
@@ -77,7 +76,7 @@ public class Stats
 
 		specialPercent = client.getVarpValue(VarPlayerID.SA_ENERGY) / 10;
 		totalLevel = client.getTotalLevel();
-		runEnergy = client.getEnergy();
+		runEnergy = client.getEnergy() / 100;
 	}
 
 	public int recalculateCombatLevel()

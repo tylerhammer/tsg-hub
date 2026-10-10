@@ -60,7 +60,7 @@ public final class GroupMembersPanel extends JPanel
 		rebuild();
 	}
 
-	public void update(PartyPlayer player, boolean bannerChanged, boolean self)
+	public void update(PartyPlayer player, boolean self)
 	{
 		final long id = player.getMember().getMemberId();
 		if (self && selfId != id)
@@ -74,12 +74,12 @@ public final class GroupMembersPanel extends JPanel
 		if (existing != null)
 		{
 			existing.setSelf(id == selfId);
-			existing.updatePlayerData(player, bannerChanged);
+			existing.updatePlayerData(player);
 			return;
 		}
 		final PlayerPanel panel = new PlayerPanel(player, settings, spriteManager, itemManager);
 		panel.setSelf(self);
-		panel.updatePlayerData(player, true);
+		panel.updatePlayerData(player);
 		addMenu(panel, id);
 		panels.put(id, panel);
 		rebuild();
@@ -100,7 +100,7 @@ public final class GroupMembersPanel extends JPanel
 			{
 				panel.setShowInfo(settings.autoExpandMembers());
 				panel.updatePanel();
-				panel.updatePlayerData(panel.getPlayer(), false);
+				panel.updatePlayerData(panel.getPlayer());
 			}
 			panel.updateDisplayVirtualLevels();
 			panel.updateDisplayPlayerWorlds();
@@ -131,11 +131,6 @@ public final class GroupMembersPanel extends JPanel
 	public java.awt.Dimension getMaximumSize()
 	{
 		return new java.awt.Dimension(Integer.MAX_VALUE, getPreferredSize().height);
-	}
-
-	public int memberCount()
-	{
-		return panels.size();
 	}
 
 	private void rebuild()

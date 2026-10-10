@@ -29,13 +29,12 @@ import net.runelite.api.Skill;
 import com.tsghub.group.data.PartyPlayer;
 
 @Value
-public class PartyStatChange implements PartyProcess
+public class PartyStatChange
 {
 	int s; // Skill ordinal
 	int l; // Level
 	int b; // Boosted Level
 
-	@Override
 	public void process(PartyPlayer p)
 	{
 		final Skill skill = Skill.values()[s];

@@ -2,7 +2,6 @@
  "now": "2026-10-04T02:00:00Z",
  "bingo": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
  "skill": "0df1ad0f-8568-45a1-813f-8fc433ddb8f9",
- "dropParty": "68bae018-5dfd-4854-87a8-2839192ce00f",
  "groupsList": {
   "groups": [
    {
@@ -327,16 +326,6 @@
      "createdAt": "2026-09-27T23:22:02.499Z"
     },
     {
-     "id": "968c76bd-b5ff-4063-9231-e54c0fa3ef53",
-     "title": "Clan photo at the GE",
-     "description": "Screenshot with at least 5 teammates in TSG capes.",
-     "type": "manual",
-     "scope": "team",
-     "config": {},
-     "points": 5,
-     "createdAt": "2026-09-27T23:22:02.500Z"
-    },
-    {
      "id": "499ccdcd-2635-4519-8fad-138dbba8e50f",
      "title": "Bandos armour set",
      "description": "",
@@ -586,16 +575,6 @@
        "pending": false,
        "completed": true,
        "completedBy": "Mossy Rock"
-      },
-      {
-       "taskId": "968c76bd-b5ff-4063-9231-e54c0fa3ef53",
-       "scope": "team",
-       "contributors": [],
-       "progress": 0,
-       "target": 1,
-       "pending": true,
-       "completed": false,
-       "completedBy": null
       },
       {
        "taskId": "499ccdcd-2635-4519-8fad-138dbba8e50f",
@@ -891,14 +870,19 @@
     {
      "id": "5ed4ea5f-cea7-4d9f-8fe8-48b005835d89",
      "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
-     "taskId": "968c76bd-b5ff-4063-9231-e54c0fa3ef53",
+     "taskId": "654b5fd2-e2fc-4a9a-8e9f-a02d67716e11",
      "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
      "evidenceId": "e30",
      "quantity": 0,
-     "source": "manual",
+     "source": "raid",
      "status": "pending",
      "submittedAt": "2026-09-27T23:22:02.536Z",
-     "reviewedAt": null
+     "reviewedAt": null,
+     "evidence": {
+      "mode": "tob",
+      "players": [],
+      "nonClanPlayers": []
+     }
     }
    ],
    "prizes": [
@@ -1087,16 +1071,6 @@
     },
     "points": 5,
     "createdAt": "2026-09-27T23:22:02.499Z"
-   },
-   {
-    "id": "968c76bd-b5ff-4063-9231-e54c0fa3ef53",
-    "title": "Clan photo at the GE",
-    "description": "Screenshot with at least 5 teammates in TSG capes.",
-    "type": "manual",
-    "scope": "team",
-    "config": {},
-    "points": 5,
-    "createdAt": "2026-09-27T23:22:02.500Z"
    },
    {
     "id": "499ccdcd-2635-4519-8fad-138dbba8e50f",
@@ -1350,16 +1324,6 @@
       "completedBy": "Mossy Rock"
      },
      {
-      "taskId": "968c76bd-b5ff-4063-9231-e54c0fa3ef53",
-      "scope": "team",
-      "contributors": [],
-      "progress": 0,
-      "target": 1,
-      "pending": true,
-      "completed": false,
-      "completedBy": null
-     },
-     {
       "taskId": "499ccdcd-2635-4519-8fad-138dbba8e50f",
       "scope": "team",
       "contributors": [
@@ -1598,16 +1562,6 @@
       "completedBy": null
      },
      {
-      "taskId": "968c76bd-b5ff-4063-9231-e54c0fa3ef53",
-      "scope": "team",
-      "contributors": [],
-      "progress": 0,
-      "target": 1,
-      "pending": false,
-      "completed": false,
-      "completedBy": null
-     },
-     {
       "taskId": "499ccdcd-2635-4519-8fad-138dbba8e50f",
       "scope": "team",
       "contributors": [],
@@ -1813,16 +1767,6 @@
       "pending": false,
       "completed": true,
       "completedBy": "Tiny Imp"
-     },
-     {
-      "taskId": "968c76bd-b5ff-4063-9231-e54c0fa3ef53",
-      "scope": "team",
-      "contributors": [],
-      "progress": 0,
-      "target": 1,
-      "pending": true,
-      "completed": false,
-      "completedBy": null
      },
      {
       "taskId": "499ccdcd-2635-4519-8fad-138dbba8e50f",
@@ -2522,16 +2466,18 @@
    {
     "id": "5ed4ea5f-cea7-4d9f-8fe8-48b005835d89",
     "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
-    "taskId": "968c76bd-b5ff-4063-9231-e54c0fa3ef53",
+    "taskId": "654b5fd2-e2fc-4a9a-8e9f-a02d67716e11",
     "memberId": "35211e0d-6a00-4dd3-b947-3d49f969ca64",
     "teamId": "44f9251a-ed5b-484f-903c-8ac0ac95bfc2",
     "displayName": "Sir Gnomealot",
     "evidenceId": "e30",
     "quantity": 0,
     "evidence": {
-     "note": "https://imgur.com/a/tsg-ge"
+     "mode": "tob",
+     "players": [],
+     "nonClanPlayers": []
     },
-    "source": "manual",
+    "source": "raid",
     "status": "pending",
     "submittedAt": "2026-09-27T23:22:02.536Z",
     "reviewedAt": null,
@@ -2540,16 +2486,18 @@
    {
     "id": "06b27011-87f4-4b61-a043-0c2d34486022",
     "eventId": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
-    "taskId": "968c76bd-b5ff-4063-9231-e54c0fa3ef53",
+    "taskId": "654b5fd2-e2fc-4a9a-8e9f-a02d67716e11",
     "memberId": "27520e8b-9bac-4377-8867-d0470649dee5",
     "teamId": "d1578c18-ae4e-43ec-9bbf-4311ac03f8b1",
     "displayName": "Spoon Feeder",
     "evidenceId": "e31",
     "quantity": 0,
     "evidence": {
-     "note": "https://imgur.com/a/gnomes"
+     "mode": "tob",
+     "players": [],
+     "nonClanPlayers": []
     },
-    "source": "manual",
+    "source": "raid",
     "status": "pending",
     "submittedAt": "2026-09-27T23:22:02.536Z",
     "reviewedAt": null,
@@ -2708,31 +2656,6 @@
     5000000
    ]
   }
- },
- "dropBoard": {
-  "id": "68bae018-5dfd-4854-87a8-2839192ce00f",
-  "name": "Anniversary Drop Party",
-  "clanName": "TSGaming",
-  "createdByName": "TSG Admin",
-  "description": "",
-  "startsAt": "2026-10-04T08:00:00Z",
-  "endsAt": "2026-10-04T10:00:00Z",
-  "status": "scheduled",
-  "createdAt": "2026-09-27T23:22:02.549Z",
-  "hideScores": false,
-  "type": "drop-party",
-  "config": {
-   "startsAt": "2026-10-04T08:00:00Z",
-   "world": 420,
-   "location": "Falador Party Room",
-   "host": "TSG Admin",
-   "notes": "Bring inventory space. Balloons at 7, big drop at 7:30."
-  },
-  "teams": [],
-  "tasks": [],
-  "teamScores": [],
-  "members": [],
-  "claims": []
  },
  "membersList": {
   "members": [

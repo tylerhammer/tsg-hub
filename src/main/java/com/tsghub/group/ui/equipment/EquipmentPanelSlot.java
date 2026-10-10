@@ -41,7 +41,6 @@ public class EquipmentPanelSlot extends JLabel
 	static final Dimension SIZE = new Dimension(48, 46);
 
 	private ImageIcon placeholder;
-	@Getter
 	private GameItem item;
 	@Getter
 	@Setter

@@ -3,6 +3,10 @@ package com.tsghub;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 import static net.runelite.client.util.ColorUtil.toHexColor;
+import static com.tsghub.TsgHubSession.DOCK_VIEW;
+import static com.tsghub.TsgHubSession.HIDE_COMPLETED;
+import static com.tsghub.TsgHubSession.MEMBER_TOKEN;
+import static com.tsghub.TsgHubSession.SHOW_OFFLINE;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -20,21 +24,15 @@ import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
-import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import javax.swing.BorderFactory;
@@ -64,14 +62,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 {
 	private static final int TEXT_W = 215;
 	private static final int CARD_TEXT_W = 185;
-	private static final String ALT_RANK = "Gnome Child";
 	private static final int MAX_WARNING_LENGTH = 300;
-	private static final int MAX_PAST_WARNINGS = 3;
 	private static final int[] EXPIRY_DAYS = {30, 90, 0};
-	private static final Color TIP_CARD = new Color(0x2E2B33);
-	private static final Color DIM_BAR = new Color(0x3B3741);
-	private static final DateTimeFormatter WARNING_DAY = DateTimeFormatter.ofPattern("d MMM", java.util.Locale.ENGLISH);
-	private static final DateTimeFormatter WARNING_DAY_YEAR = DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale.ENGLISH);
 	private static final int CARD_TITLE_W = 150;
 	private static final int CARD_CONTRIBUTORS = 2;
 	private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("h:mm a");
@@ -106,7 +98,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final WidthTrackingPanel scoreboardTab = new WidthTrackingPanel();
 	private final WidthTrackingPanel teamTab = new WidthTrackingPanel();
 	private final JCheckBox hideCompleted = new JCheckBox("Hide completed");
-	private final JTextField manualNote = new JTextField();
 
 	private final JTextField codeField = new JTextField();
 	private final JButton joinButton = primaryButton("Join event");
@@ -117,7 +108,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private JsonObject previewEvent;
 	private JsonObject boardEvent;
 	private String boardDisplayName = "";
-	private String openManualTaskId = "";
 	private int busy;
 	private volatile boolean active;
 	private volatile boolean boardShowing;
@@ -147,9 +137,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final WidthTrackingPanel groupsPage = new WidthTrackingPanel();
 	private final JScrollPane groupsScroll = scroll(groupsPage);
 	private final GroupMembersPanel groupMembers;
-	private static final String WILDERNESS = "Wilderness lvl ";
 	private static final int DROP_ICON_W = 40;
-	private static final DateTimeFormatter CLOCK_TIME = DateTimeFormatter.ofPattern("HH:mm");
 	private static final Color TAG_DEFAULT = new Color(195, 140, 255);
 	private static final Map<String, Color> TAG_COLORS = Map.of(
 		"Log", new Color(55, 240, 70),
@@ -158,18 +146,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 		"ToA", new Color(224, 180, 76),
 		"Pet", new Color(255, 138, 216),
 		"Dupe pet", new Color(255, 138, 216));
-	private static final Set<String> COX_ITEMS = Set.of(
-		"Dexterous prayer scroll", "Arcane prayer scroll", "Twisted buckler", "Dragon hunter crossbow",
-		"Dinh's bulwark", "Ancestral hat", "Ancestral robe top", "Ancestral robe bottom", "Dragon claws",
-		"Elder maul", "Kodai insignia", "Twisted bow", "Olmlet", "Metamorphic dust", "Twisted ancestral colour kit");
-	private static final Set<String> TOB_ITEMS = Set.of(
-		"Avernic defender hilt", "Ghrazi rapier", "Sanguinesti staff", "Justiciar faceguard", "Justiciar chestguard",
-		"Justiciar legguards", "Scythe of vitur", "Lil' zik", "Sanguine dust", "Sanguine ornament kit", "Holy ornament kit");
-	private static final Set<String> TOA_ITEMS = Set.of(
-		"Osmumten's fang", "Lightbearer", "Elidinis' ward", "Masori mask", "Masori body", "Masori chaps",
-		"Tumeken's shadow", "Tumeken's guardian", "Thread of Elidinis", "Breach of the scarab", "Eye of the corruptor",
-		"Jewel of the sun", "Menaphite ornament kit", "Remnant of Akkha",
-		"Remnant of Ba-Ba", "Remnant of Kephri", "Remnant of Zebak", "Ancient remnant");
 	private final JButton createGroupButton = primaryButton("New party");
 	private final JLabel groupError = label("", TsgHubTheme.ERROR, smallFont());
 	private JsonArray groupList;
@@ -221,8 +197,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		add(buildFooter(), BorderLayout.SOUTH);
 
 		codeField.setToolTipText("Team code from an admin");
-		codeField.putClientProperty("JTextField.placeholderText", "Team code, e.g. DRGN42");
-		manualNote.putClientProperty("JTextField.placeholderText", "Screenshot link or note");
+		placeholder(codeField, "Team code, e.g. DRGN42");
 		codeField.addActionListener(e -> submitJoin());
 		joinButton.addActionListener(e -> submitJoin());
 		joinError.setVisible(false);
@@ -230,16 +205,16 @@ final class TsgHubSidebarPanel extends PluginPanel
 		groupError.setVisible(false);
 
 		plain(showOffline, MUTED).setFont(smallFont());
-		showOffline.setSelected("true".equals(TsgHubSession.get("showOffline")));
+		showOffline.setSelected("true".equals(TsgHubSession.get(SHOW_OFFLINE)));
 		showOffline.addActionListener(e -> {
-			TsgHubSession.set("showOffline", showOffline.isSelected() ? "true" : "");
+			TsgHubSession.set(SHOW_OFFLINE, showOffline.isSelected() ? "true" : "");
 			renderMembers();
 		});
 
 		plain(hideCompleted, MUTED).setFont(smallFont());
-		hideCompleted.setSelected("true".equals(TsgHubSession.get("hideCompleted")));
+		hideCompleted.setSelected("true".equals(TsgHubSession.get(HIDE_COMPLETED)));
 		hideCompleted.addActionListener(e -> {
-			TsgHubSession.set("hideCompleted", hideCompleted.isSelected() ? "true" : "");
+			TsgHubSession.set(HIDE_COMPLETED, hideCompleted.isSelected() ? "true" : "");
 			renderTasks();
 		});
 
@@ -644,21 +619,13 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	private void setMemberTip(JComponent card, JsonObject member, String note, JLabel detail)
 	{
-		fullTextTooltip(card, () -> rosterTooltip(detail != null && truncated(detail) ? locationTip(str(member, "activity"), str(member, "area")) : "",
+		fullTextTooltip(card, () -> TsgHubRoster.rosterTooltip(detail != null && truncated(detail) ? TsgHubRoster.locationTip(str(member, "activity"), str(member, "area")) : "",
 			array(member, "previousNames"), str(member, "altOf"), array(member, "alts"), note, visibleWarnings(member), clock.instant(), ZoneId.systemDefault()));
-	}
-
-	static String locationTip(String activity, String area)
-	{
-		String detail = activityDetail(activity, "");
-		boolean active = !"Idle".equals(activity) && !"Online".equals(activity) && !activity.isEmpty();
-		String html = tipLine(active ? SUCCESS : MUTED, escape(detail));
-		return area.isEmpty() || area.equals(detail) ? html : html + "<br>" + tipLine(MUTED, escape(area));
 	}
 
 	private void addMemberBadges(JPanel badges, JsonObject member, String note, boolean more)
 	{
-		boolean warned = hasActiveWarning(visibleWarnings(member));
+		boolean warned = TsgHubRoster.hasActiveWarning(visibleWarnings(member));
 		if (warned)
 		{
 			JLabel warning = new JLabel(new WarningIcon());
@@ -695,7 +662,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 		JPanel text = stack();
 		text.add(top);
-		String detail = activityDetail(activity, str(member, "area"));
+		String detail = TsgHubRoster.activityDetail(activity, str(member, "area"));
 		JLabel detailLabel = null;
 		if (!detail.isEmpty())
 		{
@@ -716,7 +683,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		Font small = smallFont();
 		String note = visibleNote(member);
-		String seen = lastSeen(str(member, "lastSeenAt"), clock.instant());
+		String seen = TsgHubRoster.lastSeen(str(member, "lastSeenAt"), clock.instant());
 		JPanel row = card();
 		row.setBorder(BorderFactory.createEmptyBorder(4, 7, 4, 7));
 		row.add(memberName(member, str(member, "displayName"), MUTED, small), BorderLayout.CENTER);
@@ -738,34 +705,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private JsonArray visibleWarnings(JsonObject member)
 	{
 		return plugin.canManageOrganizerUi() ? array(member, "warnings") : new JsonArray();
-	}
-
-	static boolean hasActiveWarning(JsonArray warnings)
-	{
-		return !activeWarnings(warnings).isEmpty();
-	}
-
-	static List<JsonObject> activeWarnings(JsonArray warnings)
-	{
-		List<JsonObject> active = new ArrayList<>();
-		for (JsonObject warning : objects(warnings)) if (bool(warning, "active")) active.add(warning);
-		return active;
-	}
-
-	static String lastSeen(String iso, Instant now)
-	{
-		Instant then = instant(iso);
-		if (then == null) return "";
-		long minutes = Math.max(0, java.time.Duration.between(then, now).toMinutes());
-		if (minutes < 1) return "just now";
-		if (minutes < 60) return minutes + "m ago";
-		long hours = minutes / 60;
-		if (hours < 24) return hours + "h ago";
-		long days = hours / 24;
-		if (days < 14) return days + "d ago";
-		if (days < 60) return days / 7 + "w ago";
-		if (days < 365) return days / 30 + "mo ago";
-		return days / 365 + "y ago";
 	}
 
 	private void addMemberMenu(JComponent card, JsonObject member)
@@ -850,8 +789,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 		String name = str(member, "displayName");
 		String altOf = str(member, "altOf");
 		String note = str(member, "note");
-		boolean alt = isAltRank(str(member, "rank"));
-		List<JsonObject> active = activeWarnings(array(member, "warnings"));
+		boolean alt = TsgHubRoster.isAltRank(str(member, "rank"));
+		List<JsonObject> active = TsgHubRoster.activeWarnings(array(member, "warnings"));
 		menu.addSeparator();
 		javax.swing.JMenuItem edit = new javax.swing.JMenuItem(alt ? "Edit alt and admin note" : "Edit admin note");
 		edit.addActionListener(e -> promptMemberNote(name, alt, altOf, note));
@@ -875,110 +814,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 			if (child instanceof JComponent) ((JComponent) child).setInheritsPopupMenu(true);
 			if (child instanceof java.awt.Container) inheritMenu((java.awt.Container) child);
 		}
-	}
-
-	static String rosterTooltip(String location, JsonArray previousNames, String altOf, JsonArray alts, String note, JsonArray warnings, Instant now, ZoneId zone)
-	{
-		List<String> names = strings(alts);
-		List<String> formerly = strings(previousNames);
-		Collections.reverse(formerly);
-		List<String> lines = new ArrayList<>();
-		if (!altOf.isEmpty()) lines.add(tipLine(ACCENT, "Alt of <b>" + escape(altOf) + "</b>"));
-		if (!names.isEmpty()) lines.add(tipLine(ACCENT, (names.size() == 1 ? "Alt: " : "Alts: ") + "<b>" + escape(String.join(", ", names)) + "</b>"));
-		String head = String.join("<br>", lines);
-		if (!location.isEmpty()) head = head.isEmpty() ? location : location + tipSection(false, head);
-		String sections = "";
-		if (!formerly.isEmpty())
-		{
-			sections += tipSection(head.isEmpty(), tipLine(MUTED, "<b>PREVIOUS NAMES</b>"))
-				+ tipCard(TIP_CARD, escape(String.join("\n", formerly)).replace("\n", "<br>"));
-		}
-		if (!note.isEmpty())
-		{
-			sections += tipSection(head.isEmpty() && sections.isEmpty(), tipLine(WARNING, "<b>ADMIN NOTE</b>"))
-				+ tipCard(TIP_CARD, escape(note).replace("\n", "<br>"));
-		}
-		List<JsonObject> history = objects(warnings);
-		if (!history.isEmpty())
-		{
-			sections += tipSection(head.isEmpty() && sections.isEmpty(), tipLine(TsgHubTheme.ERROR, "<b>WARNINGS</b>") + " " + tipLine(MUTED, warningSummary(history)))
-				+ warningCards(history, now, zone);
-		}
-		return head + sections;
-	}
-
-	private static List<String> strings(JsonArray array)
-	{
-		List<String> out = new ArrayList<>();
-		for (int i = 0; i < array.size(); i++) if (array.get(i).isJsonPrimitive()) out.add(array.get(i).getAsString());
-		return out;
-	}
-
-	private static String tipSection(boolean first, String heading)
-	{
-		return "<div style='margin-top:" + (first ? 0 : 6) + "px'>" + heading + "</div>";
-	}
-
-	private static String tipCard(Color bar, String inner)
-	{
-		return "<table cellspacing='0' cellpadding='0' width='100%' style='margin-top:2px'><tr><td bgcolor='" + hex(bar) + "' width='2'></td>"
-			+ "<td bgcolor='" + hex(TIP_CARD) + "' style='padding:3px 6px'>" + inner + "</td></tr></table>";
-	}
-
-	private static String warningSummary(List<JsonObject> warnings)
-	{
-		int active = 0, expired = 0, revoked = 0;
-		for (JsonObject warning : warnings)
-		{
-			if (bool(warning, "active")) active++;
-			else if (!str(warning, "revokedAt").isEmpty()) revoked++;
-			else expired++;
-		}
-		List<String> parts = new ArrayList<>();
-		parts.add(active + " active");
-		if (expired > 0) parts.add(expired + " expired");
-		if (revoked > 0) parts.add(revoked + " revoked");
-		return String.join(" · ", parts);
-	}
-
-	private static String warningCards(List<JsonObject> warnings, Instant now, ZoneId zone)
-	{
-		List<JsonObject> ordered = new ArrayList<>();
-		List<JsonObject> past = new ArrayList<>();
-		for (JsonObject warning : warnings) (bool(warning, "active") ? ordered : past).add(warning);
-		int inactive = past.size();
-		ordered.addAll(past.subList(0, Math.min(inactive, MAX_PAST_WARNINGS)));
-		StringBuilder out = new StringBuilder();
-		for (JsonObject warning : ordered)
-		{
-			boolean active = bool(warning, "active");
-			String meta = warningDate(str(warning, "issuedAt"), now, zone) + " · " + escape(str(warning, "issuedBy")) + " · " + warningStatus(warning, now, zone);
-			Color text = active ? TEXT : DIM;
-			out.append(tipCard(active ? TsgHubTheme.ERROR : DIM_BAR, tipLine(text, escape(str(warning, "reason"))) + "<br>" + tipLine(active ? MUTED : DIM, meta)));
-		}
-		if (inactive > MAX_PAST_WARNINGS) out.append(tipLine(DIM, "+" + (inactive - MAX_PAST_WARNINGS) + " older"));
-		return out.toString();
-	}
-
-	static String warningStatus(JsonObject warning, Instant now, ZoneId zone)
-	{
-		if (!str(warning, "revokedAt").isEmpty()) return "revoked by " + escape(str(warning, "revokedBy"));
-		String expires = str(warning, "expiresAt");
-		if (expires.isEmpty()) return "no expiry";
-		return bool(warning, "active") ? "expires " + warningDate(expires, now, zone) : "expired";
-	}
-
-	static String warningDate(String iso, Instant now, ZoneId zone)
-	{
-		Instant at = instant(iso);
-		if (at == null) return "";
-		LocalDate day = at.atZone(zone).toLocalDate();
-		return day.format(day.getYear() == now.atZone(zone).getYear() ? WARNING_DAY : WARNING_DAY_YEAR);
-	}
-
-	private static String hex(Color color)
-	{
-		return String.format("#%06x", color.getRGB() & 0xffffff);
 	}
 
 	private void promptWarning(String name, int active)
@@ -1023,7 +858,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		JPanel form = stack();
 		for (JsonObject warning : active)
 		{
-			String meta = warningDate(str(warning, "issuedAt"), now, zone) + " · " + escape(str(warning, "issuedBy"));
+			String meta = TsgHubRoster.warningDate(str(warning, "issuedAt"), now, zone) + " · " + escape(str(warning, "issuedBy"));
 			javax.swing.JRadioButton choice = plain(new javax.swing.JRadioButton(html(escape(str(warning, "reason")) + "<br>" + tipLine(MUTED, meta), 220)), TEXT);
 			choice.setSelected(choices.isEmpty());
 			group.add(choice);
@@ -1041,16 +876,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 		{
 			if (choices.get(i).isSelected()) plugin.presence().revokeWarning(name, str(active.get(i), "id"), reason.getText().trim());
 		}
-	}
-
-	private static String tipLine(Color color, String html)
-	{
-		return "<font color='" + String.format("#%06x", color.getRGB() & 0xffffff) + "'>" + html + "</font>";
-	}
-
-	static boolean isAltRank(String rank)
-	{
-		return ALT_RANK.equalsIgnoreCase(rank.trim());
 	}
 
 	private void promptMemberNote(String name, boolean alt, String altOf, String note)
@@ -1071,7 +896,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		form.add(new javax.swing.JScrollPane(notes));
 		if (JOptionPane.showConfirmDialog(this, form, name, JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) != JOptionPane.OK_OPTION) return;
 		String typed = main.getText();
-		String nextMain = typed.equals(altOf) ? altOf : resolveName(candidates, typed);
+		String nextMain = typed.equals(altOf) ? altOf : PlayerNames.resolveName(candidates, typed);
 		String nextNote = notes.getText().trim();
 		if (samePlayer(nextMain, name))
 		{
@@ -1097,43 +922,11 @@ final class TsgHubSidebarPanel extends PluginPanel
 			{
 				JsonObject member = list.get(i).getAsJsonObject();
 				String candidate = str(member, "displayName");
-				if (!samePlayer(candidate, alt) && !isAltRank(str(member, "rank"))) names.add(candidate);
+				if (!samePlayer(candidate, alt) && !TsgHubRoster.isAltRank(str(member, "rank"))) names.add(candidate);
 			}
 		}
 		names.sort(String.CASE_INSENSITIVE_ORDER);
 		return names;
-	}
-
-	static List<String> matchNames(List<String> names, String query, int limit)
-	{
-		String needle = playerKey(query);
-		List<String> prefix = new ArrayList<>();
-		List<String> contains = new ArrayList<>();
-		for (String name : names)
-		{
-			String key = playerKey(name);
-			if (key.startsWith(needle)) prefix.add(name);
-			else if (key.contains(needle)) contains.add(name);
-		}
-		prefix.addAll(contains);
-		return prefix.size() > limit ? prefix.subList(0, limit) : prefix;
-	}
-
-	static String resolveName(List<String> names, String typed)
-	{
-		if (typed.isEmpty()) return typed;
-		for (String name : names) if (samePlayer(name, typed)) return name;
-		List<String> matches = matchNames(names, typed, 2);
-		return matches.size() == 1 ? matches.get(0) : typed;
-	}
-
-	static String activityDetail(String activity, String area)
-	{
-		if (activity.isEmpty()) activity = "Online";
-		int dash = activity.indexOf(" - ");
-		String detail = dash < 0 ? activity : activity.startsWith("Slayer - ") ? "Slayer: " + activity.substring(dash + 3) : activity.substring(dash + 3);
-		if (area.isEmpty() || area.equals(detail)) return detail;
-		return detail + " · " + area;
 	}
 
 	void setDrops(JsonArray drops)
@@ -1175,7 +968,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			for (int i = 0; i < drops.size(); i++)
 			{
 				JsonObject drop = drops.get(i).getAsJsonObject();
-				String nextDay = dropDay(str(drop, "receivedAt"), now, zone);
+				String nextDay = TsgHubDrops.dropDay(str(drop, "receivedAt"), now, zone);
 				if (!nextDay.equals(day))
 				{
 					dropsPage.add(listHeading(nextDay, i == 0));
@@ -1197,13 +990,13 @@ final class TsgHubSidebarPanel extends PluginPanel
 		JLabel icon = dropIcon(integer(drop, "itemId", 0));
 		if (icon != null) card.add(icon, BorderLayout.WEST);
 
-		JLabel name = shrinkable(boldLabel(dropItem(drop)));
+		JLabel name = shrinkable(boldLabel(TsgHubDrops.dropItem(drop)));
 		JPanel extras = panel(new FlowLayout(FlowLayout.RIGHT, 3, 0));
-		for (String tag : dropTags(drop)) extras.add(badge(tag, TAG_COLORS.getOrDefault(tag, TAG_DEFAULT)));
+		for (String tag : TsgHubDrops.dropTags(drop)) extras.add(badge(tag, TAG_COLORS.getOrDefault(tag, TAG_DEFAULT)));
 		long value = drop.has("value") ? drop.get("value").getAsLong() : 0;
 		if (value > 0) extras.add(label(formatGp(value), coinColor(value), smallFont()));
 		card.add(fillWidth(twoLines(
-			row(name, caption(dropWhen(str(drop, "receivedAt"), now, zone))),
+			row(name, caption(TsgHubDrops.dropWhen(str(drop, "receivedAt"), now, zone))),
 			row(shrinkable(label(player, ACCENT, smallFont())), extras))), BorderLayout.CENTER);
 		fullTextTooltip(card, null);
 		return fitHeight(card);
@@ -1231,66 +1024,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 		return label;
 	}
 
-	static List<String> dropTags(JsonObject drop)
-	{
-		List<String> tags = new ArrayList<>();
-		String kind = str(drop, "kind");
-		if ("raid".equals(kind)) tags.add(raidName(str(drop, "item")));
-		else if ("pet".equals(kind)) tags.add("Pet");
-		else if ("dupe".equals(kind)) tags.add("Dupe pet");
-		if (bool(drop, "newLog") || "clog".equals(kind)) tags.add("Log");
-		return tags;
-	}
-
-	static String raidName(String item)
-	{
-		String base = item.replaceAll("(\\s*\\([^)]*\\))+$", "");
-		if (COX_ITEMS.contains(base)) return "CoX";
-		if (TOB_ITEMS.contains(base)) return "ToB";
-		if (TOA_ITEMS.contains(base)) return "ToA";
-		return "Raid";
-	}
-
-	static String dropItem(JsonObject drop)
-	{
-		int quantity = integer(drop, "quantity", 1);
-		String item = str(drop, "item").replaceAll("(\\s*\\([^)]*\\))+$", "");
-		return quantity > 1 ? quantity + " x " + item : item;
-	}
-
-	static String dropAge(String iso, Instant now)
-	{
-		Instant then;
-		try { then = Instant.parse(iso); }
-		catch (Exception e) { return ""; }
-		long minutes = Math.max(0, Duration.between(then, now).toMinutes());
-		if (minutes < 1) return "now";
-		if (minutes < 60) return minutes + "m";
-		long hours = minutes / 60;
-		if (hours < 24) return hours + "h";
-		return hours / 24 + "d";
-	}
-
-	static String dropWhen(String iso, Instant now, ZoneId zone)
-	{
-		String day = dropDay(iso, now, zone);
-		if ("Earlier".equals(day)) return "";
-		if ("Today".equals(day)) return dropAge(iso, now);
-		return Instant.parse(iso).atZone(zone).format(CLOCK_TIME);
-	}
-
-	static String dropDay(String iso, Instant now, ZoneId zone)
-	{
-		Instant then;
-		try { then = Instant.parse(iso); }
-		catch (Exception e) { return "Earlier"; }
-		LocalDate day = then.atZone(zone).toLocalDate();
-		LocalDate today = now.atZone(zone).toLocalDate();
-		if (!day.isBefore(today)) return "Today";
-		if (day.equals(today.minusDays(1))) return "Yesterday";
-		return localDate(then, zone);
-	}
-
 	private void openEvents()
 	{
 		showEventList();
@@ -1312,8 +1045,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		// Background refreshes must not pull the user off another screen.
 		if (!open && view != View.BOARD) return;
-		boolean sameEvent = boardEvent != null && str(boardEvent, "id").equals(str(event, "id"));
-		if (!sameEvent) openManualTaskId = "";
 		boardEvent = event;
 		boardDisplayName = displayName == null ? "" : displayName;
 		setView(View.BOARD);
@@ -1367,7 +1098,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		competitionJoinButton.setEnabled(true);
 		competitionJoinButton.setText("Join");
-		showError(joinError, message);
+		showError(joinError, message, TEXT_W);
 	}
 
 	void showCompetition(JsonObject event, String displayName, boolean open)
@@ -1385,7 +1116,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		boolean hidden = bool(event, "hideScores");
 		JsonArray rows = array(event, "leaderboard");
 		JsonObject mine = null;
-		for (JsonObject row : objects(rows)) if (str(row, "displayName").equalsIgnoreCase(competitionName)) mine = row;
+		for (JsonObject row : objects(rows)) if (samePlayer(str(row, "displayName"), competitionName)) mine = row;
 
 		boolean started = !"scheduled".equals(str(event, "status"));
 		boolean tracking = mine != null && bool(mine, "tracking");
@@ -1435,7 +1166,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			for (int i = 0; i < rows.size(); i++)
 			{
 				JsonObject row = rows.get(i).getAsJsonObject();
-				boolean me = str(row, "displayName").equalsIgnoreCase(competitionName);
+				boolean me = samePlayer(str(row, "displayName"), competitionName);
 				int rank = integer(row, "rank", i + 1);
 				JPanel card = card();
 				card.setLayout(new BorderLayout(8, 0));
@@ -1449,8 +1180,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			}
 		}
 		page.add(Box.createVerticalStrut(GAP_L));
-		JButton leave = button("Leave competition");
-		leave.setForeground(TsgHubTheme.ERROR);
+		JButton leave = dangerButton("Leave competition");
 		leave.addActionListener(e -> {
 			int choice = JOptionPane.showConfirmDialog(this, "Leave \"" + eventName(event) + "\"?\nYou'll drop off the leaderboard on this device. You can rejoin while it's running.",
 				"Leave competition", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
@@ -1465,7 +1195,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (view != View.COMPETITION || competitionEvent == null || !eventId.equals(openCompetitionId)) return;
 		List<JsonObject> rows = new ArrayList<>(objects(array(competitionEvent, "leaderboard")));
 		JsonObject mine = null;
-		for (JsonObject row : rows) if (str(row, "displayName").equalsIgnoreCase(competitionName)) mine = row;
+		for (JsonObject row : rows) if (samePlayer(str(row, "displayName"), competitionName)) mine = row;
 		if (mine == null) return;
 		mine.addProperty("gained", gained);
 		mine.addProperty("tracking", true);
@@ -1527,19 +1257,9 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		joinButton.setEnabled(true);
 		joinButton.setText("Join event");
-		showError(joinError, message);
+		showError(joinError, message, TEXT_W);
 		codeField.requestFocusInWindow();
 		codeField.selectAll();
-	}
-
-	void manualSubmitFinished(boolean success)
-	{
-		if (success)
-		{
-			openManualTaskId = "";
-			manualNote.setText("");
-		}
-		renderTasks();
 	}
 
 	void showParties()
@@ -1590,13 +1310,13 @@ final class TsgHubSidebarPanel extends PluginPanel
 	void groupActionFailed(String message)
 	{
 		groupBusy = false;
-		showError(groupError, message);
+		showError(groupError, message, TEXT_W);
 		if (shows(View.GROUPS)) renderGroups();
 	}
 
-	void groupMemberUpdated(PartyPlayer player, boolean bannerChanged, boolean self)
+	void groupMemberUpdated(PartyPlayer player, boolean self)
 	{
-		groupMembers.update(player, bannerChanged, self);
+		groupMembers.update(player, self);
 	}
 
 	void groupMemberRemoved(PartyPlayer player)
@@ -1646,8 +1366,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (!groups.inGroup()) browsingParties = false;
 		if (groups.inGroup() && !browsingParties) renderCurrentGroup(current);
 		else renderGroupList(groups.inGroup() ? current : null);
-		groupsPage.revalidate();
-		groupsPage.repaint();
+		refresh(groupsPage);
 	}
 
 	private void setPartyHeader(JsonObject group)
@@ -1699,8 +1418,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			groupError.setVisible(false);
 			renderGroups();
 		});
-		JButton leave = button("Leave party");
-		leave.setForeground(TsgHubTheme.ERROR);
+		JButton leave = dangerButton("Leave party");
 		leave.addActionListener(e -> {
 			leave.setEnabled(false);
 			plugin.groups().leave();
@@ -1773,7 +1491,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		boolean mine = current != null && str(group, "id").equals(str(current, "id"));
 		if (mine) highlightSelf(card);
 		boolean locked = !mine && bool(group, "locked");
-		String title = mine ? currentTitle(group) : partyTitle(group);
+		String title = mine ? currentTitle(group) : TsgHubGroups.partyTitle(group);
 
 		JLabel heading = shrinkable(label(title, locked ? MUTED : TEXT, boldFont()));
 		heading.putClientProperty("html.disable", Boolean.TRUE);
@@ -1786,7 +1504,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		boolean sameWorld = !mine && world > 0 && world == myWorld;
 		JPanel top = world > 0 ? row(heading, label("W" + world, sameWorld ? SUCCESS : MUTED, smallFont())) : row(heading, new JLabel());
 
-		Map.Entry<String, Integer> area = areaSummary(members);
+		Map.Entry<String, Integer> area = TsgHubGroups.areaSummary(members);
 		boolean showArea = area != null && !area.getKey().equalsIgnoreCase(title) && (area.getValue() >= 2 || members.size() == 1);
 		String extra = showArea ? area.getKey() : leaderListed || leader.isEmpty() ? "" : "Led by " + leader;
 		JLabel detail = shrinkable(showArea ? label(extra, SUCCESS, smallFont()) : caption(extra));
@@ -1830,56 +1548,11 @@ final class TsgHubSidebarPanel extends PluginPanel
 		return 0;
 	}
 
-	static String partyTitle(JsonObject group)
-	{
-		String title = str(group, "activity");
-		if (!title.isEmpty()) return title;
-		Map.Entry<String, Integer> area = areaSummary(array(group, "members"));
-		if (area != null) return area.getKey();
-		String leader = str(group, "leaderName");
-		return leader.isEmpty() ? "Party" : leader + "'s party";
-	}
-
 	private String currentTitle(JsonObject group)
 	{
-		if (!str(group, "activity").isEmpty()) return partyTitle(group);
-		Map.Entry<String, Integer> live = areaSummary(plugin.groups().liveAreas());
-		return live != null ? live.getKey() : partyTitle(group);
-	}
-
-	static Map.Entry<String, Integer> areaSummary(JsonArray members)
-	{
-		List<String> areas = new ArrayList<>();
-		for (JsonObject member : objects(members)) areas.add(str(member, "area"));
-		return areaSummary(areas);
-	}
-
-	static Map.Entry<String, Integer> areaSummary(List<String> areas)
-	{
-		Map<String, Integer> counts = new LinkedHashMap<>();
-		int low = Integer.MAX_VALUE;
-		int high = 0;
-		for (String area : areas)
-		{
-			if (area == null || area.isEmpty()) continue;
-			if (area.startsWith(WILDERNESS))
-			{
-				try
-				{
-					int level = Integer.parseInt(area.substring(WILDERNESS.length()).trim());
-					low = Math.min(low, level);
-					high = Math.max(high, level);
-					area = "Wilderness";
-				}
-				catch (NumberFormatException ignored) { }
-			}
-			counts.merge(area, 1, Integer::sum);
-		}
-		if (counts.isEmpty()) return null;
-		Map.Entry<String, Integer> top = Collections.max(counts.entrySet(), Map.Entry.comparingByValue());
-		String name = top.getKey();
-		if (name.equals("Wilderness") && high > 0) name += " lvl " + (low == high ? String.valueOf(low) : low + "-" + high);
-		return new AbstractMap.SimpleImmutableEntry<>(name, top.getValue());
+		if (!str(group, "activity").isEmpty()) return TsgHubGroups.partyTitle(group);
+		Map.Entry<String, Integer> live = TsgHubGroups.areaSummary(plugin.groups().liveAreas());
+		return live != null ? live.getKey() : TsgHubGroups.partyTitle(group);
 	}
 
 	private void promptTitle(JsonObject group)
@@ -2016,7 +1689,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private void pin(View next)
 	{
 		pinned = next;
-		TsgHubSession.set("dockView", next.name());
+		TsgHubSession.set(DOCK_VIEW, next.name());
 		dock.pin(pinIcon(next), pane(next));
 		dock.expand();
 		renderPinned();
@@ -2027,7 +1700,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (pinned == null) return;
 		View was = pinned;
 		pinned = null;
-		TsgHubSession.set("dockView", "");
+		TsgHubSession.set(DOCK_VIEW, "");
 		dock.unpin();
 		center.add(pane(was), cardName(was));
 		setView(view);
@@ -2035,7 +1708,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	private void restorePin()
 	{
-		String saved = TsgHubSession.get("dockView");
+		String saved = TsgHubSession.get(DOCK_VIEW);
 		for (View candidate : View.values())
 			if (pinnable(candidate) && candidate.name().equals(saved))
 			{
@@ -2139,7 +1812,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		clickable(card, () -> {
 			String id = str(event, "id");
 			if (dropParty) showDropParty(event);
-			else if (competition && joined && !TsgHubSession.get("memberToken:" + id).isEmpty()) plugin.openCompetition(id, true);
+			else if (competition && joined && !TsgHubSession.get(MEMBER_TOKEN + id).isEmpty()) plugin.openCompetition(id, true);
 			else if (competition) showCompetitionPreview(event);
 			else if (joined) plugin.activateEvent(id);
 			else showPreview(event);
@@ -2220,19 +1893,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 		renderTeam();
 	}
 
-	private List<JsonObject> rankedTeams()
-	{
-		JsonArray teams = array(boardEvent, "teams");
-		JsonArray scores = array(boardEvent, "teamScores");
-		List<JsonObject> ranked = new ArrayList<>();
-		for (int i = 0; i < teams.size(); i++) ranked.add(teams.get(i).getAsJsonObject());
-		ranked.sort(Comparator
-			.comparingInt((JsonObject team) -> integer(scoreFor(scores, str(team, "id")), "points", 0)).reversed()
-			.thenComparing(Comparator.comparingInt((JsonObject team) -> integer(scoreFor(scores, str(team, "id")), "completedTasks", 0)).reversed())
-			.thenComparing(team -> str(team, "name"), String.CASE_INSENSITIVE_ORDER));
-		return ranked;
-	}
-
 	private String ownTeamId()
 	{
 		return teamIdFor(boardEvent, boardDisplayName);
@@ -2242,7 +1902,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		boardSummary.removeAll();
 		String teamId = ownTeamId();
-		List<JsonObject> ranked = rankedTeams();
+		List<JsonObject> ranked = rankedTeams(boardEvent);
 		JsonObject score = scoreFor(array(boardEvent, "teamScores"), teamId);
 		int totalTasks = array(boardEvent, "tasks").size();
 		int completed = integer(score, "completedTasks", 0);
@@ -2277,8 +1937,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			card.add(prizes, BorderLayout.SOUTH);
 		}
 		boardSummary.add(fitHeight(card));
-		boardSummary.revalidate();
-		boardSummary.repaint();
+		refresh(boardSummary);
 	}
 
 	private void renderTasks()
@@ -2334,7 +1993,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 		boolean pending = bool(progress, "pending");
 		boolean individual = "individual".equals(str(task, "scope"));
 		boolean solo = "solo".equals(str(task, "scope"));
-		boolean manual = "manual".equals(str(task, "type"));
 
 		JPanel card = card();
 		JLabel name = shrinkable(label(str(task, "title"), completed ? MUTED : TEXT, boldFont()));
@@ -2352,7 +2010,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		JsonObject mine = individual || solo ? myEntry(progress) : null;
 		if (completed)
 		{
-			boolean creditedToOrganizer = bool(progress, "override") && !bool(progress, "overrideCredited");
+			boolean creditedToOrganizer = creditedToOrganizer(progress);
 			String line = creditedToOrganizer ? "Marked complete by an admin" : completedLine(progress);
 			if (!"Completed".equals(line)) body.add(label(line, SUCCESS, smallFont()));
 		}
@@ -2382,7 +2040,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 			if (!amounts.isEmpty()) body.add(cardNoteHtml(amounts));
 		}
 		if (pending && !completed) body.add(label("Awaiting admin review", WARNING, smallFont()));
-		if (manual && !completed && !pending) addManualSubmit(body, taskId);
 		addLineSpacing(body);
 		addScopeIcon(body, solo, individual);
 		card.add(body, BorderLayout.CENTER);
@@ -2407,50 +2064,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 		String count = value + " of " + target + " teammates done";
 		if (mine == null || !bool(mine, "completed")) return caption(count);
 		return label(html("<font color='" + toHexColor(SUCCESS) + "'>You're done</font> · " + count, CARD_TEXT_W), MUTED, smallFont());
-	}
-
-	private void addManualSubmit(JPanel body, String taskId)
-	{
-		body.add(Box.createVerticalStrut(GAP_S));
-		if (!taskId.equals(openManualTaskId))
-		{
-			JButton submit = button("Submit proof");
-			submit.addActionListener(e -> {
-				openManualTaskId = taskId;
-				manualNote.setText("");
-				renderTasks();
-				SwingUtilities.invokeLater(manualNote::requestFocusInWindow);
-			});
-			body.add(fitHeight(submit));
-			return;
-		}
-		body.add(cardNote("Add a note or link for the admins."));
-		body.add(Box.createVerticalStrut(GAP_XS));
-		body.add(fitHeight(manualNote));
-		body.add(Box.createVerticalStrut(GAP_S));
-		JPanel buttons = panel(new GridLayout(1, 2, 4, 0));
-		JButton cancel = button("Cancel");
-		cancel.addActionListener(e -> {
-			openManualTaskId = "";
-			renderTasks();
-		});
-		JButton send = primaryButton("Send");
-		Runnable doSend = () -> {
-			if (manualNote.getText().trim().isEmpty())
-			{
-				setStatus("Add a short note before sending.", Tone.ERROR);
-				manualNote.requestFocusInWindow();
-				return;
-			}
-			send.setEnabled(false);
-			plugin.submitManual(taskId, manualNote.getText().trim());
-		};
-		send.addActionListener(e -> doSend.run());
-		for (ActionListener listener : manualNote.getActionListeners()) manualNote.removeActionListener(listener);
-		manualNote.addActionListener(e -> doSend.run());
-		buttons.add(cancel);
-		buttons.add(send);
-		body.add(fitHeight(buttons));
 	}
 
 	private boolean addSetProgress(JPanel body, JsonObject source, boolean mine)
@@ -2503,7 +2116,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (individual || solo) sections += memberSections(progress, solo, head.isEmpty());
 		else if (sections.isEmpty() && array(progress, "contributors").size() > CARD_CONTRIBUTORS)
 		{
-			sections += tipSection(head.isEmpty(), tipLine(MUTED, "<b>CONTRIBUTORS</b>")) + tipCard(TIP_CARD, contributorsHtml(progress, "<br>", 50, boardDisplayName));
+			sections += tipSection(head.isEmpty(), tipLine(MUTED, "<b>CONTRIBUTORS</b>")) + tipCard(CARD_HOVER, contributorsHtml(progress, "<br>", 50, boardDisplayName));
 		}
 		if (head.isEmpty() && sections.isEmpty()) return null;
 		return html("<div style='padding:2px'>" + head + sections + "</div>", 240);
@@ -2538,24 +2151,24 @@ final class TsgHubSidebarPanel extends PluginPanel
 			else if (bool(member, "completed")) done.add(name);
 			else waiting.add(need > 1 ? name + " " + tipLine(MUTED, have + "/" + need) : name);
 		}
-		if (solo) return tipSection(first, tipLine(MUTED, "<b>STANDINGS</b>")) + tipCard(TIP_CARD, String.join("<br>", waiting));
+		if (solo) return tipSection(first, tipLine(MUTED, "<b>STANDINGS</b>")) + tipCard(CARD_HOVER, String.join("<br>", waiting));
 		String out = "";
 		if (!done.isEmpty()) out += tipSection(first, tipLine(SUCCESS, "<b>DONE</b> ") + tipLine(MUTED, String.valueOf(done.size()))) + tipCard(SUCCESS, String.join("<br>", done));
-		if (!waiting.isEmpty()) out += tipSection(first && done.isEmpty(), tipLine(MUTED, "<b>STILL NEED</b> " + waiting.size())) + tipCard(TIP_CARD, String.join("<br>", waiting));
+		if (!waiting.isEmpty()) out += tipSection(first && done.isEmpty(), tipLine(MUTED, "<b>STILL NEED</b> " + waiting.size())) + tipCard(CARD_HOVER, String.join("<br>", waiting));
 		return out;
 	}
 
 	private void addSoloLeader(JPanel body, JsonObject progress)
 	{
 		String leader = str(progress, "leader");
-		if (leader.isEmpty() || leader.equalsIgnoreCase(boardDisplayName)) return;
+		if (leader.isEmpty() || samePlayer(leader, boardDisplayName)) return;
 		body.add(caption("Leader: " + leader + " (" + integer(progress, "progress", 0) + "/" + integer(progress, "target", 1) + ")"));
 	}
 
 	private JsonObject myEntry(JsonObject progress)
 	{
 		for (JsonObject member : objects(array(progress, "members")))
-			if (str(member, "displayName").equalsIgnoreCase(boardDisplayName)) return member;
+			if (samePlayer(str(member, "displayName"), boardDisplayName)) return member;
 		return null;
 	}
 
@@ -2567,7 +2180,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			renderHiddenScoreboard();
 			return;
 		}
-		List<JsonObject> ranked = rankedTeams();
+		List<JsonObject> ranked = rankedTeams(boardEvent);
 		JsonArray scores = array(boardEvent, "teamScores");
 		int totalTasks = array(boardEvent, "tasks").size();
 		String ownTeam = ownTeamId();
@@ -2631,8 +2244,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			teamTab.add(Box.createVerticalStrut(LIST_GAP));
 		}
 		teamTab.add(Box.createVerticalStrut(GAP_L));
-		JButton leave = button("Disconnect from event");
-		leave.setForeground(TsgHubTheme.ERROR);
+		JButton leave = dangerButton("Disconnect from event");
 		leave.addActionListener(e -> confirmLeave());
 		teamTab.add(fitHeight(leave));
 		teamTab.add(Box.createVerticalStrut(GAP_S));
@@ -2691,20 +2303,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 		return label(html(innerHtml, CARD_TEXT_W), MUTED, smallFont());
 	}
 
-	private static void showError(JLabel label, String message)
-	{
-		label.setText(html(escape(message), TEXT_W));
-		label.setVisible(true);
-	}
-
 	private void refreshPage()
 	{
 		refresh(page);
-	}
-
-	private static void refresh(JPanel panel)
-	{
-		panel.revalidate();
-		panel.repaint();
 	}
 }

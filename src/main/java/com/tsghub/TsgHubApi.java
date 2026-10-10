@@ -4,6 +4,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -65,6 +67,11 @@ final class TsgHubApi
 			if (json == null) throw new IllegalStateException("Service returned an unexpected response");
 			return json;
 		}
+	}
+
+	static String encode(String value)
+	{
+		return URLEncoder.encode(value, StandardCharsets.UTF_8);
 	}
 
 	private static JsonObject parseObject(String text)

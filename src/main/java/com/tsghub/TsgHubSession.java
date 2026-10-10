@@ -6,6 +6,23 @@ import net.runelite.client.config.ConfigManager;
 
 final class TsgHubSession
 {
+	static final String EVENT_ID = "eventId";
+	static final String TOKEN = "token";
+	static final String DISPLAY_NAME = "displayName";
+	static final String ORGANIZER_EVENT_ID = "organizerEventId";
+	static final String MEMBER_TOKEN = "memberToken:";
+	static final String MEMBER_NAME = "memberName:";
+	static final String ORGANIZER_TOKEN = "organizerToken:";
+	static final String ORGANIZER_NAME = "organizerName:";
+	static final String GROUP_TOKEN = "groupToken";
+	static final String GROUP_PASSPHRASE = "groupPassphrase";
+	static final String GROUP_PLAYER = "groupPlayer";
+	static final String HIDE_COMPLETED = "hideCompleted";
+	static final String SHOW_OFFLINE = "showOffline";
+	static final String DOCK_VIEW = "dockView";
+	static final String DOCK_SPLIT = "dockSplit";
+	static final String DOCK_COLLAPSED = "dockCollapsed";
+
 	private static final String GROUP = "tsghubsession";
 	private static final String PROFILE_PREFIX = GROUP + "." + ConfigManager.RSPROFILE_GROUP + ".";
 	private static volatile ConfigManager configManager;
@@ -74,6 +91,22 @@ final class TsgHubSession
 		if (profile == null) return keys;
 		for (String key : manager.getRSProfileConfigurationKeys(GROUP, profile, encode(prefix))) keys.add(decode(key));
 		return keys;
+	}
+
+	static String memberToken(String eventId)
+	{
+		return eventValue(MEMBER_TOKEN, eventId, TOKEN);
+	}
+
+	static String memberName(String eventId)
+	{
+		return eventValue(MEMBER_NAME, eventId, DISPLAY_NAME);
+	}
+
+	private static String eventValue(String prefix, String eventId, String activeKey)
+	{
+		String value = get(prefix + eventId);
+		return value.isEmpty() && eventId.equals(get(EVENT_ID)) ? get(activeKey) : value;
 	}
 
 	static void clear(String... keys)

@@ -322,38 +322,38 @@ final class TsgHubSocket
 				message = element.getAsJsonObject();
 			}
 			catch (RuntimeException e) { return; }
-			String type = string(message, "type");
-			String eventId = string(message, "eventId");
+			String type = TsgHubUi.str(message, "type");
+			String eventId = TsgHubUi.str(message, "eventId");
 			switch (type)
 			{
 				case "ready":
 					opened(ws);
 					break;
 				case "changed":
-					String topic = string(message, "topic");
-					executor.execute(() -> listener.onChanged(topic, eventId));
+					String topic = TsgHubUi.str(message, "topic");
+					dispatch(ws, () -> listener.onChanged(topic, eventId));
 					break;
 				case "subscribed":
 					subscribed(ws, eventId);
 					break;
 				case "progress":
-					progress(eventId, message);
+					progress(ws, eventId, message);
 					break;
 				case "admin.revoked":
 					adminRevoked(ws);
 					break;
 				case "announcement":
-					String announcement = string(message, "text");
-					if (!announcement.isEmpty()) executor.execute(() -> listener.onAnnouncement(announcement));
+					String announcement = TsgHubUi.str(message, "text");
+					if (!announcement.isEmpty()) dispatch(ws, () -> listener.onAnnouncement(announcement));
 					break;
 				case "update":
-					String version = string(message, "version");
-					if (!version.isEmpty()) executor.execute(() -> listener.onUpdateAvailable(version));
+					String version = TsgHubUi.str(message, "version");
+					if (!version.isEmpty()) dispatch(ws, () -> listener.onUpdateAvailable(version));
 					break;
 				case "error":
 					if (!eventId.isEmpty()) rejected(ws, eventId);
-					else if ("admin".equals(string(message, "topic")) && "401".equals(string(message, "status"))) adminRevoked(ws);
-					log.debug("TSG Hub socket error: {}", string(message, "message"));
+					else if ("admin".equals(TsgHubUi.str(message, "topic")) && "401".equals(TsgHubUi.str(message, "status"))) adminRevoked(ws);
+					log.debug("TSG Hub socket error: {}", TsgHubUi.str(message, "message"));
 					break;
 				default:
 			}
@@ -380,21 +380,21 @@ final class TsgHubSocket
 		}
 	}
 
-	private void progress(String eventId, JsonObject message)
+	private synchronized void dispatch(WebSocket ws, Runnable action)
+	{
+		if (ws != socket || executor.isShutdown()) return;
+		executor.execute(action);
+	}
+
+	private void progress(WebSocket ws, String eventId, JsonObject message)
 	{
 		try
 		{
-			long gained = Long.parseLong(string(message, "gained"));
-			String rank = string(message, "rank");
+			long gained = Long.parseLong(TsgHubUi.str(message, "gained"));
+			String rank = TsgHubUi.str(message, "rank");
 			Long parsedRank = rank.isEmpty() ? null : Long.parseLong(rank);
-			if (!eventId.isEmpty()) executor.execute(() -> listener.onProgress(eventId, gained, parsedRank));
+			if (!eventId.isEmpty()) dispatch(ws, () -> listener.onProgress(eventId, gained, parsedRank));
 		}
 		catch (NumberFormatException e) { return; }
-	}
-
-	private static String string(JsonObject object, String key)
-	{
-		JsonElement value = object.get(key);
-		return value != null && value.isJsonPrimitive() ? value.getAsString() : "";
 	}
 }

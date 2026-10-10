@@ -31,13 +31,11 @@ import java.awt.GridLayout;
 import java.util.HashMap;
 import java.util.Map;
 import javax.swing.JPanel;
-import lombok.Getter;
 import net.runelite.api.Prayer;
 import net.runelite.client.game.SpriteManager;
 
 public class PlayerPrayerPanel extends JPanel
 {
-	@Getter
 	private final Map<Prayer, PrayerSlot> slotMap = new HashMap<>();
 
 	public PlayerPrayerPanel(final PartyPlayer player, final SpriteManager spriteManager)

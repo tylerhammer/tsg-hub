@@ -1,5 +1,7 @@
 package com.tsghub;
 
+import static com.tsghub.TsgHubSession.MEMBER_TOKEN;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.time.Instant;
@@ -161,14 +163,19 @@ final class TsgHubCompetitionTracker
 		else queueXp(event, xp);
 	}
 
+	static int killCount(String message)
+	{
+		if (!message.contains("kill count") && !message.contains("kill-count")) return -1;
+		Matcher count = KILL_COUNT.matcher(message);
+		if (!count.find()) return -1;
+		try { return Integer.parseInt(count.group(1).replace(",", "")); }
+		catch (NumberFormatException e) { return -1; }
+	}
+
 	void onChat(String message)
 	{
-		if (!message.contains("kill count") && !message.contains("kill-count")) return;
-		Matcher count = KILL_COUNT.matcher(message);
-		if (!count.find()) return;
-		int kills;
-		try { kills = Integer.parseInt(count.group(1).replace(",", "")); }
-		catch (NumberFormatException e) { return; }
+		int kills = killCount(message);
+		if (kills < 0) return;
 		for (JsonObject event : joined)
 		{
 			JsonObject config = config(event);
@@ -229,7 +236,7 @@ final class TsgHubCompetitionTracker
 
 	private static String token(JsonObject event)
 	{
-		return TsgHubSession.get("memberToken:" + TsgHubUi.str(event, "id"));
+		return TsgHubSession.get(MEMBER_TOKEN + TsgHubUi.str(event, "id"));
 	}
 
 	private static JsonObject config(JsonObject event)

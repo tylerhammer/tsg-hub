@@ -1,6 +1,7 @@
 package com.tsghub;
 
 import static com.tsghub.TsgHubTheme.*;
+import static net.runelite.client.util.ColorUtil.toHexColor;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -15,8 +16,8 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Graphics;
 import java.awt.LayoutManager;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -42,6 +43,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.LongFunction;
@@ -64,8 +66,10 @@ import javax.swing.Scrollable;
 import javax.swing.Timer;
 import javax.swing.ToolTipManager;
 import javax.swing.border.Border;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.text.JTextComponent;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.util.AsyncBufferedImage;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.SwingUtil;
@@ -406,6 +410,23 @@ final class TsgHubUi
 		return button;
 	}
 
+	static JButton dangerButton(String text)
+	{
+		JButton button = button(text);
+		button.setForeground(ERROR);
+		return button;
+	}
+
+	static void onTextChange(JTextComponent field, Runnable action)
+	{
+		field.getDocument().addDocumentListener(new DocumentListener()
+		{
+			@Override public void insertUpdate(DocumentEvent e) { action.run(); }
+			@Override public void removeUpdate(DocumentEvent e) { action.run(); }
+			@Override public void changedUpdate(DocumentEvent e) { action.run(); }
+		});
+	}
+
 	static JButton primaryButton(String text)
 	{
 		JButton button = button(text);
@@ -487,22 +508,52 @@ final class TsgHubUi
 		return message.endsWith(".") ? message : message + ".";
 	}
 
-	static boolean samePlayer(String a, String b)
+	static void refresh(JComponent panel)
 	{
-		String left = playerKey(a);
-		return !left.isEmpty() && left.equals(playerKey(b));
+		panel.revalidate();
+		panel.repaint();
 	}
 
-	static String playerKey(String name)
+	static void showError(JLabel label, String message, int width)
 	{
-		return PlayerNames.normalize(name);
+		label.setText(html(escape(message), width));
+		label.setVisible(true);
+		label.revalidate();
+	}
+
+	static void placeholder(JComponent field, String text)
+	{
+		field.putClientProperty("JTextField.placeholderText", text);
+	}
+
+	static String plural(int count, String noun)
+	{
+		return count + " " + noun + (count == 1 ? "" : "s");
+	}
+
+	static List<String> strings(JsonArray array)
+	{
+		List<String> out = new ArrayList<>();
+		for (JsonElement element : array) if (element.isJsonPrimitive()) out.add(element.getAsString());
+		return out;
+	}
+
+	static boolean creditedToOrganizer(JsonObject progress)
+	{
+		return bool(progress, "override") && !bool(progress, "overrideCredited");
+	}
+
+	static boolean samePlayer(String a, String b)
+	{
+		String left = PlayerNames.normalize(a);
+		return !left.isEmpty() && left.equals(PlayerNames.normalize(b));
 	}
 
 	static String str(JsonObject object, String key)
 	{
-		if (object == null || !object.has(key)) return "";
+		if (object == null) return "";
 		JsonElement value = object.get(key);
-		return value == null || value.isJsonNull() ? "" : value.getAsString();
+		return value != null && value.isJsonPrimitive() ? value.getAsString() : "";
 	}
 
 	static int integer(JsonObject object, String key, int fallback)
@@ -870,6 +921,17 @@ final class TsgHubUi
 		return empty;
 	}
 
+	static List<JsonObject> rankedTeams(JsonObject event)
+	{
+		JsonArray scores = array(event, "teamScores");
+		List<JsonObject> ranked = objects(array(event, "teams"));
+		ranked.sort(Comparator
+			.comparingInt((JsonObject team) -> integer(scoreFor(scores, str(team, "id")), "points", 0)).reversed()
+			.thenComparing(Comparator.comparingInt((JsonObject team) -> integer(scoreFor(scores, str(team, "id")), "completedTasks", 0)).reversed())
+			.thenComparing(team -> str(team, "name"), String.CASE_INSENSITIVE_ORDER));
+		return ranked;
+	}
+
 	static JsonObject progressFor(JsonArray progressRows, String taskId)
 	{
 		for (JsonObject progress : objects(progressRows)) if (str(progress, "taskId").equals(taskId)) return progress;
@@ -1023,7 +1085,7 @@ final class TsgHubUi
 	{
 		String scope = str(progress, "scope");
 		String by = str(progress, "completedBy");
-		boolean creditedToOrganizer = bool(progress, "override") && !bool(progress, "overrideCredited");
+		boolean creditedToOrganizer = creditedToOrganizer(progress);
 		if (creditedToOrganizer) return "Completed (credited to no one)";
 		if ("individual".equals(scope) || by.isEmpty()) return "Completed";
 		if (!"solo".equals(scope) && array(progress, "contributors").size() > 0) return "Completed";
@@ -1034,7 +1096,7 @@ final class TsgHubUi
 	{
 		for (JsonObject member : objects(array(event, "members")))
 		{
-			if (str(member, "displayName").equalsIgnoreCase(displayName) && !str(member, "teamId").isEmpty()) return str(member, "teamId");
+			if (samePlayer(str(member, "displayName"), displayName) && !str(member, "teamId").isEmpty()) return str(member, "teamId");
 		}
 		return "";
 	}
@@ -1379,5 +1441,21 @@ final class TsgHubUi
 	static Border bottomRule()
 	{
 		return BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER);
+	}
+
+	static String tipSection(boolean first, String heading)
+	{
+		return "<div style='margin-top:" + (first ? 0 : 6) + "px'>" + heading + "</div>";
+	}
+
+	static String tipCard(Color bar, String inner)
+	{
+		return "<table cellspacing='0' cellpadding='0' width='100%' style='margin-top:2px'><tr><td bgcolor='" + toHexColor(bar) + "' width='2'></td>"
+			+ "<td bgcolor='" + toHexColor(CARD_HOVER) + "' style='padding:3px 6px'>" + inner + "</td></tr></table>";
+	}
+
+	static String tipLine(Color color, String html)
+	{
+		return "<font color='" + toHexColor(color) + "'>" + html + "</font>";
 	}
 }

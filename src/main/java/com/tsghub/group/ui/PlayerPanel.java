@@ -70,7 +70,6 @@ public class PlayerPanel extends JPanel
 	@Getter
 	private PartyPlayer player;
 	private final GroupViewSettings config;
-	@Getter
 	private final PlayerBanner banner;
 	private final PlayerInventoryPanel inventoryPanel;
 	private final PlayerEquipmentPanel equipmentPanel;
@@ -81,7 +80,6 @@ public class PlayerPanel extends JPanel
 	private boolean self;
 	private boolean hovered;
 
-	@Getter
 	@Setter
 	private boolean showInfo;
 
@@ -112,7 +110,7 @@ public class PlayerPanel extends JPanel
 				if (!SwingUtilities.isLeftMouseButton(e) || e.isPopupTrigger() || e.isControlDown() || !e.getComponent().contains(e.getPoint())) return;
 				showInfo = !showInfo;
 				updatePanel();
-				if (showInfo) updatePlayerData(PlayerPanel.this.player, false);
+				if (showInfo) updatePlayerData(PlayerPanel.this.player);
 			}
 
 			@Override
@@ -151,7 +149,7 @@ public class PlayerPanel extends JPanel
 		details.setLayout(new BoxLayout(details, BoxLayout.Y_AXIS));
 
 		JComponent rule = new JPanel();
-		rule.setBackground(PartyStyle.DIVIDER);
+		rule.setBackground(TsgHubTheme.BORDER);
 		rule.setMinimumSize(new Dimension(0, 1));
 		rule.setPreferredSize(new Dimension(10, 1));
 		rule.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
@@ -191,14 +189,14 @@ public class PlayerPanel extends JPanel
 		materialTab.setFont(TsgHubTheme.smallFont());
 		materialTab.setOnSelectEvent(() -> {
 			selected = tab;
-			updatePlayerData(player, false);
+			updatePlayerData(player);
 			return true;
 		});
 		group.addTab(materialTab);
 		if (tab == selected) group.select(materialTab);
 	}
 
-	public void updatePlayerData(PartyPlayer newPlayer, boolean hasBreakingBannerChange)
+	public void updatePlayerData(PartyPlayer newPlayer)
 	{
 		player = newPlayer;
 		banner.update(player);

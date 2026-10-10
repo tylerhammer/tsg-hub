@@ -177,26 +177,6 @@ public class TsgGroupUpdate extends PartyMemberMessage
 		return m != null && m.stream().anyMatch(e -> e.t == PartyMiscChange.PartyMisc.A);
 	}
 
-	public boolean hasBreakingBannerChange()
-	{
-		return m != null
-				&& m.stream()
-				.anyMatch(e ->
-				{
-					switch (e.t)
-					{
-						case C:
-						case W:
-						case U:
-						case SP:
-						case A:
-							return true;
-					}
-
-					return false;
-				});
-	}
-
 	public boolean hasStatChange()
 	{
 		return (s != null && !s.isEmpty())

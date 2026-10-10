@@ -16,9 +16,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
-import javax.swing.SwingUtilities;
 import net.runelite.api.Client;
 import net.runelite.api.Actor;
 import net.runelite.api.GameState;
@@ -138,9 +136,9 @@ final class TsgHubPresence
 
 	void loadMembers(boolean quiet)
 	{
-		if (!canUse() || executor.isShutdown()) return;
-		String clan = encode(plugin.getDetectedClanName());
-		if (!quiet) ui(s -> s.setBusy(true));
+		if (!plugin.canUseHub() || executor.isShutdown()) return;
+		String clan = TsgHubApi.encode(plugin.getDetectedClanName());
+		if (!quiet) plugin.ui(s -> s.setBusy(true));
 		executor.submit(() -> {
 			try
 			{
@@ -155,11 +153,11 @@ final class TsgHubPresence
 					addRanks(roster[1]);
 					loadAccountIcons(roster[0]);
 					loadAccountIcons(roster[1]);
-					ui(s -> s.setMembers(roster[0], roster[1], known != null));
+					plugin.ui(s -> s.setMembers(roster[0], roster[1], known != null));
 				});
 			}
-			catch (Exception e) { if (!quiet) ui(s -> s.setStatus("Couldn't load members. " + TsgHubUi.friendlyError(e), Tone.ERROR)); }
-			finally { if (!quiet) ui(s -> s.setBusy(false)); }
+			catch (Exception e) { if (!quiet) plugin.ui(s -> s.setStatus("Couldn't load members. " + TsgHubUi.friendlyError(e), Tone.ERROR)); }
+			finally { if (!quiet) plugin.ui(s -> s.setBusy(false)); }
 		});
 	}
 
@@ -200,7 +198,7 @@ final class TsgHubPresence
 		{
 			if (!notes.get(i).isJsonObject()) continue;
 			JsonObject note = notes.get(i).getAsJsonObject();
-			byName.put(TsgHubUi.playerKey(TsgHubUi.str(note, "displayName")), note);
+			byName.put(PlayerNames.normalize(TsgHubUi.str(note, "displayName")), note);
 		}
 		List<JsonObject> online = new ArrayList<>();
 		Set<String> seen = new HashSet<>();
@@ -208,11 +206,11 @@ final class TsgHubPresence
 		{
 			if (!presence.get(i).isJsonObject()) continue;
 			JsonObject member = presence.get(i).getAsJsonObject();
-			if (seen.add(TsgHubUi.playerKey(TsgHubUi.str(member, "displayName")))) online.add(member);
+			if (seen.add(PlayerNames.normalize(TsgHubUi.str(member, "displayName")))) online.add(member);
 		}
 		for (Map.Entry<String, Integer> entry : chatWorlds.entrySet())
 		{
-			if (!seen.add(TsgHubUi.playerKey(entry.getKey()))) continue;
+			if (!seen.add(PlayerNames.normalize(entry.getKey()))) continue;
 			JsonObject member = new JsonObject();
 			member.addProperty("displayName", entry.getKey());
 			if (entry.getValue() > 0) member.addProperty("world", entry.getValue());
@@ -221,7 +219,7 @@ final class TsgHubPresence
 		List<JsonObject> offline = new ArrayList<>();
 		for (String name : clanNames)
 		{
-			if (!seen.add(TsgHubUi.playerKey(name))) continue;
+			if (!seen.add(PlayerNames.normalize(name))) continue;
 			JsonObject member = new JsonObject();
 			member.addProperty("displayName", name);
 			offline.add(member);
@@ -235,7 +233,7 @@ final class TsgHubPresence
 		JsonArray out = new JsonArray();
 		for (JsonObject member : members)
 		{
-			JsonObject note = notes.get(TsgHubUi.playerKey(TsgHubUi.str(member, "displayName")));
+			JsonObject note = notes.get(PlayerNames.normalize(TsgHubUi.str(member, "displayName")));
 			if (note != null)
 			{
 				for (String field : new String[] {"altOf", "alts", "note", "lastSeenAt", "warnings", "accountType", "previousNames"})
@@ -270,7 +268,7 @@ final class TsgHubPresence
 	{
 		JsonObject body = adminBody();
 		body.addProperty("reason", reason);
-		adminWrite("POST", "/v1/members/warnings/" + encode(warningId) + "/revoke", body, "Revoked a warning for " + displayName + ".");
+		adminWrite("POST", "/v1/members/warnings/" + TsgHubApi.encode(warningId) + "/revoke", body, "Revoked a warning for " + displayName + ".");
 	}
 
 	private JsonObject adminBody()
@@ -284,16 +282,16 @@ final class TsgHubPresence
 	{
 		String token = key.get();
 		if (token.isEmpty() || executor.isShutdown()) return;
-		ui(s -> s.setBusy(true));
+		plugin.ui(s -> s.setBusy(true));
 		executor.submit(() -> {
 			try
 			{
 				api.get().request(method, path, token, body);
-				ui(s -> s.setStatus(success, Tone.SUCCESS));
+				plugin.ui(s -> s.setStatus(success, Tone.SUCCESS));
 				loadMembers(true);
 			}
-			catch (Exception e) { ui(s -> s.setStatus("Couldn't save. " + TsgHubUi.friendlyError(e), Tone.ERROR)); }
-			finally { ui(s -> s.setBusy(false)); }
+			catch (Exception e) { plugin.ui(s -> s.setStatus("Couldn't save. " + TsgHubUi.friendlyError(e), Tone.ERROR)); }
+			finally { plugin.ui(s -> s.setBusy(false)); }
 		});
 	}
 
@@ -466,24 +464,5 @@ final class TsgHubPresence
 	{
 		try { api.get().request("POST", path, null, body); }
 		catch (Exception ignored) { }
-	}
-
-	private boolean canUse()
-	{
-		return plugin.isInHubClan() && plugin.sharingEnabled() && !plugin.getDetectedPlayerName().isEmpty();
-	}
-
-	private static String encode(String value)
-	{
-		try { return java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8.name()); }
-		catch (java.io.UnsupportedEncodingException e) { return ""; }
-	}
-
-	private void ui(Consumer<TsgHubSidebarPanel> action)
-	{
-		SwingUtilities.invokeLater(() -> {
-			TsgHubSidebarPanel s = sidebar.get();
-			if (s != null) action.accept(s);
-		});
 	}
 }
