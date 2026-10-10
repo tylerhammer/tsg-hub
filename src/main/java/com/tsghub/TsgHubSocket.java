@@ -331,24 +331,24 @@ final class TsgHubSocket
 					break;
 				case "changed":
 					String topic = string(message, "topic");
-					executor.execute(() -> listener.onChanged(topic, eventId));
+					dispatch(ws, () -> listener.onChanged(topic, eventId));
 					break;
 				case "subscribed":
 					subscribed(ws, eventId);
 					break;
 				case "progress":
-					progress(eventId, message);
+					progress(ws, eventId, message);
 					break;
 				case "admin.revoked":
 					adminRevoked(ws);
 					break;
 				case "announcement":
 					String announcement = string(message, "text");
-					if (!announcement.isEmpty()) executor.execute(() -> listener.onAnnouncement(announcement));
+					if (!announcement.isEmpty()) dispatch(ws, () -> listener.onAnnouncement(announcement));
 					break;
 				case "update":
 					String version = string(message, "version");
-					if (!version.isEmpty()) executor.execute(() -> listener.onUpdateAvailable(version));
+					if (!version.isEmpty()) dispatch(ws, () -> listener.onUpdateAvailable(version));
 					break;
 				case "error":
 					if (!eventId.isEmpty()) rejected(ws, eventId);
@@ -380,14 +380,20 @@ final class TsgHubSocket
 		}
 	}
 
-	private void progress(String eventId, JsonObject message)
+	private synchronized void dispatch(WebSocket ws, Runnable action)
+	{
+		if (ws != socket || executor.isShutdown()) return;
+		executor.execute(action);
+	}
+
+	private void progress(WebSocket ws, String eventId, JsonObject message)
 	{
 		try
 		{
 			long gained = Long.parseLong(string(message, "gained"));
 			String rank = string(message, "rank");
 			Long parsedRank = rank.isEmpty() ? null : Long.parseLong(rank);
-			if (!eventId.isEmpty()) executor.execute(() -> listener.onProgress(eventId, gained, parsedRank));
+			if (!eventId.isEmpty()) dispatch(ws, () -> listener.onProgress(eventId, gained, parsedRank));
 		}
 		catch (NumberFormatException e) { return; }
 	}
