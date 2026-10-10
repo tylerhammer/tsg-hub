@@ -68,8 +68,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private static final int MAX_WARNING_LENGTH = 300;
 	private static final int MAX_PAST_WARNINGS = 3;
 	private static final int[] EXPIRY_DAYS = {30, 90, 0};
-	private static final Color TIP_CARD = new Color(0x2E2B33);
-	private static final Color DIM_BAR = new Color(0x3B3741);
 	private static final DateTimeFormatter WARNING_DAY = DateTimeFormatter.ofPattern("d MMM", java.util.Locale.ENGLISH);
 	private static final DateTimeFormatter WARNING_DAY_YEAR = DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale.ENGLISH);
 	private static final int CARD_TITLE_W = 150;
@@ -221,8 +219,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 		add(buildFooter(), BorderLayout.SOUTH);
 
 		codeField.setToolTipText("Team code from an admin");
-		codeField.putClientProperty("JTextField.placeholderText", "Team code, e.g. DRGN42");
-		manualNote.putClientProperty("JTextField.placeholderText", "Screenshot link or note");
+		placeholder(codeField, "Team code, e.g. DRGN42");
+		placeholder(manualNote, "Screenshot link or note");
 		codeField.addActionListener(e -> submitJoin());
 		joinButton.addActionListener(e -> submitJoin());
 		joinError.setVisible(false);
@@ -891,12 +889,12 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (!formerly.isEmpty())
 		{
 			sections += tipSection(head.isEmpty(), tipLine(MUTED, "<b>PREVIOUS NAMES</b>"))
-				+ tipCard(TIP_CARD, escape(String.join("\n", formerly)).replace("\n", "<br>"));
+				+ tipCard(CARD_HOVER, escape(String.join("\n", formerly)).replace("\n", "<br>"));
 		}
 		if (!note.isEmpty())
 		{
 			sections += tipSection(head.isEmpty() && sections.isEmpty(), tipLine(WARNING, "<b>ADMIN NOTE</b>"))
-				+ tipCard(TIP_CARD, escape(note).replace("\n", "<br>"));
+				+ tipCard(CARD_HOVER, escape(note).replace("\n", "<br>"));
 		}
 		List<JsonObject> history = objects(warnings);
 		if (!history.isEmpty())
@@ -907,13 +905,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 		return head + sections;
 	}
 
-	private static List<String> strings(JsonArray array)
-	{
-		List<String> out = new ArrayList<>();
-		for (int i = 0; i < array.size(); i++) if (array.get(i).isJsonPrimitive()) out.add(array.get(i).getAsString());
-		return out;
-	}
-
 	private static String tipSection(boolean first, String heading)
 	{
 		return "<div style='margin-top:" + (first ? 0 : 6) + "px'>" + heading + "</div>";
@@ -921,8 +912,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	private static String tipCard(Color bar, String inner)
 	{
-		return "<table cellspacing='0' cellpadding='0' width='100%' style='margin-top:2px'><tr><td bgcolor='" + hex(bar) + "' width='2'></td>"
-			+ "<td bgcolor='" + hex(TIP_CARD) + "' style='padding:3px 6px'>" + inner + "</td></tr></table>";
+		return "<table cellspacing='0' cellpadding='0' width='100%' style='margin-top:2px'><tr><td bgcolor='" + toHexColor(bar) + "' width='2'></td>"
+			+ "<td bgcolor='" + toHexColor(CARD_HOVER) + "' style='padding:3px 6px'>" + inner + "</td></tr></table>";
 	}
 
 	private static String warningSummary(List<JsonObject> warnings)
@@ -954,7 +945,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			boolean active = bool(warning, "active");
 			String meta = warningDate(str(warning, "issuedAt"), now, zone) + " · " + escape(str(warning, "issuedBy")) + " · " + warningStatus(warning, now, zone);
 			Color text = active ? TEXT : DIM;
-			out.append(tipCard(active ? TsgHubTheme.ERROR : DIM_BAR, tipLine(text, escape(str(warning, "reason"))) + "<br>" + tipLine(active ? MUTED : DIM, meta)));
+			out.append(tipCard(active ? TsgHubTheme.ERROR : BORDER, tipLine(text, escape(str(warning, "reason"))) + "<br>" + tipLine(active ? MUTED : DIM, meta)));
 		}
 		if (inactive > MAX_PAST_WARNINGS) out.append(tipLine(DIM, "+" + (inactive - MAX_PAST_WARNINGS) + " older"));
 		return out.toString();
@@ -974,11 +965,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (at == null) return "";
 		LocalDate day = at.atZone(zone).toLocalDate();
 		return day.format(day.getYear() == now.atZone(zone).getYear() ? WARNING_DAY : WARNING_DAY_YEAR);
-	}
-
-	private static String hex(Color color)
-	{
-		return String.format("#%06x", color.getRGB() & 0xffffff);
 	}
 
 	private void promptWarning(String name, int active)
@@ -1045,7 +1031,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	private static String tipLine(Color color, String html)
 	{
-		return "<font color='" + String.format("#%06x", color.getRGB() & 0xffffff) + "'>" + html + "</font>";
+		return "<font color='" + toHexColor(color) + "'>" + html + "</font>";
 	}
 
 	static boolean isAltRank(String rank)
@@ -1367,7 +1353,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		competitionJoinButton.setEnabled(true);
 		competitionJoinButton.setText("Join");
-		showError(joinError, message);
+		showError(joinError, message, TEXT_W);
 	}
 
 	void showCompetition(JsonObject event, String displayName, boolean open)
@@ -1527,7 +1513,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		joinButton.setEnabled(true);
 		joinButton.setText("Join event");
-		showError(joinError, message);
+		showError(joinError, message, TEXT_W);
 		codeField.requestFocusInWindow();
 		codeField.selectAll();
 	}
@@ -1590,7 +1576,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	void groupActionFailed(String message)
 	{
 		groupBusy = false;
-		showError(groupError, message);
+		showError(groupError, message, TEXT_W);
 		if (shows(View.GROUPS)) renderGroups();
 	}
 
@@ -1646,8 +1632,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (!groups.inGroup()) browsingParties = false;
 		if (groups.inGroup() && !browsingParties) renderCurrentGroup(current);
 		else renderGroupList(groups.inGroup() ? current : null);
-		groupsPage.revalidate();
-		groupsPage.repaint();
+		refresh(groupsPage);
 	}
 
 	private void setPartyHeader(JsonObject group)
@@ -2264,8 +2249,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			card.add(prizes, BorderLayout.SOUTH);
 		}
 		boardSummary.add(fitHeight(card));
-		boardSummary.revalidate();
-		boardSummary.repaint();
+		refresh(boardSummary);
 	}
 
 	private void renderTasks()
@@ -2490,7 +2474,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (individual || solo) sections += memberSections(progress, solo, head.isEmpty());
 		else if (sections.isEmpty() && array(progress, "contributors").size() > CARD_CONTRIBUTORS)
 		{
-			sections += tipSection(head.isEmpty(), tipLine(MUTED, "<b>CONTRIBUTORS</b>")) + tipCard(TIP_CARD, contributorsHtml(progress, "<br>", 50, boardDisplayName));
+			sections += tipSection(head.isEmpty(), tipLine(MUTED, "<b>CONTRIBUTORS</b>")) + tipCard(CARD_HOVER, contributorsHtml(progress, "<br>", 50, boardDisplayName));
 		}
 		if (head.isEmpty() && sections.isEmpty()) return null;
 		return html("<div style='padding:2px'>" + head + sections + "</div>", 240);
@@ -2525,10 +2509,10 @@ final class TsgHubSidebarPanel extends PluginPanel
 			else if (bool(member, "completed")) done.add(name);
 			else waiting.add(need > 1 ? name + " " + tipLine(MUTED, have + "/" + need) : name);
 		}
-		if (solo) return tipSection(first, tipLine(MUTED, "<b>STANDINGS</b>")) + tipCard(TIP_CARD, String.join("<br>", waiting));
+		if (solo) return tipSection(first, tipLine(MUTED, "<b>STANDINGS</b>")) + tipCard(CARD_HOVER, String.join("<br>", waiting));
 		String out = "";
 		if (!done.isEmpty()) out += tipSection(first, tipLine(SUCCESS, "<b>DONE</b> ") + tipLine(MUTED, String.valueOf(done.size()))) + tipCard(SUCCESS, String.join("<br>", done));
-		if (!waiting.isEmpty()) out += tipSection(first && done.isEmpty(), tipLine(MUTED, "<b>STILL NEED</b> " + waiting.size())) + tipCard(TIP_CARD, String.join("<br>", waiting));
+		if (!waiting.isEmpty()) out += tipSection(first && done.isEmpty(), tipLine(MUTED, "<b>STILL NEED</b> " + waiting.size())) + tipCard(CARD_HOVER, String.join("<br>", waiting));
 		return out;
 	}
 
@@ -2678,20 +2662,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 		return label(html(innerHtml, CARD_TEXT_W), MUTED, smallFont());
 	}
 
-	private static void showError(JLabel label, String message)
-	{
-		label.setText(html(escape(message), TEXT_W));
-		label.setVisible(true);
-	}
-
 	private void refreshPage()
 	{
 		refresh(page);
-	}
-
-	private static void refresh(JPanel panel)
-	{
-		panel.revalidate();
-		panel.repaint();
 	}
 }

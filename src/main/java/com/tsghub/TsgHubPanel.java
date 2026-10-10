@@ -537,8 +537,7 @@ final class TsgHubPanel extends JPanel
 			raidModeChoices.add(radio);
 			raidModeChoices.add(Box.createHorizontalStrut(10));
 		});
-		raidModeChoices.revalidate();
-		raidModeChoices.repaint();
+		refresh(raidModeChoices);
 	}
 
 	private static JRadioButton modeRadio(String label, ButtonGroup group)
@@ -672,8 +671,7 @@ final class TsgHubPanel extends JPanel
 		{
 			eventList.add(wrapped("No events yet. Create one to get started.", MUTED, smallFont(), LIST_W - 30));
 		}
-		eventList.revalidate();
-		eventList.repaint();
+		refresh(eventList);
 	}
 
 	void openOrganizerEvent(JsonObject event)
@@ -754,7 +752,7 @@ final class TsgHubPanel extends JPanel
 
 	void eventFormFailed(String message)
 	{
-		showFormError(eventFormError, message);
+		showError(eventFormError, message, DETAIL_TEXT_W);
 	}
 
 	private void eventFormFailed(String message, JComponent focus)
@@ -765,7 +763,7 @@ final class TsgHubPanel extends JPanel
 
 	void taskFormFailed(String message)
 	{
-		showFormError(taskFormError, message);
+		showError(taskFormError, message, DETAIL_TEXT_W);
 	}
 
 	void taskDeleted(String taskId)
@@ -847,11 +845,6 @@ final class TsgHubPanel extends JPanel
 		String message = "Delete task \"" + str(task, "title") + "\"?\n\n"
 			+ "Every team's progress and claims for it will be deleted.\nThis can't be undone.";
 		if (confirmDelete(this, "Delete task", message, "Delete task")) plugin.deleteTask(str(task, "id"));
-	}
-
-	private static String plural(int count, String noun)
-	{
-		return count + " " + noun + (count == 1 ? "" : "s");
 	}
 
 	void finishTaskEdit()
@@ -1754,8 +1747,7 @@ final class TsgHubPanel extends JPanel
 		{
 			for (int g = 0; g < itemGroups.size(); g++) selectedItemsPanel.add(setCard(g));
 		}
-		selectedItemsPanel.revalidate();
-		selectedItemsPanel.repaint();
+		refresh(selectedItemsPanel);
 	}
 
 	private JPanel setCard(int index)
@@ -1841,11 +1833,6 @@ final class TsgHubPanel extends JPanel
 		}
 	}
 
-	private static void placeholder(JTextField field, String text)
-	{
-		field.putClientProperty("JTextField.placeholderText", text);
-	}
-
 	private static JPanel field(String label, Component input)
 	{
 		JPanel row = panel(new BorderLayout(0, 3));
@@ -1897,13 +1884,6 @@ final class TsgHubPanel extends JPanel
 		return scroll(page);
 	}
 
-	private void showFormError(JLabel label, String message)
-	{
-		label.setText(html(escape(message), DETAIL_TEXT_W));
-		label.setVisible(true);
-		label.revalidate();
-	}
-
 	private JsonObject findTeam(String teamId)
 	{
 		for (JsonObject team : objects(array(currentEvent, "teams"))) if (str(team, "id").equals(teamId)) return team;
@@ -1930,13 +1910,6 @@ final class TsgHubPanel extends JPanel
 				+ (options > 1 ? " (closest of " + options + ")" : "") + (missing.isEmpty() ? "" : " · need " + String.join(", ", missing));
 		}
 		return integer(progress, "progress", 0) + "/" + integer(progress, "target", 1);
-	}
-
-	private static List<String> strings(JsonArray array)
-	{
-		List<String> values = new ArrayList<>();
-		for (int i = 0; i < array.size(); i++) values.add(array.get(i).getAsString());
-		return values;
 	}
 
 	private static String nameOrPieces(JsonArray items)
@@ -1970,11 +1943,5 @@ final class TsgHubPanel extends JPanel
 	private static int statusOrder(String status)
 	{
 		return "active".equals(status) ? 0 : "ended".equals(status) ? 2 : 1;
-	}
-
-	private static void refresh(JPanel panel)
-	{
-		panel.revalidate();
-		panel.repaint();
 	}
 }

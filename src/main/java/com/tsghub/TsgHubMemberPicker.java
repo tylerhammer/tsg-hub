@@ -38,7 +38,7 @@ final class TsgHubMemberPicker extends JPanel
 		setAlignmentX(LEFT_ALIGNMENT);
 
 		field.setText(value);
-		field.putClientProperty("JTextField.placeholderText", "Type to search the clan");
+		TsgHubUi.placeholder(field, "Type to search the clan");
 		field.setAlignmentX(LEFT_ALIGNMENT);
 		field.getDocument().addDocumentListener(new DocumentListener()
 		{

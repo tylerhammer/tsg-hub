@@ -42,7 +42,7 @@ final class TsgHubBossPicker extends JPanel
 		add(label);
 		add(Box.createVerticalStrut(TsgHubTheme.GAP_XS));
 
-		field.putClientProperty("JTextField.placeholderText", "e.g. Vorkath");
+		TsgHubUi.placeholder(field, "e.g. Vorkath");
 		field.setAlignmentX(LEFT_ALIGNMENT);
 		field.getDocument().addDocumentListener(new DocumentListener()
 		{

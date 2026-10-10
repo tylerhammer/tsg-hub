@@ -488,6 +488,36 @@ final class TsgHubUi
 		return message.endsWith(".") ? message : message + ".";
 	}
 
+	static void refresh(JComponent panel)
+	{
+		panel.revalidate();
+		panel.repaint();
+	}
+
+	static void showError(JLabel label, String message, int width)
+	{
+		label.setText(html(escape(message), width));
+		label.setVisible(true);
+		label.revalidate();
+	}
+
+	static void placeholder(JComponent field, String text)
+	{
+		field.putClientProperty("JTextField.placeholderText", text);
+	}
+
+	static String plural(int count, String noun)
+	{
+		return count + " " + noun + (count == 1 ? "" : "s");
+	}
+
+	static List<String> strings(JsonArray array)
+	{
+		List<String> out = new ArrayList<>();
+		for (JsonElement element : array) if (element.isJsonPrimitive()) out.add(element.getAsString());
+		return out;
+	}
+
 	static boolean samePlayer(String a, String b)
 	{
 		String left = PlayerNames.normalize(a);
