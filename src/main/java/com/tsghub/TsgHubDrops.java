@@ -19,6 +19,7 @@ import net.runelite.client.callback.ClientThread;
 final class TsgHubDrops
 {
 	static final int REFRESH_SECONDS = 60;
+	private static final int INDEX_CHUNK = 2000;
 	private static final String[] KEYWORDS = {
 		"received a drop:", "received special loot from a raid:", "funny feeling", "sneaking into", "acquired something special", "new collection log item:"
 	};
@@ -29,7 +30,8 @@ final class TsgHubDrops
 	private final ScheduledExecutorService executor;
 	private final Supplier<TsgHubApi> api;
 	private final Supplier<TsgHubSidebarPanel> sidebar;
-	private Map<String, Integer> itemIds;
+	private final Map<String, Integer> itemIds = new HashMap<>();
+	private int indexedItems;
 
 	TsgHubDrops(TsgHubPlugin plugin, Client client, ClientThread clientThread, ScheduledExecutorService executor, Supplier<TsgHubApi> api, Supplier<TsgHubSidebarPanel> sidebar)
 	{
@@ -76,9 +78,11 @@ final class TsgHubDrops
 			{
 				JsonArray drops = api.get().request("GET", "/v1/drops?clanName=" + clan, null, null).getAsJsonArray("drops");
 				if (clientThread == null) ui(s -> s.setDrops(drops));
-				else clientThread.invokeLater(() -> {
+				else clientThread.invoke(() -> {
+					if (!indexItems()) return false;
 					addItemIds(drops);
 					ui(s -> s.setDrops(drops));
+					return true;
 				});
 			}
 			catch (Exception e) { if (!quiet) ui(s -> s.setStatus("Couldn't load drops. " + TsgHubUi.friendlyError(e), Tone.ERROR)); }
@@ -88,7 +92,6 @@ final class TsgHubDrops
 
 	private void addItemIds(JsonArray drops)
 	{
-		if (itemIds == null || itemIds.isEmpty()) itemIds = itemIndex();
 		for (int i = 0; i < drops.size(); i++)
 		{
 			JsonObject drop = drops.get(i).getAsJsonObject();
@@ -97,18 +100,19 @@ final class TsgHubDrops
 		}
 	}
 
-	private Map<String, Integer> itemIndex()
+	private boolean indexItems()
 	{
-		Map<String, Integer> ids = new HashMap<>();
-		for (int id = 0; id < client.getItemCount(); id++)
+		int end = Math.min(client.getItemCount(), indexedItems + INDEX_CHUNK);
+		for (int id = indexedItems; id < end; id++)
 		{
 			ItemComposition item = client.getItemDefinition(id);
 			if (item == null || item.getNote() != -1 || item.getPlaceholderTemplateId() != -1) continue;
 			String name = item.getName();
 			if (name == null || name.isEmpty() || "null".equalsIgnoreCase(name)) continue;
-			ids.putIfAbsent(name.toLowerCase(Locale.ROOT), id);
+			itemIds.putIfAbsent(name.toLowerCase(Locale.ROOT), id);
 		}
-		return ids;
+		indexedItems = end;
+		return end >= client.getItemCount();
 	}
 
 	void autoRefresh()
