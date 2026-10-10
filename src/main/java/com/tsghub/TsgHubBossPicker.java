@@ -16,8 +16,6 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import net.runelite.client.hiscore.HiscoreSkill;
 import net.runelite.client.hiscore.HiscoreSkillType;
 
@@ -44,12 +42,7 @@ final class TsgHubBossPicker extends JPanel
 
 		TsgHubUi.placeholder(field, "e.g. Vorkath");
 		field.setAlignmentX(LEFT_ALIGNMENT);
-		field.getDocument().addDocumentListener(new DocumentListener()
-		{
-			@Override public void insertUpdate(DocumentEvent e) { filter(); }
-			@Override public void removeUpdate(DocumentEvent e) { filter(); }
-			@Override public void changedUpdate(DocumentEvent e) { filter(); }
-		});
+		TsgHubUi.onTextChange(field, this::filter);
 		field.addActionListener(e -> {
 			if (resultScroll.isVisible() && !results.isEmpty()) choose(results.get(Math.max(0, resultList.getSelectedIndex())));
 		});

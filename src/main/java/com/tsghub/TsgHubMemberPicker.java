@@ -17,8 +17,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 
 final class TsgHubMemberPicker extends JPanel
 {
@@ -40,12 +38,7 @@ final class TsgHubMemberPicker extends JPanel
 		field.setText(value);
 		TsgHubUi.placeholder(field, "Type to search the clan");
 		field.setAlignmentX(LEFT_ALIGNMENT);
-		field.getDocument().addDocumentListener(new DocumentListener()
-		{
-			@Override public void insertUpdate(DocumentEvent e) { filter(); }
-			@Override public void removeUpdate(DocumentEvent e) { filter(); }
-			@Override public void changedUpdate(DocumentEvent e) { filter(); }
-		});
+		TsgHubUi.onTextChange(field, this::filter);
 		field.addActionListener(e -> {
 			if (resultScroll.isVisible() && !results.isEmpty()) choose(results.get(Math.max(0, resultList.getSelectedIndex())));
 			else submit();

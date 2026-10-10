@@ -149,7 +149,7 @@ public class PlayerPanel extends JPanel
 		details.setLayout(new BoxLayout(details, BoxLayout.Y_AXIS));
 
 		JComponent rule = new JPanel();
-		rule.setBackground(PartyStyle.DIVIDER);
+		rule.setBackground(TsgHubTheme.BORDER);
 		rule.setMinimumSize(new Dimension(0, 1));
 		rule.setPreferredSize(new Dimension(10, 1));
 		rule.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));

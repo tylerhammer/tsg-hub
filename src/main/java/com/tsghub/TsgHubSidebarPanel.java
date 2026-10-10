@@ -1435,8 +1435,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			}
 		}
 		page.add(Box.createVerticalStrut(GAP_L));
-		JButton leave = button("Leave competition");
-		leave.setForeground(TsgHubTheme.ERROR);
+		JButton leave = dangerButton("Leave competition");
 		leave.addActionListener(e -> {
 			int choice = JOptionPane.showConfirmDialog(this, "Leave \"" + eventName(event) + "\"?\nYou'll drop off the leaderboard on this device. You can rejoin while it's running.",
 				"Leave competition", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
@@ -1684,8 +1683,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			groupError.setVisible(false);
 			renderGroups();
 		});
-		JButton leave = button("Leave party");
-		leave.setForeground(TsgHubTheme.ERROR);
+		JButton leave = dangerButton("Leave party");
 		leave.addActionListener(e -> {
 			leave.setEnabled(false);
 			plugin.groups().leave();
@@ -2323,7 +2321,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		JsonObject mine = individual || solo ? myEntry(progress) : null;
 		if (completed)
 		{
-			boolean creditedToOrganizer = bool(progress, "override") && !bool(progress, "overrideCredited");
+			boolean creditedToOrganizer = creditedToOrganizer(progress);
 			String line = creditedToOrganizer ? "Marked complete by an admin" : completedLine(progress);
 			if (!"Completed".equals(line)) body.add(label(line, SUCCESS, smallFont()));
 		}
@@ -2602,8 +2600,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			teamTab.add(Box.createVerticalStrut(LIST_GAP));
 		}
 		teamTab.add(Box.createVerticalStrut(GAP_L));
-		JButton leave = button("Disconnect from event");
-		leave.setForeground(TsgHubTheme.ERROR);
+		JButton leave = dangerButton("Disconnect from event");
 		leave.addActionListener(e -> confirmLeave());
 		teamTab.add(fitHeight(leave));
 		teamTab.add(Box.createVerticalStrut(GAP_S));

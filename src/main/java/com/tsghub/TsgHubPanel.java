@@ -54,8 +54,6 @@ import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import javax.swing.text.JTextComponent;
 import net.runelite.api.Skill;
 import net.runelite.api.clan.ClanRank;
@@ -576,12 +574,7 @@ final class TsgHubPanel extends JPanel
 		picker.add(caption("Items"));
 		picker.add(Box.createVerticalStrut(GAP_XS));
 		itemSearch.setToolTipText("Type at least 2 letters to search RuneLite's item catalog");
-		itemSearch.getDocument().addDocumentListener(new DocumentListener()
-		{
-			@Override public void insertUpdate(DocumentEvent e) { searchDebounce.restart(); }
-			@Override public void removeUpdate(DocumentEvent e) { searchDebounce.restart(); }
-			@Override public void changedUpdate(DocumentEvent e) { searchDebounce.restart(); }
-		});
+		onTextChange(itemSearch, searchDebounce::restart);
 		searchDebounce.setRepeats(false);
 		itemSearch.addActionListener(e -> {
 			if (!itemResults.isEmpty()) addItem(itemResults.get(Math.max(0, itemResultList.getSelectedIndex())));
@@ -972,7 +965,7 @@ final class TsgHubPanel extends JPanel
 			if (completed)
 			{
 				String by = str(progress, "completedBy");
-				boolean creditedToOrganizer = bool(progress, "override") && !bool(progress, "overrideCredited");
+				boolean creditedToOrganizer = creditedToOrganizer(progress);
 				text.add(label(completedLine(progress), SUCCESS, smallFont()));
 				JsonObject manual = overrideClaim(teamId, taskId);
 				if (manual != null)

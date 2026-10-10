@@ -65,6 +65,9 @@ import javax.swing.Scrollable;
 import javax.swing.Timer;
 import javax.swing.ToolTipManager;
 import javax.swing.border.Border;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.text.JTextComponent;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.util.AsyncBufferedImage;
@@ -407,6 +410,23 @@ final class TsgHubUi
 		return button;
 	}
 
+	static JButton dangerButton(String text)
+	{
+		JButton button = button(text);
+		button.setForeground(ERROR);
+		return button;
+	}
+
+	static void onTextChange(JTextComponent field, Runnable action)
+	{
+		field.getDocument().addDocumentListener(new DocumentListener()
+		{
+			@Override public void insertUpdate(DocumentEvent e) { action.run(); }
+			@Override public void removeUpdate(DocumentEvent e) { action.run(); }
+			@Override public void changedUpdate(DocumentEvent e) { action.run(); }
+		});
+	}
+
 	static JButton primaryButton(String text)
 	{
 		JButton button = button(text);
@@ -516,6 +536,11 @@ final class TsgHubUi
 		List<String> out = new ArrayList<>();
 		for (JsonElement element : array) if (element.isJsonPrimitive()) out.add(element.getAsString());
 		return out;
+	}
+
+	static boolean creditedToOrganizer(JsonObject progress)
+	{
+		return bool(progress, "override") && !bool(progress, "overrideCredited");
 	}
 
 	static boolean samePlayer(String a, String b)
@@ -1060,7 +1085,7 @@ final class TsgHubUi
 	{
 		String scope = str(progress, "scope");
 		String by = str(progress, "completedBy");
-		boolean creditedToOrganizer = bool(progress, "override") && !bool(progress, "overrideCredited");
+		boolean creditedToOrganizer = creditedToOrganizer(progress);
 		if (creditedToOrganizer) return "Completed (credited to no one)";
 		if ("individual".equals(scope) || by.isEmpty()) return "Completed";
 		if (!"solo".equals(scope) && array(progress, "contributors").size() > 0) return "Completed";
