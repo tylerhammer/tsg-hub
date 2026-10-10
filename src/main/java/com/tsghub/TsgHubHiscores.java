@@ -3,16 +3,17 @@ package com.tsghub;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 
+import com.tsghub.group.ui.skills.PlayerSkillsPanel;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
@@ -30,15 +31,9 @@ import net.runelite.client.util.ImageUtil;
 
 final class TsgHubHiscores
 {
-	static final List<HiscoreSkill> SKILL_GRID = Arrays.asList(
-		HiscoreSkill.ATTACK, HiscoreSkill.HITPOINTS, HiscoreSkill.MINING,
-		HiscoreSkill.STRENGTH, HiscoreSkill.AGILITY, HiscoreSkill.SMITHING,
-		HiscoreSkill.DEFENCE, HiscoreSkill.HERBLORE, HiscoreSkill.FISHING,
-		HiscoreSkill.RANGED, HiscoreSkill.THIEVING, HiscoreSkill.COOKING,
-		HiscoreSkill.PRAYER, HiscoreSkill.CRAFTING, HiscoreSkill.FIREMAKING,
-		HiscoreSkill.MAGIC, HiscoreSkill.FLETCHING, HiscoreSkill.WOODCUTTING,
-		HiscoreSkill.RUNECRAFT, HiscoreSkill.SLAYER, HiscoreSkill.FARMING,
-		HiscoreSkill.CONSTRUCTION, HiscoreSkill.HUNTER, HiscoreSkill.SAILING);
+	static final List<HiscoreSkill> SKILL_GRID = PlayerSkillsPanel.SKILL_ORDER.stream()
+		.map(skill -> HiscoreSkill.valueOf(skill.name()))
+		.collect(Collectors.toList());
 	private static final int ICON = 16;
 	private static final Map<HiscoreSkill, BufferedImage> SKILL_ICONS = new EnumMap<>(HiscoreSkill.class);
 
