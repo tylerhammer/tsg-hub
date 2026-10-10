@@ -6,8 +6,14 @@ import static org.junit.Assert.assertTrue;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import net.runelite.client.hiscore.HiscoreEndpoint;
+import net.runelite.client.hiscore.HiscoreResult;
+import net.runelite.client.hiscore.HiscoreSkill;
+import net.runelite.client.hiscore.HiscoreSkillType;
+import net.runelite.client.hiscore.Skill;
 import org.junit.Test;
 
 public class MembersPanelTest
@@ -150,6 +156,26 @@ public class MembersPanelTest
 		assertEquals("3w ago", TsgHubSidebarPanel.lastSeen("2026-09-15T12:00:00Z", now));
 		assertEquals("4mo ago", TsgHubSidebarPanel.lastSeen("2026-06-01T12:00:00Z", now));
 		assertEquals("2y ago", TsgHubSidebarPanel.lastSeen("2024-09-01T12:00:00Z", now));
+	}
+
+	@Test
+	public void hiscores()
+	{
+		assertEquals(HiscoreEndpoint.NORMAL, TsgHubHiscores.endpoint(0));
+		assertEquals(HiscoreEndpoint.ULTIMATE_IRONMAN, TsgHubHiscores.endpoint(2));
+		assertEquals(HiscoreEndpoint.NORMAL, TsgHubHiscores.endpoint(4));
+		Map<HiscoreSkill, Skill> skills = new EnumMap<>(HiscoreSkill.class);
+		for (HiscoreSkill skill : TsgHubHiscores.SKILL_GRID) skills.put(skill, new Skill(1, 99, 13_034_431));
+		skills.put(HiscoreSkill.OVERALL, new Skill(1, 2376, 312_822_344));
+		skills.put(HiscoreSkill.ZULRAH, new Skill(5, 1200, -1));
+		skills.put(HiscoreSkill.VORKATH, new Skill(4, 900, -1));
+		skills.put(HiscoreSkill.SCORPIA, new Skill(-1, -1, -1));
+		skills.put(HiscoreSkill.THE_GAUNTLET, new Skill(6, 50, -1));
+		skills.put(HiscoreSkill.GENERAL_GRAARDOR, new Skill(7, 10, -1));
+		HiscoreResult result = new HiscoreResult("Mossy Rock", skills);
+		assertEquals(24, TsgHubHiscores.SKILL_GRID.size());
+		assertEquals("Combat 126 · Total 2,376", TsgHubHiscores.subtitle(result));
+		assertEquals(Arrays.asList(HiscoreSkill.THE_GAUNTLET, HiscoreSkill.GENERAL_GRAARDOR, HiscoreSkill.VORKATH, HiscoreSkill.ZULRAH), TsgHubHiscores.scored(result, HiscoreSkillType.BOSS));
 	}
 
 	@Test

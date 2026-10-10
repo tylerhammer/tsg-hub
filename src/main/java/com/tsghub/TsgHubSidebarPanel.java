@@ -50,6 +50,9 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+import net.runelite.client.hiscore.HiscoreResult;
+import net.runelite.client.hiscore.HiscoreSkill;
+import net.runelite.client.hiscore.HiscoreSkillType;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.components.ProgressBar;
 import net.runelite.client.ui.components.materialtabs.MaterialTab;
@@ -72,7 +75,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private static final int CARD_CONTRIBUTORS = 2;
 	private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("h:mm a");
 
-	private enum View { LOGGED_OUT, NOT_IN_CLAN, SHARING_OFF, HOME, EVENTS, PREVIEW, BOARD, COMPETITION_PREVIEW, COMPETITION, DROP_PARTY, GROUPS, MEMBERS, DROPS }
+	private enum View { LOGGED_OUT, NOT_IN_CLAN, SHARING_OFF, HOME, EVENTS, PREVIEW, BOARD, COMPETITION_PREVIEW, COMPETITION, DROP_PARTY, GROUPS, MEMBERS, LOOKUP, DROPS }
 
 	private final TsgHubPlugin plugin;
 	private final JButton back = iconButton(new BackIcon(), "Back to events");
@@ -117,6 +120,11 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private JsonArray offlineMembers = new JsonArray();
 	private boolean notesLoaded;
 	private final JCheckBox showOffline = new JCheckBox("Show offline");
+	private String lookupName = "";
+	private int lookupType;
+	private HiscoreResult lookupResult;
+	private String lookupError = "";
+	private int lookupSeq;
 	private String update;
 	private JsonArray drops;
 	private JsonObject competitionEvent;
@@ -237,6 +245,11 @@ final class TsgHubSidebarPanel extends PluginPanel
 				renderGroups();
 				return;
 			}
+			if (view == View.LOOKUP)
+			{
+				showMembers();
+				return;
+			}
 			if (view == View.GROUPS || view == View.EVENTS || view == View.MEMBERS || view == View.DROPS)
 			{
 				showHome();
@@ -264,6 +277,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			}
 			else if (view == View.GROUPS) plugin.groups().refresh();
 			else if (view == View.MEMBERS) plugin.presence().loadMembers(false);
+			else if (view == View.LOOKUP) loadLookup();
 			else if (view == View.DROPS) plugin.drops().load(false);
 			else if (view == View.BOARD) plugin.refreshBoard();
 			else if (view == View.COMPETITION && competitionEvent != null) plugin.openCompetition(str(competitionEvent, "id"));
@@ -671,7 +685,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 		card.add(text, BorderLayout.CENTER);
 		setMemberTip(card, member, note, detailLabel);
-		addNoteMenu(card, member);
+		addMemberMenu(card, member);
 		return fitHeight(card);
 	}
 
@@ -689,7 +703,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (!seen.isEmpty()) badges.add(label(seen, MUTED, small));
 		if (badges.getComponentCount() > 0) row.add(badges, BorderLayout.EAST);
 		setMemberTip(row, member, note, null);
-		addNoteMenu(row, member);
+		addMemberMenu(row, member);
 		return fitHeight(row);
 	}
 
@@ -731,15 +745,90 @@ final class TsgHubSidebarPanel extends PluginPanel
 		return days / 365 + "y ago";
 	}
 
-	private void addNoteMenu(JComponent card, JsonObject member)
+	private void addMemberMenu(JComponent card, JsonObject member)
 	{
-		if (!plugin.canManageOrganizerUi() || !notesLoaded) return;
+		String name = str(member, "displayName");
+		javax.swing.JPopupMenu menu = new javax.swing.JPopupMenu();
+		javax.swing.JMenuItem lookup = new javax.swing.JMenuItem("Lookup");
+		lookup.addActionListener(e -> showLookup(name, TsgHubPresence.accountType(member)));
+		menu.add(lookup);
+		if (plugin.canManageOrganizerUi() && notesLoaded) addNoteItems(menu, member);
+		card.setComponentPopupMenu(menu);
+		inheritMenu(card);
+	}
+
+	private void showLookup(String name, int accountType)
+	{
+		lookupName = name;
+		lookupType = accountType;
+		setView(View.LOOKUP);
+		loadLookup();
+	}
+
+	private void loadLookup()
+	{
+		int seq = ++lookupSeq;
+		lookupResult = null;
+		lookupError = "";
+		renderLookup();
+		setBusy(true);
+		plugin.lookupHiscores(lookupName, lookupType).whenComplete((result, error) -> SwingUtilities.invokeLater(() -> {
+			setBusy(false);
+			if (seq != lookupSeq) return;
+			lookupResult = result;
+			lookupError = error != null ? friendlyError(error) : result == null ? "Not found" : "";
+			if (view == View.LOOKUP) renderLookup();
+		}));
+	}
+
+	private void renderLookup()
+	{
+		HiscoreResult result = lookupResult;
+		setHeader(lookupName, result == null ? TsgHubHiscores.endpoint(lookupType).getName() + " hiscores" : TsgHubHiscores.subtitle(result), true, true);
+		page.removeAll();
+		if (!lookupError.isEmpty())
+		{
+			page.add("Not found".equals(lookupError)
+				? errorPanel("Not on the hiscores", lookupName + " isn't ranked on the " + TsgHubHiscores.endpoint(lookupType).getName() + " hiscores.")
+				: errorPanel("Lookup failed", lookupError));
+		}
+		else if (result == null)
+		{
+			page.add(caption("Looking up " + lookupName + "..."));
+		}
+		else
+		{
+			page.add(sectionHeading("Skills", null));
+			page.add(TsgHubHiscores.skillGrid(result));
+			page.add(Box.createVerticalStrut(GAP_XS));
+			page.add(TsgHubHiscores.totalRow(result));
+			addScores("Bosses", result, HiscoreSkillType.BOSS);
+			addScores("Activities", result, HiscoreSkillType.ACTIVITY);
+		}
+		refreshPage();
+	}
+
+	private void addScores(String heading, HiscoreResult result, HiscoreSkillType type)
+	{
+		List<HiscoreSkill> scored = TsgHubHiscores.scored(result, type);
+		if (scored.isEmpty()) return;
+		page.add(Box.createVerticalStrut(GAP_L));
+		page.add(sectionHeading(heading + " (" + scored.size() + ")", null));
+		for (HiscoreSkill skill : scored)
+		{
+			page.add(TsgHubHiscores.scoreRow(result, skill, plugin.sprites()));
+			page.add(Box.createVerticalStrut(2));
+		}
+	}
+
+	private void addNoteItems(javax.swing.JPopupMenu menu, JsonObject member)
+	{
 		String name = str(member, "displayName");
 		String altOf = str(member, "altOf");
 		String note = str(member, "note");
 		boolean alt = isAltRank(str(member, "rank"));
 		List<JsonObject> active = activeWarnings(array(member, "warnings"));
-		javax.swing.JPopupMenu menu = new javax.swing.JPopupMenu();
+		menu.addSeparator();
 		javax.swing.JMenuItem edit = new javax.swing.JMenuItem(alt ? "Edit alt and admin note" : "Edit admin note");
 		edit.addActionListener(e -> promptMemberNote(name, alt, altOf, note));
 		menu.add(edit);
@@ -753,8 +842,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 			revoke.addActionListener(e -> promptRevoke(name, active));
 			menu.add(revoke);
 		}
-		card.setComponentPopupMenu(menu);
-		inheritMenu(card);
 	}
 
 	private static void inheritMenu(java.awt.Container parent)
@@ -1796,7 +1883,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (next != View.COMPETITION) openCompetitionId = null;
 		centerLayout.show(center, next == View.BOARD ? "board" : next == View.GROUPS ? "groups" : "page");
 		footer.setVisible(next == View.HOME);
-		back.setToolTipText(next == View.EVENTS || next == View.GROUPS || next == View.MEMBERS || next == View.DROPS ? "Home" : "Back to events");
+		back.setToolTipText(next == View.LOOKUP ? "Members" : next == View.EVENTS || next == View.GROUPS || next == View.MEMBERS || next == View.DROPS ? "Home" : "Back to events");
 	}
 
 	private JPanel buildFooter()

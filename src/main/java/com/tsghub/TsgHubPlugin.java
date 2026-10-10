@@ -27,6 +27,7 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
@@ -75,6 +76,8 @@ import net.runelite.client.game.ChatIconManager;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.ItemStack;
 import net.runelite.client.game.SpriteManager;
+import net.runelite.client.hiscore.HiscoreClient;
+import net.runelite.client.hiscore.HiscoreResult;
 import net.runelite.client.party.PartyService;
 import net.runelite.client.party.WSClient;
 import net.runelite.client.plugins.Plugin;
@@ -108,6 +111,7 @@ public class TsgHubPlugin extends Plugin
 	@Inject private PartyService partyService;
 	@Inject private WSClient wsClient;
 	@Inject private SpriteManager spriteManager;
+	@Inject private HiscoreClient hiscoreClient;
 	@Inject private EventBus eventBus;
 	@Inject @Named("developerMode") private boolean developerMode;
 	private TsgHubPanel panel;
@@ -276,6 +280,8 @@ public class TsgHubPlugin extends Plugin
 	TsgHubGroups groups() { return groups; }
 	TsgHubPresence presence() { return presence; }
 	TsgHubDrops drops() { return drops; }
+	SpriteManager sprites() { return spriteManager; }
+	CompletableFuture<HiscoreResult> lookupHiscores(String name, int accountType) { return hiscoreClient.lookupAsync(name, TsgHubHiscores.endpoint(accountType)); }
 
 	String currentArea() { return presence == null ? "" : presence.area(); }
 	boolean inClanChat() { return inClanChat; }
