@@ -16,9 +16,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
-import javax.swing.SwingUtilities;
 import net.runelite.api.Client;
 import net.runelite.api.Actor;
 import net.runelite.api.GameState;
@@ -138,9 +136,9 @@ final class TsgHubPresence
 
 	void loadMembers(boolean quiet)
 	{
-		if (!canUse() || executor.isShutdown()) return;
-		String clan = encode(plugin.getDetectedClanName());
-		if (!quiet) ui(s -> s.setBusy(true));
+		if (!plugin.canUseHub() || executor.isShutdown()) return;
+		String clan = TsgHubApi.encode(plugin.getDetectedClanName());
+		if (!quiet) plugin.ui(s -> s.setBusy(true));
 		executor.submit(() -> {
 			try
 			{
@@ -155,11 +153,11 @@ final class TsgHubPresence
 					addRanks(roster[1]);
 					loadAccountIcons(roster[0]);
 					loadAccountIcons(roster[1]);
-					ui(s -> s.setMembers(roster[0], roster[1], known != null));
+					plugin.ui(s -> s.setMembers(roster[0], roster[1], known != null));
 				});
 			}
-			catch (Exception e) { if (!quiet) ui(s -> s.setStatus("Couldn't load members. " + TsgHubUi.friendlyError(e), Tone.ERROR)); }
-			finally { if (!quiet) ui(s -> s.setBusy(false)); }
+			catch (Exception e) { if (!quiet) plugin.ui(s -> s.setStatus("Couldn't load members. " + TsgHubUi.friendlyError(e), Tone.ERROR)); }
+			finally { if (!quiet) plugin.ui(s -> s.setBusy(false)); }
 		});
 	}
 
@@ -270,7 +268,7 @@ final class TsgHubPresence
 	{
 		JsonObject body = adminBody();
 		body.addProperty("reason", reason);
-		adminWrite("POST", "/v1/members/warnings/" + encode(warningId) + "/revoke", body, "Revoked a warning for " + displayName + ".");
+		adminWrite("POST", "/v1/members/warnings/" + TsgHubApi.encode(warningId) + "/revoke", body, "Revoked a warning for " + displayName + ".");
 	}
 
 	private JsonObject adminBody()
@@ -284,16 +282,16 @@ final class TsgHubPresence
 	{
 		String token = key.get();
 		if (token.isEmpty() || executor.isShutdown()) return;
-		ui(s -> s.setBusy(true));
+		plugin.ui(s -> s.setBusy(true));
 		executor.submit(() -> {
 			try
 			{
 				api.get().request(method, path, token, body);
-				ui(s -> s.setStatus(success, Tone.SUCCESS));
+				plugin.ui(s -> s.setStatus(success, Tone.SUCCESS));
 				loadMembers(true);
 			}
-			catch (Exception e) { ui(s -> s.setStatus("Couldn't save. " + TsgHubUi.friendlyError(e), Tone.ERROR)); }
-			finally { ui(s -> s.setBusy(false)); }
+			catch (Exception e) { plugin.ui(s -> s.setStatus("Couldn't save. " + TsgHubUi.friendlyError(e), Tone.ERROR)); }
+			finally { plugin.ui(s -> s.setBusy(false)); }
 		});
 	}
 
@@ -466,24 +464,5 @@ final class TsgHubPresence
 	{
 		try { api.get().request("POST", path, null, body); }
 		catch (Exception ignored) { }
-	}
-
-	private boolean canUse()
-	{
-		return plugin.isInHubClan() && plugin.sharingEnabled() && !plugin.getDetectedPlayerName().isEmpty();
-	}
-
-	private static String encode(String value)
-	{
-		try { return java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8.name()); }
-		catch (java.io.UnsupportedEncodingException e) { return ""; }
-	}
-
-	private void ui(Consumer<TsgHubSidebarPanel> action)
-	{
-		SwingUtilities.invokeLater(() -> {
-			TsgHubSidebarPanel s = sidebar.get();
-			if (s != null) action.accept(s);
-		});
 	}
 }

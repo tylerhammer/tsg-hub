@@ -11,8 +11,6 @@ import com.tsghub.group.GroupViewSettings;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Window;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -178,7 +176,7 @@ public class TsgHubPlugin extends Plugin
 			@Override public void onAnnouncement(String text) { announce(text); }
 			@Override public void onUpdateAvailable(String version) { updateAvailable(version); }
 			@Override public void onSubscribed(String eventId) { if (competitions != null) competitions.onSubscribed(eventId); }
-			@Override public void onProgress(String eventId, long gained, Long rank) { SwingUtilities.invokeLater(() -> sidebar.competitionProgress(eventId, gained, rank)); }
+			@Override public void onProgress(String eventId, long gained, Long rank) { ui(s -> s.competitionProgress(eventId, gained, rank)); }
 		});
 		executor.scheduleAtFixedRate(this::socketTick, 2, 5, TimeUnit.SECONDS);
 		executor.scheduleAtFixedRate(unlessLive(this::autoRefreshBoard), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
@@ -355,7 +353,7 @@ public class TsgHubPlugin extends Plugin
 		executor.submit(() -> {
 			try
 			{
-				String query = "/v1/me?displayName=" + URLEncoder.encode(name, StandardCharsets.UTF_8);
+				String query = "/v1/me?displayName=" + TsgHubApi.encode(name);
 				if (!hash.isEmpty()) query += "&accountHash=" + hash;
 				JsonObject result = api().request("GET", query, key, null);
 				if (!identity.equals(checkedKeyIdentity)) return;
@@ -477,18 +475,18 @@ public class TsgHubPlugin extends Plugin
 		if ("partyShowSelf".equals(event.getKey()))
 		{
 			if (config.partyShowSelf()) groupTracker.refreshSelf();
-			else SwingUtilities.invokeLater(() -> sidebar.groupSelfHidden());
+			else ui(s -> s.groupSelfHidden());
 			return;
 		}
 		if (event.getKey().startsWith("party"))
 		{
 			boolean expand = "partyExpandMembers".equals(event.getKey());
-			SwingUtilities.invokeLater(() -> sidebar.groupSettingsChanged(expand));
+			ui(s -> s.groupSettingsChanged(expand));
 			return;
 		}
 		if ("shareLocation".equals(event.getKey()))
 		{
-			SwingUtilities.invokeLater(() -> sidebar.locationSharingChanged());
+			ui(s -> s.locationSharingChanged());
 			return;
 		}
 		if ("hubKey".equals(event.getKey()))
@@ -546,7 +544,7 @@ public class TsgHubPlugin extends Plugin
 		});
 		if (!sidebarRouted && !detectedPlayerName.isEmpty()) routeSidebar();
 		else if (sidebarRouted && (routedAsHubMember != isInHubClan() || routedClanPending != clanPending())) routeSidebar();
-		else if (client.getGameState() != GameState.LOGGED_IN && !sidebarRouted) SwingUtilities.invokeLater(() -> sidebar.showLoggedOut());
+		else if (client.getGameState() != GameState.LOGGED_IN && !sidebarRouted) ui(s -> s.showLoggedOut());
 		checkHubKey();
 	}
 
@@ -628,7 +626,7 @@ public class TsgHubPlugin extends Plugin
 
 	private void joinFailed(String message)
 	{
-		SwingUtilities.invokeLater(() -> sidebar.joinFailed(message));
+		ui(s -> s.joinFailed(message));
 	}
 
 	void leaveEvent(String eventId)
@@ -642,7 +640,7 @@ public class TsgHubPlugin extends Plugin
 			clearTaskCache();
 			}
 		memberStatus("Disconnected. Rejoin anytime with your team code.", Tone.SUCCESS);
-		SwingUtilities.invokeLater(() -> sidebar.showEventList());
+		ui(s -> s.showEventList());
 		loadClanEvents();
 	}
 
@@ -706,7 +704,7 @@ public class TsgHubPlugin extends Plugin
 					cachePvmTasks(event);
 					taskEventId = eventId;
 				}
-				SwingUtilities.invokeLater(() -> sidebar.showBoard(event, TsgHubSession.get("displayName"), open));
+				ui(s -> s.showBoard(event, TsgHubSession.get("displayName"), open));
 			}
 			catch (Exception e) { eventLoadFailed(eventId, e, "Couldn't update the board. "); }
 			finally { sidebarBusy(false); }
@@ -843,7 +841,7 @@ public class TsgHubPlugin extends Plugin
 				loadClanEvents();
 				openCompetition(eventId, true);
 			}
-			catch (Exception e) { SwingUtilities.invokeLater(() -> sidebar.competitionJoinFailed(TsgHubUi.friendlyError(e))); }
+			catch (Exception e) { ui(s -> s.competitionJoinFailed(TsgHubUi.friendlyError(e))); }
 			finally { sidebarBusy(false); }
 		});
 	}
@@ -863,7 +861,7 @@ public class TsgHubPlugin extends Plugin
 			try
 			{
 				JsonObject event = api().request("GET", "/v1/events/" + eventId, token, null).getAsJsonObject("event");
-				SwingUtilities.invokeLater(() -> sidebar.showCompetition(event, name, open));
+				ui(s -> s.showCompetition(event, name, open));
 			}
 			catch (Exception e) { eventLoadFailed(eventId, e, "Couldn't load the leaderboard. "); }
 			finally { sidebarBusy(false); }
@@ -963,10 +961,10 @@ public class TsgHubPlugin extends Plugin
 		String clanName = detectedClanName;
 		if (clanName == null || clanName.trim().isEmpty())
 		{
-			SwingUtilities.invokeLater(() -> sidebar.setEvents(new JsonArray()));
+			ui(s -> s.setEvents(new JsonArray()));
 			return;
 		}
-		String encodedClan = URLEncoder.encode(clanName, StandardCharsets.UTF_8);
+		String encodedClan = TsgHubApi.encode(clanName);
 		sidebarBusy(true);
 		executor.submit(() -> {
 			try
@@ -989,7 +987,7 @@ public class TsgHubPlugin extends Plugin
 					event.addProperty("joined", !savedToken.isEmpty());
 				}
 				competitions.setEvents(events);
-				SwingUtilities.invokeLater(() -> sidebar.setEvents(events));
+				ui(s -> s.setEvents(events));
 			}
 			catch (Exception e) { memberError("Couldn't load events. ", e); }
 			finally { sidebarBusy(false); }
@@ -1053,13 +1051,13 @@ public class TsgHubPlugin extends Plugin
 			{
 				api().request("POST", "/v1/events/" + eventId + "/claims", token, body);
 				memberStatus("Sent. An admin will review it.", Tone.SUCCESS);
-				SwingUtilities.invokeLater(() -> sidebar.manualSubmitFinished(true));
+				ui(s -> s.manualSubmitFinished(true));
 				refreshBoard();
 			}
 			catch (Exception e)
 			{
 				memberError("Couldn't send proof. ", e);
-				SwingUtilities.invokeLater(() -> sidebar.manualSubmitFinished(false));
+				ui(s -> s.manualSubmitFinished(false));
 			}
 		});
 	}
@@ -1337,7 +1335,7 @@ public class TsgHubPlugin extends Plugin
 		{
 			TsgHubSession.clear("token", "eventId");
 			clearTaskCache();
-			SwingUtilities.invokeLater(() -> sidebar.closeBoard());
+			ui(s -> s.closeBoard());
 		}
 	}
 
@@ -1850,7 +1848,7 @@ public class TsgHubPlugin extends Plugin
 		if (token.isEmpty() || eventId.isEmpty()) return;
 		try
 		{
-			String path = "/v1/events/" + eventId + "/notifications?inClanChat=" + inClanChat + "&clanName=" + URLEncoder.encode(detectedClanName, StandardCharsets.UTF_8);
+			String path = "/v1/events/" + eventId + "/notifications?inClanChat=" + inClanChat + "&clanName=" + TsgHubApi.encode(detectedClanName);
 			JsonArray notifications = api().request("GET", path, token, null).getAsJsonArray("notifications");
 			if (notifications == null) return;
 			for (JsonObject notification : TsgHubUi.objects(notifications))
@@ -1897,7 +1895,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		if (version.equals(notifiedUpdate)) return;
 		notifiedUpdate = version;
-		SwingUtilities.invokeLater(() -> { if (sidebar != null) sidebar.setUpdate(version); });
+		ui(s -> s.setUpdate(version));
 		showLocalChatMessage(new ChatMessageBuilder().append(ChatColorType.HIGHLIGHT).append("TSG Hub " + Text.escapeJagex(version) + " is available. Restart RuneLite to update."));
 	}
 
@@ -1990,7 +1988,7 @@ public class TsgHubPlugin extends Plugin
 
 	private void memberStatus(String message, Tone tone)
 	{
-		SwingUtilities.invokeLater(() -> { if (sidebar != null) sidebar.setStatus(message, tone); });
+		ui(s -> s.setStatus(message, tone));
 	}
 
 	private void memberError(String failure, Exception e)
@@ -2010,10 +2008,20 @@ public class TsgHubPlugin extends Plugin
 
 	private void sidebarBusy(boolean busy)
 	{
-		SwingUtilities.invokeLater(() -> { if (sidebar != null) sidebar.setBusy(busy); });
+		ui(s -> s.setBusy(busy));
 	}
 
 	TsgHubApi api() { return api; }
+
+	void ui(Consumer<TsgHubSidebarPanel> action)
+	{
+		SwingUtilities.invokeLater(() -> { if (sidebar != null) action.accept(sidebar); });
+	}
+
+	boolean canUseHub()
+	{
+		return isInHubClan() && sharingEnabled() && !detectedPlayerName.isEmpty();
+	}
 
 	private void adminRequest(String method, String suffix, JsonObject payload, String success, Consumer<JsonObject> callback, Consumer<String> onError)
 	{

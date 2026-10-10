@@ -7,9 +7,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
-import javax.swing.SwingUtilities;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.ItemComposition;
@@ -71,8 +69,8 @@ final class TsgHubDrops
 	void load(boolean quiet)
 	{
 		if (!plugin.isInHubClan() || !plugin.sharingEnabled() || executor.isShutdown()) return;
-		String clan = encode(plugin.getDetectedClanName());
-		if (!quiet) ui(s -> s.setBusy(true));
+		String clan = TsgHubApi.encode(plugin.getDetectedClanName());
+		if (!quiet) plugin.ui(s -> s.setBusy(true));
 		executor.submit(() -> {
 			try
 			{
@@ -80,12 +78,12 @@ final class TsgHubDrops
 				clientThread.invoke(() -> {
 					if (!indexItems()) return false;
 					addItemIds(drops);
-					ui(s -> s.setDrops(drops));
+					plugin.ui(s -> s.setDrops(drops));
 					return true;
 				});
 			}
-			catch (Exception e) { if (!quiet) ui(s -> s.setStatus("Couldn't load drops. " + TsgHubUi.friendlyError(e), Tone.ERROR)); }
-			finally { if (!quiet) ui(s -> s.setBusy(false)); }
+			catch (Exception e) { if (!quiet) plugin.ui(s -> s.setStatus("Couldn't load drops. " + TsgHubUi.friendlyError(e), Tone.ERROR)); }
+			finally { if (!quiet) plugin.ui(s -> s.setBusy(false)); }
 		});
 	}
 
@@ -118,19 +116,5 @@ final class TsgHubDrops
 	{
 		TsgHubSidebarPanel s = sidebar.get();
 		if (s != null && s.wantsDrops()) load(true);
-	}
-
-	private static String encode(String value)
-	{
-		try { return java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8.name()); }
-		catch (java.io.UnsupportedEncodingException e) { return ""; }
-	}
-
-	private void ui(Consumer<TsgHubSidebarPanel> action)
-	{
-		SwingUtilities.invokeLater(() -> {
-			TsgHubSidebarPanel s = sidebar.get();
-			if (s != null) action.accept(s);
-		});
 	}
 }
