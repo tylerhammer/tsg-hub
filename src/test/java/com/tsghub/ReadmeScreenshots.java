@@ -141,6 +141,13 @@ public class ReadmeScreenshots
 		sidebar.showDrops();
 		shoot(sidebar, SIDEBAR_W, 360, "drops");
 
+		sidebar.showMembers();
+		sharing = false;
+		sidebar.pinCurrent();
+		sidebar.showBoard(data.getAsJsonObject("board").getAsJsonObject("event"), "Crab Legs", true);
+		selectTab(sidebar, "Tasks");
+		shoot(sidebar, SIDEBAR_W, 680, "dock");
+
 		TsgHubPanel organizer = new TsgHubPanel(plugin);
 		organizer.setManagedEvents(data.getAsJsonObject("managed").getAsJsonArray("events"));
 		organizer.openOrganizerEvent(data.getAsJsonObject("organizer"));
