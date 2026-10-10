@@ -3,13 +3,19 @@ package com.tsghub;
 import static com.tsghub.TsgHubSession.GROUP_PASSPHRASE;
 import static com.tsghub.TsgHubSession.GROUP_PLAYER;
 import static com.tsghub.TsgHubSession.GROUP_TOKEN;
+import static com.tsghub.TsgHubUi.*;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.tsghub.TsgHubUi.Tone;
 import com.tsghub.group.GroupTracker;
 import com.tsghub.group.data.PartyPlayer;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Supplier;
 import net.runelite.api.Client;
@@ -18,6 +24,7 @@ import net.runelite.client.party.PartyService;
 
 final class TsgHubGroups implements GroupTracker.Listener
 {
+	private static final String WILDERNESS = "Wilderness lvl ";
 	// The service drops members after 3 minutes without a check-in.
 	static final int HEARTBEAT_SECONDS = 60;
 	static final int REFRESH_SECONDS = 30;
@@ -165,7 +172,7 @@ final class TsgHubGroups implements GroupTracker.Listener
 				TsgHubSession.set(GROUP_PLAYER, plugin.getDetectedPlayerName());
 				group = joined;
 				partyService.changeParty(passphrase);
-				status(created ? "Started a party." : "Joined " + TsgHubSidebarPanel.partyTitle(joined) + ".", Tone.SUCCESS);
+				status(created ? "Started a party." : "Joined " + partyTitle(joined) + ".", Tone.SUCCESS);
 				plugin.ui(s -> s.showGroup(joined));
 				loadGroups(true);
 			}
@@ -306,5 +313,50 @@ final class TsgHubGroups implements GroupTracker.Listener
 	private void busy(boolean isBusy)
 	{
 		plugin.ui(s -> s.setBusy(isBusy));
+	}
+
+	static String partyTitle(JsonObject group)
+	{
+		String title = str(group, "activity");
+		if (!title.isEmpty()) return title;
+		Map.Entry<String, Integer> area = areaSummary(array(group, "members"));
+		if (area != null) return area.getKey();
+		String leader = str(group, "leaderName");
+		return leader.isEmpty() ? "Party" : leader + "'s party";
+	}
+
+	static Map.Entry<String, Integer> areaSummary(JsonArray members)
+	{
+		List<String> areas = new ArrayList<>();
+		for (JsonObject member : objects(members)) areas.add(str(member, "area"));
+		return areaSummary(areas);
+	}
+
+	static Map.Entry<String, Integer> areaSummary(List<String> areas)
+	{
+		Map<String, Integer> counts = new LinkedHashMap<>();
+		int low = Integer.MAX_VALUE;
+		int high = 0;
+		for (String area : areas)
+		{
+			if (area == null || area.isEmpty()) continue;
+			if (area.startsWith(WILDERNESS))
+			{
+				try
+				{
+					int level = Integer.parseInt(area.substring(WILDERNESS.length()).trim());
+					low = Math.min(low, level);
+					high = Math.max(high, level);
+					area = "Wilderness";
+				}
+				catch (NumberFormatException ignored) { }
+			}
+			counts.merge(area, 1, Integer::sum);
+		}
+		if (counts.isEmpty()) return null;
+		Map.Entry<String, Integer> top = Collections.max(counts.entrySet(), Map.Entry.comparingByValue());
+		String name = top.getKey();
+		if (name.equals("Wilderness") && high > 0) name += " lvl " + (low == high ? String.valueOf(low) : low + "-" + high);
+		return new AbstractMap.SimpleImmutableEntry<>(name, top.getValue());
 	}
 }

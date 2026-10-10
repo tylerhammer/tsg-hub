@@ -29,7 +29,7 @@ final class TsgHubMemberPicker extends TsgHubSearchField
 	@Override
 	List<String> matches(String query)
 	{
-		return TsgHubSidebarPanel.matchNames(names, query, MAX_RESULTS);
+		return PlayerNames.matchNames(names, query, MAX_RESULTS);
 	}
 
 	@Override

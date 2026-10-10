@@ -1,6 +1,7 @@
 package com.tsghub;
 
 import static com.tsghub.TsgHubTheme.*;
+import static net.runelite.client.util.ColorUtil.toHexColor;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -15,8 +16,8 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Graphics;
 import java.awt.LayoutManager;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -69,7 +70,6 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.JTextComponent;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.util.AsyncBufferedImage;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.SwingUtil;
@@ -1441,5 +1441,21 @@ final class TsgHubUi
 	static Border bottomRule()
 	{
 		return BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER);
+	}
+
+	static String tipSection(boolean first, String heading)
+	{
+		return "<div style='margin-top:" + (first ? 0 : 6) + "px'>" + heading + "</div>";
+	}
+
+	static String tipCard(Color bar, String inner)
+	{
+		return "<table cellspacing='0' cellpadding='0' width='100%' style='margin-top:2px'><tr><td bgcolor='" + toHexColor(bar) + "' width='2'></td>"
+			+ "<td bgcolor='" + toHexColor(CARD_HOVER) + "' style='padding:3px 6px'>" + inner + "</td></tr></table>";
+	}
+
+	static String tipLine(Color color, String html)
+	{
+		return "<font color='" + toHexColor(color) + "'>" + html + "</font>";
 	}
 }
