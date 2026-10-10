@@ -164,12 +164,12 @@ final class TsgHubPanel extends JPanel
 	private final JRadioButton dropPet = new JRadioButton("Any boss pet");
 	private final JComboBox<Object> presetChoice = new JComboBox<>();
 	private final JTextField itemSearch = new JTextField();
-	private final DefaultListModel<TsgHubPlugin.ItemSuggestion> itemResults = new DefaultListModel<>();
-	private final JList<TsgHubPlugin.ItemSuggestion> itemResultList = new JList<>(itemResults);
+	private final DefaultListModel<ItemSuggestion> itemResults = new DefaultListModel<>();
+	private final JList<ItemSuggestion> itemResultList = new JList<>(itemResults);
 	private final JLabel itemSearchHint = caption("");
 	private final JComboBox<String> activeGroup = new JComboBox<>();
 	private final JPanel selectedItemsPanel = stack();
-	private final List<List<TsgHubPlugin.ItemSuggestion>> itemGroups = new ArrayList<>();
+	private final List<List<ItemSuggestion>> itemGroups = new ArrayList<>();
 	private final JTextField targetCount = new JTextField("1");
 	private final JLabel targetCountCaption = caption("How many");
 	private final JTextField taskPoints = new JTextField("1");
@@ -221,7 +221,7 @@ final class TsgHubPanel extends JPanel
 		column.setBorder(BorderFactory.createEmptyBorder(12, 10, 10, 10));
 
 		JButton refresh = iconButton(new RefreshIcon(), "Refresh events");
-		refresh.addActionListener(e -> plugin.loadManagedEvents());
+		refresh.addActionListener(e -> plugin.organizer().loadManagedEvents());
 		JPanel header = row(boldLabel("Events"), refresh);
 
 		JButton create = primaryButton("New event");
@@ -343,7 +343,7 @@ final class TsgHubPanel extends JPanel
 		JButton deleteEvent = iconButton(new TrashIcon(), "Delete event");
 		deleteEvent.addActionListener(e -> confirmDeleteEvent());
 		publishEvent.setToolTipText("Let players see and join this event");
-		publishEvent.addActionListener(e -> { if (currentEvent != null) plugin.publishEvent(currentEvent); });
+		publishEvent.addActionListener(e -> { if (currentEvent != null) plugin.organizer().publishEvent(currentEvent); });
 		JPanel editButtons = panel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
 		endEvent.setToolTipText("Mark this event as finished and let the clan know");
 		endEvent.addActionListener(e -> confirmEndEvent());
@@ -493,10 +493,10 @@ final class TsgHubPanel extends JPanel
 		renderSelectedItems();
 	}
 
-	private static List<Integer> ids(List<TsgHubPlugin.ItemSuggestion> items)
+	private static List<Integer> ids(List<ItemSuggestion> items)
 	{
 		List<Integer> ids = new ArrayList<>();
-		for (TsgHubPlugin.ItemSuggestion item : items) ids.add(item.id);
+		for (ItemSuggestion item : items) ids.add(item.id);
 		return ids;
 	}
 
@@ -657,7 +657,7 @@ final class TsgHubPanel extends JPanel
 			clickable(card, () -> {
 				selectedEventId = id;
 				setManagedEvents(managedEvents);
-				plugin.selectEvent(id);
+				plugin.organizer().selectEvent(id);
 			});
 			eventList.add(fitHeight(card));
 			eventList.add(Box.createVerticalStrut(LIST_GAP));
@@ -782,7 +782,7 @@ final class TsgHubPanel extends JPanel
 		if (currentEvent == null) return;
 		String message = "End \"" + TsgHubUi.eventName(currentEvent) + "\" now?\n\n"
 			+ "It moves to ended and online clanmates get an announcement that it's over.";
-		if (confirmDelete(this, "End event", message, "End event")) plugin.endEvent(str(currentEvent, "id"));
+		if (confirmDelete(this, "End event", message, "End event")) plugin.organizer().endEvent(str(currentEvent, "id"));
 	}
 
 	private void confirmDeleteEvent()
@@ -795,7 +795,7 @@ final class TsgHubPanel extends JPanel
 			+ "This permanently removes its " + plural(teams, "team") + ", " + plural(tasks, "task") + " and all progress.\n"
 			+ (members > 0 ? plural(members, "player") + " will be disconnected.\n" : "")
 			+ "This can't be undone.";
-		if (confirmDelete(this, "Delete event", message, "Delete event")) plugin.deleteEvent(str(currentEvent, "id"));
+		if (confirmDelete(this, "Delete event", message, "Delete event")) plugin.organizer().deleteEvent(str(currentEvent, "id"));
 	}
 
 	private void confirmDeleteTeam(JsonObject team, int members)
@@ -804,7 +804,7 @@ final class TsgHubPanel extends JPanel
 			+ (members > 0 ? "Its " + plural(members, "member") + " will be removed from the event, and " : "")
 			+ (members > 0 ? "its" : "Its") + " progress will be deleted. Its invite code stops working.\n"
 			+ "This can't be undone.";
-		if (confirmDelete(this, "Delete team", message, "Delete team")) plugin.deleteTeam(str(team, "id"));
+		if (confirmDelete(this, "Delete team", message, "Delete team")) plugin.organizer().deleteTeam(str(team, "id"));
 	}
 
 	private static boolean reconcilable(JsonObject task)
@@ -832,14 +832,14 @@ final class TsgHubPanel extends JPanel
 		}
 		if (claims.size() > shown) message.append("...and ").append(claims.size() - shown).append(" more\n");
 		int choice = JOptionPane.showConfirmDialog(this, message.toString(), "Reconcile", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-		if (choice == JOptionPane.OK_OPTION) plugin.reconcileTask(taskId, false);
+		if (choice == JOptionPane.OK_OPTION) plugin.organizer().reconcileTask(taskId, false);
 	}
 
 	private void confirmDeleteTask(JsonObject task)
 	{
 		String message = "Delete task \"" + str(task, "title") + "\"?\n\n"
 			+ "Every team's progress and claims for it will be deleted.\nThis can't be undone.";
-		if (confirmDelete(this, "Delete task", message, "Delete task")) plugin.deleteTask(str(task, "id"));
+		if (confirmDelete(this, "Delete task", message, "Delete task")) plugin.organizer().deleteTask(str(task, "id"));
 	}
 
 	void finishTaskEdit()
@@ -1040,13 +1040,13 @@ final class TsgHubPanel extends JPanel
 			newTeamName.requestFocusInWindow();
 			return;
 		}
-		plugin.createTeam(name);
+		plugin.organizer().createTeam(name);
 	}
 
 	private void promptRename(String teamId, String currentName)
 	{
 		String name = (String) JOptionPane.showInputDialog(this, "New team name:", "Rename team", JOptionPane.PLAIN_MESSAGE, null, null, currentName);
-		if (name != null && !name.trim().isEmpty() && !name.trim().equals(currentName)) plugin.renameTeam(teamId, name.trim());
+		if (name != null && !name.trim().isEmpty() && !name.trim().equals(currentName)) plugin.organizer().renameTeam(teamId, name.trim());
 	}
 
 	private void promptComplete(String taskId, String teamId, String taskName, String teamName)
@@ -1076,7 +1076,7 @@ final class TsgHubPanel extends JPanel
 			JOptionPane.showMessageDialog(this, "Add a short reason so other admins know why.", "Reason required", JOptionPane.WARNING_MESSAGE);
 		}
 		String[] picked = (String[]) credit.getSelectedItem();
-		plugin.completeTask(taskId, teamId, picked == null || picked[0].isEmpty() ? null : picked[0], reason.getText().trim());
+		plugin.organizer().completeTask(taskId, teamId, picked == null || picked[0].isEmpty() ? null : picked[0], reason.getText().trim());
 	}
 
 	private JsonObject overrideClaim(String teamId, String taskId)
@@ -1187,7 +1187,7 @@ final class TsgHubPanel extends JPanel
 			{
 				JButton reconcile = button("Reconcile");
 				reconcile.setToolTipText("Credit matching loot players received earlier in this event");
-				reconcile.addActionListener(e -> plugin.reconcileTask(str(task, "id"), true));
+				reconcile.addActionListener(e -> plugin.organizer().reconcileTask(str(task, "id"), true));
 				taskButtons.add(reconcile);
 			}
 			taskButtons.add(edit);
@@ -1260,10 +1260,10 @@ final class TsgHubPanel extends JPanel
 			JButton reject = button("Reject");
 			reject.addActionListener(e -> {
 				if (JOptionPane.showConfirmDialog(this, "Reject this claim?", "Reject claim", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION)
-					plugin.reviewClaim(claimId, false);
+					plugin.organizer().reviewClaim(claimId, false);
 			});
 			JButton approve = primaryButton("Approve");
-			approve.addActionListener(e -> plugin.reviewClaim(claimId, true));
+			approve.addActionListener(e -> plugin.organizer().reviewClaim(claimId, true));
 			actions.add(reject);
 			actions.add(approve);
 			card.add(north(actions), BorderLayout.EAST);
@@ -1385,8 +1385,8 @@ final class TsgHubPanel extends JPanel
 			if (gp > 0) prizes.add(gp);
 		}
 		eventFormError.setVisible(false);
-		if (editingEvent && currentEvent != null) plugin.updateEvent(str(currentEvent, "id"), name, start, end, eventHideScores.isSelected(), eventHidden.isSelected(), "bingo".equals(type) ? null : config, prizes);
-		else plugin.createEvent(name, start, end, eventHideScores.isSelected(), eventHidden.isSelected(), type, config, prizes);
+		if (editingEvent && currentEvent != null) plugin.organizer().updateEvent(str(currentEvent, "id"), name, start, end, eventHideScores.isSelected(), eventHidden.isSelected(), "bingo".equals(type) ? null : config, prizes);
+		else plugin.organizer().createEvent(name, start, end, eventHideScores.isSelected(), eventHidden.isSelected(), type, config, prizes);
 	}
 
 	private void setEventTimes(ZonedDateTime start, ZonedDateTime end)
@@ -1505,9 +1505,9 @@ final class TsgHubPanel extends JPanel
 			itemGroups.clear();
 			for (int g = 0; g < groups.size(); g++)
 			{
-				List<TsgHubPlugin.ItemSuggestion> items = new ArrayList<>();
+				List<ItemSuggestion> items = new ArrayList<>();
 				for (JsonObject item : objects(groups.get(g).getAsJsonArray()))
-					items.add(new TsgHubPlugin.ItemSuggestion(integer(item, "id", 0), str(item, "name")));
+					items.add(new ItemSuggestion(integer(item, "id", 0), str(item, "name")));
 				itemGroups.add(items);
 			}
 		}
@@ -1516,7 +1516,7 @@ final class TsgHubPanel extends JPanel
 			JsonArray names = array(config, "itemNames");
 			JsonArray ids = array(config, "itemIds");
 			for (int i = 0; i < names.size(); i++)
-				itemGroups.get(0).add(new TsgHubPlugin.ItemSuggestion(i < ids.size() ? ids.get(i).getAsInt() : 0, names.get(i).getAsString()));
+				itemGroups.get(0).add(new ItemSuggestion(i < ids.size() ? ids.get(i).getAsInt() : 0, names.get(i).getAsString()));
 		}
 		refreshGroupChoices(0);
 		renderSelectedItems();
@@ -1581,7 +1581,7 @@ final class TsgHubPanel extends JPanel
 		taskFormError.setVisible(false);
 		String targets = type == TaskType.KILL ? taskBoss.getText() : type == TaskType.RAID ? String.join("\n", selectedRaidModes()) : "";
 		int dropCategory = dropJar.isSelected() ? 1 : dropPet.isSelected() ? 2 : 0;
-		plugin.saveTask(editingTaskId, taskTitle.getText(), taskDescription.getText(), type.ordinal(),
+		plugin.organizer().saveTask(editingTaskId, taskTitle.getText(), taskDescription.getText(), type.ordinal(),
 			scopeIndividual.isSelected() ? 1 : scopeSolo.isSelected() ? 2 : 0, signalLoot.isSelected() ? 1 : 0, dropCategory,
 			targets, selectedItemsJson(type), type == TaskType.ITEM_SET ? 1 : 0,
 			targetCount.getText(), taskPoints.getText());
@@ -1636,7 +1636,7 @@ final class TsgHubPanel extends JPanel
 		boolean grouped = type == TaskType.ITEM_SET;
 		for (int g = 0; g < itemGroups.size(); g++)
 		{
-			for (TsgHubPlugin.ItemSuggestion item : itemGroups.get(g))
+			for (ItemSuggestion item : itemGroups.get(g))
 			{
 				JsonObject json = new JsonObject();
 				json.addProperty("name", item.name);
@@ -1662,10 +1662,10 @@ final class TsgHubPanel extends JPanel
 		}
 		long requestId = ++itemSearchRequestId;
 		itemSearchHint.setText("Searching...");
-		plugin.searchItems(query, found -> {
+		plugin.organizer().searchItems(query, found -> {
 			if (requestId != itemSearchRequestId) return;
 			itemResults.clear();
-			for (TsgHubPlugin.ItemSuggestion item : found) itemResults.addElement(item);
+			for (ItemSuggestion item : found) itemResults.addElement(item);
 			itemResultList.setVisibleRowCount(Math.max(1, Math.min(6, found.size())));
 			results.setVisible(!found.isEmpty());
 			if (!found.isEmpty()) itemResultList.setSelectedIndex(0);
@@ -1683,10 +1683,10 @@ final class TsgHubPanel extends JPanel
 		throw new IllegalStateException("results list missing");
 	}
 
-	private void addItem(TsgHubPlugin.ItemSuggestion item)
+	private void addItem(ItemSuggestion item)
 	{
 		int group = groupRow.isVisible() ? Math.max(0, activeGroup.getSelectedIndex()) : 0;
-		List<TsgHubPlugin.ItemSuggestion> target = itemGroups.get(group);
+		List<ItemSuggestion> target = itemGroups.get(group);
 		if (target.stream().anyMatch(existing -> existing.id == item.id))
 		{
 			itemSearchHint.setText(item.name + " is already added.");
@@ -1711,9 +1711,9 @@ final class TsgHubPanel extends JPanel
 
 	private void collapseGroups()
 	{
-		List<TsgHubPlugin.ItemSuggestion> merged = new ArrayList<>();
-		for (List<TsgHubPlugin.ItemSuggestion> group : itemGroups)
-			for (TsgHubPlugin.ItemSuggestion item : group)
+		List<ItemSuggestion> merged = new ArrayList<>();
+		for (List<ItemSuggestion> group : itemGroups)
+			for (ItemSuggestion item : group)
 				if (merged.stream().noneMatch(existing -> existing.id == item.id)) merged.add(item);
 		itemGroups.clear();
 		itemGroups.add(merged);
@@ -1739,7 +1739,7 @@ final class TsgHubPanel extends JPanel
 		boolean grouped = groupRow != null && groupRow.isVisible();
 		if (!grouped)
 		{
-			for (TsgHubPlugin.ItemSuggestion item : itemGroups.get(0)) selectedItemsPanel.add(fitHeight(itemRow(item, itemGroups.get(0))));
+			for (ItemSuggestion item : itemGroups.get(0)) selectedItemsPanel.add(fitHeight(itemRow(item, itemGroups.get(0))));
 			if (itemGroups.get(0).isEmpty()) selectedItemsPanel.add(caption("No items added yet."));
 		}
 		else
@@ -1751,7 +1751,7 @@ final class TsgHubPanel extends JPanel
 
 	private JPanel setCard(int index)
 	{
-		List<TsgHubPlugin.ItemSuggestion> group = itemGroups.get(index);
+		List<ItemSuggestion> group = itemGroups.get(index);
 		JPanel card = new JPanel(new BorderLayout(0, 6));
 		card.setBackground(CARD);
 		boolean active = index == activeGroup.getSelectedIndex() && itemGroups.size() > 1;
@@ -1778,7 +1778,7 @@ final class TsgHubPanel extends JPanel
 		else
 		{
 			JPanel pieces = panel(new GridLayout(0, 2, 4, 2));
-			for (TsgHubPlugin.ItemSuggestion item : group) pieces.add(itemRow(item, group));
+			for (ItemSuggestion item : group) pieces.add(itemRow(item, group));
 			card.add(pieces, BorderLayout.CENTER);
 		}
 		JPanel wrap = panel(new BorderLayout());
@@ -1787,7 +1787,7 @@ final class TsgHubPanel extends JPanel
 		return fitHeight(wrap);
 	}
 
-	private JPanel itemRow(TsgHubPlugin.ItemSuggestion item, List<TsgHubPlugin.ItemSuggestion> owner)
+	private JPanel itemRow(ItemSuggestion item, List<ItemSuggestion> owner)
 	{
 		JPanel row = new JPanel(new BorderLayout(4, 0));
 		row.setBackground(BACKGROUND);

@@ -14,14 +14,14 @@ final class TsgHubItemSets
 	static final class ItemSet
 	{
 		final String name;
-		final List<TsgHubPlugin.ItemSuggestion> items;
+		final List<ItemSuggestion> items;
 
 		private ItemSet(String name, Object... idsAndNames)
 		{
 			this.name = name;
-			List<TsgHubPlugin.ItemSuggestion> list = new ArrayList<>();
+			List<ItemSuggestion> list = new ArrayList<>();
 			for (int i = 0; i < idsAndNames.length; i += 2)
-				list.add(new TsgHubPlugin.ItemSuggestion((Integer) idsAndNames[i], (String) idsAndNames[i + 1]));
+				list.add(new ItemSuggestion((Integer) idsAndNames[i], (String) idsAndNames[i + 1]));
 			this.items = Collections.unmodifiableList(list);
 		}
 	}
@@ -128,7 +128,7 @@ final class TsgHubItemSets
 		for (ItemSet set : ALL_SETS)
 		{
 			Set<Integer> ids = new HashSet<>();
-			for (TsgHubPlugin.ItemSuggestion item : set.items) ids.add(item.id);
+			for (ItemSuggestion item : set.items) ids.add(item.id);
 			if (ids.equals(wanted)) return set.name;
 		}
 		return "";
