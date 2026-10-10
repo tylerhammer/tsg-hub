@@ -2220,19 +2220,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 		renderTeam();
 	}
 
-	private List<JsonObject> rankedTeams()
-	{
-		JsonArray teams = array(boardEvent, "teams");
-		JsonArray scores = array(boardEvent, "teamScores");
-		List<JsonObject> ranked = new ArrayList<>();
-		for (int i = 0; i < teams.size(); i++) ranked.add(teams.get(i).getAsJsonObject());
-		ranked.sort(Comparator
-			.comparingInt((JsonObject team) -> integer(scoreFor(scores, str(team, "id")), "points", 0)).reversed()
-			.thenComparing(Comparator.comparingInt((JsonObject team) -> integer(scoreFor(scores, str(team, "id")), "completedTasks", 0)).reversed())
-			.thenComparing(team -> str(team, "name"), String.CASE_INSENSITIVE_ORDER));
-		return ranked;
-	}
-
 	private String ownTeamId()
 	{
 		return teamIdFor(boardEvent, boardDisplayName);
@@ -2242,7 +2229,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		boardSummary.removeAll();
 		String teamId = ownTeamId();
-		List<JsonObject> ranked = rankedTeams();
+		List<JsonObject> ranked = rankedTeams(boardEvent);
 		JsonObject score = scoreFor(array(boardEvent, "teamScores"), teamId);
 		int totalTasks = array(boardEvent, "tasks").size();
 		int completed = integer(score, "completedTasks", 0);
@@ -2567,7 +2554,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			renderHiddenScoreboard();
 			return;
 		}
-		List<JsonObject> ranked = rankedTeams();
+		List<JsonObject> ranked = rankedTeams(boardEvent);
 		JsonArray scores = array(boardEvent, "teamScores");
 		int totalTasks = array(boardEvent, "tasks").size();
 		String ownTeam = ownTeamId();

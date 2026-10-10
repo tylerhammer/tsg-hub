@@ -42,6 +42,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.LongFunction;
@@ -868,6 +869,17 @@ final class TsgHubUi
 		empty.addProperty("completedTasks", 0);
 		empty.add("tasks", new JsonArray());
 		return empty;
+	}
+
+	static List<JsonObject> rankedTeams(JsonObject event)
+	{
+		JsonArray scores = array(event, "teamScores");
+		List<JsonObject> ranked = objects(array(event, "teams"));
+		ranked.sort(Comparator
+			.comparingInt((JsonObject team) -> integer(scoreFor(scores, str(team, "id")), "points", 0)).reversed()
+			.thenComparing(Comparator.comparingInt((JsonObject team) -> integer(scoreFor(scores, str(team, "id")), "completedTasks", 0)).reversed())
+			.thenComparing(team -> str(team, "name"), String.CASE_INSENSITIVE_ORDER));
+		return ranked;
 	}
 
 	static JsonObject progressFor(JsonArray progressRows, String taskId)

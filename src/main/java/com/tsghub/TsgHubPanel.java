@@ -870,12 +870,9 @@ final class TsgHubPanel extends JPanel
 			return;
 		}
 		viewedTeamId = "";
-		JsonArray teams = array(currentEvent, "teams");
 		JsonArray scores = array(currentEvent, "teamScores");
 		int totalTasks = array(currentEvent, "tasks").size();
-		List<JsonObject> ranked = objects(teams);
-		ranked.sort(Comparator.comparingInt((JsonObject t) -> integer(scoreFor(scores, str(t, "id")), "points", 0)).reversed()
-			.thenComparing(t -> str(t, "name"), String.CASE_INSENSITIVE_ORDER));
+		List<JsonObject> ranked = rankedTeams(currentEvent);
 
 		if (ranked.isEmpty())
 		{
