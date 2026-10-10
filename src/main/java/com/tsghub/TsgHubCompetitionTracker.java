@@ -1,5 +1,7 @@
 package com.tsghub;
 
+import static com.tsghub.TsgHubSession.MEMBER_TOKEN;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.time.Instant;
@@ -234,7 +236,7 @@ final class TsgHubCompetitionTracker
 
 	private static String token(JsonObject event)
 	{
-		return TsgHubSession.get("memberToken:" + TsgHubUi.str(event, "id"));
+		return TsgHubSession.get(MEMBER_TOKEN + TsgHubUi.str(event, "id"));
 	}
 
 	private static JsonObject config(JsonObject event)

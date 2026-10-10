@@ -3,6 +3,10 @@ package com.tsghub;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 import static net.runelite.client.util.ColorUtil.toHexColor;
+import static com.tsghub.TsgHubSession.DOCK_VIEW;
+import static com.tsghub.TsgHubSession.HIDE_COMPLETED;
+import static com.tsghub.TsgHubSession.MEMBER_TOKEN;
+import static com.tsghub.TsgHubSession.SHOW_OFFLINE;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -225,16 +229,16 @@ final class TsgHubSidebarPanel extends PluginPanel
 		groupError.setVisible(false);
 
 		plain(showOffline, MUTED).setFont(smallFont());
-		showOffline.setSelected("true".equals(TsgHubSession.get("showOffline")));
+		showOffline.setSelected("true".equals(TsgHubSession.get(SHOW_OFFLINE)));
 		showOffline.addActionListener(e -> {
-			TsgHubSession.set("showOffline", showOffline.isSelected() ? "true" : "");
+			TsgHubSession.set(SHOW_OFFLINE, showOffline.isSelected() ? "true" : "");
 			renderMembers();
 		});
 
 		plain(hideCompleted, MUTED).setFont(smallFont());
-		hideCompleted.setSelected("true".equals(TsgHubSession.get("hideCompleted")));
+		hideCompleted.setSelected("true".equals(TsgHubSession.get(HIDE_COMPLETED)));
 		hideCompleted.addActionListener(e -> {
-			TsgHubSession.set("hideCompleted", hideCompleted.isSelected() ? "true" : "");
+			TsgHubSession.set(HIDE_COMPLETED, hideCompleted.isSelected() ? "true" : "");
 			renderTasks();
 		});
 
@@ -1984,7 +1988,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private void pin(View next)
 	{
 		pinned = next;
-		TsgHubSession.set("dockView", next.name());
+		TsgHubSession.set(DOCK_VIEW, next.name());
 		dock.pin(pinIcon(next), pane(next));
 		dock.expand();
 		renderPinned();
@@ -1995,7 +1999,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (pinned == null) return;
 		View was = pinned;
 		pinned = null;
-		TsgHubSession.set("dockView", "");
+		TsgHubSession.set(DOCK_VIEW, "");
 		dock.unpin();
 		center.add(pane(was), cardName(was));
 		setView(view);
@@ -2003,7 +2007,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	private void restorePin()
 	{
-		String saved = TsgHubSession.get("dockView");
+		String saved = TsgHubSession.get(DOCK_VIEW);
 		for (View candidate : View.values())
 			if (pinnable(candidate) && candidate.name().equals(saved))
 			{
@@ -2107,7 +2111,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		clickable(card, () -> {
 			String id = str(event, "id");
 			if (dropParty) showDropParty(event);
-			else if (competition && joined && !TsgHubSession.get("memberToken:" + id).isEmpty()) plugin.openCompetition(id, true);
+			else if (competition && joined && !TsgHubSession.get(MEMBER_TOKEN + id).isEmpty()) plugin.openCompetition(id, true);
 			else if (competition) showCompetitionPreview(event);
 			else if (joined) plugin.activateEvent(id);
 			else showPreview(event);

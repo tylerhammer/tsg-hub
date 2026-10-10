@@ -1,5 +1,9 @@
 package com.tsghub;
 
+import static com.tsghub.TsgHubSession.GROUP_PASSPHRASE;
+import static com.tsghub.TsgHubSession.GROUP_PLAYER;
+import static com.tsghub.TsgHubSession.GROUP_TOKEN;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.tsghub.TsgHubUi.Tone;
@@ -45,13 +49,13 @@ final class TsgHubGroups implements GroupTracker.Listener
 
 	boolean isGroupParty(String passphrase)
 	{
-		String saved = TsgHubSession.get("groupPassphrase");
+		String saved = TsgHubSession.get(GROUP_PASSPHRASE);
 		return plugin.sharingEnabled() && passphrase != null && !saved.isEmpty() && saved.equals(passphrase);
 	}
 
 	boolean inGroup()
 	{
-		return !TsgHubSession.get("groupToken").isEmpty();
+		return !TsgHubSession.get(GROUP_TOKEN).isEmpty();
 	}
 
 	JsonObject currentGroup()
@@ -62,7 +66,7 @@ final class TsgHubGroups implements GroupTracker.Listener
 	boolean isLeader()
 	{
 		JsonObject current = group;
-		return inGroup() && current != null && TsgHubUi.samePlayer(TsgHubUi.str(current, "leaderName"), TsgHubSession.get("groupPlayer"));
+		return inGroup() && current != null && TsgHubUi.samePlayer(TsgHubUi.str(current, "leaderName"), TsgHubSession.get(GROUP_PLAYER));
 	}
 
 	boolean inOtherParty()
@@ -123,7 +127,7 @@ final class TsgHubGroups implements GroupTracker.Listener
 
 	private void update(String path, JsonObject payload)
 	{
-		String token = TsgHubSession.get("groupToken");
+		String token = TsgHubSession.get(GROUP_TOKEN);
 		if (token.isEmpty() || executor.isShutdown()) return;
 		executor.submit(() -> {
 			try
@@ -146,7 +150,7 @@ final class TsgHubGroups implements GroupTracker.Listener
 
 	private void enter(String method, String path, JsonObject payload, boolean created)
 	{
-		String previousToken = TsgHubSession.get("groupToken");
+		String previousToken = TsgHubSession.get(GROUP_TOKEN);
 		executor.submit(() -> {
 			try
 			{
@@ -156,9 +160,9 @@ final class TsgHubGroups implements GroupTracker.Listener
 				// The service already removed us from the previous group.
 				if (!previousToken.isEmpty()) forget();
 				// Save before switching so the tracker recognises the new party.
-				TsgHubSession.set("groupToken", result.get("token").getAsString());
-				TsgHubSession.set("groupPassphrase", passphrase);
-				TsgHubSession.set("groupPlayer", plugin.getDetectedPlayerName());
+				TsgHubSession.set(GROUP_TOKEN, result.get("token").getAsString());
+				TsgHubSession.set(GROUP_PASSPHRASE, passphrase);
+				TsgHubSession.set(GROUP_PLAYER, plugin.getDetectedPlayerName());
 				group = joined;
 				partyService.changeParty(passphrase);
 				status(created ? "Started a party." : "Joined " + TsgHubSidebarPanel.partyTitle(joined) + ".", Tone.SUCCESS);
@@ -172,9 +176,9 @@ final class TsgHubGroups implements GroupTracker.Listener
 
 	void leave()
 	{
-		String token = TsgHubSession.get("groupToken");
+		String token = TsgHubSession.get(GROUP_TOKEN);
 		// Compare passphrases directly: sharing may already be off.
-		String passphrase = TsgHubSession.get("groupPassphrase");
+		String passphrase = TsgHubSession.get(GROUP_PASSPHRASE);
 		boolean ours = partyService.isInParty() && !passphrase.isEmpty() && passphrase.equals(partyService.getPartyPassphrase());
 		forget();
 		if (ours) partyService.changeParty(null);
@@ -189,13 +193,13 @@ final class TsgHubGroups implements GroupTracker.Listener
 
 	void heartbeat()
 	{
-		String token = TsgHubSession.get("groupToken");
+		String token = TsgHubSession.get(GROUP_TOKEN);
 		if (token.isEmpty()) return;
 		if (!plugin.sharingEnabled()) { leave(); return; }
 		GroupTracker t = tracker;
 		if (t != null && t.idleTooLong()) { status("Left your party after 30 minutes logged out.", Tone.INFO); leave(); return; }
 		String name = plugin.getDetectedPlayerName();
-		if (!name.isEmpty() && !TsgHubUi.samePlayer(name, TsgHubSession.get("groupPlayer"))) { leave(); return; }
+		if (!name.isEmpty() && !TsgHubUi.samePlayer(name, TsgHubSession.get(GROUP_PLAYER))) { leave(); return; }
 		JsonObject payload = new JsonObject();
 		if (client.getGameState() == GameState.LOGGED_IN) payload.addProperty("world", client.getWorld());
 		payload.addProperty("area", plugin.currentArea());
@@ -204,7 +208,7 @@ final class TsgHubGroups implements GroupTracker.Listener
 			JsonObject joined = api.get().request("POST", "/v1/groups/heartbeat", token, payload).getAsJsonObject("group");
 			group = joined;
 			// Still listed after a client restart but not connected.
-			String passphrase = TsgHubSession.get("groupPassphrase");
+			String passphrase = TsgHubSession.get(GROUP_PASSPHRASE);
 			if (!passphrase.equals(partyService.getPartyPassphrase())) partyService.changeParty(passphrase);
 			plugin.ui(s -> s.groupRefreshed(joined));
 			loadGroups(true);
@@ -232,9 +236,9 @@ final class TsgHubGroups implements GroupTracker.Listener
 	private void forget()
 	{
 		group = null;
-		TsgHubSession.set("groupToken", "");
-		TsgHubSession.set("groupPassphrase", "");
-		TsgHubSession.set("groupPlayer", "");
+		TsgHubSession.set(GROUP_TOKEN, "");
+		TsgHubSession.set(GROUP_PASSPHRASE, "");
+		TsgHubSession.set(GROUP_PLAYER, "");
 	}
 
 	@Override

@@ -1,5 +1,10 @@
 package com.tsghub;
 
+import static com.tsghub.TsgHubSession.ORGANIZER_EVENT_ID;
+import static com.tsghub.TsgHubSession.ORGANIZER_NAME;
+import static com.tsghub.TsgHubSession.ORGANIZER_TOKEN;
+import static com.tsghub.TsgHubSession.TOKEN;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.tsghub.TsgHubUi.Tone;
@@ -50,7 +55,7 @@ final class TsgHubOrganizer
 	void selectEvent(String eventId)
 	{
 		if (eventId.trim().isEmpty()) return;
-		TsgHubSession.set("organizerEventId", eventId.trim());
+		TsgHubSession.set(ORGANIZER_EVENT_ID, eventId.trim());
 		plugin.syncSocketNow();
 		status("Loading event...", Tone.INFO);
 		executor.submit(() -> {
@@ -113,9 +118,9 @@ final class TsgHubOrganizer
 				JsonObject response = request("POST", "/v1/events", credential, body);
 				JsonObject result = response.getAsJsonObject("event");
 				String id = result.get("id").getAsString();
-				TsgHubSession.set("organizerEventId", id);
-				TsgHubSession.set("organizerToken:" + id, response.get("organizerToken").getAsString());
-				TsgHubSession.set("organizerName:" + id, creatorName);
+				TsgHubSession.set(ORGANIZER_EVENT_ID, id);
+				TsgHubSession.set(ORGANIZER_TOKEN + id, response.get("organizerToken").getAsString());
+				TsgHubSession.set(ORGANIZER_NAME + id, creatorName);
 				SwingUtilities.invokeLater(() -> panel.get().eventCreated(result));
 				status("Event created. Add teams next.", Tone.SUCCESS);
 				loadManagedEvents();
@@ -463,12 +468,12 @@ final class TsgHubOrganizer
 
 	String credential(String eventId)
 	{
-		String ownerToken = TsgHubSession.get("organizerToken:" + eventId);
-		String creatorName = TsgHubSession.get("organizerName:" + eventId);
+		String ownerToken = TsgHubSession.get(ORGANIZER_TOKEN + eventId);
+		String creatorName = TsgHubSession.get(ORGANIZER_NAME + eventId);
 		if (!ownerToken.isEmpty() && !creatorName.isEmpty() && TsgHubUi.samePlayer(creatorName, plugin.getDetectedPlayerName())) return ownerToken;
 		String adminToken = plugin.adminKey();
 		if (!adminToken.isEmpty()) return adminToken;
-		return TsgHubSession.get("token");
+		return TsgHubSession.get(TOKEN);
 	}
 
 	private String listCredential()
@@ -481,12 +486,12 @@ final class TsgHubOrganizer
 			String credential = credential(eventId);
 			if (!credential.isEmpty()) return credential;
 		}
-		String memberToken = TsgHubSession.get("token");
+		String memberToken = TsgHubSession.get(TOKEN);
 		if (!memberToken.isEmpty()) return memberToken;
-		for (String key : TsgHubSession.keysWithPrefix("organizerToken:"))
+		for (String key : TsgHubSession.keysWithPrefix(ORGANIZER_TOKEN))
 		{
-			String candidateId = key.substring("organizerToken:".length());
-			String creator = TsgHubSession.get("organizerName:" + candidateId);
+			String candidateId = key.substring(ORGANIZER_TOKEN.length());
+			String creator = TsgHubSession.get(ORGANIZER_NAME + candidateId);
 			if (!creator.isEmpty() && TsgHubUi.samePlayer(creator, plugin.getDetectedPlayerName())) return TsgHubSession.get(key);
 		}
 		return "";

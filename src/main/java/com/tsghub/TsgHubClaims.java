@@ -1,5 +1,7 @@
 package com.tsghub;
 
+import static com.tsghub.TsgHubSession.EVENT_ID;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -328,7 +330,7 @@ final class TsgHubClaims
 
 	private String claimEventId()
 	{
-		String eventId = TsgHubSession.get("eventId");
+		String eventId = TsgHubSession.get(EVENT_ID);
 		if (eventId.isEmpty() || !eventId.equals(taskEventId) || TsgHubSession.memberToken(eventId).isEmpty()) return "";
 		return eventId;
 	}
