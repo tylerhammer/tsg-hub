@@ -104,7 +104,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final WidthTrackingPanel scoreboardTab = new WidthTrackingPanel();
 	private final WidthTrackingPanel teamTab = new WidthTrackingPanel();
 	private final JCheckBox hideCompleted = new JCheckBox("Hide completed");
-	private final JTextField manualNote = new JTextField();
 
 	private final JTextField codeField = new JTextField();
 	private final JButton joinButton = primaryButton("Join event");
@@ -115,7 +114,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private JsonObject previewEvent;
 	private JsonObject boardEvent;
 	private String boardDisplayName = "";
-	private String openManualTaskId = "";
 	private int busy;
 	private volatile boolean active;
 	private volatile boolean boardShowing;
@@ -220,7 +218,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 		codeField.setToolTipText("Team code from an admin");
 		placeholder(codeField, "Team code, e.g. DRGN42");
-		placeholder(manualNote, "Screenshot link or note");
 		codeField.addActionListener(e -> submitJoin());
 		joinButton.addActionListener(e -> submitJoin());
 		joinError.setVisible(false);
@@ -1298,8 +1295,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		// Background refreshes must not pull the user off another screen.
 		if (!open && view != View.BOARD) return;
-		boolean sameEvent = boardEvent != null && str(boardEvent, "id").equals(str(event, "id"));
-		if (!sameEvent) openManualTaskId = "";
 		boardEvent = event;
 		boardDisplayName = displayName == null ? "" : displayName;
 		setView(View.BOARD);
@@ -1515,16 +1510,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 		showError(joinError, message, TEXT_W);
 		codeField.requestFocusInWindow();
 		codeField.selectAll();
-	}
-
-	void manualSubmitFinished(boolean success)
-	{
-		if (success)
-		{
-			openManualTaskId = "";
-			manualNote.setText("");
-		}
-		renderTasks();
 	}
 
 	void showParties()
@@ -2303,7 +2288,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 		boolean pending = bool(progress, "pending");
 		boolean individual = "individual".equals(str(task, "scope"));
 		boolean solo = "solo".equals(str(task, "scope"));
-		boolean manual = "manual".equals(str(task, "type"));
 
 		JPanel card = card();
 		JLabel name = shrinkable(label(str(task, "title"), completed ? MUTED : TEXT, boldFont()));
@@ -2351,7 +2335,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 			if (!amounts.isEmpty()) body.add(cardNoteHtml(amounts));
 		}
 		if (pending && !completed) body.add(label("Awaiting admin review", WARNING, smallFont()));
-		if (manual && !completed && !pending) addManualSubmit(body, taskId);
 		addLineSpacing(body);
 		addScopeIcon(body, solo, individual);
 		card.add(body, BorderLayout.CENTER);
@@ -2376,50 +2359,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 		String count = value + " of " + target + " teammates done";
 		if (mine == null || !bool(mine, "completed")) return caption(count);
 		return label(html("<font color='" + toHexColor(SUCCESS) + "'>You're done</font> · " + count, CARD_TEXT_W), MUTED, smallFont());
-	}
-
-	private void addManualSubmit(JPanel body, String taskId)
-	{
-		body.add(Box.createVerticalStrut(GAP_S));
-		if (!taskId.equals(openManualTaskId))
-		{
-			JButton submit = button("Submit proof");
-			submit.addActionListener(e -> {
-				openManualTaskId = taskId;
-				manualNote.setText("");
-				renderTasks();
-				SwingUtilities.invokeLater(manualNote::requestFocusInWindow);
-			});
-			body.add(fitHeight(submit));
-			return;
-		}
-		body.add(cardNote("Add a note or link for the admins."));
-		body.add(Box.createVerticalStrut(GAP_XS));
-		body.add(fitHeight(manualNote));
-		body.add(Box.createVerticalStrut(GAP_S));
-		JPanel buttons = panel(new GridLayout(1, 2, 4, 0));
-		JButton cancel = button("Cancel");
-		cancel.addActionListener(e -> {
-			openManualTaskId = "";
-			renderTasks();
-		});
-		JButton send = primaryButton("Send");
-		Runnable doSend = () -> {
-			if (manualNote.getText().trim().isEmpty())
-			{
-				setStatus("Add a short note before sending.", Tone.ERROR);
-				manualNote.requestFocusInWindow();
-				return;
-			}
-			send.setEnabled(false);
-			plugin.submitManual(taskId, manualNote.getText().trim());
-		};
-		send.addActionListener(e -> doSend.run());
-		for (ActionListener listener : manualNote.getActionListeners()) manualNote.removeActionListener(listener);
-		manualNote.addActionListener(e -> doSend.run());
-		buttons.add(cancel);
-		buttons.add(send);
-		body.add(fitHeight(buttons));
 	}
 
 	private boolean addSetProgress(JPanel body, JsonObject source, boolean mine)

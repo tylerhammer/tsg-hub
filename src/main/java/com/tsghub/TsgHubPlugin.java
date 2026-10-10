@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.CompletableFuture;
@@ -1018,30 +1017,6 @@ public class TsgHubPlugin extends Plugin
 			syncedClanRanks.put(key, rank);
 		}
 		catch (Exception ignored) { /* Board refresh should still succeed if a rank sync is unavailable. */ }
-	}
-
-	void submitManual(String taskId, String note)
-	{
-		String eventId = TsgHubSession.get("eventId");
-		String token = TsgHubSession.get("token");
-		JsonObject evidence = new JsonObject();
-		evidence.addProperty("note", note.trim());
-		JsonObject body = TsgHubClaims.claim(taskId, "manual-" + UUID.randomUUID(), "manual", evidence);
-		memberStatus("Sending proof...", Tone.INFO);
-		executor.submit(() -> {
-			try
-			{
-				api().request("POST", "/v1/events/" + eventId + "/claims", token, body);
-				memberStatus("Sent. An admin will review it.", Tone.SUCCESS);
-				ui(s -> s.manualSubmitFinished(true));
-				refreshBoard();
-			}
-			catch (Exception e)
-			{
-				memberError("Couldn't send proof. ", e);
-				ui(s -> s.manualSubmitFinished(false));
-			}
-		});
 	}
 
 	void selectEvent(String eventId)

@@ -348,7 +348,7 @@ final class TsgHubClaims
 		postClaim(eventId, claim(task.id, source + "-" + UUID.randomUUID(), source, evidence), "PVM progress sync failed. ", null);
 	}
 
-	static JsonObject claim(String taskId, String evidenceId, String source, JsonObject evidence)
+	private static JsonObject claim(String taskId, String evidenceId, String source, JsonObject evidence)
 	{
 		JsonObject claim = new JsonObject();
 		claim.addProperty("taskId", taskId);
