@@ -1106,12 +1106,12 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	static List<String> matchNames(List<String> names, String query, int limit)
 	{
-		String needle = playerKey(query);
+		String needle = PlayerNames.normalize(query);
 		List<String> prefix = new ArrayList<>();
 		List<String> contains = new ArrayList<>();
 		for (String name : names)
 		{
-			String key = playerKey(name);
+			String key = PlayerNames.normalize(name);
 			if (key.startsWith(needle)) prefix.add(name);
 			else if (key.contains(needle)) contains.add(name);
 		}
@@ -1385,7 +1385,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		boolean hidden = bool(event, "hideScores");
 		JsonArray rows = array(event, "leaderboard");
 		JsonObject mine = null;
-		for (JsonObject row : objects(rows)) if (str(row, "displayName").equalsIgnoreCase(competitionName)) mine = row;
+		for (JsonObject row : objects(rows)) if (samePlayer(str(row, "displayName"), competitionName)) mine = row;
 
 		boolean started = !"scheduled".equals(str(event, "status"));
 		boolean tracking = mine != null && bool(mine, "tracking");
@@ -1435,7 +1435,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			for (int i = 0; i < rows.size(); i++)
 			{
 				JsonObject row = rows.get(i).getAsJsonObject();
-				boolean me = str(row, "displayName").equalsIgnoreCase(competitionName);
+				boolean me = samePlayer(str(row, "displayName"), competitionName);
 				int rank = integer(row, "rank", i + 1);
 				JPanel card = card();
 				card.setLayout(new BorderLayout(8, 0));
@@ -1465,7 +1465,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (view != View.COMPETITION || competitionEvent == null || !eventId.equals(openCompetitionId)) return;
 		List<JsonObject> rows = new ArrayList<>(objects(array(competitionEvent, "leaderboard")));
 		JsonObject mine = null;
-		for (JsonObject row : rows) if (str(row, "displayName").equalsIgnoreCase(competitionName)) mine = row;
+		for (JsonObject row : rows) if (samePlayer(str(row, "displayName"), competitionName)) mine = row;
 		if (mine == null) return;
 		mine.addProperty("gained", gained);
 		mine.addProperty("tracking", true);
@@ -2535,14 +2535,14 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private void addSoloLeader(JPanel body, JsonObject progress)
 	{
 		String leader = str(progress, "leader");
-		if (leader.isEmpty() || leader.equalsIgnoreCase(boardDisplayName)) return;
+		if (leader.isEmpty() || samePlayer(leader, boardDisplayName)) return;
 		body.add(caption("Leader: " + leader + " (" + integer(progress, "progress", 0) + "/" + integer(progress, "target", 1) + ")"));
 	}
 
 	private JsonObject myEntry(JsonObject progress)
 	{
 		for (JsonObject member : objects(array(progress, "members")))
-			if (str(member, "displayName").equalsIgnoreCase(boardDisplayName)) return member;
+			if (samePlayer(str(member, "displayName"), boardDisplayName)) return member;
 		return null;
 	}
 

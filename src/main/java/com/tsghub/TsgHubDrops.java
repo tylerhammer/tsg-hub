@@ -13,6 +13,7 @@ import net.runelite.api.Client;
 import net.runelite.api.ItemComposition;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.util.Text;
 
 final class TsgHubDrops
 {
@@ -60,7 +61,7 @@ final class TsgHubDrops
 	static String broadcast(String raw)
 	{
 		if (raw == null) return null;
-		String message = raw.replaceAll("<[^>]*>", "").replace(' ', ' ').trim();
+		String message = Text.removeTags(raw).replace(' ', ' ').trim();
 		String lower = message.toLowerCase(Locale.ROOT);
 		for (String keyword : KEYWORDS) if (lower.contains(keyword)) return message;
 		return null;

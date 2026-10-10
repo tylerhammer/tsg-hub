@@ -490,20 +490,15 @@ final class TsgHubUi
 
 	static boolean samePlayer(String a, String b)
 	{
-		String left = playerKey(a);
-		return !left.isEmpty() && left.equals(playerKey(b));
-	}
-
-	static String playerKey(String name)
-	{
-		return PlayerNames.normalize(name);
+		String left = PlayerNames.normalize(a);
+		return !left.isEmpty() && left.equals(PlayerNames.normalize(b));
 	}
 
 	static String str(JsonObject object, String key)
 	{
-		if (object == null || !object.has(key)) return "";
+		if (object == null) return "";
 		JsonElement value = object.get(key);
-		return value == null || value.isJsonNull() ? "" : value.getAsString();
+		return value != null && value.isJsonPrimitive() ? value.getAsString() : "";
 	}
 
 	static int integer(JsonObject object, String key, int fallback)
@@ -1046,7 +1041,7 @@ final class TsgHubUi
 	{
 		for (JsonObject member : objects(array(event, "members")))
 		{
-			if (str(member, "displayName").equalsIgnoreCase(displayName) && !str(member, "teamId").isEmpty()) return str(member, "teamId");
+			if (samePlayer(str(member, "displayName"), displayName) && !str(member, "teamId").isEmpty()) return str(member, "teamId");
 		}
 		return "";
 	}

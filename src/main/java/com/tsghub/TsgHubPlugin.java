@@ -31,7 +31,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.regex.Matcher;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.swing.JFrame;
@@ -1020,10 +1019,10 @@ public class TsgHubPlugin extends Plugin
 		String displayName = detectedPlayerName;
 		String memberName = TsgHubSession.get("displayName");
 		String eventClan = TsgHubUi.str(event, "clanName");
-		if (token.isEmpty() || displayName.isEmpty() || !displayName.equalsIgnoreCase(memberName)
+		if (token.isEmpty() || displayName.isEmpty() || !TsgHubUi.samePlayer(displayName, memberName)
 			|| eventClan.isEmpty() || !eventClan.equalsIgnoreCase(detectedClanName)) return;
 		int rank = detectedClanRank;
-		String key = eventId + ":" + TsgHubUi.playerKey(displayName);
+		String key = eventId + ":" + PlayerNames.normalize(displayName);
 		Integer synced = syncedClanRanks.get(key);
 		if (synced != null && synced == rank) return;
 		JsonObject body = new JsonObject();
@@ -1517,7 +1516,7 @@ public class TsgHubPlugin extends Plugin
 		if (event == null || event.getMessage() == null || client.getLocalPlayer() == null) return;
 		if (drops != null) drops.onChatMessage(event);
 		if (event.getType() != ChatMessageType.GAMEMESSAGE && event.getType() != ChatMessageType.SPAM) return;
-		String message = event.getMessage().replaceAll("<[^>]*>", "").toLowerCase(Locale.ROOT);
+		String message = Text.removeTags(event.getMessage()).toLowerCase(Locale.ROOT);
 		if (config.dataSharingOptIn() && competitions != null) competitions.onChat(message);
 		if (!config.dataSharingOptIn()) return;
 		String eventId = claimEventId();
@@ -1536,8 +1535,8 @@ public class TsgHubPlugin extends Plugin
 			{
 				if (player == null || player.getName() == null) continue;
 				String name = player.getName();
-				if (visiblePlayers.stream().noneMatch(existing -> existing.equalsIgnoreCase(name))) visiblePlayers.add(name);
-				if (!player.isClanMember() && nonClanPlayers.stream().noneMatch(existing -> existing.equalsIgnoreCase(name))) nonClanPlayers.add(name);
+				if (visiblePlayers.stream().noneMatch(existing -> TsgHubUi.samePlayer(existing, name))) visiblePlayers.add(name);
+				if (!player.isClanMember() && nonClanPlayers.stream().noneMatch(existing -> TsgHubUi.samePlayer(existing, name))) nonClanPlayers.add(name);
 			}
 		}
 		for (PvmTask task : pvmTasks)
@@ -1623,7 +1622,7 @@ public class TsgHubPlugin extends Plugin
 	private static String petName(String name)
 	{
 		if (name == null) return null;
-		String normalized = name.replaceAll("<[^>]*>", "").trim().toLowerCase(Locale.ROOT);
+		String normalized = Text.removeTags(name).trim().toLowerCase(Locale.ROOT);
 		return normalized.startsWith("pet ") ? normalized.substring(4) : normalized;
 	}
 
@@ -1645,12 +1644,8 @@ public class TsgHubPlugin extends Plugin
 
 	private void submitKillCountSignals(String eventId, String message)
 	{
-		if (!message.contains("kill count") && !message.contains("kill-count")) return;
-		Matcher countMatch = TsgHubCompetitionTracker.KILL_COUNT.matcher(message);
-		if (!countMatch.find()) return;
-		int count;
-		try { count = Integer.parseInt(countMatch.group(1).replace(",", "")); }
-		catch (NumberFormatException e) { return; }
+		int count = TsgHubCompetitionTracker.killCount(message);
+		if (count < 0) return;
 		for (PvmTask task : pvmTasks)
 		{
 			if (!"kill".equals(task.type) || !task.chatKillCount || task.targetNames.isEmpty()) continue;
@@ -2059,7 +2054,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		String ownerToken = TsgHubSession.get("organizerToken:" + eventId);
 		String creatorName = TsgHubSession.get("organizerName:" + eventId);
-		if (!ownerToken.isEmpty() && !creatorName.isEmpty() && creatorName.equalsIgnoreCase(detectedPlayerName)) return ownerToken;
+		if (!ownerToken.isEmpty() && !creatorName.isEmpty() && TsgHubUi.samePlayer(creatorName, detectedPlayerName)) return ownerToken;
 		String adminToken = adminKey();
 		if (!adminToken.isEmpty()) return adminToken;
 		return TsgHubSession.get("token");
@@ -2081,7 +2076,7 @@ public class TsgHubPlugin extends Plugin
 		{
 			String candidateId = key.substring("organizerToken:".length());
 			String creator = TsgHubSession.get("organizerName:" + candidateId);
-			if (!creator.isEmpty() && creator.equalsIgnoreCase(detectedPlayerName)) return TsgHubSession.get(key);
+			if (!creator.isEmpty() && TsgHubUi.samePlayer(creator, detectedPlayerName)) return TsgHubSession.get(key);
 		}
 		return "";
 	}

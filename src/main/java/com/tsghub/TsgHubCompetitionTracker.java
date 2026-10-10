@@ -161,14 +161,19 @@ final class TsgHubCompetitionTracker
 		else queueXp(event, xp);
 	}
 
+	static int killCount(String message)
+	{
+		if (!message.contains("kill count") && !message.contains("kill-count")) return -1;
+		Matcher count = KILL_COUNT.matcher(message);
+		if (!count.find()) return -1;
+		try { return Integer.parseInt(count.group(1).replace(",", "")); }
+		catch (NumberFormatException e) { return -1; }
+	}
+
 	void onChat(String message)
 	{
-		if (!message.contains("kill count") && !message.contains("kill-count")) return;
-		Matcher count = KILL_COUNT.matcher(message);
-		if (!count.find()) return;
-		int kills;
-		try { kills = Integer.parseInt(count.group(1).replace(",", "")); }
-		catch (NumberFormatException e) { return; }
+		int kills = killCount(message);
+		if (kills < 0) return;
 		for (JsonObject event : joined)
 		{
 			JsonObject config = config(event);
