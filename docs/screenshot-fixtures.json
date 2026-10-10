@@ -2,7 +2,6 @@
  "now": "2026-10-04T02:00:00Z",
  "bingo": "0942cefa-fe5b-42a8-834c-7584e3245fdb",
  "skill": "0df1ad0f-8568-45a1-813f-8fc433ddb8f9",
- "dropParty": "68bae018-5dfd-4854-87a8-2839192ce00f",
  "groupsList": {
   "groups": [
    {
@@ -2708,31 +2707,6 @@
     5000000
    ]
   }
- },
- "dropBoard": {
-  "id": "68bae018-5dfd-4854-87a8-2839192ce00f",
-  "name": "Anniversary Drop Party",
-  "clanName": "TSGaming",
-  "createdByName": "TSG Admin",
-  "description": "",
-  "startsAt": "2026-10-04T08:00:00Z",
-  "endsAt": "2026-10-04T10:00:00Z",
-  "status": "scheduled",
-  "createdAt": "2026-09-27T23:22:02.549Z",
-  "hideScores": false,
-  "type": "drop-party",
-  "config": {
-   "startsAt": "2026-10-04T08:00:00Z",
-   "world": 420,
-   "location": "Falador Party Room",
-   "host": "TSG Admin",
-   "notes": "Bring inventory space. Balloons at 7, big drop at 7:30."
-  },
-  "teams": [],
-  "tasks": [],
-  "teamScores": [],
-  "members": [],
-  "claims": []
  },
  "membersList": {
   "members": [
