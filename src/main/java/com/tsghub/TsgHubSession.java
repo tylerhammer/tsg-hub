@@ -76,6 +76,22 @@ final class TsgHubSession
 		return keys;
 	}
 
+	static String memberToken(String eventId)
+	{
+		return eventValue("memberToken:", eventId, "token");
+	}
+
+	static String memberName(String eventId)
+	{
+		return eventValue("memberName:", eventId, "displayName");
+	}
+
+	private static String eventValue(String prefix, String eventId, String activeKey)
+	{
+		String value = get(prefix + eventId);
+		return value.isEmpty() && eventId.equals(get("eventId")) ? get(activeKey) : value;
+	}
+
 	static void clear(String... keys)
 	{
 		for (String key : keys) set(key, "");
