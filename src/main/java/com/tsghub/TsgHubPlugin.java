@@ -116,7 +116,7 @@ public class TsgHubPlugin extends Plugin
 	@Inject @Named("developerMode") private boolean developerMode;
 	private TsgHubPanel panel;
 	private TsgHubSidebarPanel sidebar;
-	private JFrame hubWindow;
+	private volatile JFrame hubWindow;
 	private NavigationButton navigationButton;
 	private ScheduledExecutorService executor;
 	private ExecutorService itemSearchExecutor;
@@ -554,7 +554,6 @@ public class TsgHubPlugin extends Plugin
 	@Subscribe
 	public void onRuneScapeProfileChanged(RuneScapeProfileChanged event)
 	{
-		attemptedXpClaims.clear();
 		syncedClanRanks.clear();
 		syncedIdentity = "";
 		if (competitions != null) competitions.clear();
@@ -621,7 +620,6 @@ public class TsgHubPlugin extends Plugin
 				TsgHubSession.set("token", memberToken);
 				TsgHubSession.set("displayName", memberName);
 				TsgHubSession.set("eventId", joinedEventId);
-				attemptedXpClaims.clear();
 				memberStatus("You're in! Progress now counts for your team.", Tone.SUCCESS);
 				refreshBoard(true);
 			}
@@ -642,7 +640,6 @@ public class TsgHubPlugin extends Plugin
 		if (eventId.equals(TsgHubSession.get("eventId")))
 		{
 			TsgHubSession.clear("token", "eventId");
-			attemptedXpClaims.clear();
 			clearTaskCache();
 			}
 		memberStatus("Disconnected. Rejoin anytime with your team code.", Tone.SUCCESS);
@@ -659,7 +656,6 @@ public class TsgHubPlugin extends Plugin
 		TsgHubSession.removePrefix("memberName:");
 		TsgHubSession.removePrefix("organizerToken:");
 		TsgHubSession.removePrefix("organizerName:");
-		attemptedXpClaims.clear();
 		syncedClanRanks.clear();
 		clearTaskCache();
 		checkedKeyIdentity = "";
@@ -1019,7 +1015,6 @@ public class TsgHubPlugin extends Plugin
 		TsgHubSession.set("token", token);
 		TsgHubSession.set("eventId", eventId);
 		TsgHubSession.set("displayName", displayName);
-		attemptedXpClaims.clear();
 		refreshBoard(open);
 	}
 
@@ -1785,6 +1780,8 @@ public class TsgHubPlugin extends Plugin
 		taskEventId = "";
 		xpTasks = Collections.emptyList();
 		pvmTasks = Collections.emptyList();
+		attemptedXpClaims.clear();
+		attemptedKillCountClaims.clear();
 	}
 
 	private String claimEventId()
