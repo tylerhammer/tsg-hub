@@ -610,12 +610,9 @@ public class TsgHubPlugin extends Plugin
 				String joinedEventId = result.getAsJsonObject("member").get("eventId").getAsString();
 				String memberToken = result.get("token").getAsString();
 				String memberName = result.getAsJsonObject("member").get("displayName").getAsString();
-				clearTaskCache();
 				TsgHubSession.set("memberToken:" + joinedEventId, memberToken);
 				TsgHubSession.set("memberName:" + joinedEventId, memberName);
-				TsgHubSession.set("token", memberToken);
-				TsgHubSession.set("displayName", memberName);
-				TsgHubSession.set("eventId", joinedEventId);
+				setActiveEvent(joinedEventId, memberToken, memberName);
 				memberStatus("You're in! Progress now counts for your team.", Tone.SUCCESS);
 				refreshBoard(true);
 			}
@@ -1006,12 +1003,16 @@ public class TsgHubPlugin extends Plugin
 			memberStatus("Join this event with your team code first.", Tone.ERROR);
 			return;
 		}
-		String displayName = eventSession("memberName:", eventId, "displayName");
+		setActiveEvent(eventId, token, eventSession("memberName:", eventId, "displayName"));
+		refreshBoard(open);
+	}
+
+	private void setActiveEvent(String eventId, String token, String displayName)
+	{
 		clearTaskCache();
 		TsgHubSession.set("token", token);
 		TsgHubSession.set("eventId", eventId);
 		TsgHubSession.set("displayName", displayName);
-		refreshBoard(open);
 	}
 
 	private void syncClanRank(String eventId, String token, JsonObject event)
