@@ -15,6 +15,7 @@ Clan events for **Type Shiii Gaming** (TSG), right in your RuneLite sidebar. Joi
 - **Clan parties** for raids, bossing and skilling. Join with one click, no passphrase to type, and see your party's health, prayer, gear, inventory and skills live.
 - **Members** list showing which clanmates are online, their world, area and what they're doing.
 - **Drops** history of the clan's big drops, raid loot, pets and collection log items, so you can catch up on what you missed.
+- **Split view**: pin Members, Parties or Drops below the main view to keep them open alongside an event.
 - **Discord linking**: link your RuneScape account to the clan Discord.
 - **Admin tools** for clan admins: create events, teams and tasks, and review proof, all without leaving the game.
 
@@ -97,6 +98,14 @@ It's built from the clan chat broadcasts your clan already has turned on: drops 
 
 <p>
 <img src="docs/images/drops.png" width="320" alt="Recent clan drops with item, player, value and time">
+</p>
+
+## Split view
+
+Click the pin icon on **Members**, **Parties** or **Drops** to dock it below the main view, then open an event or anything else above it. Drag the divider to resize, click the dock's bar or arrow to collapse it to a single row, and click **✕** to unpin. One section can be pinned at a time, and the dock remembers its size and what's pinned.
+
+<p>
+<img src="docs/images/dock.png" width="320" alt="A bingo board with the Members list pinned below it">
 </p>
 
 ## Getting started

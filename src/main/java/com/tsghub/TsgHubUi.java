@@ -1145,6 +1145,22 @@ final class TsgHubUi
 		}
 	}
 
+	static final class PinIcon extends HoverIcon
+	{
+		PinIcon() { super(16); }
+		@Override void paint(Graphics2D g, Component c)
+		{
+			g.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+			g.drawLine(5, 2, 11, 2);
+			g.drawLine(6, 2, 6, 7);
+			g.drawLine(10, 2, 10, 7);
+			g.drawLine(3, 10, 13, 10);
+			g.drawLine(6, 7, 3, 10);
+			g.drawLine(10, 7, 13, 10);
+			g.drawLine(8, 10, 8, 15);
+		}
+	}
+
 	abstract static class TileIcon implements Icon
 	{
 		@Override public int getIconWidth() { return 24; }

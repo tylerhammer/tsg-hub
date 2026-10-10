@@ -48,6 +48,7 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import net.runelite.client.hiscore.HiscoreResult;
@@ -86,12 +87,19 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final JButton refresh = iconButton(refreshIcon, "Refresh");
 	private final JButton organizer = iconButton(new OrganizerIcon(), "Admin tools");
 	private final JButton settings = iconButton(new CogIcon(), "Plugin settings");
+	private final JButton pin = iconButton(new PinIcon(), "Pin below");
 	private final JPanel footer = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
 	private final StatusLine status = new StatusLine(TEXT_W);
 
 	private final CardLayout centerLayout = new CardLayout();
 	private final JPanel center = new JPanel(centerLayout);
 	private final WidthTrackingPanel page = new WidthTrackingPanel();
+	private final WidthTrackingPanel membersPage = new WidthTrackingPanel();
+	private final WidthTrackingPanel dropsPage = new WidthTrackingPanel();
+	private final JScrollPane membersScroll = scroll(membersPage);
+	private final JScrollPane dropsScroll = scroll(dropsPage);
+	private final TsgHubDock dock = new TsgHubDock(center, this::unpin);
+	private View pinned;
 
 	private final JPanel boardSummary = stack();
 	private final WidthTrackingPanel tasksTab = new WidthTrackingPanel();
@@ -121,6 +129,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private boolean notesLoaded;
 	private final JCheckBox showOffline = new JCheckBox("Show offline");
 	private String lookupName = "";
+	private View lookupReturn = View.MEMBERS;
 	private int lookupType;
 	private HiscoreResult lookupResult;
 	private String lookupError = "";
@@ -136,6 +145,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 2, 0));
 	private final List<Section> sections;
 	private final WidthTrackingPanel groupsPage = new WidthTrackingPanel();
+	private final JScrollPane groupsScroll = scroll(groupsPage);
 	private final GroupMembersPanel groupMembers;
 	private static final String WILDERNESS = "Wilderness lvl ";
 	private static final int DROP_ICON_W = 40;
@@ -204,8 +214,10 @@ final class TsgHubSidebarPanel extends PluginPanel
 		center.setOpaque(false);
 		center.add(scroll(page), "page");
 		center.add(buildBoard(), "board");
-		center.add(scroll(groupsPage), "groups");
-		add(center, BorderLayout.CENTER);
+		center.add(groupsScroll, "groups");
+		center.add(membersScroll, "members");
+		center.add(dropsScroll, "drops");
+		add(dock, BorderLayout.CENTER);
 		add(buildFooter(), BorderLayout.SOUTH);
 
 		codeField.setToolTipText("Team code from an admin");
@@ -232,6 +244,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		});
 
 		showLoggedOut();
+		restorePin();
 	}
 
 	private JPanel buildHeader()
@@ -247,7 +260,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			}
 			if (view == View.LOOKUP)
 			{
-				showMembers();
+				reopen(lookupReturn);
 				return;
 			}
 			if (view == View.GROUPS || view == View.EVENTS || view == View.MEMBERS || view == View.DROPS)
@@ -287,7 +300,10 @@ final class TsgHubSidebarPanel extends PluginPanel
 		refreshSlot.setPreferredSize(refresh.getPreferredSize());
 		refreshSlot.add(refresh);
 		settings.addActionListener(e -> plugin.openSettings());
+		pin.addActionListener(e -> pinCurrent());
+		pin.setVisible(false);
 		actions.add(organizer);
+		actions.add(pin);
 		actions.add(refreshSlot);
 		actions.add(settings);
 		titleRow.add(actions, BorderLayout.EAST);
@@ -327,12 +343,13 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		organizer.setVisible(allowed);
 		title.setText(html(escape(titleText), titleWidth()));
-		if (view == View.MEMBERS) renderMembers();
+		if (shows(View.MEMBERS)) renderMembers();
 	}
 
 	private int titleWidth()
 	{
-		return 150 - (organizer.isVisible() ? organizer.getPreferredSize().width + 2 : 0);
+		return 150 - (organizer.isVisible() ? organizer.getPreferredSize().width + 2 : 0)
+			- (pin.isVisible() ? pin.getPreferredSize().width + 2 : 0);
 	}
 
 	void setStatus(String message, Tone tone)
@@ -540,7 +557,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	void locationSharingChanged()
 	{
-		if (view == View.MEMBERS) renderMembers();
+		if (shows(View.MEMBERS)) renderMembers();
 	}
 
 	void setMembers(JsonArray members, JsonArray offline, boolean notesLoaded)
@@ -548,12 +565,18 @@ final class TsgHubSidebarPanel extends PluginPanel
 		this.members = members;
 		this.offlineMembers = offline;
 		this.notesLoaded = notesLoaded;
-		if (view == View.MEMBERS) renderMembers();
-		else if (view == View.HOME) renderHome();
+		if (shows(View.MEMBERS)) renderMembers();
+		if (view == View.HOME) renderHome();
 	}
 
 	void showMembers()
 	{
+		if (pinned == View.MEMBERS)
+		{
+			dock.expand();
+			plugin.presence().loadMembers(false);
+			return;
+		}
 		setView(View.MEMBERS);
 		renderMembers();
 		plugin.presence().loadMembers(false);
@@ -561,41 +584,41 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	private void renderMembers()
 	{
-		setHeader("Members", "", true, true);
-		page.removeAll();
+		viewHeader(View.MEMBERS, "Members", "", membersSummary());
+		membersPage.removeAll();
 		if (members == null)
 		{
-			page.add(caption("Loading members..."));
-			refreshPage();
+			membersPage.add(caption("Loading members..."));
+			refresh(membersPage);
 			return;
 		}
-		page.add(sectionHeading("Online (" + members.size() + ")", null));
-		if (members.size() == 0) page.add(hint("Nobody online right now."));
+		membersPage.add(sectionHeading("Online (" + members.size() + ")", null));
+		if (members.size() == 0) membersPage.add(hint("Nobody online right now."));
 		int myWorld = 0;
 		for (JsonObject member : objects(members))
 			if (samePlayer(str(member, "displayName"), plugin.getDetectedPlayerName())) myWorld = integer(member, "world", 0);
 		for (JsonObject member : objects(members))
 		{
-			page.add(memberCard(member, myWorld));
-			page.add(Box.createVerticalStrut(LIST_GAP));
+			membersPage.add(memberCard(member, myWorld));
+			membersPage.add(Box.createVerticalStrut(LIST_GAP));
 		}
 		if (offlineMembers.size() > 0)
 		{
-			page.add(Box.createVerticalStrut(GAP_S));
-			page.add(sectionHeading("Offline (" + offlineMembers.size() + ")", showOffline));
+			membersPage.add(Box.createVerticalStrut(GAP_S));
+			membersPage.add(sectionHeading("Offline (" + offlineMembers.size() + ")", showOffline));
 			if (showOffline.isSelected())
 			{
 				for (JsonObject member : objects(offlineMembers))
 				{
-					page.add(offlineRow(member));
-					page.add(Box.createVerticalStrut(LIST_GAP));
+					membersPage.add(offlineRow(member));
+					membersPage.add(Box.createVerticalStrut(LIST_GAP));
 				}
 			}
 		}
-		page.add(Box.createVerticalStrut(GAP_M));
-		page.add(hint(plugin.locationSharingEnabled() ? "Leave clan chat to hide yourself."
+		membersPage.add(Box.createVerticalStrut(GAP_M));
+		membersPage.add(hint(plugin.locationSharingEnabled() ? "Leave clan chat to hide yourself."
 			: "You show as Online. Turn on location sharing in settings to show what you're doing."));
-		refreshPage();
+		refresh(membersPage);
 	}
 
 	private JPanel sectionHeading(String text, JComponent right)
@@ -761,6 +784,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		lookupName = name;
 		lookupType = accountType;
+		if (view != View.LOOKUP) lookupReturn = view;
 		setView(View.LOOKUP);
 		loadLookup();
 	}
@@ -1115,11 +1139,17 @@ final class TsgHubSidebarPanel extends PluginPanel
 	void setDrops(JsonArray drops)
 	{
 		this.drops = drops;
-		if (view == View.DROPS) renderDrops();
+		if (shows(View.DROPS)) renderDrops();
 	}
 
 	void showDrops()
 	{
+		if (pinned == View.DROPS)
+		{
+			dock.expand();
+			plugin.drops().load(false);
+			return;
+		}
 		setView(View.DROPS);
 		renderDrops();
 		plugin.drops().load(false);
@@ -1127,15 +1157,15 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	private void renderDrops()
 	{
-		setHeader("Drops", "", true, true);
-		page.removeAll();
+		viewHeader(View.DROPS, "Drops", "", "");
+		dropsPage.removeAll();
 		if (drops == null)
 		{
-			page.add(caption("Loading drops..."));
+			dropsPage.add(caption("Loading drops..."));
 		}
 		else if (drops.size() == 0)
 		{
-			page.add(errorPanel("No drops yet", "Clan broadcasts for drops, raid loot, pets and collection log items show up here."));
+			dropsPage.add(errorPanel("No drops yet", "Clan broadcasts for drops, raid loot, pets and collection log items show up here."));
 		}
 		else
 		{
@@ -1148,14 +1178,14 @@ final class TsgHubSidebarPanel extends PluginPanel
 				String nextDay = dropDay(str(drop, "receivedAt"), now, zone);
 				if (!nextDay.equals(day))
 				{
-					page.add(listHeading(nextDay, i == 0));
+					dropsPage.add(listHeading(nextDay, i == 0));
 					day = nextDay;
 				}
-				page.add(dropCard(drop, now, zone));
-				page.add(Box.createVerticalStrut(LIST_GAP));
+				dropsPage.add(dropCard(drop, now, zone));
+				dropsPage.add(Box.createVerticalStrut(LIST_GAP));
 			}
 		}
-		refreshPage();
+		refresh(dropsPage);
 	}
 
 	private JPanel dropCard(JsonObject drop, Instant now, ZoneId zone)
@@ -1515,6 +1545,12 @@ final class TsgHubSidebarPanel extends PluginPanel
 	void showParties()
 	{
 		groupError.setVisible(false);
+		if (pinned == View.GROUPS)
+		{
+			dock.expand();
+			plugin.groups().refresh();
+			return;
+		}
 		setView(View.GROUPS);
 		renderGroups();
 		plugin.groups().refresh();
@@ -1523,15 +1559,15 @@ final class TsgHubSidebarPanel extends PluginPanel
 	void showGroupList()
 	{
 		groupBusy = false;
-		if (view == View.GROUPS) renderGroups();
+		if (shows(View.GROUPS)) renderGroups();
 	}
 
 	void setGroups(JsonArray groups)
 	{
 		groupList = groups;
 		applyMemberOrder(plugin.groups().currentGroup());
-		if (view == View.GROUPS) renderGroups();
-		else if (view == View.HOME) renderHome();
+		if (shows(View.GROUPS)) renderGroups();
+		if (view == View.HOME) renderHome();
 	}
 
 	void showGroup(JsonObject group)
@@ -1539,22 +1575,23 @@ final class TsgHubSidebarPanel extends PluginPanel
 		groupBusy = false;
 		browsingParties = false;
 		applyMemberOrder(group);
-		if (view != View.GROUPS) setView(View.GROUPS);
+		if (pinned == View.GROUPS) dock.expand();
+		else if (view != View.GROUPS) setView(View.GROUPS);
 		renderGroups();
 	}
 
 	void groupRefreshed(JsonObject group)
 	{
 		applyMemberOrder(group);
-		if (view == View.GROUPS) renderGroups();
-		else if (view == View.HOME) renderHome();
+		if (shows(View.GROUPS)) renderGroups();
+		if (view == View.HOME) renderHome();
 	}
 
 	void groupActionFailed(String message)
 	{
 		groupBusy = false;
 		showError(groupError, message);
-		if (view == View.GROUPS) renderGroups();
+		if (shows(View.GROUPS)) renderGroups();
 	}
 
 	void groupMemberUpdated(PartyPlayer player, boolean bannerChanged, boolean self)
@@ -1573,9 +1610,9 @@ final class TsgHubSidebarPanel extends PluginPanel
 		TsgHubGroups groups = plugin.groups();
 		JsonObject current = groups.currentGroup();
 		if (current == null || !str(current, "activity").isEmpty()) return;
-		if (view == View.GROUPS && !browsingParties) setPartyHeader(current);
-		else if (view == View.GROUPS) renderGroups();
-		else if (view == View.HOME) renderHome();
+		if (shows(View.GROUPS) && !browsingParties) setPartyHeader(current);
+		else if (shows(View.GROUPS)) renderGroups();
+		if (view == View.HOME) renderHome();
 	}
 
 	void groupSettingsChanged(boolean expandChanged)
@@ -1618,7 +1655,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		int count = group == null ? 0 : array(group, "members").size();
 		String members = count == 0 ? "" : count == 1 ? "Just you so far" : count + " members";
 		if (group != null && bool(group, "locked")) members = members.isEmpty() ? "Locked" : members + " · Locked";
-		setHeader(group == null ? "Your party" : currentTitle(group), members, true, true);
+		viewHeader(View.GROUPS, group == null ? "Your party" : currentTitle(group), members, members);
 	}
 
 	private void renderCurrentGroup(JsonObject group)
@@ -1676,8 +1713,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	private void renderGroupList(JsonObject current)
 	{
-		setHeader(current != null ? "Other parties" : "Parties", "", true, true);
-		back.setToolTipText(current != null ? "Back to your party" : "Home");
+		viewHeader(View.GROUPS, current != null ? "Other parties" : "Parties", "", partiesSummary());
+		if (pinned != View.GROUPS) back.setToolTipText(current != null ? "Back to your party" : "Home");
 		if (groupList == null)
 		{
 			groupsPage.add(caption("Loading parties..."));
@@ -1877,13 +1914,143 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		view = next;
 		boardShowing = next == View.BOARD;
-		membersWanted = next == View.MEMBERS || next == View.HOME;
-		groupsWanted = next == View.GROUPS || next == View.HOME;
-		dropsWanted = next == View.DROPS;
+		boolean docked = pinned != null && !gated(next);
+		membersWanted = next == View.MEMBERS || next == View.HOME || docked && pinned == View.MEMBERS;
+		groupsWanted = next == View.GROUPS || next == View.HOME || docked && pinned == View.GROUPS;
+		dropsWanted = next == View.DROPS || docked && pinned == View.DROPS;
 		if (next != View.COMPETITION) openCompetitionId = null;
-		centerLayout.show(center, next == View.BOARD ? "board" : next == View.GROUPS ? "groups" : "page");
+		centerLayout.show(center, cardName(next));
 		footer.setVisible(next == View.HOME);
-		back.setToolTipText(next == View.LOOKUP ? "Members" : next == View.EVENTS || next == View.GROUPS || next == View.MEMBERS || next == View.DROPS ? "Home" : "Back to events");
+		dock.setShown(!gated(next));
+		pin.setVisible(pinnable(next));
+		title.setText(html(escape(titleText), titleWidth()));
+		back.setToolTipText(next == View.LOOKUP ? backLabel(lookupReturn) : next == View.EVENTS || next == View.GROUPS || next == View.MEMBERS || next == View.DROPS ? "Home" : "Back to events");
+	}
+
+	private static String cardName(View next)
+	{
+		switch (next)
+		{
+			case BOARD: return "board";
+			case GROUPS: return "groups";
+			case MEMBERS: return "members";
+			case DROPS: return "drops";
+			default: return "page";
+		}
+	}
+
+	private static boolean gated(View next)
+	{
+		return next == View.LOGGED_OUT || next == View.NOT_IN_CLAN || next == View.SHARING_OFF;
+	}
+
+	private static boolean pinnable(View next)
+	{
+		return next == View.MEMBERS || next == View.DROPS || next == View.GROUPS;
+	}
+
+	private boolean shows(View owner)
+	{
+		return view == owner || pinned == owner;
+	}
+
+	private static String backLabel(View target)
+	{
+		switch (target)
+		{
+			case MEMBERS: return "Members";
+			case BOARD:
+			case COMPETITION: return "Back to event";
+			case EVENTS: return "Events";
+			case DROPS: return "Drops";
+			case GROUPS: return "Parties";
+			default: return "Home";
+		}
+	}
+
+	private void reopen(View target)
+	{
+		switch (target)
+		{
+			case MEMBERS: showMembers(); break;
+			case DROPS: showDrops(); break;
+			case GROUPS: showParties(); break;
+			case EVENTS: showEventList(); break;
+			case BOARD:
+				if (boardEvent != null) showBoard(boardEvent, boardDisplayName, true);
+				else showHome();
+				break;
+			case COMPETITION:
+				if (competitionEvent != null) showCompetition(competitionEvent, competitionName, true);
+				else showHome();
+				break;
+			default: showHome();
+		}
+	}
+
+	private void viewHeader(View owner, String titleText, String subtitleText, String dockDetail)
+	{
+		if (pinned == owner) dock.setTitle(titleText, dockDetail);
+		else setHeader(titleText, subtitleText, true, true);
+	}
+
+	private JScrollPane pane(View owner)
+	{
+		return owner == View.MEMBERS ? membersScroll : owner == View.DROPS ? dropsScroll : groupsScroll;
+	}
+
+	private Icon pinIcon(View owner)
+	{
+		return owner == View.MEMBERS ? new MembersIcon() : owner == View.DROPS ? new DropsIcon() : new PartyIcon();
+	}
+
+	void pinCurrent()
+	{
+		if (!pinnable(view)) return;
+		View next = view;
+		if (pinned != null) unpin();
+		pin(next);
+		showHome();
+	}
+
+	private void pin(View next)
+	{
+		pinned = next;
+		TsgHubSession.set("dockView", next.name());
+		dock.pin(pinIcon(next), pane(next));
+		dock.expand();
+		renderPinned();
+	}
+
+	private void unpin()
+	{
+		if (pinned == null) return;
+		View was = pinned;
+		pinned = null;
+		TsgHubSession.set("dockView", "");
+		dock.unpin();
+		center.add(pane(was), cardName(was));
+		setView(view);
+	}
+
+	private void restorePin()
+	{
+		String saved = TsgHubSession.get("dockView");
+		for (View candidate : View.values())
+			if (pinnable(candidate) && candidate.name().equals(saved))
+			{
+				pinned = candidate;
+				dock.pin(pinIcon(candidate), pane(candidate));
+				setView(view);
+				renderPinned();
+			}
+	}
+
+	private void renderPinned()
+	{
+		if (pinned == View.MEMBERS) renderMembers();
+		else if (pinned == View.DROPS) renderDrops();
+		else if (pinned == View.GROUPS) renderGroups();
 	}
 
 	private JPanel buildFooter()
