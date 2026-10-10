@@ -206,9 +206,12 @@ public final class GroupTracker
 	public void onPartyChanged(final PartyChanged event)
 	{
 		partyMembers.clear();
-		myPlayer = null;
-		selfView = null;
-		currentChange = new TsgGroupUpdate();
+		clientThread.invoke(() ->
+		{
+			myPlayer = null;
+			selfView = null;
+			currentChange = new TsgGroupUpdate();
+		});
 		SwingUtilities.invokeLater(listener::membersCleared);
 		listener.partyChanged(event.getPassphrase());
 	}
@@ -221,6 +224,7 @@ public final class GroupTracker
 
 		if (myPlayer == null)
 		{
+			if (partyService.getLocalMember() == null) return;
 			myPlayer = new PartyPlayer(partyService.getLocalMember(), client, itemManager, clientThread);
 			sendUpdate(partyPlayerAsBatchedChange());
 			return;
@@ -262,16 +266,10 @@ public final class GroupTracker
 	public void onUserSync(final UserSync event)
 	{
 		if (!isSharing()) return;
-		if (myPlayer != null)
-		{
-			final TsgGroupUpdate c = partyPlayerAsBatchedChange();
-			if (c.isValid()) sendUpdate(c);
-			return;
-		}
-
 		clientThread.invoke(() ->
 		{
-			myPlayer = new PartyPlayer(partyService.getLocalMember(), client, itemManager, clientThread);
+			if (partyService.getLocalMember() == null) return;
+			if (myPlayer == null) myPlayer = new PartyPlayer(partyService.getLocalMember(), client, itemManager, clientThread);
 			final TsgGroupUpdate c = partyPlayerAsBatchedChange();
 			if (c.isValid()) sendUpdate(c);
 		});
