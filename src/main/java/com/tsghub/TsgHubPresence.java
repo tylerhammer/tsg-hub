@@ -146,20 +146,25 @@ final class TsgHubPresence
 			{
 				String token = key.get();
 				JsonArray members = TsgHubUi.array(api.get().request("GET", "/v1/presence?clanName=" + clan, token, null), "members");
-				JsonArray loaded = loadNotes(clan, token);
-				if (loaded != null) notes = loaded;
-				JsonArray known = notes;
-				clientThread.invokeLater(() -> {
-					JsonArray[] roster = roster(members, chatWorlds(), clanNames(), known == null ? new JsonArray() : known);
-					addRanks(roster[0]);
-					addRanks(roster[1]);
-					loadAccountIcons(roster[0]);
-					loadAccountIcons(roster[1]);
-					ui(s -> s.setMembers(roster[0], roster[1], known != null));
-				});
+				apply(members, loadNotes(clan, token));
 			}
 			catch (Exception e) { if (!quiet) ui(s -> s.setStatus("Couldn't load members. " + TsgHubUi.friendlyError(e), Tone.ERROR)); }
 			finally { if (!quiet) ui(s -> s.setBusy(false)); }
+		});
+	}
+
+	void apply(JsonArray members, JsonArray loaded)
+	{
+		if (!canUse()) return;
+		if (loaded != null) notes = loaded;
+		JsonArray known = notes;
+		clientThread.invokeLater(() -> {
+			JsonArray[] roster = roster(members, chatWorlds(), clanNames(), known == null ? new JsonArray() : known);
+			addRanks(roster[0]);
+			addRanks(roster[1]);
+			loadAccountIcons(roster[0]);
+			loadAccountIcons(roster[1]);
+			ui(s -> s.setMembers(roster[0], roster[1], known != null));
 		});
 	}
 

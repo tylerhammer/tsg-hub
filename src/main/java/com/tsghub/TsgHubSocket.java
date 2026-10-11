@@ -1,5 +1,6 @@
 package com.tsghub;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -27,7 +28,9 @@ final class TsgHubSocket
 
 	interface Listener
 	{
-		void onState(State state);
+		void onConnection(State state);
+
+		void onSnapshot(JsonObject message);
 
 		void onReady(String rulesVersion);
 
@@ -90,6 +93,7 @@ final class TsgHubSocket
 	private WebSocket socket;
 	private JsonObject presence;
 	private String adminToken = "";
+	private Set<String> watching = new HashSet<>();
 	private ScheduledFuture<?> retry;
 	private String clanName = "";
 	private String rejectedClan = "";
@@ -130,6 +134,7 @@ final class TsgHubSocket
 		confirmed.clear();
 		presence = null;
 		adminToken = "";
+		watching = new HashSet<>();
 		changed();
 	}
 
@@ -189,6 +194,23 @@ final class TsgHubSocket
 		message.addProperty("group", group);
 		message.addProperty("open", open);
 		message.addProperty("tick", tick);
+		socket.send(message.toString());
+	}
+
+	synchronized void watch(Set<String> topics)
+	{
+		if (topics.equals(watching)) return;
+		watching = new HashSet<>(topics);
+		if (ready && socket != null) sendWatch();
+	}
+
+	private void sendWatch()
+	{
+		JsonArray topics = new JsonArray();
+		watching.forEach(topics::add);
+		JsonObject message = new JsonObject();
+		message.addProperty("type", "watch");
+		message.add("topics", topics);
 		socket.send(message.toString());
 	}
 
@@ -258,6 +280,7 @@ final class TsgHubSocket
 		}
 		if (presence != null) sendPresence();
 		if (!adminToken.isEmpty()) sendAdmin();
+		if (!watching.isEmpty()) sendWatch();
 		changed();
 		String rulesVersion = string(message, "rules");
 		executor.execute(() -> listener.onReady(rulesVersion));
@@ -309,7 +332,7 @@ final class TsgHubSocket
 		State next = ready ? State.LIVE : socket != null || retry != null ? State.CONNECTING : State.OFFLINE;
 		if (next == state) return;
 		state = next;
-		if (listener != null && !executor.isShutdown()) executor.execute(() -> listener.onState(next));
+		if (listener != null && !executor.isShutdown()) executor.execute(() -> listener.onConnection(next));
 	}
 
 	private synchronized void reopen()
@@ -360,6 +383,9 @@ final class TsgHubSocket
 				case "claimed":
 				case "notice":
 					executor.execute(() -> listener.onReply(message));
+					break;
+				case "state":
+					executor.execute(() -> listener.onSnapshot(message));
 					break;
 				case "ack":
 					String id = string(message, "id");

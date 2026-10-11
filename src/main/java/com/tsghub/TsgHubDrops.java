@@ -71,15 +71,20 @@ final class TsgHubDrops
 		executor.submit(() -> {
 			try
 			{
-				JsonArray drops = api.get().request("GET", "/v1/drops?clanName=" + clan, null, null).getAsJsonArray("drops");
-				if (clientThread == null) ui(s -> s.setDrops(drops));
-				else clientThread.invokeLater(() -> {
-					addItemIds(drops);
-					ui(s -> s.setDrops(drops));
-				});
+				apply(api.get().request("GET", "/v1/drops?clanName=" + clan, null, null).getAsJsonArray("drops"));
 			}
 			catch (Exception e) { if (!quiet) ui(s -> s.setStatus("Couldn't load drops. " + TsgHubUi.friendlyError(e), Tone.ERROR)); }
 			finally { if (!quiet) ui(s -> s.setBusy(false)); }
+		});
+	}
+
+	void apply(JsonArray drops)
+	{
+		if (drops == null) return;
+		if (clientThread == null) ui(s -> s.setDrops(drops));
+		else clientThread.invokeLater(() -> {
+			addItemIds(drops);
+			ui(s -> s.setDrops(drops));
 		});
 	}
 
