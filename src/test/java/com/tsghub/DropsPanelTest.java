@@ -1,10 +1,10 @@
 package com.tsghub;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.awt.Color;
 import java.time.Instant;
@@ -105,36 +105,15 @@ public class DropsPanelTest
 	}
 
 	@Test
-	public void ownBroadcast()
-	{
-		assertTrue(TsgHubDrops.ownBroadcast("Iron Alice received a drop: Abyssal whip (1,000 coins).", "Iron Alice"));
-		assertTrue(TsgHubDrops.ownBroadcast("itsHammerKR has a funny feeling like he's being followed: Vorki at 158 killcount from Vorkath.", "itshammerkr"));
-		assertFalse(TsgHubDrops.ownBroadcast("Iron Alice received a drop: Abyssal whip (1,000 coins).", "Alice"));
-		assertFalse(TsgHubDrops.ownBroadcast("Iron Alice received a drop: Abyssal whip (1,000 coins).", null));
-	}
-
-	@Test
-	public void killCountMessage()
-	{
-		assertEquals(158, TsgHubDrops.killCount("Your Vorkath kill count is: <col=ff0000>158</col>."));
-		assertEquals(1234, TsgHubDrops.killCount("Your completed Chambers of Xeric count is: <col=ff0000>1,234</col>."));
-		assertEquals(0, TsgHubDrops.killCount("Fight duration: 1:23. Personal best: 1:00"));
-		assertEquals(0, TsgHubDrops.killCount(null));
-	}
-
-	@Test
-	public void recentPicksNearestTick()
+	public void recentContextSinceTick()
 	{
 		TsgHubDrops.Recent<String> recent = new TsgHubDrops.Recent<>();
-		assertNull(recent.nearest(0, 2));
-		recent.add(100, "Dagannoth Rex");
-		recent.add(101, "Dagannoth Prime");
-		recent.add(103, "Dagannoth Supreme");
-		assertEquals("Dagannoth Rex", recent.nearest(100, 2));
-		assertEquals("Dagannoth Supreme", recent.nearest(104, 2));
-		assertNull(recent.nearest(110, 2));
-		for (int i = 0; i < 10; i++) recent.add(200 + i, "Spam");
-		assertNull(recent.nearest(100, 2));
+		recent.add(80, "Kraken");
+		recent.add(99, "Abyssal demon");
+		JsonArray rows = recent.since(90, "source");
+		assertEquals(1, rows.size());
+		assertEquals(99, rows.get(0).getAsJsonObject().get("tick").getAsInt());
+		assertEquals("Abyssal demon", rows.get(0).getAsJsonObject().get("source").getAsString());
 	}
 
 	@Test

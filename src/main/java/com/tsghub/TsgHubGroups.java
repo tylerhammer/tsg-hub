@@ -84,16 +84,21 @@ final class TsgHubGroups implements GroupTracker.Listener
 		executor.submit(() -> {
 			try
 			{
-				JsonArray groups = api.get().request("GET", "/v1/groups?clanName=" + clan, null, null).getAsJsonArray("groups");
-				JsonObject current = group;
-				if (current != null && inGroup())
-					for (int i = 0; i < groups.size(); i++)
-						if (TsgHubUi.str(groups.get(i).getAsJsonObject(), "id").equals(TsgHubUi.str(current, "id"))) group = groups.get(i).getAsJsonObject();
-				ui(s -> s.setGroups(groups));
+				apply(api.get().request("GET", "/v1/groups?clanName=" + clan, null, null).getAsJsonArray("groups"));
 			}
 			catch (Exception e) { if (!quiet) status("Couldn't load parties. " + TsgHubUi.friendlyError(e), Tone.ERROR); }
 			finally { if (!quiet) busy(false); }
 		});
+	}
+
+	void apply(JsonArray groups)
+	{
+		if (groups == null) return;
+		JsonObject current = group;
+		if (current != null && inGroup())
+			for (int i = 0; i < groups.size(); i++)
+				if (TsgHubUi.str(groups.get(i).getAsJsonObject(), "id").equals(TsgHubUi.str(current, "id"))) group = groups.get(i).getAsJsonObject();
+		ui(s -> s.setGroups(groups));
 	}
 
 	void refresh()
