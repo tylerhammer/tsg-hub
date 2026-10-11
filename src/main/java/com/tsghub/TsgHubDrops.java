@@ -103,11 +103,16 @@ final class TsgHubDrops
 					if (!indexItems()) return false;
 					addItemIds(drops);
 					plugin.ui(s -> s.setDrops(drops));
+					if (!quiet) plugin.ui(s -> s.setBusy(false));
 					return true;
 				});
 			}
-			catch (Exception e) { if (!quiet) plugin.ui(s -> s.setStatus("Couldn't load drops. " + TsgHubUi.friendlyError(e), Tone.ERROR)); }
-			finally { if (!quiet) plugin.ui(s -> s.setBusy(false)); }
+			catch (Exception e)
+			{
+				if (quiet) return;
+				plugin.ui(s -> s.setStatus("Couldn't load drops. " + TsgHubUi.friendlyError(e), Tone.ERROR));
+				plugin.ui(s -> s.setBusy(false));
+			}
 		});
 	}
 
@@ -133,7 +138,7 @@ final class TsgHubDrops
 			itemIds.putIfAbsent(name.toLowerCase(Locale.ROOT), id);
 		}
 		indexedItems = end;
-		return end >= client.getItemCount();
+		return client.getItemCount() > 0 && end >= client.getItemCount();
 	}
 
 	void autoRefresh()
