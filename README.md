@@ -162,7 +162,7 @@ Once you opt in, it sends the following to the TSG Hub service:
 - Manual proof you submit
 - Whether you're currently in the clan chat channel and your world, so teammates' completion alerts reach you and clanmates see you as online
 - With **Share location and activity** on, your area name and current activity (never your exact tile)
-- Clan chat broadcasts for drops, raid loot, pets and collection log items, for the clan's **Drops** history
+- Clan chat broadcasts for drops, raid loot, pets and collection log items, for the clan's **Drops** history. For your own broadcasts, also the monster or activity it came from and your kill count from the game message
 
 In a clan party, your stats, gear and inventory go to the other members through **RuneLite's party service**, not the TSG Hub service. The TSG Hub service only learns your display name, party and world, plus your area name if location sharing is on.
 

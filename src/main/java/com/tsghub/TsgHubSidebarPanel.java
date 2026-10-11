@@ -33,6 +33,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
@@ -1215,7 +1216,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		card.add(fillWidth(twoLines(
 			row(name, caption(dropWhen(str(drop, "receivedAt"), now, zone))),
 			row(shrinkable(label(player, ACCENT, smallFont())), extras))), BorderLayout.CENTER);
-		fullTextTooltip(card, null);
+		fullTextTooltip(card, () -> dropTooltip(drop));
 		return fitHeight(card);
 	}
 
@@ -1239,6 +1240,21 @@ final class TsgHubSidebarPanel extends PluginPanel
 		label.setPreferredSize(new Dimension(DROP_ICON_W, 32));
 		image.addTo(label);
 		return label;
+	}
+
+	static String dropTooltip(JsonObject drop)
+	{
+		String source = str(drop, "source");
+		String rate = str(drop, "rate");
+		int kc = integer(drop, "killCount", 0);
+		String out = "";
+		if (!source.isEmpty())
+		{
+			out += tipSection(true, tipLine(MUTED, "<b>DROPPED BY</b>"))
+				+ tipCard(ACCENT, "<b>" + escape(source) + "</b>" + (rate.isEmpty() ? "" : "<br>" + escape(rate) + tipLine(MUTED, " drop rate")));
+		}
+		if (kc > 0) out += tipSection(out.isEmpty(), tipLine(MUTED, "<b>KILL COUNT</b> ") + String.format(Locale.US, "%,d", kc));
+		return out;
 	}
 
 	static List<String> dropTags(JsonObject drop)

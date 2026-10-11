@@ -1580,7 +1580,9 @@ public class TsgHubPlugin extends Plugin
 	{
 		if (!isInHubClan()) return;
 		if (event.getComposition() == null) return;
-		processLoot("NPC", Text.removeTags(event.getComposition().getName()), event.getItems(), 1);
+		String name = Text.removeTags(event.getComposition().getName());
+		if (drops != null) drops.onLoot(name);
+		processLoot("NPC", name, event.getItems(), 1);
 	}
 
 	@Subscribe
@@ -1588,6 +1590,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		if (!isInHubClan()) return;
 		if (event.getType() == null || "PLAYER".equals(event.getType().name()) || "NPC".equals(event.getType().name())) return;
+		if (drops != null) drops.onLoot(event.getName());
 		processLoot(event.getType().name(), event.getName(), event.getItems(), event.getAmount());
 	}
 
