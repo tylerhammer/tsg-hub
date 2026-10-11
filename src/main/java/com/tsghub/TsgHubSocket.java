@@ -25,7 +25,7 @@ final class TsgHubSocket
 {
 	interface Listener
 	{
-		void onReady();
+		void onReady(String chatRules, String playerRules);
 
 		void onChanged(String topic, String eventId);
 
@@ -35,9 +35,11 @@ final class TsgHubSocket
 
 		void onUpdateAvailable(String version);
 
-		void onSubscribed(String eventId);
+		void onAck(String id);
 
-		void onProgress(String eventId, long gained, Long rank);
+		void onReply(JsonObject message);
+
+		void onXpRequest(String skills);
 	}
 
 	private static final int CLOSE_NORMAL = 1000;
@@ -157,9 +159,9 @@ final class TsgHubSocket
 		return live;
 	}
 
-	synchronized boolean streaming(String eventId)
+	synchronized boolean send(JsonObject message)
 	{
-		return ready && socket != null && confirmed.contains(eventId);
+		return ready && socket != null && socket.send(message.toString());
 	}
 
 	synchronized boolean xp(String skill, int xp, int tick)
@@ -238,7 +240,7 @@ final class TsgHubSocket
 		socket.send(message.toString());
 	}
 
-	private synchronized void opened(WebSocket ws)
+	private synchronized void opened(WebSocket ws, JsonObject message)
 	{
 		if (ws != socket) return;
 		ready = true;
@@ -249,7 +251,9 @@ final class TsgHubSocket
 		}
 		if (presence != null) sendPresence();
 		if (!adminToken.isEmpty()) sendAdmin();
-		executor.execute(listener::onReady);
+		String chatRules = string(message, "chat");
+		String playerRules = string(message, "players");
+		executor.execute(() -> listener.onReady(chatRules, playerRules));
 	}
 
 	private synchronized void rejected(WebSocket ws, String eventId)
@@ -264,7 +268,6 @@ final class TsgHubSocket
 	{
 		if (ws != socket || !subscriptions.containsKey(eventId)) return;
 		confirmed.add(eventId);
-		executor.execute(() -> listener.onSubscribed(eventId));
 	}
 
 	private synchronized void adminRevoked(WebSocket ws)
@@ -327,7 +330,7 @@ final class TsgHubSocket
 			switch (type)
 			{
 				case "ready":
-					opened(ws);
+					opened(ws, message);
 					break;
 				case "changed":
 					String topic = string(message, "topic");
@@ -337,7 +340,17 @@ final class TsgHubSocket
 					subscribed(ws, eventId);
 					break;
 				case "progress":
-					progress(eventId, message);
+				case "claimed":
+				case "notice":
+					executor.execute(() -> listener.onReply(message));
+					break;
+				case "ack":
+					String id = string(message, "id");
+					if (!id.isEmpty()) executor.execute(() -> listener.onAck(id));
+					break;
+				case "xp.request":
+					String skills = string(message, "skills");
+					if (!skills.isEmpty()) executor.execute(() -> listener.onXpRequest(skills));
 					break;
 				case "admin.revoked":
 					adminRevoked(ws);
@@ -378,18 +391,6 @@ final class TsgHubSocket
 			log.debug("TSG Hub socket failed", error);
 			dropped(ws, 0, response == null ? 0 : response.code());
 		}
-	}
-
-	private void progress(String eventId, JsonObject message)
-	{
-		try
-		{
-			long gained = Long.parseLong(string(message, "gained"));
-			String rank = string(message, "rank");
-			Long parsedRank = rank.isEmpty() ? null : Long.parseLong(rank);
-			if (!eventId.isEmpty()) executor.execute(() -> listener.onProgress(eventId, gained, parsedRank));
-		}
-		catch (NumberFormatException e) { return; }
 	}
 
 	private static String string(JsonObject object, String key)
