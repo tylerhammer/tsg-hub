@@ -1507,6 +1507,7 @@ public class TsgHubPlugin extends Plugin
 		if (event.getComposition() == null) return;
 		String name = Text.removeTags(event.getComposition().getName());
 		if (config.dataSharingOptIn() && competitions != null) competitions.onNpcLoot(name, client.getTickCount());
+		if (drops != null) drops.onLoot(name);
 		processLoot("NPC", name, event.getItems(), 1);
 	}
 
@@ -1515,6 +1516,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		if (!isInHubClan()) return;
 		if (event.getType() == null || "PLAYER".equals(event.getType().name()) || "NPC".equals(event.getType().name())) return;
+		if (drops != null) drops.onLoot(event.getName());
 		processLoot(event.getType().name(), event.getName(), event.getItems(), event.getAmount());
 	}
 
