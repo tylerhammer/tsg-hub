@@ -25,7 +25,7 @@ final class TsgHubSocket
 {
 	interface Listener
 	{
-		void onReady(String chatRules, String playerRules);
+		void onReady(String rulesVersion);
 
 		void onChanged(String topic, String eventId);
 
@@ -251,9 +251,8 @@ final class TsgHubSocket
 		}
 		if (presence != null) sendPresence();
 		if (!adminToken.isEmpty()) sendAdmin();
-		String chatRules = string(message, "chat");
-		String playerRules = string(message, "players");
-		executor.execute(() -> listener.onReady(chatRules, playerRules));
+		String rulesVersion = string(message, "rules");
+		executor.execute(() -> listener.onReady(rulesVersion));
 	}
 
 	private synchronized void rejected(WebSocket ws, String eventId)

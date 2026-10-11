@@ -57,7 +57,6 @@ import net.runelite.api.events.StatChanged;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.events.WidgetClosed;
 import net.runelite.api.events.WidgetLoaded;
-import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.gameval.ItemID;
 import net.runelite.client.callback.ClientThread;
@@ -98,7 +97,6 @@ public class TsgHubPlugin extends Plugin
 {
 	private static final String SERVICE_URL = "https://api.typeshiigaming.com";
 	private static final long BOARD_AUTO_REFRESH_SECONDS = 15;
-	private static final Set<Integer> PVM_PET_ITEM_IDS = Set.of(11995, 12643, 12644, 12645, 12646, 12647, 12648, 12649, 12650, 12651, 12652, 12654, 12655, 12703, 12816, 12921, 12939, 12940, 13178, 13179, 13180, 13181, 13182, 13225, 13247, 13262, 20693, 20851, 21273, 21291, 21748, 21992, 22318, 22319, 22376, 22378, 22380, 22382, 22384, 22473, 22663, 22746, 22748, 22750, 22752, 23495, 23757, 23759, 23760, 24491, 25748, 25749, 25750, 25751, 25752, 25836, 25842, 25843, 26348, 27352, 27386, 27590, 27592, 27593, 27649, 27650, 27651, 28246, 28248, 28250, 28252, 28801, 28960, 29836, 30152, 30154, 30622, 30888, 31130, 31285, 31287);
 	@Inject private Client client;
 	@Inject private ItemManager itemManager;
 	@Inject private TsgHubConfig config;
@@ -124,14 +122,6 @@ public class TsgHubPlugin extends Plugin
 	private final Map<String, Integer> syncedClanRanks = new ConcurrentHashMap<>();
 	private static final int PET_CHECK_TICKS = 5;
 	private static final int MAX_LOOT_LOG_ITEMS = 50;
-	private static final Set<Integer> REWARD_INTERFACES = Set.of(
-		InterfaceID.QUESTSCROLL,
-		InterfaceID.XPREWARD,
-		InterfaceID.PEST_REWARDSHOP,
-		InterfaceID.BARBASSAULT_REWARD_SHOP,
-		InterfaceID.SOUL_WARS_REWARDS,
-		InterfaceID.AGILITYARENA_REWARDS,
-		InterfaceID.TREK_REWARDS);
 	private static final int CLAN_CHECK_TICKS = 50;
 	private static final long KEY_CHECK_RETRY_SECONDS = 15;
 	private static final long KEY_CHECK_MAX_RETRY_SECONDS = 300;
@@ -176,9 +166,9 @@ public class TsgHubPlugin extends Plugin
 		executor = Executors.newSingleThreadScheduledExecutor(daemon("tsg-hub-api"));
 		socket = new TsgHubSocket(okHttpClient, serviceUrl, executor, new TsgHubSocket.Listener()
 		{
-			@Override public void onReady(String chatRules, String playerRules)
+			@Override public void onReady(String rulesVersion)
 			{
-				signals.rules(chatRules, playerRules);
+				refreshRules(rulesVersion);
 				signals.resend();
 				resyncLiveViews();
 			}
@@ -1474,6 +1464,13 @@ public class TsgHubPlugin extends Plugin
 		signals.xp(event.getSkill().name(), event.getXp(), client.getTickCount());
 	}
 
+	private void refreshRules(String version)
+	{
+		if (version.isEmpty() || version.equals(TsgHubRules.get().version)) return;
+		try { TsgHubRules.apply(api().request("GET", "/v1/rules", null, null)); }
+		catch (Exception ignored) { }
+	}
+
 	private void reportXp(String skills)
 	{
 		if (!sharingInClan()) return;
@@ -1492,13 +1489,13 @@ public class TsgHubPlugin extends Plugin
 	@Subscribe
 	public void onWidgetLoaded(WidgetLoaded event)
 	{
-		if (sharingInClan() && REWARD_INTERFACES.contains(event.getGroupId())) socket.rewardInterface(event.getGroupId(), true, client.getTickCount());
+		if (sharingInClan() && TsgHubRules.get().rewardInterfaces.contains(event.getGroupId())) socket.rewardInterface(event.getGroupId(), true, client.getTickCount());
 	}
 
 	@Subscribe
 	public void onWidgetClosed(WidgetClosed event)
 	{
-		if (sharingInClan() && REWARD_INTERFACES.contains(event.getGroupId())) socket.rewardInterface(event.getGroupId(), false, client.getTickCount());
+		if (sharingInClan() && TsgHubRules.get().rewardInterfaces.contains(event.getGroupId())) socket.rewardInterface(event.getGroupId(), false, client.getTickCount());
 	}
 
 	@Subscribe
@@ -1603,7 +1600,7 @@ public class TsgHubPlugin extends Plugin
 		for (Item item : inventory.getItems())
 		{
 			int itemId = itemManager.canonicalize(item.getId());
-			if (PVM_PET_ITEM_IDS.contains(itemId)) pets.add(itemId);
+			if (TsgHubRules.get().pets.contains(itemId)) pets.add(itemId);
 		}
 		return pets;
 	}
@@ -1614,7 +1611,7 @@ public class TsgHubPlugin extends Plugin
 		NPC follower = client.getFollower();
 		String followerName = follower == null ? null : petName(follower.getName());
 		if (followerName == null || followerName.isEmpty()) return -1;
-		for (int itemId : PVM_PET_ITEM_IDS)
+		for (int itemId : TsgHubRules.get().pets)
 		{
 			if (followerName.equals(petName(itemManager.getItemComposition(itemId).getName()))) return itemId;
 		}

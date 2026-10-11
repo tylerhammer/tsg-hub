@@ -3,7 +3,6 @@ package com.tsghub;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -17,8 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 final class TsgHubSignals
 {
-	static final List<String> DEFAULT_CHAT = List.of("kill count", "kill-count", "completion time", "completed chambers of xeric", "collection log");
-	static final List<String> DEFAULT_PLAYERS = List.of("completion time", "completed chambers of xeric");
 	private static final long RETRY_MILLIS = 10_000;
 	private static final long MAX_AGE_MILLIS = 600_000;
 	private static final int MAX_PENDING = 200;
@@ -42,8 +39,6 @@ final class TsgHubSignals
 	private final Consumer<JsonObject> receiver;
 	private final Map<String, Pending> pending = new LinkedHashMap<>();
 	private final Map<String, Integer> offlineXp = new HashMap<>();
-	private volatile List<String> chatRules = DEFAULT_CHAT;
-	private volatile List<String> playerRules = DEFAULT_PLAYERS;
 
 	TsgHubSignals(TsgHubSocket socket, Supplier<TsgHubApi> api, Consumer<JsonObject> receiver)
 	{
@@ -52,27 +47,14 @@ final class TsgHubSignals
 		this.receiver = receiver;
 	}
 
-	void rules(String chat, String players)
-	{
-		if (!chat.isEmpty()) chatRules = split(chat);
-		if (!players.isEmpty()) playerRules = split(players);
-	}
-
-	private static List<String> split(String rules)
-	{
-		List<String> out = new ArrayList<>();
-		for (String rule : rules.split("\\|")) if (!rule.isEmpty()) out.add(rule);
-		return Collections.unmodifiableList(out);
-	}
-
 	boolean wantsChat(String message)
 	{
-		return matches(chatRules, message);
+		return matches(TsgHubRules.get().chat, message);
 	}
 
 	boolean wantsPlayers(String message)
 	{
-		return matches(playerRules, message);
+		return matches(TsgHubRules.get().players, message);
 	}
 
 	private static boolean matches(List<String> rules, String message)

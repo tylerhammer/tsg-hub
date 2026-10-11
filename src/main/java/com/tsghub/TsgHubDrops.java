@@ -19,9 +19,6 @@ import net.runelite.client.callback.ClientThread;
 final class TsgHubDrops
 {
 	static final int REFRESH_SECONDS = 60;
-	private static final String[] KEYWORDS = {
-		"received a drop:", "received special loot from a raid:", "funny feeling", "sneaking into", "acquired something special", "new collection log item:"
-	};
 
 	private final TsgHubPlugin plugin;
 	private final Client client;
@@ -62,7 +59,7 @@ final class TsgHubDrops
 		if (raw == null) return null;
 		String message = raw.replaceAll("<[^>]*>", "").replace(' ', ' ').trim();
 		String lower = message.toLowerCase(Locale.ROOT);
-		for (String keyword : KEYWORDS) if (lower.contains(keyword)) return message;
+		for (String keyword : TsgHubRules.get().dropKeywords) if (lower.contains(keyword)) return message;
 		return null;
 	}
 

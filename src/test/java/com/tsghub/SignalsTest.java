@@ -2,10 +2,13 @@ package com.tsghub;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -49,14 +52,34 @@ public class SignalsTest
 	}
 
 	@Test
-	public void serverRulesReplaceDefaults()
+	public void serverRulesReplaceBundled() throws Exception
 	{
 		TsgHubSignals signals = signals();
+		TsgHubRules bundled = TsgHubRules.get();
+		assertEquals("Alchemical Hydra", AreaNames.forRegion(5536).name);
+		assertEquals("Vorkath", ActivityDetector.bossFor("Vorkath"));
+		assertTrue(bundled.pets.contains(11995));
+		assertTrue(bundled.rewardInterfaces.contains(153));
 		assertTrue(signals.wantsChat("your vorkath kill count is: 5."));
 		assertFalse(signals.wantsChat("you catch a shrimp."));
-		signals.rules("you catch|kill count", "");
-		assertTrue(signals.wantsChat("you catch a shrimp."));
 		assertTrue(signals.wantsPlayers("theatre of blood completion time: 20:00"));
+
+		JsonObject server = new JsonParser().parse("{\"version\":\"abc\",\"chat\":[\"You catch\"],\"areas\":[{\"type\":\"CITIES\",\"name\":\"Lumbridge\",\"regions\":[5536]}]}").getAsJsonObject();
+		try
+		{
+			TsgHubRules.apply(server);
+			assertEquals("abc", TsgHubRules.get().version);
+			assertTrue(signals.wantsChat("you catch a shrimp."));
+			assertEquals("Lumbridge", AreaNames.forRegion(5536).name);
+			assertNull(ActivityDetector.bossFor("Vorkath"));
+		}
+		finally
+		{
+			try (InputStreamReader reader = new InputStreamReader(TsgHubRules.class.getResourceAsStream("rules.json"), StandardCharsets.UTF_8))
+			{
+				TsgHubRules.apply(new JsonParser().parse(reader).getAsJsonObject());
+			}
+		}
 	}
 
 	@Test

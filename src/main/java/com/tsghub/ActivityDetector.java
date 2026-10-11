@@ -1,13 +1,7 @@
 package com.tsghub;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.EnumMap;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -19,7 +13,6 @@ final class ActivityDetector
 	static final long RECENT_MILLIS = 90_000;
 	static final long SLAYER_MILLIS = 300_000;
 	private static final Set<Skill> COMBAT = EnumSet.of(Skill.ATTACK, Skill.STRENGTH, Skill.DEFENCE, Skill.RANGED, Skill.HITPOINTS);
-	private static final Map<String, String> BOSSES = loadBosses();
 
 	private final Map<Skill, Integer> xp = new EnumMap<>(Skill.class);
 	private Skill lastSkill;
@@ -34,7 +27,7 @@ final class ActivityDetector
 
 	static String bossFor(String npcName)
 	{
-		return npcName == null ? null : BOSSES.get(Text.removeTags(npcName).trim().toLowerCase(Locale.ROOT));
+		return npcName == null ? null : TsgHubRules.get().bosses.get(Text.removeTags(npcName).trim().toLowerCase(Locale.ROOT));
 	}
 
 	void onXp(Skill skill, int value, long now)
@@ -109,25 +102,5 @@ final class ActivityDetector
 		if (fighting) return "Combat";
 		if (lastSkill != null && now - lastSkillAt < RECENT_MILLIS) return "Skilling - " + lastSkill.getName();
 		return "Idle";
-	}
-
-	private static Map<String, String> loadBosses()
-	{
-		Map<String, String> bosses = new HashMap<>();
-		InputStream in = ActivityDetector.class.getResourceAsStream("bosses.tsv");
-		if (in == null) return bosses;
-		try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8)))
-		{
-			String line;
-			while ((line = reader.readLine()) != null)
-			{
-				if (line.isEmpty() || line.startsWith("#")) continue;
-				String[] parts = line.split("\t");
-				if (parts.length < 2) continue;
-				for (String npc : parts[1].split(",")) bosses.put(npc.trim().toLowerCase(Locale.ROOT), parts[0]);
-			}
-		}
-		catch (IOException ignored) { }
-		return bosses;
 	}
 }
