@@ -1,7 +1,9 @@
 package com.tsghub;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import com.google.gson.JsonObject;
 import java.awt.Color;
@@ -100,6 +102,37 @@ public class DropsPanelTest
 			TsgHubDrops.broadcast("itsHammerKR has a funny feeling like he would have been followed: Vorki at 912 killcount from Vorkath."));
 		assertNull(TsgHubDrops.broadcast("Bob has reached combat level 100."));
 		assertNull(TsgHubDrops.broadcast(null));
+	}
+
+	@Test
+	public void ownBroadcast()
+	{
+		assertTrue(TsgHubDrops.ownBroadcast("Iron Alice received a drop: Abyssal whip (1,000 coins).", "Iron Alice"));
+		assertTrue(TsgHubDrops.ownBroadcast("itsHammerKR has a funny feeling like he's being followed: Vorki at 158 killcount from Vorkath.", "itshammerkr"));
+		assertFalse(TsgHubDrops.ownBroadcast("Iron Alice received a drop: Abyssal whip (1,000 coins).", "Alice"));
+		assertFalse(TsgHubDrops.ownBroadcast("Iron Alice received a drop: Abyssal whip (1,000 coins).", null));
+	}
+
+	@Test
+	public void killCountMessage()
+	{
+		assertEquals(158, TsgHubDrops.killCount("Your Vorkath kill count is: <col=ff0000>158</col>."));
+		assertEquals(1234, TsgHubDrops.killCount("Your completed Chambers of Xeric count is: <col=ff0000>1,234</col>."));
+		assertEquals(0, TsgHubDrops.killCount("Fight duration: 1:23. Personal best: 1:00"));
+		assertEquals(0, TsgHubDrops.killCount(null));
+	}
+
+	@Test
+	public void dropTooltip()
+	{
+		JsonObject drop = drop("Dragon pickaxe", 1);
+		assertEquals("", TsgHubSidebarPanel.dropTooltip(drop));
+		drop.addProperty("source", "Spindel");
+		assertEquals("Spindel", TsgHubSidebarPanel.dropTooltip(drop));
+		drop.addProperty("rate", "1/358");
+		drop.addProperty("killCount", 1812);
+		String tip = TsgHubSidebarPanel.dropTooltip(drop);
+		assertTrue(tip, tip.startsWith("Spindel<font") && tip.contains("1/358<br>") && tip.endsWith("KC </font>1,812"));
 	}
 
 	private static JsonObject drop(String item, int quantity)

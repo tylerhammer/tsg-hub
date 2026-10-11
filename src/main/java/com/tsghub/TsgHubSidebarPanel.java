@@ -33,6 +33,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
@@ -1205,7 +1206,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		card.add(fillWidth(twoLines(
 			row(name, caption(dropWhen(str(drop, "receivedAt"), now, zone))),
 			row(shrinkable(label(player, ACCENT, smallFont())), extras))), BorderLayout.CENTER);
-		fullTextTooltip(card, null);
+		fullTextTooltip(card, () -> dropTooltip(drop));
 		return fitHeight(card);
 	}
 
@@ -1229,6 +1230,17 @@ final class TsgHubSidebarPanel extends PluginPanel
 		label.setPreferredSize(new Dimension(DROP_ICON_W, 32));
 		image.addTo(label);
 		return label;
+	}
+
+	static String dropTooltip(JsonObject drop)
+	{
+		List<String> lines = new ArrayList<>();
+		String source = str(drop, "source");
+		String rate = str(drop, "rate");
+		if (!source.isEmpty()) lines.add(escape(source) + (rate.isEmpty() ? "" : tipLine(MUTED, " · ") + escape(rate)));
+		int kc = integer(drop, "killCount", 0);
+		if (kc > 0) lines.add(tipLine(MUTED, "KC ") + String.format(Locale.US, "%,d", kc));
+		return String.join("<br>", lines);
 	}
 
 	static List<String> dropTags(JsonObject drop)
