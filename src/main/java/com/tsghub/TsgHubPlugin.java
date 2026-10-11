@@ -178,6 +178,7 @@ public class TsgHubPlugin extends Plugin
 			@Override public void onAdminRevoked(String token) { recheckHubKey(token); }
 			@Override public void onAnnouncement(String text) { announce(text); }
 			@Override public void onUpdateAvailable(String version) { updateAvailable(version); }
+			@Override public void onState(TsgHubSocket.State state) { SwingUtilities.invokeLater(() -> { if (sidebar != null) sidebar.setConnection(state); }); }
 			@Override public void onAck(String id) { signals.acked(id); }
 			@Override public void onReply(JsonObject message) { signalReply(message); }
 			@Override public void onXpRequest(String skills) { reportXp(skills); }

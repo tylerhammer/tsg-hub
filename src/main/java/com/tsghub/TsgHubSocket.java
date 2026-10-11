@@ -23,8 +23,12 @@ import okhttp3.WebSocketListener;
 @Slf4j
 final class TsgHubSocket
 {
+	enum State { OFFLINE, CONNECTING, LIVE }
+
 	interface Listener
 	{
+		void onState(State state);
+
 		void onReady(String rulesVersion);
 
 		void onChanged(String topic, String eventId);
@@ -91,6 +95,7 @@ final class TsgHubSocket
 	private String rejectedClan = "";
 	private boolean ready;
 	private int attempts;
+	private State state = State.OFFLINE;
 
 	TsgHubSocket(OkHttpClient http, String baseUrl, ScheduledExecutorService executor, Listener listener)
 	{
@@ -125,6 +130,7 @@ final class TsgHubSocket
 		confirmed.clear();
 		presence = null;
 		adminToken = "";
+		changed();
 	}
 
 	synchronized void sync(Map<String, String> tokens, boolean inClanChat)
@@ -214,6 +220,7 @@ final class TsgHubSocket
 		retry = null;
 		Request request = new Request.Builder().url(url.newBuilder().addQueryParameter("clanName", clanName).addQueryParameter("version", TsgHubVersion.VERSION).build()).build();
 		socket = http.newWebSocket(request, new Handler());
+		changed();
 	}
 
 	private void close()
@@ -251,6 +258,7 @@ final class TsgHubSocket
 		}
 		if (presence != null) sendPresence();
 		if (!adminToken.isEmpty()) sendAdmin();
+		changed();
 		String rulesVersion = string(message, "rules");
 		executor.execute(() -> listener.onReady(rulesVersion));
 	}
@@ -283,15 +291,25 @@ final class TsgHubSocket
 		socket = null;
 		ready = false;
 		confirmed.clear();
-		if (clanName.isEmpty() || executor.isShutdown()) return;
 		if (status == 403)
 		{
 			rejectedClan = clanName;
 			clanName = "";
-			return;
 		}
-		long delay = code == CLOSE_GOING_AWAY ? restartDelay() : backoff(attempts++);
-		retry = executor.schedule(this::reopen, delay, TimeUnit.MILLISECONDS);
+		if (!clanName.isEmpty() && !executor.isShutdown())
+		{
+			long delay = code == CLOSE_GOING_AWAY ? restartDelay() : backoff(attempts++);
+			retry = executor.schedule(this::reopen, delay, TimeUnit.MILLISECONDS);
+		}
+		changed();
+	}
+
+	private void changed()
+	{
+		State next = ready ? State.LIVE : socket != null || retry != null ? State.CONNECTING : State.OFFLINE;
+		if (next == state) return;
+		state = next;
+		if (listener != null && !executor.isShutdown()) executor.execute(() -> listener.onState(next));
 	}
 
 	private synchronized void reopen()

@@ -88,7 +88,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final JButton organizer = iconButton(new OrganizerIcon(), "Admin tools");
 	private final JButton settings = iconButton(new CogIcon(), "Plugin settings");
 	private final JButton pin = iconButton(new PinIcon(), "Pin below");
-	private final JPanel footer = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+	private final JPanel footer = new JPanel();
+	private final JLabel connection = label("", MUTED, smallFont());
 	private final StatusLine status = new StatusLine(TEXT_W);
 
 	private final CardLayout centerLayout = new CardLayout();
@@ -476,6 +477,15 @@ final class TsgHubSidebarPanel extends PluginPanel
 			page.add(fitHeight(notice));
 		}
 		refreshPage();
+	}
+
+	void setConnection(TsgHubSocket.State state)
+	{
+		Color color = state == TsgHubSocket.State.LIVE ? SUCCESS : state == TsgHubSocket.State.CONNECTING ? WARNING : TsgHubTheme.ERROR;
+		String status = state == TsgHubSocket.State.LIVE ? "Live" : state == TsgHubSocket.State.CONNECTING ? "Connecting" : "Offline";
+		connection.setIcon(new DotIcon(color));
+		connection.setText("v" + TsgHubVersion.VERSION + " · " + status);
+		connection.setToolTipText(state == TsgHubSocket.State.LIVE ? "Live updates connected" : state == TsgHubSocket.State.CONNECTING ? "Connecting to live updates" : "Not connected to live updates");
 	}
 
 	void setUpdate(String version)
@@ -2060,8 +2070,14 @@ final class TsgHubSidebarPanel extends PluginPanel
 			discord.setEnabled(false);
 			plugin.copyDiscordInvite(() -> discord.setEnabled(true));
 		});
+		discord.setAlignmentX(Component.CENTER_ALIGNMENT);
+		connection.setAlignmentX(Component.CENTER_ALIGNMENT);
+		connection.setIconTextGap(5);
+		setConnection(TsgHubSocket.State.OFFLINE);
+		footer.setLayout(new BoxLayout(footer, BoxLayout.Y_AXIS));
 		footer.setOpaque(false);
 		footer.add(discord);
+		footer.add(connection);
 		footer.setVisible(false);
 		return footer;
 	}
