@@ -1723,6 +1723,7 @@ public class TsgHubPlugin extends Plugin
 				break;
 			case "claimed":
 				showProgressMessage(TsgHubUi.str(message, "taskTitle"), TsgHubUi.str(message, "progress"), TsgHubUi.str(message, "complete"));
+				if (eventId.equals(TsgHubSession.get("eventId"))) refreshBoard();
 				break;
 			case "notice":
 				String text = TsgHubUi.str(message, "text");
