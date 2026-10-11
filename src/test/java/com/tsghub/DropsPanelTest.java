@@ -127,12 +127,12 @@ public class DropsPanelTest
 	{
 		JsonObject drop = drop("Dragon pickaxe", 1);
 		assertEquals("", TsgHubSidebarPanel.dropTooltip(drop));
-		drop.addProperty("source", "Spindel");
-		assertEquals("Spindel", TsgHubSidebarPanel.dropTooltip(drop));
-		drop.addProperty("rate", "1/358");
 		drop.addProperty("killCount", 1812);
+		assertTrue(TsgHubSidebarPanel.dropTooltip(drop).endsWith("KILL COUNT</b> </font>1,812</div>"));
+		drop.addProperty("source", "Spindel");
+		drop.addProperty("rate", "1/358");
 		String tip = TsgHubSidebarPanel.dropTooltip(drop);
-		assertTrue(tip, tip.startsWith("Spindel<font") && tip.contains("1/358<br>") && tip.endsWith("KC </font>1,812"));
+		assertTrue(tip, tip.contains("<b>Spindel</b><br>1/358") && tip.contains("DROPPED BY"));
 	}
 
 	private static JsonObject drop(String item, int quantity)

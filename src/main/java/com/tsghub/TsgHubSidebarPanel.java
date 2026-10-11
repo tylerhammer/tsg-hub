@@ -1234,13 +1234,17 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	static String dropTooltip(JsonObject drop)
 	{
-		List<String> lines = new ArrayList<>();
 		String source = str(drop, "source");
 		String rate = str(drop, "rate");
-		if (!source.isEmpty()) lines.add(escape(source) + (rate.isEmpty() ? "" : tipLine(MUTED, " · ") + escape(rate)));
 		int kc = integer(drop, "killCount", 0);
-		if (kc > 0) lines.add(tipLine(MUTED, "KC ") + String.format(Locale.US, "%,d", kc));
-		return String.join("<br>", lines);
+		String out = "";
+		if (!source.isEmpty())
+		{
+			out += tipSection(true, tipLine(MUTED, "<b>DROPPED BY</b>"))
+				+ tipCard(ACCENT, "<b>" + escape(source) + "</b>" + (rate.isEmpty() ? "" : "<br>" + escape(rate) + tipLine(MUTED, " drop rate")));
+		}
+		if (kc > 0) out += tipSection(out.isEmpty(), tipLine(MUTED, "<b>KILL COUNT</b> ") + String.format(Locale.US, "%,d", kc));
+		return out;
 	}
 
 	static List<String> dropTags(JsonObject drop)
