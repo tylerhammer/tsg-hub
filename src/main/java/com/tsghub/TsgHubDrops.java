@@ -3,6 +3,8 @@ package com.tsghub;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.tsghub.TsgHubUi.Tone;
+import java.util.AbstractMap;
+import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -18,6 +20,7 @@ import net.runelite.api.Client;
 import net.runelite.api.ItemComposition;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.util.Text;
 
 final class TsgHubDrops
 {
@@ -37,10 +40,8 @@ final class TsgHubDrops
 	private final Supplier<TsgHubApi> api;
 	private final Supplier<TsgHubSidebarPanel> sidebar;
 	private Map<String, Integer> itemIds;
-	private volatile String lootSource;
-	private volatile int lootTick = Integer.MIN_VALUE;
-	private volatile long killCount;
-	private volatile int killCountTick = Integer.MIN_VALUE;
+	private final Recent<String> lootSources = new Recent<>();
+	private final Recent<Long> killCounts = new Recent<>();
 
 	TsgHubDrops(TsgHubPlugin plugin, Client client, ClientThread clientThread, ScheduledExecutorService executor, Supplier<TsgHubApi> api, Supplier<TsgHubSidebarPanel> sidebar)
 	{
@@ -54,21 +55,17 @@ final class TsgHubDrops
 
 	void onLoot(String source)
 	{
-		if (source == null || source.isEmpty()) return;
-		lootSource = source;
-		lootTick = client.getTickCount();
+		if (source == null || source.isEmpty() || !plugin.sharingEnabled()) return;
+		lootSources.add(client.getTickCount(), source);
 	}
 
 	void onChatMessage(ChatMessage event)
 	{
 		if (event.getType() == ChatMessageType.GAMEMESSAGE)
 		{
+			if (!plugin.sharingEnabled()) return;
 			long count = killCount(event.getMessage());
-			if (count > 0)
-			{
-				killCount = count;
-				killCountTick = client.getTickCount();
-			}
+			if (count > 0) killCounts.add(client.getTickCount(), count);
 			return;
 		}
 		if (event.getType() != ChatMessageType.CLAN_MESSAGE || !plugin.sharingEnabled()) return;
@@ -86,8 +83,11 @@ final class TsgHubDrops
 		}
 		int tick = client.getTickCount();
 		executor.schedule(() -> {
-			if (Math.abs(lootTick - tick) <= DETAIL_TICKS) body.addProperty("source", lootSource);
-			if (Math.abs(killCountTick - tick) <= DETAIL_TICKS) body.addProperty("killCount", killCount);
+			if (!plugin.sharingEnabled()) return;
+			String source = lootSources.nearest(tick, DETAIL_TICKS);
+			Long count = killCounts.nearest(tick, DETAIL_TICKS);
+			if (source != null) body.addProperty("source", source);
+			if (count != null) body.addProperty("killCount", count);
 			post(body);
 		}, DETAIL_DELAY_MS, TimeUnit.MILLISECONDS);
 	}
@@ -111,7 +111,7 @@ final class TsgHubDrops
 	static long killCount(String raw)
 	{
 		if (raw == null) return 0;
-		Matcher m = KILL_COUNT.matcher(raw.replaceAll("<[^>]*>", "").trim());
+		Matcher m = KILL_COUNT.matcher(Text.removeTags(raw).trim());
 		if (!m.find()) return 0;
 		try { return Long.parseLong(m.group(1).replace(",", "")); }
 		catch (NumberFormatException e) { return 0; }
@@ -189,5 +189,33 @@ final class TsgHubDrops
 			TsgHubSidebarPanel s = sidebar.get();
 			if (s != null) action.accept(s);
 		});
+	}
+
+	static final class Recent<T>
+	{
+		private static final int KEEP = 8;
+		private final ArrayDeque<Map.Entry<Integer, T>> seen = new ArrayDeque<>();
+
+		synchronized void add(int tick, T value)
+		{
+			seen.addLast(new AbstractMap.SimpleImmutableEntry<>(tick, value));
+			while (seen.size() > KEEP) seen.removeFirst();
+		}
+
+		synchronized T nearest(int tick, int within)
+		{
+			T best = null;
+			long gap = within + 1L;
+			for (Map.Entry<Integer, T> entry : seen)
+			{
+				long distance = Math.abs((long) entry.getKey() - tick);
+				if (distance < gap)
+				{
+					gap = distance;
+					best = entry.getValue();
+				}
+			}
+			return best;
+		}
 	}
 }

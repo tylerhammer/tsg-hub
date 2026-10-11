@@ -123,6 +123,21 @@ public class DropsPanelTest
 	}
 
 	@Test
+	public void recentPicksNearestTick()
+	{
+		TsgHubDrops.Recent<String> recent = new TsgHubDrops.Recent<>();
+		assertNull(recent.nearest(0, 2));
+		recent.add(100, "Dagannoth Rex");
+		recent.add(101, "Dagannoth Prime");
+		recent.add(103, "Dagannoth Supreme");
+		assertEquals("Dagannoth Rex", recent.nearest(100, 2));
+		assertEquals("Dagannoth Supreme", recent.nearest(104, 2));
+		assertNull(recent.nearest(110, 2));
+		for (int i = 0; i < 10; i++) recent.add(200 + i, "Spam");
+		assertNull(recent.nearest(100, 2));
+	}
+
+	@Test
 	public void dropTooltip()
 	{
 		JsonObject drop = drop("Dragon pickaxe", 1);
