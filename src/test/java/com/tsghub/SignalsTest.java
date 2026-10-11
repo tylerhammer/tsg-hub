@@ -12,6 +12,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -30,6 +32,8 @@ public class SignalsTest
 	private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 	private final List<JsonObject> posted = new ArrayList<>();
 	private final List<JsonObject> received = new ArrayList<>();
+	private final List<String> paths = new ArrayList<>();
+	private final Map<String, Integer> eventStatus = new HashMap<>();
 	private int status = 200;
 
 	@After
@@ -44,8 +48,11 @@ public class SignalsTest
 			Buffer body = new Buffer();
 			chain.request().body().writeTo(body);
 			posted.add(new JsonParser().parse(body.readUtf8()).getAsJsonObject());
+			String path = chain.request().url().encodedPath();
+			paths.add(path);
+			int code = eventStatus.getOrDefault(path, status);
 			String reply = "{\"acked\":[],\"messages\":[{\"type\":\"claimed\",\"taskTitle\":\"Hydra\",\"progress\":\"1/3\"}]}";
-			return new Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(status).message("")
+			return new Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(code).message("")
 				.body(ResponseBody.create(MediaType.get("application/json"), reply)).build();
 		}).build();
 		TsgHubSocket socket = new TsgHubSocket(http, "https://hub.test", executor, null);
@@ -101,6 +108,42 @@ public class SignalsTest
 		{
 			TsgHubRules.apply(new JsonParser().parse(reader).getAsJsonObject());
 		}
+	}
+
+	@Test
+	public void fallbackRetriesOnlyEventsThatFailed()
+	{
+		TsgHubSignals signals = signals();
+		signals.send("loot", new JsonObject());
+		Map<String, String> tokens = new LinkedHashMap<>();
+		tokens.put("e1", "member");
+		tokens.put("e2", "member");
+		tokens.put("gone", "member");
+		eventStatus.put("/v1/events/e2/signals", 500);
+		eventStatus.put("/v1/events/gone/signals", 404);
+		signals.flush(tokens);
+		assertEquals(3, posted.size());
+
+		eventStatus.remove("/v1/events/e2/signals");
+		signals.flush(tokens);
+		assertEquals(List.of("/v1/events/e1/signals", "/v1/events/e2/signals", "/v1/events/gone/signals", "/v1/events/e2/signals"), paths);
+
+		signals.flush(tokens);
+		assertEquals(4, posted.size());
+	}
+
+	@Test
+	public void cacheFromAnotherPluginVersionIsIgnored() throws Exception
+	{
+		Filepath cache = Filepath.Unchecked.getRooted(Files.createTempDirectory("tsghub")).join("rules.json");
+		cache.write("{\"plugin\":\"0.0.1\",\"rules\":{\"version\":\"old\"}}");
+		try
+		{
+			TsgHubRules.loadCached(cache);
+			assertEquals("", TsgHubRules.get().version);
+			assertTrue(TsgHubRules.get().petMessages.contains("you feel something weird sneaking into your backpack"));
+		}
+		finally { restoreBundled(); }
 	}
 
 	@Test

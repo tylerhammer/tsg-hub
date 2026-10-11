@@ -44,6 +44,8 @@ final class TsgHubSocket
 
 		void onAck(String id);
 
+		void onSubscribed();
+
 		void onReply(JsonObject message);
 
 		void onXpRequest(String skills);
@@ -170,9 +172,14 @@ final class TsgHubSocket
 		return live;
 	}
 
-	synchronized boolean send(JsonObject message)
+	synchronized boolean signaling()
 	{
-		return ready && socket != null && socket.send(message.toString());
+		return ready && socket != null && !confirmed.isEmpty();
+	}
+
+	synchronized boolean sendSignal(JsonObject message)
+	{
+		return signaling() && socket.send(message.toString());
 	}
 
 	synchronized boolean xp(String skill, int xp, int tick)
@@ -298,6 +305,7 @@ final class TsgHubSocket
 	{
 		if (ws != socket || !subscriptions.containsKey(eventId)) return;
 		confirmed.add(eventId);
+		if (listener != null) executor.execute(listener::onSubscribed);
 	}
 
 	private synchronized void adminRevoked(WebSocket ws)

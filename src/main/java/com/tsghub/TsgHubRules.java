@@ -25,6 +25,7 @@ final class TsgHubRules
 	final List<String> chat;
 	final List<String> players;
 	final List<String> dropKeywords;
+	final List<String> petMessages;
 	final Set<Integer> pets;
 	final Set<Integer> rewardInterfaces;
 	final Map<String, String> bosses;
@@ -38,6 +39,7 @@ final class TsgHubRules
 		chat = strings(json, "chat");
 		players = strings(json, "players");
 		dropKeywords = strings(json, "dropKeywords");
+		petMessages = strings(json, "petMessages");
 		pets = ints(json, "pets");
 		rewardInterfaces = ints(json, "rewardInterfaces");
 		Map<String, String> bossNames = new HashMap<>();
@@ -83,7 +85,8 @@ final class TsgHubRules
 		if (cache == null || !cache.exists()) return;
 		try (Reader reader = cache.openReader())
 		{
-			apply(new JsonParser().parse(reader).getAsJsonObject());
+			JsonObject saved = new JsonParser().parse(reader).getAsJsonObject();
+			if (TsgHubVersion.VERSION.equals(TsgHubUi.str(saved, "plugin")) && saved.has("rules") && saved.get("rules").isJsonObject()) apply(saved.getAsJsonObject("rules"));
 		}
 		catch (Exception e) { log.debug("TSG Hub cached rules unreadable", e); }
 	}
@@ -94,7 +97,10 @@ final class TsgHubRules
 		try
 		{
 			cache.getParent().createDirectories();
-			cache.write(json.toString());
+			JsonObject saved = new JsonObject();
+			saved.addProperty("plugin", TsgHubVersion.VERSION);
+			saved.add("rules", json);
+			cache.write(saved.toString());
 		}
 		catch (Exception e) { log.debug("TSG Hub rules cache not written", e); }
 	}

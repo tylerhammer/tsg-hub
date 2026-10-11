@@ -4,10 +4,11 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -25,6 +26,7 @@ final class TsgHubSignals
 	{
 		final JsonObject message;
 		final long createdAt;
+		final Set<String> deliveredTo = new HashSet<>();
 		long sentAt;
 
 		Pending(JsonObject message, long now)
@@ -78,7 +80,7 @@ final class TsgHubSignals
 		{
 			pending.put(message.get("id").getAsString(), entry);
 			while (pending.size() > MAX_PENDING) pending.remove(pending.keySet().iterator().next());
-			if (socket.send(message)) entry.sentAt = now;
+			if (socket.sendSignal(message)) entry.sentAt = now;
 		}
 	}
 
@@ -96,7 +98,7 @@ final class TsgHubSignals
 	synchronized void resend()
 	{
 		long now = System.currentTimeMillis();
-		for (Pending entry : pending.values()) if (socket.send(entry.message)) entry.sentAt = now;
+		for (Pending entry : pending.values()) if (socket.sendSignal(entry.message)) entry.sentAt = now;
 	}
 
 	synchronized void clear()
@@ -108,16 +110,17 @@ final class TsgHubSignals
 	void flush(Map<String, String> tokens)
 	{
 		long now = System.currentTimeMillis();
-		List<JsonObject> batch = new ArrayList<>();
+		List<JsonObject> xp = new ArrayList<>();
+		List<Pending> entries = new ArrayList<>();
 		synchronized (this)
 		{
 			pending.values().removeIf(entry -> now - entry.createdAt > MAX_AGE_MILLIS);
-			if (socket.isLive())
+			if (socket.signaling())
 			{
 				offlineXp.clear();
 				for (Pending entry : pending.values())
 				{
-					if (now - entry.sentAt >= RETRY_MILLIS && socket.send(entry.message)) entry.sentAt = now;
+					if (now - entry.sentAt >= RETRY_MILLIS && socket.sendSignal(entry.message)) entry.sentAt = now;
 				}
 				return;
 			}
@@ -128,43 +131,59 @@ final class TsgHubSignals
 			}
 			for (Map.Entry<String, Integer> entry : offlineXp.entrySet())
 			{
-				JsonObject xp = new JsonObject();
-				xp.addProperty("type", "xp");
-				xp.addProperty("skill", entry.getKey());
-				xp.addProperty("xp", entry.getValue());
-				batch.add(xp);
+				JsonObject total = new JsonObject();
+				total.addProperty("type", "xp");
+				total.addProperty("skill", entry.getKey());
+				total.addProperty("xp", entry.getValue());
+				xp.add(total);
 			}
 			offlineXp.clear();
-			Iterator<Pending> entries = pending.values().iterator();
-			while (entries.hasNext() && batch.size() < MAX_BATCH) batch.add(entries.next().message);
+			for (Pending entry : pending.values())
+			{
+				if (entries.size() + xp.size() >= MAX_BATCH) break;
+				entries.add(entry);
+			}
 		}
-		if (batch.isEmpty()) return;
-		JsonArray signals = new JsonArray();
-		batch.forEach(signals::add);
-		JsonObject body = new JsonObject();
-		body.add("signals", signals);
-		boolean delivered = true;
-		for (Map.Entry<String, String> entry : tokens.entrySet())
+		boolean retryXp = false;
+		for (Map.Entry<String, String> event : tokens.entrySet())
 		{
+			List<Pending> undelivered = new ArrayList<>();
+			synchronized (this) { for (Pending entry : entries) if (!entry.deliveredTo.contains(event.getKey())) undelivered.add(entry); }
+			if (undelivered.isEmpty() && xp.isEmpty()) continue;
+			JsonArray signals = new JsonArray();
+			xp.forEach(signals::add);
+			undelivered.forEach(entry -> signals.add(entry.message));
+			JsonObject body = new JsonObject();
+			body.add("signals", signals);
 			try
 			{
-				JsonObject result = api.get().request("POST", "/v1/events/" + entry.getKey() + "/signals", entry.getValue(), body);
+				JsonObject result = api.get().request("POST", "/v1/events/" + event.getKey() + "/signals", event.getValue(), body);
+				delivered(undelivered, event.getKey());
 				for (JsonObject message : TsgHubUi.objects(TsgHubUi.array(result, "messages"))) receiver.accept(message);
+			}
+			catch (TsgHubApi.HttpError e)
+			{
+				if (e.status == 401 || e.status == 403 || e.status == 404) delivered(undelivered, event.getKey());
+				else retryXp = true;
 			}
 			catch (Exception e)
 			{
-				delivered = false;
+				retryXp = true;
 				log.debug("TSG Hub signal fallback failed", e);
 			}
 		}
 		synchronized (this)
 		{
-			for (JsonObject message : batch)
+			for (Pending entry : entries)
 			{
-				boolean xp = !message.has("id");
-				if (delivered && !xp) pending.remove(message.get("id").getAsString());
-				if (!delivered && xp) offlineXp.merge(message.get("skill").getAsString(), message.get("xp").getAsInt(), Math::max);
+				if (entry.deliveredTo.containsAll(tokens.keySet())) pending.remove(entry.message.get("id").getAsString());
 			}
+			if (retryXp) for (JsonObject total : xp) offlineXp.merge(total.get("skill").getAsString(), total.get("xp").getAsInt(), Math::max);
 		}
+	}
+
+	private synchronized void delivered(List<Pending> entries, String eventId)
+	{
+		for (Pending entry : entries) entry.deliveredTo.add(eventId);
 	}
 }

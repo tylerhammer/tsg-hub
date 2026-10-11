@@ -53,6 +53,7 @@ import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.ClanChannelChanged;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.events.StatChanged;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.events.WidgetClosed;
@@ -128,6 +129,8 @@ public class TsgHubPlugin extends Plugin
 	private static final long KEY_CHECK_MAX_RETRY_SECONDS = 300;
 	private volatile int clanCheckTicks;
 	private int petCheckTicks;
+	private int recentPet;
+	private int recentPetTick;
 	private Set<Integer> inventoryPets = Collections.emptySet();
 	private volatile String detectedClanName = "";
 	private volatile String detectedPlayerName = "";
@@ -181,6 +184,7 @@ public class TsgHubPlugin extends Plugin
 			@Override public void onSnapshot(JsonObject message) { snapshot(message); }
 			@Override public void onConnection(TsgHubSocket.State state) { SwingUtilities.invokeLater(() -> { if (sidebar != null) sidebar.setConnection(state); }); }
 			@Override public void onAck(String id) { signals.acked(id); }
+			@Override public void onSubscribed() { signals.resend(); }
 			@Override public void onReply(JsonObject message) { signalReply(message); }
 			@Override public void onXpRequest(String skills) { reportXp(skills); }
 		});
@@ -457,6 +461,7 @@ public class TsgHubPlugin extends Plugin
 		checkedKeyIdentity = "";
 		syncSocketNow();
 		if (signals != null) signals.clear();
+		joinedCompetitions = Collections.emptyList();
 		SwingUtilities.invokeLater(() -> {
 			if (panel != null) panel.setDetectedClanName("", -1);
 			if (sidebar != null)
@@ -562,6 +567,7 @@ public class TsgHubPlugin extends Plugin
 		syncedClanRanks.clear();
 		syncedIdentity = "";
 		if (signals != null) signals.clear();
+		joinedCompetitions = Collections.emptyList();
 		syncSocketNow();
 		if (detectedPlayerName.isEmpty()) return;
 		sidebarRouted = false;
@@ -653,6 +659,7 @@ public class TsgHubPlugin extends Plugin
 	private void clearAllSessions()
 	{
 		if (signals != null) signals.clear();
+		joinedCompetitions = Collections.emptyList();
 		revokeRemoteSession();
 		TsgHubSession.clear("token", "eventId", "organizerEventId");
 		TsgHubSession.removePrefix("memberToken:");
@@ -798,8 +805,9 @@ public class TsgHubPlugin extends Plugin
 				groups.apply(TsgHubUi.array(data, "groups"));
 				break;
 			case "presence":
+				JsonObject roster = data.has("presence") && data.get("presence").isJsonObject() ? data.getAsJsonObject("presence") : null;
 				JsonObject notes = data.has("members") && data.get("members").isJsonObject() ? data.getAsJsonObject("members") : null;
-				presence.apply(TsgHubUi.array(data.getAsJsonObject("presence"), "members"), notes == null ? null : TsgHubUi.array(notes, "members"));
+				if (roster != null) presence.apply(TsgHubUi.array(roster, "members"), notes == null ? null : TsgHubUi.array(notes, "members"));
 				break;
 			case "drops":
 				drops.apply(TsgHubUi.array(data, "drops"));
@@ -1522,7 +1530,7 @@ public class TsgHubPlugin extends Plugin
 	public void onStatChanged(StatChanged event)
 	{
 		if (presence != null) presence.onXp(event.getSkill(), event.getXp());
-		if (!sharingInClan() || signals == null) return;
+		if (!sharingInClan() || signals == null || client.getLocalPlayer() == null) return;
 		signals.xp(event.getSkill().name(), event.getXp(), client.getTickCount());
 	}
 
@@ -1592,7 +1600,12 @@ public class TsgHubPlugin extends Plugin
 		if (event.getType() != ChatMessageType.GAMEMESSAGE && event.getType() != ChatMessageType.SPAM) return;
 		if (!sharingInClan()) return;
 		String message = event.getMessage().replaceAll("<[^>]*>", "").toLowerCase(Locale.ROOT);
-		if (isPetMessage(message)) petCheckTicks = PET_CHECK_TICKS;
+		if (isPetMessage(message))
+		{
+			if (recentPet > 0 && client.getTickCount() - recentPetTick <= 2) sendPet(recentPet);
+			else petCheckTicks = PET_CHECK_TICKS;
+			recentPet = 0;
+		}
 		if (!signals.wantsChat(message)) return;
 		JsonObject chat = new JsonObject();
 		chat.addProperty("text", message);
@@ -1636,19 +1649,35 @@ public class TsgHubPlugin extends Plugin
 		if (!sharingInClan())
 		{
 			petCheckTicks = 0;
-			inventoryPets = Collections.emptySet();
 			return;
 		}
-		if (petCheckTicks <= 0)
-		{
-			inventoryPets = inventoryPetIds();
-			return;
-		}
+		if (petCheckTicks <= 0) return;
 		petCheckTicks--;
-		int petId = newPetId();
-		if (petId <= 0) return;
+		int petId = followerPetId();
+		if (petId > 0) sendPet(petId);
+	}
+
+	@Subscribe
+	public void onItemContainerChanged(ItemContainerChanged event)
+	{
+		if (event.getContainerId() != InventoryID.INV || !sharingInClan()) return;
+		Set<Integer> pets = inventoryPetIds();
+		int added = 0;
+		for (int itemId : pets) if (!inventoryPets.contains(itemId)) added = itemId;
+		inventoryPets = pets;
+		if (added <= 0) return;
+		if (petCheckTicks > 0) sendPet(added);
+		else
+		{
+			recentPet = added;
+			recentPetTick = client.getTickCount();
+		}
+	}
+
+	private void sendPet(int petId)
+	{
 		petCheckTicks = 0;
-		inventoryPets = inventoryPetIds();
+		recentPet = 0;
 		JsonObject pet = new JsonObject();
 		pet.addProperty("itemId", petId);
 		pet.addProperty("name", itemManager.getItemComposition(petId).getName());
@@ -1657,8 +1686,8 @@ public class TsgHubPlugin extends Plugin
 
 	private static boolean isPetMessage(String message)
 	{
-		return message.contains("you have a funny feeling like you're being followed")
-			|| message.contains("you feel something weird sneaking into your backpack");
+		for (String pattern : TsgHubRules.get().petMessages) if (message.contains(pattern)) return true;
+		return false;
 	}
 
 	private Set<Integer> inventoryPetIds()
@@ -1674,9 +1703,8 @@ public class TsgHubPlugin extends Plugin
 		return pets;
 	}
 
-	private int newPetId()
+	private int followerPetId()
 	{
-		for (int itemId : inventoryPetIds()) if (!inventoryPets.contains(itemId)) return itemId;
 		NPC follower = client.getFollower();
 		String followerName = follower == null ? null : petName(follower.getName());
 		if (followerName == null || followerName.isEmpty()) return -1;
@@ -1781,6 +1809,7 @@ public class TsgHubPlugin extends Plugin
 				break;
 			case "claimed":
 				showProgressMessage(TsgHubUi.str(message, "taskTitle"), TsgHubUi.str(message, "progress"), TsgHubUi.str(message, "complete"));
+				if (!socket.isLive() && eventId.equals(TsgHubSession.get("eventId"))) refreshBoard();
 				break;
 			case "notice":
 				String text = TsgHubUi.str(message, "text");
