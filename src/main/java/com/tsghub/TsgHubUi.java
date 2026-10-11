@@ -1334,6 +1334,23 @@ final class TsgHubUi
 		}
 	}
 
+	static final class DotIcon implements Icon
+	{
+		private final Color color;
+
+		DotIcon(Color color) { this.color = color; }
+		@Override public int getIconWidth() { return 7; }
+		@Override public int getIconHeight() { return 7; }
+		@Override public void paintIcon(Component component, Graphics graphics, int x, int y)
+		{
+			Graphics2D g = (Graphics2D) graphics.create();
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			g.setColor(color);
+			g.fillOval(x, y, 7, 7);
+			g.dispose();
+		}
+	}
+
 	static final class CheckIcon implements Icon
 	{
 		@Override public int getIconWidth() { return 14; }

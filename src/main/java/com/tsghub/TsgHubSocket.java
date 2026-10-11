@@ -1,5 +1,6 @@
 package com.tsghub;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -23,9 +24,15 @@ import okhttp3.WebSocketListener;
 @Slf4j
 final class TsgHubSocket
 {
+	enum State { OFFLINE, CONNECTING, LIVE }
+
 	interface Listener
 	{
-		void onReady();
+		void onConnection(State state);
+
+		void onSnapshot(JsonObject message);
+
+		void onReady(String rulesVersion);
 
 		void onChanged(String topic, String eventId);
 
@@ -35,9 +42,13 @@ final class TsgHubSocket
 
 		void onUpdateAvailable(String version);
 
-		void onSubscribed(String eventId);
+		void onAck(String id);
 
-		void onProgress(String eventId, long gained, Long rank);
+		void onSubscribed();
+
+		void onReply(JsonObject message);
+
+		void onXpRequest(String skills);
 	}
 
 	private static final int CLOSE_NORMAL = 1000;
@@ -84,11 +95,13 @@ final class TsgHubSocket
 	private WebSocket socket;
 	private JsonObject presence;
 	private String adminToken = "";
+	private Set<String> watching = new HashSet<>();
 	private ScheduledFuture<?> retry;
 	private String clanName = "";
 	private String rejectedClan = "";
 	private boolean ready;
 	private int attempts;
+	private State state = State.OFFLINE;
 
 	TsgHubSocket(OkHttpClient http, String baseUrl, ScheduledExecutorService executor, Listener listener)
 	{
@@ -123,6 +136,8 @@ final class TsgHubSocket
 		confirmed.clear();
 		presence = null;
 		adminToken = "";
+		watching = new HashSet<>();
+		changed();
 	}
 
 	synchronized void sync(Map<String, String> tokens, boolean inClanChat)
@@ -157,9 +172,14 @@ final class TsgHubSocket
 		return live;
 	}
 
-	synchronized boolean streaming(String eventId)
+	synchronized boolean signaling()
 	{
-		return ready && socket != null && confirmed.contains(eventId);
+		return ready && socket != null && !confirmed.isEmpty();
+	}
+
+	synchronized boolean sendSignal(JsonObject message)
+	{
+		return signaling() && socket.send(message.toString());
 	}
 
 	synchronized boolean xp(String skill, int xp, int tick)
@@ -181,6 +201,23 @@ final class TsgHubSocket
 		message.addProperty("group", group);
 		message.addProperty("open", open);
 		message.addProperty("tick", tick);
+		socket.send(message.toString());
+	}
+
+	synchronized void watch(Set<String> topics)
+	{
+		if (topics.equals(watching)) return;
+		watching = new HashSet<>(topics);
+		if (ready && socket != null) sendWatch();
+	}
+
+	private void sendWatch()
+	{
+		JsonArray topics = new JsonArray();
+		watching.forEach(topics::add);
+		JsonObject message = new JsonObject();
+		message.addProperty("type", "watch");
+		message.add("topics", topics);
 		socket.send(message.toString());
 	}
 
@@ -212,6 +249,7 @@ final class TsgHubSocket
 		retry = null;
 		Request request = new Request.Builder().url(url.newBuilder().addQueryParameter("clanName", clanName).addQueryParameter("version", TsgHubVersion.VERSION).build()).build();
 		socket = http.newWebSocket(request, new Handler());
+		changed();
 	}
 
 	private void close()
@@ -238,7 +276,7 @@ final class TsgHubSocket
 		socket.send(message.toString());
 	}
 
-	private synchronized void opened(WebSocket ws)
+	private synchronized void opened(WebSocket ws, JsonObject message)
 	{
 		if (ws != socket) return;
 		ready = true;
@@ -249,7 +287,10 @@ final class TsgHubSocket
 		}
 		if (presence != null) sendPresence();
 		if (!adminToken.isEmpty()) sendAdmin();
-		executor.execute(listener::onReady);
+		if (!watching.isEmpty()) sendWatch();
+		changed();
+		String rulesVersion = TsgHubUi.str(message, "rules");
+		executor.execute(() -> listener.onReady(rulesVersion));
 	}
 
 	private synchronized void rejected(WebSocket ws, String eventId)
@@ -264,7 +305,7 @@ final class TsgHubSocket
 	{
 		if (ws != socket || !subscriptions.containsKey(eventId)) return;
 		confirmed.add(eventId);
-		executor.execute(() -> listener.onSubscribed(eventId));
+		if (listener != null) executor.execute(listener::onSubscribed);
 	}
 
 	private synchronized void adminRevoked(WebSocket ws)
@@ -281,15 +322,25 @@ final class TsgHubSocket
 		socket = null;
 		ready = false;
 		confirmed.clear();
-		if (clanName.isEmpty() || executor.isShutdown()) return;
 		if (status == 403)
 		{
 			rejectedClan = clanName;
 			clanName = "";
-			return;
 		}
-		long delay = code == CLOSE_GOING_AWAY ? restartDelay() : backoff(attempts++);
-		retry = executor.schedule(this::reopen, delay, TimeUnit.MILLISECONDS);
+		if (!clanName.isEmpty() && !executor.isShutdown())
+		{
+			long delay = code == CLOSE_GOING_AWAY ? restartDelay() : backoff(attempts++);
+			retry = executor.schedule(this::reopen, delay, TimeUnit.MILLISECONDS);
+		}
+		changed();
+	}
+
+	private void changed()
+	{
+		State next = ready ? State.LIVE : socket != null || retry != null ? State.CONNECTING : State.OFFLINE;
+		if (next == state) return;
+		state = next;
+		if (listener != null && !executor.isShutdown()) executor.execute(() -> listener.onConnection(next));
 	}
 
 	private synchronized void reopen()
@@ -327,7 +378,7 @@ final class TsgHubSocket
 			switch (type)
 			{
 				case "ready":
-					opened(ws);
+					opened(ws, message);
 					break;
 				case "changed":
 					String topic = TsgHubUi.str(message, "topic");
@@ -337,7 +388,20 @@ final class TsgHubSocket
 					subscribed(ws, eventId);
 					break;
 				case "progress":
-					progress(ws, eventId, message);
+				case "claimed":
+				case "notice":
+					dispatch(ws, () -> listener.onReply(message));
+					break;
+				case "state":
+					dispatch(ws, () -> listener.onSnapshot(message));
+					break;
+				case "ack":
+					String id = TsgHubUi.str(message, "id");
+					if (!id.isEmpty()) dispatch(ws, () -> listener.onAck(id));
+					break;
+				case "xp.request":
+					String skills = TsgHubUi.str(message, "skills");
+					if (!skills.isEmpty()) dispatch(ws, () -> listener.onXpRequest(skills));
 					break;
 				case "admin.revoked":
 					adminRevoked(ws);
@@ -384,17 +448,5 @@ final class TsgHubSocket
 	{
 		if (ws != socket || executor.isShutdown()) return;
 		executor.execute(action);
-	}
-
-	private void progress(WebSocket ws, String eventId, JsonObject message)
-	{
-		try
-		{
-			long gained = Long.parseLong(TsgHubUi.str(message, "gained"));
-			String rank = TsgHubUi.str(message, "rank");
-			Long parsedRank = rank.isEmpty() ? null : Long.parseLong(rank);
-			if (!eventId.isEmpty()) dispatch(ws, () -> listener.onProgress(eventId, gained, parsedRank));
-		}
-		catch (NumberFormatException e) { return; }
 	}
 }

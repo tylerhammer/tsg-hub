@@ -34,7 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## RuneLite
 
-The region names in `src/main/resources/com/tsghub/areas.tsv` are seeded from the Discord plugin in [RuneLite](https://github.com/runelite/runelite).
+The area region names in `src/main/resources/com/tsghub/rules.json` (the bundled copy of the server rules) are seeded from the Discord plugin in [RuneLite](https://github.com/runelite/runelite).
 
 ```
 BSD 2-Clause License

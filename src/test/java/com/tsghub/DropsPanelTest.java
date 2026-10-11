@@ -2,7 +2,9 @@ package com.tsghub;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.awt.Color;
 import java.time.Instant;
@@ -100,6 +102,31 @@ public class DropsPanelTest
 			TsgHubDrops.broadcast("itsHammerKR has a funny feeling like he would have been followed: Vorki at 912 killcount from Vorkath."));
 		assertNull(TsgHubDrops.broadcast("Bob has reached combat level 100."));
 		assertNull(TsgHubDrops.broadcast(null));
+	}
+
+	@Test
+	public void recentContextSinceTick()
+	{
+		TsgHubDrops.Recent<String> recent = new TsgHubDrops.Recent<>();
+		recent.add(80, "Kraken");
+		recent.add(99, "Abyssal demon");
+		JsonArray rows = recent.since(90, "source");
+		assertEquals(1, rows.size());
+		assertEquals(99, rows.get(0).getAsJsonObject().get("tick").getAsInt());
+		assertEquals("Abyssal demon", rows.get(0).getAsJsonObject().get("source").getAsString());
+	}
+
+	@Test
+	public void dropTooltip()
+	{
+		JsonObject drop = drop("Dragon pickaxe", 1);
+		assertEquals("", TsgHubDrops.dropTooltip(drop));
+		drop.addProperty("killCount", 1812);
+		assertTrue(TsgHubDrops.dropTooltip(drop).endsWith("KILL COUNT</b> </font>1,812</div>"));
+		drop.addProperty("source", "Spindel");
+		drop.addProperty("rate", "1/358");
+		String tip = TsgHubDrops.dropTooltip(drop);
+		assertTrue(tip, tip.contains("<b>Spindel</b><br>1/358") && tip.contains("DROPPED BY"));
 	}
 
 	private static JsonObject drop(String item, int quantity)
