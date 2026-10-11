@@ -24,7 +24,7 @@ import okhttp3.WebSocketListener;
 @Slf4j
 final class TsgHubSocket
 {
-	enum State { OFFLINE, CONNECTING, LIVE }
+	enum State { DISCONNECTED, CONNECTING, CONNECTED }
 
 	interface Listener
 	{
@@ -101,7 +101,7 @@ final class TsgHubSocket
 	private String rejectedClan = "";
 	private boolean ready;
 	private int attempts;
-	private State state = State.OFFLINE;
+	private State state = State.DISCONNECTED;
 
 	TsgHubSocket(OkHttpClient http, String baseUrl, ScheduledExecutorService executor, Listener listener)
 	{
@@ -337,7 +337,7 @@ final class TsgHubSocket
 
 	private void changed()
 	{
-		State next = ready ? State.LIVE : socket != null || retry != null ? State.CONNECTING : State.OFFLINE;
+		State next = ready ? State.CONNECTED : socket != null || retry != null ? State.CONNECTING : State.DISCONNECTED;
 		if (next == state) return;
 		state = next;
 		if (listener != null && !executor.isShutdown()) executor.execute(() -> listener.onConnection(next));
