@@ -545,8 +545,8 @@ final class TsgHubUi
 
 	static boolean samePlayer(String a, String b)
 	{
-		String left = PlayerNames.normalize(a);
-		return !left.isEmpty() && left.equals(PlayerNames.normalize(b));
+		String left = PlayerNames.canonical(a);
+		return !left.isEmpty() && left.equals(PlayerNames.canonical(b));
 	}
 
 	static String str(JsonObject object, String key)

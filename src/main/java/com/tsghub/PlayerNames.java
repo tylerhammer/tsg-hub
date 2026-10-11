@@ -15,6 +15,11 @@ public final class PlayerNames
 		return name == null ? "" : name.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
 	}
 
+	static String canonical(String name)
+	{
+		return name == null ? "" : name.replace('\u00A0', ' ').replace('_', ' ').trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+	}
+
 	static List<String> matchNames(List<String> names, String query, int limit)
 	{
 		String needle = PlayerNames.normalize(query);

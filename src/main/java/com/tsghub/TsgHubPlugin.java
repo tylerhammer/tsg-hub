@@ -961,7 +961,7 @@ public class TsgHubPlugin extends Plugin
 						if (!savedToken.isEmpty())
 						{
 							TsgHubSession.set(MEMBER_TOKEN + eventId, savedToken);
-							TsgHubSession.set(MEMBER_NAME + eventId, TsgHubSession.get("displayName"));
+							TsgHubSession.set(MEMBER_NAME + eventId, TsgHubSession.get(DISPLAY_NAME));
 						}
 					}
 					event.addProperty("joined", !savedToken.isEmpty());

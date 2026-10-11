@@ -1,6 +1,7 @@
 package com.tsghub;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import com.google.gson.JsonArray;
@@ -18,6 +19,16 @@ import org.junit.Test;
 
 public class MembersPanelTest
 {
+	@Test
+	public void samePlayer()
+	{
+		assertTrue(TsgHubUi.samePlayer("Foo Bar", "foo bar"));
+		assertTrue(TsgHubUi.samePlayer("Foo\u00A0Bar", "Foo Bar"));
+		assertTrue(TsgHubUi.samePlayer("Foo_Bar", "Foo Bar"));
+		assertFalse(TsgHubUi.samePlayer("Foo Bar", "FooBar"));
+		assertFalse(TsgHubUi.samePlayer("", ""));
+	}
+
 	@Test
 	public void activityDetail()
 	{

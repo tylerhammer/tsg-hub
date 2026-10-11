@@ -974,7 +974,7 @@ final class TsgHubPanel extends JPanel
 				{
 					JsonObject evidence = manual.getAsJsonObject("evidence");
 					String markedBy = str(evidence, "markedBy").isEmpty() ? str(manual, "displayName") : str(evidence, "markedBy");
-					String how = !creditedToOrganizer && samePlayer(markedBy, by) ? "Marked complete manually" : "Marked complete by " + markedBy;
+					String how = !creditedToOrganizer && (markedBy.isEmpty() || samePlayer(markedBy, by)) ? "Marked complete manually" : "Marked complete by " + markedBy;
 					String note = str(evidence, "note");
 					text.add(wrapped(how + (note.isEmpty() ? "" : " · Reason: " + note), WARNING, smallFont(), DETAIL_TEXT_W - 140));
 				}
