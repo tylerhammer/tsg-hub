@@ -9,11 +9,13 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import net.runelite.client.util.Filepath;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Protocol;
@@ -73,12 +75,31 @@ public class SignalsTest
 			assertEquals("Lumbridge", AreaNames.forRegion(5536).name);
 			assertNull(ActivityDetector.bossFor("Vorkath"));
 		}
-		finally
+		finally { restoreBundled(); }
+	}
+
+	@Test
+	public void cachedRulesSurviveRestart() throws Exception
+	{
+		Filepath cache = Filepath.Unchecked.getRooted(Files.createTempDirectory("tsghub")).join("rules.json");
+		JsonObject server = new JsonParser().parse("{\"version\":\"v2\",\"chat\":[\"you catch\"]}").getAsJsonObject();
+		try
 		{
-			try (InputStreamReader reader = new InputStreamReader(TsgHubRules.class.getResourceAsStream("rules.json"), StandardCharsets.UTF_8))
-			{
-				TsgHubRules.apply(new JsonParser().parse(reader).getAsJsonObject());
-			}
+			TsgHubRules.save(server, cache);
+			restoreBundled();
+			assertEquals("", TsgHubRules.get().version);
+			TsgHubRules.loadCached(cache);
+			assertEquals("v2", TsgHubRules.get().version);
+			assertTrue(TsgHubRules.get().chat.contains("you catch"));
+		}
+		finally { restoreBundled(); }
+	}
+
+	private static void restoreBundled() throws Exception
+	{
+		try (InputStreamReader reader = new InputStreamReader(TsgHubRules.class.getResourceAsStream("rules.json"), StandardCharsets.UTF_8))
+		{
+			TsgHubRules.apply(new JsonParser().parse(reader).getAsJsonObject());
 		}
 	}
 

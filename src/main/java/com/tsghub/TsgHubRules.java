@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -15,6 +16,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.client.util.Filepath;
 
 @Slf4j
 final class TsgHubRules
@@ -62,10 +64,39 @@ final class TsgHubRules
 		return current;
 	}
 
-	static void apply(JsonObject json)
+	static boolean apply(JsonObject json)
 	{
-		try { current = new TsgHubRules(json); }
-		catch (RuntimeException e) { log.debug("TSG Hub rules rejected", e); }
+		try
+		{
+			current = new TsgHubRules(json);
+			return true;
+		}
+		catch (RuntimeException e)
+		{
+			log.debug("TSG Hub rules rejected", e);
+			return false;
+		}
+	}
+
+	static void loadCached(Filepath cache)
+	{
+		if (cache == null || !cache.exists()) return;
+		try (Reader reader = cache.openReader())
+		{
+			apply(new JsonParser().parse(reader).getAsJsonObject());
+		}
+		catch (Exception e) { log.debug("TSG Hub cached rules unreadable", e); }
+	}
+
+	static void save(JsonObject json, Filepath cache)
+	{
+		if (!apply(json) || cache == null) return;
+		try
+		{
+			cache.getParent().createDirectories();
+			cache.write(json.toString());
+		}
+		catch (Exception e) { log.debug("TSG Hub rules cache not written", e); }
 	}
 
 	private static TsgHubRules bundled()

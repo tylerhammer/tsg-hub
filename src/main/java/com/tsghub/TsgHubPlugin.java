@@ -87,12 +87,13 @@ import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayMenuEntry;
 import net.runelite.client.util.AsyncBufferedImage;
+import net.runelite.client.util.Filepath;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
 import net.runelite.http.api.item.ItemPrice;
 import okhttp3.OkHttpClient;
 
-@PluginDescriptor(name = "TSG Hub", description = "Type Shiii Gaming clan events and progress tracking", tags = {"tsg", "clan", "bingo", "events"})
+@PluginDescriptor(name = "TSG Hub", internalName = "tsg-hub", description = "Type Shiii Gaming clan events and progress tracking", tags = {"tsg", "clan", "bingo", "events"})
 public class TsgHubPlugin extends Plugin
 {
 	private static final String SERVICE_URL = "https://api.typeshiigaming.com";
@@ -148,6 +149,7 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubSocket socket;
 	private volatile boolean organizerRefreshPending;
 	private TsgHubSignals signals;
+	private volatile Filepath rulesCache;
 	private TsgHubGroups groups;
 	private TsgHubPresence presence;
 	private TsgHubDrops drops;
@@ -181,6 +183,7 @@ public class TsgHubPlugin extends Plugin
 			@Override public void onXpRequest(String skills) { reportXp(skills); }
 		});
 		signals = new TsgHubSignals(socket, this::api, this::signalReply);
+		executor.execute(this::loadCachedRules);
 		executor.scheduleAtFixedRate(this::socketTick, 2, 5, TimeUnit.SECONDS);
 		executor.scheduleAtFixedRate(unlessLive(this::autoRefreshBoard), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
 		itemSearchExecutor = Executors.newFixedThreadPool(2, daemon("tsg-hub-item-search"));
@@ -1467,8 +1470,15 @@ public class TsgHubPlugin extends Plugin
 	private void refreshRules(String version)
 	{
 		if (version.isEmpty() || version.equals(TsgHubRules.get().version)) return;
-		try { TsgHubRules.apply(api().request("GET", "/v1/rules", null, null)); }
+		try { TsgHubRules.save(api().request("GET", "/v1/rules", null, null), rulesCache); }
 		catch (Exception ignored) { }
+	}
+
+	private void loadCachedRules()
+	{
+		try { rulesCache = getPluginDirectory().join("rules.json"); }
+		catch (Exception e) { return; }
+		TsgHubRules.loadCached(rulesCache);
 	}
 
 	private void reportXp(String skills)
