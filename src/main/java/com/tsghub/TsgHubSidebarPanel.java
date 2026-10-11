@@ -81,7 +81,9 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final JButton settings = iconButton(new CogIcon(), "Plugin settings");
 	private final JButton pin = iconButton(new PinIcon(), "Pin below");
 	private final JPanel footer = new JPanel();
+	private final JButton discord = iconButton(new DiscordIcon(), "Copy an invite to the clan Discord");
 	private final JLabel connection = label("", MUTED, smallFont());
+	private final JLabel version = label("v" + TsgHubVersion.VERSION, DIM, smallFont());
 	private final StatusLine status = new StatusLine(TEXT_W);
 
 	private final CardLayout centerLayout = new CardLayout();
@@ -456,11 +458,11 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	void setConnection(TsgHubSocket.State state)
 	{
-		Color color = state == TsgHubSocket.State.LIVE ? SUCCESS : state == TsgHubSocket.State.CONNECTING ? WARNING : TsgHubTheme.ERROR;
-		String status = state == TsgHubSocket.State.LIVE ? "Live" : state == TsgHubSocket.State.CONNECTING ? "Connecting" : "Offline";
+		Color color = state == TsgHubSocket.State.CONNECTED ? SUCCESS : state == TsgHubSocket.State.CONNECTING ? WARNING : TsgHubTheme.ERROR;
+		String status = state == TsgHubSocket.State.CONNECTED ? "Connected" : state == TsgHubSocket.State.CONNECTING ? "Connecting…" : "Disconnected";
 		connection.setIcon(new DotIcon(color));
-		connection.setText("v" + TsgHubVersion.VERSION + " · " + status);
-		connection.setToolTipText(state == TsgHubSocket.State.LIVE ? "Live updates connected" : state == TsgHubSocket.State.CONNECTING ? "Connecting to live updates" : "Not connected to live updates");
+		connection.setText(status);
+		connection.setToolTipText(state == TsgHubSocket.State.CONNECTED ? "Receiving live updates" : state == TsgHubSocket.State.CONNECTING ? "Connecting to TSG Hub" : "Not connected to TSG Hub");
 	}
 
 	void setUpdate(String version)
@@ -1603,7 +1605,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		dropsWanted = next == View.DROPS || docked && pinned == View.DROPS;
 		if (next != View.COMPETITION) openCompetitionId = null;
 		centerLayout.show(center, cardName(next));
-		footer.setVisible(next == View.HOME);
+		discord.setVisible(next == View.HOME);
 		dock.setShown(!gated(next));
 		pin.setVisible(pinnable(next));
 		title.setText(html(escape(titleText), titleWidth()));
@@ -1738,20 +1740,25 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	private JPanel buildFooter()
 	{
-		JButton discord = iconButton(new DiscordIcon(), "Copy an invite to the clan Discord");
 		discord.addActionListener(e -> {
 			discord.setEnabled(false);
 			plugin.copyDiscordInvite(() -> discord.setEnabled(true));
 		});
 		discord.setAlignmentX(Component.CENTER_ALIGNMENT);
-		connection.setAlignmentX(Component.CENTER_ALIGNMENT);
-		connection.setIconTextGap(5);
-		setConnection(TsgHubSocket.State.OFFLINE);
+		connection.setIconTextGap(6);
+		setConnection(TsgHubSocket.State.DISCONNECTED);
+		JPanel status = new JPanel(new BorderLayout());
+		status.setOpaque(false);
+		status.setAlignmentX(Component.CENTER_ALIGNMENT);
+		status.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, BORDER), BorderFactory.createEmptyBorder(6, 2, 0, 2)));
+		status.add(connection, BorderLayout.WEST);
+		status.add(version, BorderLayout.EAST);
 		footer.setLayout(new BoxLayout(footer, BoxLayout.Y_AXIS));
 		footer.setOpaque(false);
 		footer.add(discord);
-		footer.add(connection);
-		footer.setVisible(false);
+		footer.add(Box.createVerticalStrut(6));
+		footer.add(status);
+		discord.setVisible(false);
 		return footer;
 	}
 
