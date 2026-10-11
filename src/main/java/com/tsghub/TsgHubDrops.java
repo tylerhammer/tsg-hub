@@ -101,15 +101,29 @@ final class TsgHubDrops
 	{
 		if (!plugin.isInHubClan() || !plugin.sharingEnabled() || executor.isShutdown()) return;
 		String clan = encode(plugin.getDetectedClanName());
+		String query = query();
 		if (!quiet) ui(s -> s.setBusy(true));
 		executor.submit(() -> {
 			try
 			{
-				apply(api.get().request("GET", "/v1/drops?clanName=" + clan, null, null).getAsJsonArray("drops"));
+				JsonArray drops = api.get().request("GET", "/v1/drops?clanName=" + clan + query, null, null).getAsJsonArray("drops");
+				if (query.equals(query())) apply(drops);
 			}
 			catch (Exception e) { if (!quiet) ui(s -> s.setStatus("Couldn't load drops. " + TsgHubUi.friendlyError(e), Tone.ERROR)); }
 			finally { if (!quiet) ui(s -> s.setBusy(false)); }
 		});
+	}
+
+	void onSnapshot(JsonArray drops)
+	{
+		if (query().isEmpty()) apply(drops);
+		else load(true);
+	}
+
+	private String query()
+	{
+		TsgHubSidebarPanel s = sidebar.get();
+		return s == null ? "" : s.dropsQuery();
 	}
 
 	void apply(JsonArray drops)
@@ -153,9 +167,9 @@ final class TsgHubDrops
 		if (s != null && s.wantsDrops()) load(true);
 	}
 
-	private static String encode(String value)
+	static String encode(String value)
 	{
-		try { return java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8.name()); }
+		try { return java.net.URLEncoder.encode(value == null ? "" : value, java.nio.charset.StandardCharsets.UTF_8.name()); }
 		catch (java.io.UnsupportedEncodingException e) { return ""; }
 	}
 
