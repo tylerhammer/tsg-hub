@@ -810,7 +810,7 @@ public class TsgHubPlugin extends Plugin
 				if (roster != null) presence.apply(TsgHubUi.array(roster, "members"), notes == null ? null : TsgHubUi.array(notes, "members"));
 				break;
 			case "drops":
-				drops.apply(TsgHubUi.array(data, "drops"));
+				drops.onSnapshot(TsgHubUi.array(data, "drops"));
 				break;
 			case "events":
 				applyClanEvents(TsgHubUi.array(data, "events"));

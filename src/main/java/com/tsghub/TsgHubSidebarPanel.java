@@ -45,6 +45,7 @@ import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -102,6 +103,9 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final WidthTrackingPanel dropsPage = new WidthTrackingPanel();
 	private final JScrollPane membersScroll = scroll(membersPage);
 	private final JScrollPane dropsScroll = scroll(dropsPage);
+	private final JPanel dropsView = new JPanel(new BorderLayout(0, GAP_M));
+	private final JComboBox<String> dropType = new JComboBox<>(new String[] {"All types", "Mine", "Raids", "Pets", "Log"});
+	private final JComboBox<String> dropValue = new JComboBox<>(new String[] {"Any value", "100k+", "1m+", "10m+"});
 	private final TsgHubDock dock = new TsgHubDock(center, this::unpin);
 	private View pinned;
 
@@ -128,6 +132,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private volatile boolean membersWanted;
 	private volatile boolean groupsWanted;
 	private volatile boolean dropsWanted;
+	private volatile int dropTypeIndex;
+	private volatile int dropValueIndex;
 	private JsonArray members;
 	private JsonArray offlineMembers = new JsonArray();
 	private boolean notesLoaded;
@@ -153,6 +159,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final GroupMembersPanel groupMembers;
 	private static final String WILDERNESS = "Wilderness lvl ";
 	private static final int DROP_ICON_W = 40;
+	private static final String[] DROP_KINDS = {"", "", "raid", "pet", "log"};
+	private static final long[] DROP_VALUES = {0, 100_000, 1_000_000, 10_000_000};
 	private static final DateTimeFormatter CLOCK_TIME = DateTimeFormatter.ofPattern("HH:mm");
 	private static final Color TAG_DEFAULT = new Color(195, 140, 255);
 	private static final Map<String, Color> TAG_COLORS = Map.of(
@@ -220,7 +228,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		center.add(buildBoard(), "board");
 		center.add(groupsScroll, "groups");
 		center.add(membersScroll, "members");
-		center.add(dropsScroll, "drops");
+		center.add(buildDropsView(), "drops");
 		add(dock, BorderLayout.CENTER);
 		add(buildFooter(), BorderLayout.SOUTH);
 
@@ -1155,6 +1163,75 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (shows(View.DROPS)) renderDrops();
 	}
 
+	private JPanel buildDropsView()
+	{
+		JPanel filters = panel(new java.awt.GridLayout(1, 2, GAP_S, 0));
+		dropTypeIndex = sessionIndex("dropType", dropType.getItemCount());
+		dropValueIndex = sessionIndex("dropValue", dropValue.getItemCount());
+		dropType.setSelectedIndex(dropTypeIndex);
+		dropValue.setSelectedIndex(dropValueIndex);
+		dropType.setToolTipText("Drop type");
+		dropValue.setToolTipText("Minimum value");
+		dropType.addActionListener(e -> changeDropFilter());
+		dropValue.addActionListener(e -> changeDropFilter());
+		filters.add(dropType);
+		filters.add(dropValue);
+		dropsView.setOpaque(false);
+		dropsView.add(filters, BorderLayout.NORTH);
+		dropsView.add(dropsScroll, BorderLayout.CENTER);
+		return dropsView;
+	}
+
+	private static int sessionIndex(String key, int size)
+	{
+		try
+		{
+			int index = Integer.parseInt(TsgHubSession.get(key));
+			return index >= 0 && index < size ? index : 0;
+		}
+		catch (NumberFormatException e)
+		{
+			return 0;
+		}
+	}
+
+	private void changeDropFilter()
+	{
+		if (dropTypeIndex == dropType.getSelectedIndex() && dropValueIndex == dropValue.getSelectedIndex()) return;
+		dropTypeIndex = Math.max(0, dropType.getSelectedIndex());
+		dropValueIndex = Math.max(0, dropValue.getSelectedIndex());
+		TsgHubSession.set("dropType", dropTypeIndex == 0 ? "" : String.valueOf(dropTypeIndex));
+		TsgHubSession.set("dropValue", dropValueIndex == 0 ? "" : String.valueOf(dropValueIndex));
+		if (shows(View.DROPS)) renderDrops();
+		plugin.drops().load(false);
+	}
+
+	String dropsQuery()
+	{
+		String query = "";
+		String kind = DROP_KINDS[dropTypeIndex];
+		if (!kind.isEmpty()) query += "&kind=" + kind;
+		if (dropTypeIndex == 1) query += "&player=" + TsgHubDrops.encode(plugin.getDetectedPlayerName());
+		if (dropValueIndex > 0) query += "&minValue=" + DROP_VALUES[dropValueIndex];
+		return query;
+	}
+
+	static boolean dropMatches(JsonObject drop, int type, long minValue, String self)
+	{
+		String kind = str(drop, "kind");
+		boolean typeMatches;
+		switch (type)
+		{
+			case 1: typeMatches = samePlayer(str(drop, "player"), self); break;
+			case 2: typeMatches = "raid".equals(kind); break;
+			case 3: typeMatches = "pet".equals(kind) || "dupe".equals(kind); break;
+			case 4: typeMatches = bool(drop, "newLog") || "clog".equals(kind); break;
+			default: typeMatches = true;
+		}
+		long value = drop.has("value") ? drop.get("value").getAsLong() : 0;
+		return typeMatches && value >= minValue;
+	}
+
 	void showDrops()
 	{
 		if (pinned == View.DROPS)
@@ -1176,7 +1253,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		{
 			dropsPage.add(caption("Loading drops..."));
 		}
-		else if (drops.size() == 0)
+		else if (drops.size() == 0 && dropTypeIndex == 0 && dropValueIndex == 0)
 		{
 			dropsPage.add(errorPanel("No drops yet", "Clan broadcasts for drops, raid loot, pets and collection log items show up here."));
 		}
@@ -1184,10 +1261,18 @@ final class TsgHubSidebarPanel extends PluginPanel
 		{
 			Instant now = clock.instant();
 			ZoneId zone = ZoneId.systemDefault();
-			String day = null;
+			String self = plugin.getDetectedPlayerName();
+			JsonArray shown = new JsonArray();
 			for (int i = 0; i < drops.size(); i++)
 			{
 				JsonObject drop = drops.get(i).getAsJsonObject();
+				if (dropMatches(drop, dropTypeIndex, DROP_VALUES[dropValueIndex], self)) shown.add(drop);
+			}
+			if (shown.size() == 0) dropsPage.add(errorPanel("No matching drops", "Nothing recent matches this type and value."));
+			String day = null;
+			for (int i = 0; i < shown.size(); i++)
+			{
+				JsonObject drop = shown.get(i).getAsJsonObject();
 				String nextDay = dropDay(str(drop, "receivedAt"), now, zone);
 				if (!nextDay.equals(day))
 				{
@@ -2022,9 +2107,9 @@ final class TsgHubSidebarPanel extends PluginPanel
 		else setHeader(titleText, subtitleText, true, true);
 	}
 
-	private JScrollPane pane(View owner)
+	private JComponent pane(View owner)
 	{
-		return owner == View.MEMBERS ? membersScroll : owner == View.DROPS ? dropsScroll : groupsScroll;
+		return owner == View.MEMBERS ? membersScroll : owner == View.DROPS ? dropsView : groupsScroll;
 	}
 
 	private Icon pinIcon(View owner)
