@@ -12,8 +12,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import javax.swing.SwingUtilities;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
@@ -25,10 +23,7 @@ import net.runelite.client.util.Text;
 final class TsgHubDrops
 {
 	static final int REFRESH_SECONDS = 60;
-	private static final int DETAIL_DELAY_MS = 1200;
-	private static final int DETAIL_TICKS = 2;
-	private static final Pattern KILL_COUNT = Pattern.compile("^Your .+? count is: ([0-9][0-9,]*)");
-	private static final String[] PLAYER_ENDS = {" received ", " has a funny feeling", " feels "};
+	private static final int CONTEXT_TICKS = 10;
 
 	private final TsgHubPlugin plugin;
 	private final Client client;
@@ -38,7 +33,7 @@ final class TsgHubDrops
 	private final Supplier<TsgHubSidebarPanel> sidebar;
 	private Map<String, Integer> itemIds;
 	private final Recent<String> lootSources = new Recent<>();
-	private final Recent<Long> killCounts = new Recent<>();
+	private final Recent<String> countMessages = new Recent<>();
 
 	TsgHubDrops(TsgHubPlugin plugin, Client client, ClientThread clientThread, ScheduledExecutorService executor, Supplier<TsgHubApi> api, Supplier<TsgHubSidebarPanel> sidebar)
 	{
@@ -58,14 +53,15 @@ final class TsgHubDrops
 
 	void onChatMessage(ChatMessage event)
 	{
+		if (!plugin.sharingEnabled()) return;
 		if (event.getType() == ChatMessageType.GAMEMESSAGE)
 		{
-			if (!plugin.sharingEnabled()) return;
-			long count = killCount(event.getMessage());
-			if (count > 0) killCounts.add(client.getTickCount(), count);
+			String text = Text.removeTags(event.getMessage()).trim();
+			String lower = text.toLowerCase(Locale.ROOT);
+			if (TsgHubRules.get().dropContext.stream().anyMatch(lower::contains)) countMessages.add(client.getTickCount(), text);
 			return;
 		}
-		if (event.getType() != ChatMessageType.CLAN_MESSAGE || !plugin.sharingEnabled()) return;
+		if (event.getType() != ChatMessageType.CLAN_MESSAGE) return;
 		String message = broadcast(event.getMessage());
 		long hash = client.getAccountHash();
 		if (message == null || hash == -1 || executor.isShutdown()) return;
@@ -73,45 +69,23 @@ final class TsgHubDrops
 		body.addProperty("clanName", plugin.getDetectedClanName());
 		body.addProperty("accountHash", Long.toString(hash));
 		body.addProperty("message", message);
-		if (!ownBroadcast(message, plugin.getDetectedPlayerName()))
-		{
-			executor.submit(() -> post(body));
-			return;
-		}
+		body.addProperty("reporter", plugin.getDetectedPlayerName());
 		int tick = client.getTickCount();
+		body.addProperty("tick", tick);
 		executor.schedule(() -> {
 			if (!plugin.sharingEnabled()) return;
-			String source = lootSources.nearest(tick, DETAIL_TICKS);
-			Long count = killCounts.nearest(tick, DETAIL_TICKS);
-			if (source != null) body.addProperty("source", source);
-			if (count != null) body.addProperty("killCount", count);
+			JsonObject context = new JsonObject();
+			context.add("loot", lootSources.since(tick - CONTEXT_TICKS, "source"));
+			context.add("chat", countMessages.since(tick - CONTEXT_TICKS, "text"));
+			body.add("context", context);
 			post(body);
-		}, DETAIL_DELAY_MS, TimeUnit.MILLISECONDS);
+		}, TsgHubRules.get().dropDelayMs, TimeUnit.MILLISECONDS);
 	}
 
 	private void post(JsonObject body)
 	{
 		try { api.get().request("POST", "/v1/drops", null, body); }
 		catch (Exception ignored) { }
-	}
-
-	static boolean ownBroadcast(String message, String self)
-	{
-		for (String end : PLAYER_ENDS)
-		{
-			int at = message.indexOf(end);
-			if (at > 0) return TsgHubUi.samePlayer(message.substring(0, at), self);
-		}
-		return false;
-	}
-
-	static long killCount(String raw)
-	{
-		if (raw == null) return 0;
-		Matcher m = KILL_COUNT.matcher(Text.removeTags(raw).trim());
-		if (!m.find()) return 0;
-		try { return Long.parseLong(m.group(1).replace(",", "")); }
-		catch (NumberFormatException e) { return 0; }
 	}
 
 	static String broadcast(String raw)
@@ -204,20 +178,18 @@ final class TsgHubDrops
 			while (seen.size() > KEEP) seen.removeFirst();
 		}
 
-		synchronized T nearest(int tick, int within)
+		synchronized JsonArray since(int tick, String key)
 		{
-			T best = null;
-			long gap = within + 1L;
+			JsonArray out = new JsonArray();
 			for (Map.Entry<Integer, T> entry : seen)
 			{
-				long distance = Math.abs((long) entry.getKey() - tick);
-				if (distance < gap)
-				{
-					gap = distance;
-					best = entry.getValue();
-				}
+				if (entry.getKey() < tick) continue;
+				JsonObject row = new JsonObject();
+				row.addProperty("tick", entry.getKey());
+				row.addProperty(key, String.valueOf(entry.getValue()));
+				out.add(row);
 			}
-			return best;
+			return out;
 		}
 	}
 }
