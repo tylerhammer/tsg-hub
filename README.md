@@ -12,7 +12,7 @@ Join a bingo team, climb the Skill of the Week leaderboard, find a raid party, a
 
 </div>
 
-> **Members only.** TSG Hub only works for characters in the **TSGaming** clan. Anyone else sees a members-only message, and nothing is sent.
+> **Members only.** TSG Hub only works for members of the **TSGaming** clan. Anyone else sees a members-only message, and nothing is sent.
 
 ## Getting started
 
