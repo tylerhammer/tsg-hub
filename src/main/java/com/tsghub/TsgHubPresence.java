@@ -379,6 +379,8 @@ final class TsgHubPresence
 		payload.addProperty("accountHash", Long.toString(hash));
 		payload.addProperty("world", client.getWorld());
 		payload.addProperty("accountType", client.getVarbitValue(VarbitID.IRONMAN));
+		int clanRank = plugin.getDetectedClanRank();
+		if (clanRank >= 0) payload.addProperty("clanRank", clanRank);
 		payload.addProperty("area", area == null ? "" : area.name);
 		payload.addProperty("activity", detailed ? activity.activity(area, System.currentTimeMillis()) : "Online");
 		return payload;
