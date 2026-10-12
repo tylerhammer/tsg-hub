@@ -2,7 +2,7 @@
 
 # TSG Hub
 
-**Clan events for Type Shiii Gaming, right in your RuneLite sidebar.**
+**Clan events for TypeShii Gaming, right in your RuneLite sidebar.**
 
 Join a bingo team, climb the Skill of the Week leaderboard, find a raid party, and let the plugin track your progress while you play.
 

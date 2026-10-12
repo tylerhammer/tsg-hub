@@ -94,7 +94,7 @@ import net.runelite.client.util.Text;
 import net.runelite.http.api.item.ItemPrice;
 import okhttp3.OkHttpClient;
 
-@PluginDescriptor(name = "TSG Hub", internalName = "tsg-hub", description = "Type Shiii Gaming clan events and progress tracking", tags = {"tsg", "clan", "bingo", "events"})
+@PluginDescriptor(name = "TSG Hub", internalName = "tsg-hub", description = "TypeShii Gaming clan events and progress tracking", tags = {"tsg", "clan", "bingo", "events"})
 public class TsgHubPlugin extends Plugin
 {
 	private static final String SERVICE_URL = "https://api.typeshiigaming.com";
