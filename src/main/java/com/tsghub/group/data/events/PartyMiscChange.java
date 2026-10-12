@@ -30,7 +30,7 @@ import com.tsghub.group.data.PartyPlayer;
 
 @Data
 @Slf4j
-public class PartyMiscChange implements PartyProcess
+public class PartyMiscChange
 {
 	PartyMisc t;
 	Integer v;
@@ -65,7 +65,6 @@ public class PartyMiscChange implements PartyProcess
 		this.s = s;
 	}
 
-	@Override
 	public void process(PartyPlayer p)
 	{
 		switch (t)

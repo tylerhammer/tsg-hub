@@ -38,7 +38,7 @@ Join a bingo team, climb the Skill of the Week leaderboard, find a raid party, a
 | 💎 **[Drops](#drops)** | The clan's big drops, raid loot, pets and collection log items, so you can catch up |
 | 📌 **[Split view](#split-view)** | Pin Members, Parties or Drops below the main view |
 | 🔗 **[Discord linking](#link-your-discord)** | Link your RuneScape account to the clan Discord |
-| 🛠️ **[Admin tools](#for-admins)** | Create events, teams and tasks, and review proof, without leaving the game |
+| 🛠️ **[Admin tools](#for-admins)** | Create events, teams and tasks, and review flagged claims, without leaving the game |
 
 ---
 
@@ -62,7 +62,6 @@ When you make progress, a message appears in **your own chatbox only**. When you
 | **Any jar / Any boss pet** | Built-in groups, so admins don't have to list every item |
 | **Raids** | Chambers of Xeric, Theatre of Blood and Tombs of Amascut completions, per mode. Optionally clan-only |
 | **Collection log** | New collection log unlocks count toward set tasks |
-| **Manual** | Submit a screenshot link or note; an admin reviews it |
 
 Tasks can be **Team** (everyone's progress pools together), **Everyone** (each member reaches the target), or **Solo** (one member does it alone).
 
@@ -147,14 +146,14 @@ Your in-game clan rank doesn't grant admin access. Owners and Deputy Owners keep
 1. **New event**: pick bingo, Skill of the Week, Boss of the Week or a custom event, then set its name and its start and end date and time. Times are entered in your computer's time zone, shown next to the fields, and players see them converted to theirs. Custom events can leave the end time empty. You can add optional prizes for 1st, 2nd and 3rd place, in millions of GP, and hide scores from players until the end.
 2. **Teams**: add teams. Each gets a permanent invite code; use **Copy code** to share it.
 3. **Tasks**: add tasks shared by every team. Item tasks have type-ahead search with icons and ready-made sets, and raid tasks let you choose each raid and mode.
-4. **Claims**: approve or reject manual submissions. The tab shows how many are waiting.
+4. **Claims**: approve or reject clan-only raid completions where the plugin couldn't see who was in the raid (plus any older manual submissions). The tab shows how many are waiting.
 
 <details>
 <summary><b>Screenshots: teams and claims</b></summary>
 
 <img src="docs/images/admin-teams.png" alt="Teams for the selected event with invite codes and actions">
 
-<img src="docs/images/admin-claims.png" alt="Pending manual claims awaiting review">
+<img src="docs/images/admin-claims.png" alt="Pending raid claims awaiting review">
 
 </details>
 
@@ -172,7 +171,6 @@ Once you opt in, it sends the following to the TSG Hub service:
 - If you've set a hub key, the key with your display name and RuneLite account hash when the plugin checks it, to link your Discord account to this character and follow name changes
 - Progress for events you've joined: kill counts, drops, raid completions, collection log unlocks and skill XP
 - Loot you receive while a bingo event you've joined is active, so admins can reconcile a task from earlier drops if its item list changes
-- Manual proof you submit
 - Whether you're currently in the clan chat channel and your world, so teammates' completion alerts reach you and clanmates see you as online
 - With **Share location and activity** on, your area name and current activity (never your exact tile)
 - Clan chat broadcasts for drops, raid loot, pets and collection log items, for the clan's **Drops** history. For your own broadcasts, also the monster or activity it came from and your kill count from the game message

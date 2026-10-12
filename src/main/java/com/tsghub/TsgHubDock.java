@@ -2,6 +2,8 @@ package com.tsghub;
 
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
+import static com.tsghub.TsgHubSession.DOCK_COLLAPSED;
+import static com.tsghub.TsgHubSession.DOCK_SPLIT;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -50,7 +52,7 @@ final class TsgHubDock extends JPanel
 	private final JButton toggle = iconButton(chevron, "Collapse");
 	private final JButton close = iconButton(new CloseIcon(), "Unpin");
 	private JComponent content;
-	private boolean collapsed = "true".equals(TsgHubSession.get("dockCollapsed"));
+	private boolean collapsed = "true".equals(TsgHubSession.get(DOCK_COLLAPSED));
 	private boolean shown = true;
 	private boolean applySplit;
 
@@ -129,7 +131,7 @@ final class TsgHubDock extends JPanel
 	private void toggle()
 	{
 		collapsed = !collapsed;
-		TsgHubSession.set("dockCollapsed", collapsed ? "true" : "");
+		TsgHubSession.set(DOCK_COLLAPSED, collapsed ? "true" : "");
 		rebuild();
 	}
 
@@ -171,7 +173,7 @@ final class TsgHubDock extends JPanel
 	{
 		try
 		{
-			double ratio = Double.parseDouble(TsgHubSession.get("dockSplit"));
+			double ratio = Double.parseDouble(TsgHubSession.get(DOCK_SPLIT));
 			return Math.max(MIN_SPLIT, Math.min(MAX_SPLIT, ratio));
 		}
 		catch (NumberFormatException e)
@@ -186,7 +188,7 @@ final class TsgHubDock extends JPanel
 		if (applySplit || span <= 0 || split.getParent() == null) return;
 		double ratio = Math.max(MIN_SPLIT, Math.min(MAX_SPLIT, split.getDividerLocation() / (double) span));
 		split.setResizeWeight(ratio);
-		TsgHubSession.set("dockSplit", String.format(java.util.Locale.ROOT, "%.3f", ratio));
+		TsgHubSession.set(DOCK_SPLIT, String.format(java.util.Locale.ROOT, "%.3f", ratio));
 	}
 
 	private static final class Grip extends BasicSplitPaneDivider

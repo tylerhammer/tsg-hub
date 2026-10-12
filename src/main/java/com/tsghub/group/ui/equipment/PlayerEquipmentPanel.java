@@ -34,7 +34,6 @@ import java.util.HashMap;
 import java.util.Map;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
-import lombok.Getter;
 import net.runelite.api.EquipmentInventorySlot;
 import net.runelite.api.gameval.SpriteID;
 import net.runelite.client.game.ItemManager;
@@ -57,7 +56,6 @@ public class PlayerEquipmentPanel extends JPanel
 		.put(EquipmentInventorySlot.AMMO, SpriteID.Wornicons.AMMUNITION)
 		.build();
 
-	@Getter
 	private final Map<EquipmentInventorySlot, EquipmentPanelSlot> panelMap = new HashMap<>();
 	private final EquipmentPanelSlot quiverSlot = new EquipmentPanelSlot();
 	private final ItemManager itemManager;

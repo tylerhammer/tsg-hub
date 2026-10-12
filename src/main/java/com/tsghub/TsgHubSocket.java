@@ -289,7 +289,7 @@ final class TsgHubSocket
 		if (!adminToken.isEmpty()) sendAdmin();
 		if (!watching.isEmpty()) sendWatch();
 		changed();
-		String rulesVersion = string(message, "rules");
+		String rulesVersion = TsgHubUi.str(message, "rules");
 		executor.execute(() -> listener.onReady(rulesVersion));
 	}
 
@@ -373,16 +373,16 @@ final class TsgHubSocket
 				message = element.getAsJsonObject();
 			}
 			catch (RuntimeException e) { return; }
-			String type = string(message, "type");
-			String eventId = string(message, "eventId");
+			String type = TsgHubUi.str(message, "type");
+			String eventId = TsgHubUi.str(message, "eventId");
 			switch (type)
 			{
 				case "ready":
 					opened(ws, message);
 					break;
 				case "changed":
-					String topic = string(message, "topic");
-					executor.execute(() -> listener.onChanged(topic, eventId));
+					String topic = TsgHubUi.str(message, "topic");
+					dispatch(ws, () -> listener.onChanged(topic, eventId));
 					break;
 				case "subscribed":
 					subscribed(ws, eventId);
@@ -390,34 +390,34 @@ final class TsgHubSocket
 				case "progress":
 				case "claimed":
 				case "notice":
-					executor.execute(() -> listener.onReply(message));
+					dispatch(ws, () -> listener.onReply(message));
 					break;
 				case "state":
-					executor.execute(() -> listener.onSnapshot(message));
+					dispatch(ws, () -> listener.onSnapshot(message));
 					break;
 				case "ack":
-					String id = string(message, "id");
-					if (!id.isEmpty()) executor.execute(() -> listener.onAck(id));
+					String id = TsgHubUi.str(message, "id");
+					if (!id.isEmpty()) dispatch(ws, () -> listener.onAck(id));
 					break;
 				case "xp.request":
-					String skills = string(message, "skills");
-					if (!skills.isEmpty()) executor.execute(() -> listener.onXpRequest(skills));
+					String skills = TsgHubUi.str(message, "skills");
+					if (!skills.isEmpty()) dispatch(ws, () -> listener.onXpRequest(skills));
 					break;
 				case "admin.revoked":
 					adminRevoked(ws);
 					break;
 				case "announcement":
-					String announcement = string(message, "text");
-					if (!announcement.isEmpty()) executor.execute(() -> listener.onAnnouncement(announcement));
+					String announcement = TsgHubUi.str(message, "text");
+					if (!announcement.isEmpty()) dispatch(ws, () -> listener.onAnnouncement(announcement));
 					break;
 				case "update":
-					String version = string(message, "version");
-					if (!version.isEmpty()) executor.execute(() -> listener.onUpdateAvailable(version));
+					String version = TsgHubUi.str(message, "version");
+					if (!version.isEmpty()) dispatch(ws, () -> listener.onUpdateAvailable(version));
 					break;
 				case "error":
 					if (!eventId.isEmpty()) rejected(ws, eventId);
-					else if ("admin".equals(string(message, "topic")) && "401".equals(string(message, "status"))) adminRevoked(ws);
-					log.debug("TSG Hub socket error: {}", string(message, "message"));
+					else if ("admin".equals(TsgHubUi.str(message, "topic")) && "401".equals(TsgHubUi.str(message, "status"))) adminRevoked(ws);
+					log.debug("TSG Hub socket error: {}", TsgHubUi.str(message, "message"));
 					break;
 				default:
 			}
@@ -444,9 +444,9 @@ final class TsgHubSocket
 		}
 	}
 
-	private static String string(JsonObject object, String key)
+	private synchronized void dispatch(WebSocket ws, Runnable action)
 	{
-		JsonElement value = object.get(key);
-		return value != null && value.isJsonPrimitive() ? value.getAsString() : "";
+		if (ws != socket || executor.isShutdown()) return;
+		executor.execute(action);
 	}
 }

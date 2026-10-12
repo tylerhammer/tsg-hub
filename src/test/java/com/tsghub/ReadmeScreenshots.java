@@ -97,9 +97,6 @@ public class ReadmeScreenshots
 
 		TsgHubSidebarPanel sidebar = new TsgHubSidebarPanel(plugin, new GroupMembersPanel(new GroupViewSettings() {}, null, null));
 
-		sidebar.showSharingOff();
-		shoot(sidebar, SIDEBAR_W, 220, "sharing");
-
 		JsonArray events = data.getAsJsonObject("eventList").getAsJsonArray("events");
 		for (int i = 0; i < events.size(); i++)
 		{
@@ -123,7 +120,7 @@ public class ReadmeScreenshots
 		BufferedImage eventList = shoot(sidebar, SIDEBAR_W, 480, "events");
 
 		sidebar.showBoard(data.getAsJsonObject("board").getAsJsonObject("event"), "Crab Legs", true);
-		BufferedImage board = shoot(sidebar, SIDEBAR_W, 712, "board-tasks");
+		BufferedImage board = shoot(sidebar, SIDEBAR_W, 652, "board-tasks");
 		selectTab(sidebar, "Scores");
 		shoot(sidebar, SIDEBAR_W, 330, "board-scores");
 		selectTab(sidebar, "Team");

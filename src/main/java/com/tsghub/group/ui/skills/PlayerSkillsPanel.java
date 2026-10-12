@@ -69,7 +69,7 @@ import static net.runelite.api.Skill.WOODCUTTING;
 
 public class PlayerSkillsPanel extends JPanel
 {
-	private static final List<Skill> SKILLS = ImmutableList.of(
+	public static final List<Skill> SKILL_ORDER = ImmutableList.of(
 		ATTACK, HITPOINTS, MINING,
 		STRENGTH, AGILITY, SMITHING,
 		DEFENCE, HERBLORE, FISHING,
@@ -117,7 +117,7 @@ public class PlayerSkillsPanel extends JPanel
 
 		JPanel grid = new JPanel(new GridLayout(0, 3, 2, 2));
 		grid.setOpaque(false);
-		for (Skill skill : SKILLS)
+		for (Skill skill : SKILL_ORDER)
 		{
 			SkillPanelSlot slot = new SkillPanelSlot(skill.getName());
 			panelMap.put(skill, slot);
@@ -150,7 +150,7 @@ public class PlayerSkillsPanel extends JPanel
 			return;
 		}
 		int total = 0;
-		for (Skill skill : SKILLS)
+		for (Skill skill : SKILL_ORDER)
 		{
 			int base = player.getSkillRealLevel(skill, displayVirtualLevels);
 			total += base;

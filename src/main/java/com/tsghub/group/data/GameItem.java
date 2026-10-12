@@ -24,7 +24,6 @@
  */
 package com.tsghub.group.data;
 
-import lombok.AllArgsConstructor;
 import lombok.Value;
 import net.runelite.api.Item;
 import net.runelite.api.ItemComposition;
@@ -32,7 +31,6 @@ import net.runelite.client.game.ItemManager;
 import net.runelite.client.util.QuantityFormatter;
 
 @Value
-@AllArgsConstructor
 public class GameItem
 {
 	int id;
