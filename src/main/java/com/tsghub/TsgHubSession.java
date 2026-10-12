@@ -22,6 +22,8 @@ final class TsgHubSession
 	static final String DOCK_VIEW = "dockView";
 	static final String DOCK_SPLIT = "dockSplit";
 	static final String DOCK_COLLAPSED = "dockCollapsed";
+	static final String DROP_TYPE = "dropType";
+	static final String DROP_VALUE = "dropValue";
 
 	private static final String GROUP = "tsghubsession";
 	private static final String PROFILE_PREFIX = GROUP + "." + ConfigManager.RSPROFILE_GROUP + ".";

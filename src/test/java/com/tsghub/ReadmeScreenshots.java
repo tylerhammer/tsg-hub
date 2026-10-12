@@ -117,12 +117,14 @@ public class ReadmeScreenshots
 		sidebar.showHome();
 		shoot(sidebar, SIDEBAR_W, 300, "home");
 		sidebar.showEventList();
-		BufferedImage eventList = shoot(sidebar, SIDEBAR_W, 480, null);
+		BufferedImage eventList = shoot(sidebar, SIDEBAR_W, 480, "events");
 
 		sidebar.showBoard(data.getAsJsonObject("board").getAsJsonObject("event"), "Crab Legs", true);
 		BufferedImage board = shoot(sidebar, SIDEBAR_W, 652, "board-tasks");
 		selectTab(sidebar, "Scores");
 		shoot(sidebar, SIDEBAR_W, 330, "board-scores");
+		selectTab(sidebar, "Team");
+		shoot(sidebar, SIDEBAR_W, 400, "board-team");
 
 		sidebar.showCompetition(data.getAsJsonObject("skillBoard").getAsJsonObject("event"), "Crab Legs", true);
 		shoot(sidebar, SIDEBAR_W, 400, "competition");
@@ -146,6 +148,7 @@ public class ReadmeScreenshots
 		TsgHubPanel organizer = new TsgHubPanel(plugin);
 		organizer.setManagedEvents(data.getAsJsonObject("managed").getAsJsonArray("events"));
 		organizer.openOrganizerEvent(data.getAsJsonObject("organizer"));
+		shoot(organizer, 860, 300, "admin-teams");
 		selectTab(organizer, "Tasks");
 		shoot(organizer, 860, 580, "admin-tasks");
 		selectTab(organizer, "Claims");
@@ -200,7 +203,7 @@ public class ReadmeScreenshots
 		g.scale(SCALE, SCALE);
 		panel.paint(g);
 		g.dispose();
-		if (name != null) ImageIO.write(image, "png", new File(out, name + ".png"));
+		ImageIO.write(image, "png", new File(out, name + ".png"));
 		frame.setContentPane(new JComponent() {});
 		frame.dispose();
 		return image;

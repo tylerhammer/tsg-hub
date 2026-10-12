@@ -1,6 +1,7 @@
 package com.tsghub;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -127,6 +128,34 @@ public class DropsPanelTest
 		drop.addProperty("rate", "1/358");
 		String tip = TsgHubDrops.dropTooltip(drop);
 		assertTrue(tip, tip.contains("<b>Spindel</b><br>1/358") && tip.contains("DROPPED BY"));
+	}
+
+	@Test
+	public void dropMatches()
+	{
+		JsonObject whip = drop("Abyssal whip", 1);
+		whip.addProperty("kind", "drop");
+		whip.addProperty("player", "Iron Mo");
+		whip.addProperty("value", 1_512_345);
+		JsonObject raid = drop("Twisted bow", 1);
+		raid.addProperty("kind", "raid");
+		raid.addProperty("player", "Crab Legs");
+		raid.addProperty("newLog", true);
+		JsonObject dupe = drop("Vorki", 1);
+		dupe.addProperty("kind", "dupe");
+		dupe.addProperty("player", "Crab Legs");
+
+		assertTrue(TsgHubDrops.dropMatches(whip, 0, 0, "Crab Legs"));
+		assertFalse(TsgHubDrops.dropMatches(whip, 1, 0, "Crab Legs"));
+		assertTrue(TsgHubDrops.dropMatches(raid, 1, 0, "crab\u00a0legs"));
+		assertTrue(TsgHubDrops.dropMatches(raid, 2, 0, "Crab Legs"));
+		assertFalse(TsgHubDrops.dropMatches(whip, 2, 0, "Crab Legs"));
+		assertTrue(TsgHubDrops.dropMatches(dupe, 3, 0, "Crab Legs"));
+		assertTrue(TsgHubDrops.dropMatches(raid, 4, 0, "Crab Legs"));
+		assertFalse(TsgHubDrops.dropMatches(dupe, 4, 0, "Crab Legs"));
+		assertTrue(TsgHubDrops.dropMatches(whip, 0, 1_000_000, "Crab Legs"));
+		assertFalse(TsgHubDrops.dropMatches(whip, 0, 10_000_000, "Crab Legs"));
+		assertFalse(TsgHubDrops.dropMatches(raid, 2, 100_000, "Crab Legs"));
 	}
 
 	private static JsonObject drop(String item, int quantity)

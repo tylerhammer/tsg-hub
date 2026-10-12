@@ -1,23 +1,46 @@
+<div align="center">
+
 # TSG Hub
 
-Clan events for **Type Shiii Gaming** (TSG), right in your RuneLite sidebar. Join a bingo team, climb the Skill of the Week leaderboard, find a raid party, and let the plugin track your progress while you play.
+**Clan events for TypeShii Gaming, right in your RuneLite sidebar.**
 
-![TSG Hub sidebar: clan events, a live bingo board, and clan parties](docs/images/hero.png)
+Join a bingo team, climb the Skill of the Week leaderboard, find a raid party, and let the plugin track your progress while you play.
 
-> TSG Hub only works for characters in the **TSGaming** clan. Anyone else sees a members-only message, and nothing is sent.
+[Getting started](#getting-started) · [Features](#features) · [Discord](#link-your-discord) · [Admins](#for-admins) · [Privacy](#privacy)
+
+<img src="docs/images/hero.png" width="820" alt="TSG Hub sidebar: clan events, a live bingo board, and clan parties">
+
+</div>
+
+> **Members only.** TSG Hub only works for members of the **TSGaming** clan. Anyone else sees a members-only message, and nothing is sent.
+
+## Getting started
+
+1. Install **TSG Hub** from the Plugin Hub.
+2. Log in to a character in the TSGaming clan and open the TSG Hub sidebar.
+3. Click **Enable sharing**. Nothing is sent until you do.
+4. Pick an event. For bingo, enter the team code an admin gave you. Your team is fixed once you join.
+
+<table align="center"><tr><td align="center" valign="top"><img src="docs/images/home.png" width="260" alt="TSG Hub home with Events, Parties, Members and Drops tiles"><br><sub>Home</sub></td><td align="center" valign="top"><img src="docs/images/events.png" width="260" alt="Live and upcoming events"><br><sub>Events</sub></td></tr></table>
+
+**Disconnect from event** on the **Team** tab stops tracking on this device. Your team keeps its progress, and you can rejoin with the same code.
 
 ## Features
 
-- **Bingo boards** with team tasks that update automatically from kills, drops, raids and collection log unlocks.
-- **Skill of the Week** and **Boss of the Week** leaderboards you join with one click.
-- **Custom** events (drop parties, clan trips, anything else) announced with the time, world and location.
-- **Prizes**: events can list GP prizes for 1st, 2nd and 3rd place.
-- **Clan parties** for raids, bossing and skilling. Join with one click, no passphrase to type, and see your party's health, prayer, gear, inventory and skills live.
-- **Members** list showing which clanmates are online, their world, area and what they're doing.
-- **Drops** history of the clan's big drops, raid loot, pets and collection log items, so you can catch up on what you missed.
-- **Split view**: pin Members, Parties or Drops below the main view to keep them open alongside an event.
-- **Discord linking**: link your RuneScape account to the clan Discord.
-- **Admin tools** for clan admins: create events, teams and tasks, and review flagged claims, all without leaving the game.
+| Feature | What it does |
+|---|---|
+| 🎯 **[Bingo](#bingo)** | Team boards that update automatically from kills, drops, raids and collection log unlocks |
+| 🏆 **[Competitions](#competitions-and-custom-events)** | Skill of the Week and Boss of the Week leaderboards you join with one click |
+| 📣 **[Custom events](#competitions-and-custom-events)** | Drop parties, clan trips and more, announced with the time, world and location |
+| 💰 **Prizes** | Optional GP prizes for 1st, 2nd and 3rd place |
+| ⚔️ **[Clan parties](#clan-parties)** | Raids, bossing and skilling. One-click join, no passphrase, live health, prayer, gear, inventory and skills |
+| 👥 **[Members](#members)** | Which clanmates are online, their world, area and what they're doing |
+| 💎 **[Drops](#drops)** | The clan's big drops, raid loot, pets and collection log items, so you can catch up |
+| 📌 **[Split view](#split-view)** | Pin Members, Parties or Drops below the main view |
+| 🔗 **[Discord linking](#link-your-discord)** | Link your RuneScape account to the clan Discord |
+| 🛠️ **[Admin tools](#for-admins)** | Create events, teams and tasks, and review flagged claims, without leaving the game |
+
+---
 
 ## Bingo
 
@@ -27,10 +50,7 @@ Your team's board opens straight from the sidebar. The header shows your team's 
 
 When you make progress, a message appears in **your own chatbox only**. When your team finishes a tile, teammates who are online in clan chat get a local alert too. TSG Hub never posts to public or clan chat.
 
-<p>
-<img src="docs/images/board-tasks.png" width="320" alt="A team's bingo board with progress on each task">
-<img src="docs/images/board-scores.png" width="320" alt="Team scoreboard">
-</p>
+<table align="center"><tr><td align="center" valign="top"><img src="docs/images/board-tasks.png" width="240" alt="A team's bingo board with progress on each task"><br><sub>Tasks</sub></td><td align="center" valign="top"><img src="docs/images/board-scores.png" width="240" alt="Team scoreboard"><br><sub>Scores</sub></td><td align="center" valign="top"><img src="docs/images/board-team.png" width="240" alt="Team tab listing teammates"><br><sub>Team</sub></td></tr></table>
 
 ### What gets tracked
 
@@ -55,9 +75,7 @@ The **Events** list splits live and upcoming events, with each one's prize pool.
 
 Every event shows its start and end in your own time zone, with the zone name (for example "Mon 5 Oct, 7pm AEDT") and how long until it starts or ends. Competitions count gains made between those exact times, wherever you are.
 
-<p>
-<img src="docs/images/competition.png" width="320" alt="Skill of the Week leaderboard">
-</p>
+<p align="center"><img src="docs/images/competition.png" width="280" alt="Skill of the Week leaderboard"></p>
 
 ## Clan parties
 
@@ -67,9 +85,7 @@ There's no passphrase to share. Once you're in, each member's panel shows their 
 
 A party closes when its last member leaves. Members drop out after 3 minutes without checking in, or after 30 minutes at the login screen.
 
-<p>
-<img src="docs/images/parties.png" width="320" alt="Clan party list">
-</p>
+<p align="center"><img src="docs/images/parties.png" width="280" alt="Clan party list"></p>
 
 ## Members
 
@@ -81,13 +97,16 @@ Anyone in clan chat with sharing on appears in the list. Your area and activity 
 
 Online clanmates are listed first, including those in clan chat without TSG Hub, who show just their world. The rest of the clan is listed under **Offline**; tick **Show offline** to expand it. Offline members who use TSG Hub show how long ago they were last online.
 
+<p align="center"><img src="docs/images/members.png" width="280" alt="Online clan members with their world, area and activity"></p>
+
+<details>
+<summary><b>Admin tools: notes, alts and warnings</b></summary>
+
 Admins with a hub key can right-click any member to edit their admin note. On Gnome Child characters it also sets whose alt they are; type part of a name to search the clan for their main. Alt links, notes and last seen times follow TSG Hub users through name changes. Hover anywhere on a member to see their rank, whose alt they are or a main's alts, and for admins their admin note. Members with a note also show a note icon.
 
 Admins can also right-click a member to **Add warning** with a reason and an expiry (30 days by default, 90 days, or never), or **Revoke a warning**. Members with an active warning show a red warning icon, and the hover lists each warning with its date, who issued it and when it expires. Revoked and expired warnings stay in the history, greyed out. Only admins see warnings.
 
-<p>
-<img src="docs/images/members.png" width="320" alt="Online clan members with their world, area and activity">
-</p>
+</details>
 
 ## Drops
 
@@ -95,30 +114,15 @@ The **Drops** section keeps a history of the clan's big drops, so you can see wh
 
 It's built from the clan chat broadcasts your clan already has turned on: drops over the clan's value threshold, raid loot, pets and new collection log items. Anyone online with sharing on records them, so drops from clanmates who don't use TSG Hub show up too. If several people see the same broadcast, it's only recorded once.
 
-<p>
-<img src="docs/images/drops.png" width="320" alt="Recent clan drops with item, player, value and time">
-</p>
+<p align="center"><img src="docs/images/drops.png" width="280" alt="Recent clan drops with item, player, value and time"></p>
 
 ## Split view
 
 Click the pin icon on **Members**, **Parties** or **Drops** to dock it below the main view, then open an event or anything else above it. Drag the divider to resize, click the dock's bar or arrow to collapse it to a single row, and click **✕** to unpin. One section can be pinned at a time, and the dock remembers its size and what's pinned.
 
-<p>
-<img src="docs/images/dock.png" width="320" alt="A bingo board with the Members list pinned below it">
-</p>
+<p align="center"><img src="docs/images/dock.png" width="280" alt="A bingo board with the Members list pinned below it"></p>
 
-## Getting started
-
-1. Install **TSG Hub** from the Plugin Hub.
-2. Log in to a character in the TSGaming clan and open the TSG Hub sidebar.
-3. Click **Enable sharing**. Nothing is sent until you do.
-4. Pick an event. For bingo, enter the team code an admin gave you. Your team is fixed once you join.
-
-<p>
-<img src="docs/images/home.png" width="320" alt="TSG Hub home with Events, Parties, Members and Drops tiles">
-</p>
-
-**Disconnect from event** on the **Team** tab stops tracking on this device. Your team keeps its progress, and you can rejoin with the same code.
+---
 
 ## Link your Discord
 
@@ -131,7 +135,7 @@ The plugin confirms the key in the sidebar and links your Discord account to the
 
 ## For admins
 
-![Admin window: events on the left, the selected event's tasks on the right](docs/images/admin-tasks.png)
+<img src="docs/images/admin-tasks.png" alt="Admin window: events on the left, the selected event's tasks on the right">
 
 Admin tools use the same hub key. If you're a Discord admin (the server owner, a member with an admin role, or anyone with Manage Server), `/hub key` gives you a key with admin access. Keys from before hub keys existed, starting with `tsgadm_`, keep working and move into the **Hub key** setting by themselves.
 
@@ -144,9 +148,18 @@ Your in-game clan rank doesn't grant admin access. Owners and Deputy Owners keep
 3. **Tasks**: add tasks shared by every team. Item tasks have type-ahead search with icons and ready-made sets, and raid tasks let you choose each raid and mode.
 4. **Claims**: approve or reject clan-only raid completions where the plugin couldn't see who was in the raid (plus any older manual submissions). The tab shows how many are waiting.
 
-![Pending raid claims awaiting review](docs/images/admin-claims.png)
+<details>
+<summary><b>Screenshots: teams and claims</b></summary>
+
+<img src="docs/images/admin-teams.png" alt="Teams for the selected event with invite codes and actions">
+
+<img src="docs/images/admin-claims.png" alt="Pending raid claims awaiting review">
+
+</details>
 
 You can edit a task after the event starts. Progress the service already recorded is recalculated against the new requirements. To credit something the plugin couldn't see, open a team's **Details** and use **Mark complete** with a short note.
+
+---
 
 ## Privacy
 

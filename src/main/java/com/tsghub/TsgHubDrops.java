@@ -125,11 +125,15 @@ final class TsgHubDrops
 	{
 		if (!plugin.isInHubClan() || !plugin.sharingEnabled() || executor.isShutdown()) return;
 		String clan = TsgHubApi.encode(plugin.getDetectedClanName());
+		String query = query();
+		Runnable done = quiet ? null : () -> plugin.ui(s -> s.setBusy(false));
 		if (!quiet) plugin.ui(s -> s.setBusy(true));
 		executor.submit(() -> {
 			try
 			{
-				apply(api.get().request("GET", "/v1/drops?clanName=" + clan, null, null).getAsJsonArray("drops"), quiet ? null : () -> plugin.ui(s -> s.setBusy(false)));
+				JsonArray drops = api.get().request("GET", "/v1/drops?clanName=" + clan + query, null, null).getAsJsonArray("drops");
+				if (query.equals(query())) apply(drops, done);
+				else if (done != null) done.run();
 			}
 			catch (Exception e)
 			{
@@ -138,6 +142,18 @@ final class TsgHubDrops
 				plugin.ui(s -> s.setBusy(false));
 			}
 		});
+	}
+
+	void onSnapshot(JsonArray drops)
+	{
+		if (query().isEmpty()) apply(drops);
+		else load(true);
+	}
+
+	private String query()
+	{
+		TsgHubSidebarPanel s = sidebar.get();
+		return s == null ? "" : s.dropsQuery();
 	}
 
 	void apply(JsonArray drops)
@@ -210,6 +226,22 @@ final class TsgHubDrops
 		}
 		if (kc > 0) out += tipSection(out.isEmpty(), tipLine(MUTED, "<b>KILL COUNT</b> ") + String.format(Locale.US, "%,d", kc));
 		return out;
+	}
+
+	static boolean dropMatches(JsonObject drop, int type, long minValue, String self)
+	{
+		String kind = str(drop, "kind");
+		boolean typeMatches;
+		switch (type)
+		{
+			case 1: typeMatches = samePlayer(str(drop, "player"), self); break;
+			case 2: typeMatches = "raid".equals(kind); break;
+			case 3: typeMatches = "pet".equals(kind) || "dupe".equals(kind); break;
+			case 4: typeMatches = bool(drop, "newLog") || "clog".equals(kind); break;
+			default: typeMatches = true;
+		}
+		long value = drop.has("value") ? drop.get("value").getAsLong() : 0;
+		return typeMatches && value >= minValue;
 	}
 
 	static List<String> dropTags(JsonObject drop)

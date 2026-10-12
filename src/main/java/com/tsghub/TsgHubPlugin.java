@@ -97,7 +97,7 @@ import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
 import okhttp3.OkHttpClient;
 
-@PluginDescriptor(name = "TSG Hub", internalName = "tsg-hub", description = "Type Shiii Gaming clan events and progress tracking", tags = {"tsg", "clan", "bingo", "events"})
+@PluginDescriptor(name = "TSG Hub", internalName = "tsg-hub", description = "TypeShii Gaming clan events and progress tracking", tags = {"tsg", "clan", "bingo", "events"})
 public class TsgHubPlugin extends Plugin
 {
 	private static final String SERVICE_URL = "https://api.typeshiigaming.com";
@@ -810,7 +810,7 @@ public class TsgHubPlugin extends Plugin
 				if (roster != null) presence.apply(TsgHubUi.array(roster, "members"), notes == null ? null : TsgHubUi.array(notes, "members"));
 				break;
 			case "drops":
-				drops.apply(TsgHubUi.array(data, "drops"));
+				drops.onSnapshot(TsgHubUi.array(data, "drops"));
 				break;
 			case "events":
 				applyClanEvents(TsgHubUi.array(data, "events"));

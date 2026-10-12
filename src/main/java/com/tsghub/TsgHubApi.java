@@ -71,7 +71,7 @@ final class TsgHubApi
 
 	static String encode(String value)
 	{
-		return URLEncoder.encode(value, StandardCharsets.UTF_8);
+		return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8);
 	}
 
 	private static JsonObject parseObject(String text)
