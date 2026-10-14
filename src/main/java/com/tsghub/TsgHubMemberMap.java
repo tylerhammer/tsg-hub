@@ -2,7 +2,8 @@ package com.tsghub;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
@@ -12,16 +13,18 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Supplier;
+import net.runelite.api.Point;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.worldmap.WorldMapPoint;
 import net.runelite.client.ui.overlay.worldmap.WorldMapPointManager;
 
 final class TsgHubMemberMap
 {
 	static final int REFRESH_SECONDS = 10;
-	private static final int MARKER_SIZE = 12;
-	private static final BufferedImage MARKER = marker();
+	private static final int DOT = 8;
+	private static final int GAP = 3;
 
 	private final TsgHubPlugin plugin;
 	private final ClientThread clientThread;
@@ -79,7 +82,8 @@ final class TsgHubMemberMap
 				WorldMapPoint point = points.get(key);
 				if (point == null)
 				{
-					point = WorldMapPoint.builder().worldPoint(at).image(MARKER).name(name).tooltip(tooltip).snapToEdge(true).jumpOnClick(true).build();
+					BufferedImage image = marker(name);
+					point = WorldMapPoint.builder().worldPoint(at).image(image).imagePoint(new Point(DOT / 2, image.getHeight() / 2)).name(name).tooltip(tooltip).snapToEdge(true).jumpOnClick(true).build();
 					points.put(key, point);
 					manager.add(point);
 				}
@@ -105,16 +109,29 @@ final class TsgHubMemberMap
 		});
 	}
 
-	private static BufferedImage marker()
+	static BufferedImage marker(String name)
 	{
-		BufferedImage image = new BufferedImage(MARKER_SIZE, MARKER_SIZE, BufferedImage.TYPE_INT_ARGB);
+		BufferedImage probe = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
+		Graphics2D measure = probe.createGraphics();
+		FontMetrics metrics = measure.getFontMetrics(FontManager.getRunescapeSmallFont());
+		measure.dispose();
+		int height = Math.max(DOT, metrics.getAscent() + 1);
+		BufferedImage image = new BufferedImage(DOT + GAP + metrics.stringWidth(name) + 1, height, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g = image.createGraphics();
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		int top = (height - DOT) / 2;
+		g.setColor(Color.BLACK);
+		g.fillOval(0, top, DOT, DOT);
 		g.setColor(TsgHubTheme.ACCENT);
-		g.fillOval(1, 1, MARKER_SIZE - 2, MARKER_SIZE - 2);
-		g.setColor(TsgHubTheme.CARD);
-		g.setStroke(new BasicStroke(1.5f));
-		g.drawOval(1, 1, MARKER_SIZE - 3, MARKER_SIZE - 3);
+		g.fillOval(1, top + 1, DOT - 2, DOT - 2);
+		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+		g.setFont(FontManager.getRunescapeSmallFont());
+		int x = DOT + GAP;
+		int baseline = (height + metrics.getAscent()) / 2 - 1;
+		g.setColor(Color.BLACK);
+		g.drawString(name, x + 1, baseline + 1);
+		g.setColor(Color.WHITE);
+		g.drawString(name, x, baseline);
 		g.dispose();
 		return image;
 	}
