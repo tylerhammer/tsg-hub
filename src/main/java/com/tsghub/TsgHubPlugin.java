@@ -159,6 +159,8 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubGroups groups;
 	private TsgHubPresence presence;
 	private TsgHubDrops drops;
+	private TsgHubAnnouncements announcements;
+	private TsgHubNewsEditor newsEditor;
 	private GroupTracker groupTracker;
 
 	@Override
@@ -197,7 +199,9 @@ public class TsgHubPlugin extends Plugin
 		executor.scheduleAtFixedRate(unlessLive(this::autoRefreshBoard), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
 		itemSearchExecutor = Executors.newFixedThreadPool(2, daemon("tsg-hub-item-search"));
 		organizer = new TsgHubOrganizer(this, client, clientThread, itemManager, executor, itemSearchExecutor, () -> panel);
+		announcements = new TsgHubAnnouncements(this, executor, this::api, () -> newsEditor, this::clanAnnouncement);
 		panel = new TsgHubPanel(this);
+		newsEditor = new TsgHubNewsEditor(this);
 		GroupMembersPanel groupMembers = new GroupMembersPanel(new GroupViewSettings()
 		{
 			@Override public boolean autoExpandMembers() { return config.partyExpandMembers(); }
@@ -267,7 +271,7 @@ public class TsgHubPlugin extends Plugin
 			{
 				hubWindow = new JFrame("TSG Hub · Admin");
 				hubWindow.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
-				hubWindow.setContentPane(panel);
+				hubWindow.setContentPane(new TsgHubAdminWindow(panel, organizer::loadManagedEvents, newsEditor, announcements::load));
 				hubWindow.setMinimumSize(new Dimension(680, 480));
 				hubWindow.setSize(860, 640);
 				Window owner = SwingUtilities.getWindowAncestor(client.getCanvas());
@@ -293,6 +297,7 @@ public class TsgHubPlugin extends Plugin
 	TsgHubGroups groups() { return groups; }
 	TsgHubPresence presence() { return presence; }
 	TsgHubDrops drops() { return drops; }
+	TsgHubAnnouncements announcements() { return announcements; }
 	SpriteManager sprites() { return spriteManager; }
 	CompletableFuture<HiscoreResult> lookupHiscores(String name, int accountType) { return hiscoreClient.lookupAsync(name, TsgHubHiscores.endpoint(accountType)); }
 
@@ -454,6 +459,7 @@ public class TsgHubPlugin extends Plugin
 		// Loading screens and world hops aren't logouts.
 		if (state != GameState.LOGIN_SCREEN && state != GameState.LOGIN_SCREEN_AUTHENTICATOR) return;
 		if (presence != null) presence.onLoggedOut();
+		if (announcements != null) announcements.onLoggedOut();
 		detectedPlayerName = "";
 		detectedClanName = "";
 		detectedClanRank = -1;
@@ -597,6 +603,7 @@ public class TsgHubPlugin extends Plugin
 			if (!config.dataSharingOptIn()) { sidebar.showSharingOff(); return; }
 			sidebar.showHome();
 			loadClanEvents();
+			announcements.load();
 			String eventId = TsgHubSession.get(EVENT_ID);
 			if (!eventId.isEmpty() && !TsgHubSession.get(TOKEN).isEmpty() && TsgHubUi.samePlayer(TsgHubSession.memberName(eventId), detectedPlayerName))
 				activateEvent(eventId, false);
@@ -784,6 +791,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		Set<String> topics = new HashSet<>();
 		topics.add("events");
+		topics.add("announcements");
 		topics.add("notifications");
 		if (sidebar == null) return topics;
 		if (sidebar.wantsGroups()) topics.add("groups");
@@ -811,6 +819,9 @@ public class TsgHubPlugin extends Plugin
 				break;
 			case "drops":
 				drops.onSnapshot(TsgHubUi.array(data, "drops"));
+				break;
+			case "announcements":
+				announcements.apply(TsgHubUi.array(data, "announcements"));
 				break;
 			case "events":
 				applyClanEvents(TsgHubUi.array(data, "events"));
@@ -862,6 +873,9 @@ public class TsgHubPlugin extends Plugin
 				break;
 			case "drops":
 				drops.autoRefresh();
+				break;
+			case "announcements":
+				announcements.load();
 				break;
 			case "notifications":
 				if (eventId.equals(TsgHubSession.get(EVENT_ID))) pollTeamNotifications();
@@ -1456,6 +1470,12 @@ public class TsgHubPlugin extends Plugin
 	private void announce(String text)
 	{
 		if (!config.eventAnnouncements()) return;
+		showLocalChatMessage(new ChatMessageBuilder().append(ChatColorType.HIGHLIGHT).append(Text.escapeJagex(text)));
+	}
+
+	private void clanAnnouncement(String text)
+	{
+		if (!config.clanAnnouncements()) return;
 		showLocalChatMessage(new ChatMessageBuilder().append(ChatColorType.HIGHLIGHT).append(Text.escapeJagex(text)));
 	}
 

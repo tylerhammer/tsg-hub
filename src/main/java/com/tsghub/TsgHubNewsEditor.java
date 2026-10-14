@@ -1,0 +1,402 @@
+package com.tsghub;
+
+import static com.tsghub.TsgHubTheme.*;
+import static com.tsghub.TsgHubUi.*;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.tsghub.TsgHubUi.Tone;
+import java.awt.BorderLayout;
+import java.awt.CardLayout;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.time.Instant;
+import java.time.ZoneId;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+
+final class TsgHubNewsEditor extends JPanel
+{
+	private static final int LIST_W = 270;
+	private static final int TEXT_W = 480;
+	private static final int MAX_TITLE = 80;
+	private static final int MAX_BODY = 1000;
+	private static final String[] EXPIRY_LABELS = {"1 day", "7 days", "30 days", "Never"};
+	private static final int[] EXPIRY_DAYS = {1, 7, 30, 0};
+	private static final String KEEP_EXPIRY = "Keep current";
+
+	private final TsgHubPlugin plugin;
+	private final JPanel list = stack();
+	private final CardLayout detailLayout = new CardLayout();
+	private final JPanel detail = new JPanel(detailLayout);
+	private final StatusLine status = new StatusLine(TEXT_W);
+
+	private final JTextField title = new JTextField();
+	private final JTextArea body = new JTextArea(8, 40);
+	private final JCheckBox pinned = new JCheckBox("Pin to the top of News");
+	private final JComboBox<String> expiry = new JComboBox<>();
+	private final JLabel formTitle = sectionTitle("New announcement");
+	private final JLabel expiryHint = label("", MUTED, smallFont());
+	private final JButton draft = button("Save as draft");
+	private final JButton post = primaryButton("Post now");
+	private final JLabel error = label("", TsgHubTheme.ERROR, smallFont());
+
+	private final JLabel viewTitle = label(" ", TEXT, titleFont());
+	private final JLabel viewMeta = label(" ", MUTED, smallFont());
+	private final JLabel draftNote = label("Draft: only admins can see this. Publish it when it's ready.", WARNING, smallFont());
+	private final JPanel viewBody = stack();
+	private final JButton edit = button("Edit");
+	private final JButton publish = primaryButton("Publish");
+	private final JButton pin = button("Pin");
+	private final JButton delete = iconButton(new TrashIcon(), "Delete announcement");
+
+	private JsonArray announcements;
+	private JsonObject selected;
+	private String selectedId = "";
+	private JsonObject editing;
+
+	TsgHubNewsEditor(TsgHubPlugin plugin)
+	{
+		super(new BorderLayout());
+		this.plugin = plugin;
+		setBackground(BACKGROUND);
+		add(buildListColumn(), BorderLayout.WEST);
+
+		detail.setOpaque(false);
+		detail.add(north(emptyState("Pick an announcement", "Choose one on the left, or post a new one.", 320)), "empty");
+		detail.add(narrowPage(buildForm()), "form");
+		detail.add(buildView(), "view");
+
+		JPanel right = panel(new BorderLayout());
+		right.setBorder(BorderFactory.createEmptyBorder(12, 16, 10, 16));
+		right.add(detail, BorderLayout.CENTER);
+		right.add(status, BorderLayout.SOUTH);
+		add(right, BorderLayout.CENTER);
+		setAnnouncements(null);
+	}
+
+	private JComponent buildListColumn()
+	{
+		JPanel column = new JPanel(new BorderLayout(0, 8));
+		column.setBackground(CARD);
+		column.setPreferredSize(new Dimension(LIST_W, 100));
+		column.setBorder(BorderFactory.createEmptyBorder(12, 10, 10, 10));
+
+		JButton refresh = iconButton(new RefreshIcon(), "Refresh announcements");
+		refresh.addActionListener(e -> plugin.announcements().load());
+		JButton create = primaryButton("New announcement");
+		create.addActionListener(e -> beginPost());
+
+		JPanel top = stack();
+		top.add(fitHeight(row(boldLabel("Announcements"), refresh)));
+		top.add(Box.createVerticalStrut(GAP_M));
+		top.add(fitHeight(create));
+		column.add(top, BorderLayout.NORTH);
+
+		WidthTrackingPanel listWrap = new WidthTrackingPanel();
+		listWrap.add(list);
+		column.add(scroll(listWrap), BorderLayout.CENTER);
+		return column;
+	}
+
+	private JPanel buildForm()
+	{
+		JPanel form = stack();
+		form.add(formTitle);
+		form.add(wrapped("Clan members get a chat message once and see it under News in the TSG Hub sidebar. Save it as a draft to let other admins review it first.", MUTED, smallFont(), TEXT_W));
+		form.add(Box.createVerticalStrut(GAP_M));
+		form.add(field("Title", title));
+		body.setLineWrap(true);
+		body.setWrapStyleWord(true);
+		body.setFont(title.getFont());
+		JScrollPane bodyScroll = new JScrollPane(body);
+		bodyScroll.setBorder(title.getBorder());
+		form.add(field("Message (optional)", bodyScroll));
+		JPanel expiryRow = panel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+		expiryRow.add(expiry);
+		expiryRow.add(Box.createHorizontalStrut(GAP_M));
+		expiryRow.add(expiryHint);
+		form.add(field("Expires after", fitHeight(expiryRow)));
+		form.add(plain(pinned, TEXT));
+		form.add(Box.createVerticalStrut(GAP_L));
+		error.setVisible(false);
+		form.add(error);
+		JButton cancel = button("Cancel");
+		cancel.addActionListener(e -> show(selected));
+		JPanel footer = panel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+		footer.add(cancel);
+		footer.add(draft);
+		footer.add(post);
+		form.add(fitHeight(footer));
+
+		placeholder(title, "e.g. Clan meeting Saturday");
+		draft.addActionListener(e -> submit(false));
+		post.addActionListener(e -> submit(true));
+		return form;
+	}
+
+	private JComponent buildView()
+	{
+		JPanel view = panel(new BorderLayout(0, 8));
+		JPanel header = panel(new BorderLayout(12, 0));
+		JPanel titles = stack();
+		titles.add(viewTitle);
+		titles.add(Box.createVerticalStrut(GAP_XS));
+		titles.add(viewMeta);
+		titles.add(draftNote);
+		header.add(titles, BorderLayout.CENTER);
+		edit.addActionListener(e -> beginEdit());
+		publish.addActionListener(e -> confirmPublish());
+		pin.addActionListener(e -> {
+			if (selected != null) plugin.announcements().setPinned(str(selected, "id"), !bool(selected, "pinned"));
+		});
+		delete.addActionListener(e -> confirmDelete());
+		JPanel buttons = panel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+		buttons.add(edit);
+		buttons.add(publish);
+		buttons.add(pin);
+		buttons.add(delete);
+		header.add(north(buttons), BorderLayout.EAST);
+		header.setBorder(BorderFactory.createCompoundBorder(bottomRule(), BorderFactory.createEmptyBorder(0, 0, 10, 0)));
+		view.add(header, BorderLayout.NORTH);
+		WidthTrackingPanel page = new WidthTrackingPanel();
+		page.add(viewBody);
+		view.add(scroll(page), BorderLayout.CENTER);
+		return view;
+	}
+
+	private void beginPost()
+	{
+		selectedId = "";
+		selected = null;
+		renderList();
+		openForm(null);
+	}
+
+	private void beginEdit()
+	{
+		if (selected != null) openForm(selected);
+	}
+
+	private void openForm(JsonObject announcement)
+	{
+		editing = announcement;
+		boolean isDraft = announcement != null && bool(announcement, "draft");
+		boolean live = announcement != null && !isDraft;
+		formTitle.setText(announcement == null ? "New announcement" : isDraft ? "Edit draft" : "Edit announcement");
+		title.setText(announcement == null ? "" : str(announcement, "title"));
+		body.setText(announcement == null ? "" : str(announcement, "body"));
+		body.setCaretPosition(0);
+		pinned.setSelected(announcement != null && bool(announcement, "pinned"));
+		expiry.removeAllItems();
+		if (live) expiry.addItem(KEEP_EXPIRY);
+		for (String option : EXPIRY_LABELS) expiry.addItem(option);
+		expiry.setSelectedIndex(live ? 0 : isDraft ? expiryIndex(integer(announcement, "expiresInDays", 7)) : 1);
+		expiryHint.setText(live ? "New choices count from now." : "Counts from when it's posted.");
+		draft.setVisible(!live);
+		draft.setText(isDraft ? "Save draft" : "Save as draft");
+		post.setText(live ? "Save changes" : isDraft ? "Publish" : "Post now");
+		draft.setEnabled(true);
+		post.setEnabled(true);
+		error.setVisible(false);
+		detailLayout.show(detail, "form");
+		title.requestFocusInWindow();
+	}
+
+	private static int expiryIndex(int days)
+	{
+		for (int i = 0; i < EXPIRY_DAYS.length; i++) if (EXPIRY_DAYS[i] == days) return i;
+		return 1;
+	}
+
+	private Integer chosenExpiry()
+	{
+		int index = expiry.getSelectedIndex();
+		if (KEEP_EXPIRY.equals(expiry.getItemAt(0)))
+		{
+			if (index <= 0) return null;
+			index--;
+		}
+		return EXPIRY_DAYS[Math.max(0, index)];
+	}
+
+	private void submit(boolean publishNow)
+	{
+		String text = title.getText().trim();
+		String message = body.getText().trim();
+		if (text.isEmpty()) { fail("Add a title."); return; }
+		if (text.length() > MAX_TITLE) { fail("Keep the title under " + MAX_TITLE + " characters."); return; }
+		if (message.length() > MAX_BODY) { fail("Keep the message under " + MAX_BODY + " characters."); return; }
+		error.setVisible(false);
+		draft.setEnabled(false);
+		post.setEnabled(false);
+		boolean live = editing != null && !bool(editing, "draft");
+		String id = editing == null ? "" : str(editing, "id");
+		plugin.announcements().save(id, text, message, pinned.isSelected(), chosenExpiry(), publishNow && !live);
+	}
+
+	private void confirmPublish()
+	{
+		if (selected == null) return;
+		if (javax.swing.JOptionPane.showConfirmDialog(this, "Publish \"" + str(selected, "title") + "\"? Clan members get a chat message and see it under News.",
+			"Publish announcement", javax.swing.JOptionPane.OK_CANCEL_OPTION, javax.swing.JOptionPane.QUESTION_MESSAGE) == javax.swing.JOptionPane.OK_OPTION)
+			plugin.announcements().publish(str(selected, "id"));
+	}
+
+	private void fail(String message)
+	{
+		showError(error, message, TEXT_W);
+	}
+
+	private void confirmDelete()
+	{
+		if (selected == null) return;
+		if (TsgHubUi.confirmDelete(this, "Delete announcement", "Delete \"" + str(selected, "title") + "\"? Members won't see it anymore.", "Delete"))
+			plugin.announcements().delete(str(selected, "id"));
+	}
+
+	void setStatus(String message, Tone tone)
+	{
+		status.show(message, tone);
+	}
+
+	void showAnnouncement(String id)
+	{
+		draft.setEnabled(true);
+		post.setEnabled(true);
+		selectedId = id;
+		select();
+	}
+
+	void failed()
+	{
+		draft.setEnabled(true);
+		post.setEnabled(true);
+	}
+
+	void setAnnouncements(JsonArray announcements)
+	{
+		this.announcements = announcements;
+		renderList();
+		select();
+	}
+
+	private void select()
+	{
+		JsonObject match = null;
+		if (announcements != null)
+			for (JsonObject announcement : objects(announcements))
+				if (str(announcement, "id").equals(selectedId)) match = announcement;
+		if (match != null) show(match);
+		else if (!selectedId.isEmpty() && announcements != null) show(null);
+	}
+
+	private void show(JsonObject announcement)
+	{
+		selected = announcement;
+		selectedId = announcement == null ? "" : str(announcement, "id");
+		renderList();
+		if (announcement == null)
+		{
+			detailLayout.show(detail, "empty");
+			return;
+		}
+		Instant now = clock.instant();
+		ZoneId zone = ZoneId.systemDefault();
+		viewTitle.setText(html(escape(str(announcement, "title")), TEXT_W));
+		viewMeta.setText(html(escape(meta(announcement, now, zone)), TEXT_W));
+		boolean isDraft = bool(announcement, "draft");
+		draftNote.setVisible(isDraft);
+		publish.setVisible(isDraft);
+		pin.setVisible(!isDraft);
+		boolean isPinned = bool(announcement, "pinned");
+		pin.setText(isPinned ? "Unpin" : "Pin");
+		pin.setToolTipText(isPinned ? "Stop keeping this at the top of News" : "Keep this at the top of News");
+		viewBody.removeAll();
+		String text = str(announcement, "body");
+		viewBody.add(text.isEmpty()
+			? label("No message, just the title.", DIM, smallFont())
+			: linkedText(text, TEXT, plainFont(), TEXT_W));
+		refresh(viewBody);
+		detailLayout.show(detail, "view");
+	}
+
+	static String meta(JsonObject announcement, Instant now, ZoneId zone)
+	{
+		String when = TsgHubRoster.warningDate(str(announcement, "postedAt"), now, zone);
+		if (bool(announcement, "draft"))
+		{
+			int days = integer(announcement, "expiresInDays", 7);
+			return "Drafted by " + str(announcement, "postedBy") + " · " + when
+				+ (days == 0 ? " · never expires" : " · expires " + plural(days, "day") + " after posting");
+		}
+		String meta = "Posted by " + str(announcement, "postedBy") + " · " + when;
+		if (!str(announcement, "publishedBy").isEmpty()) meta += " · published by " + str(announcement, "publishedBy");
+		if (!str(announcement, "editedAt").isEmpty())
+			meta += " · edited by " + str(announcement, "editedBy") + " " + TsgHubRoster.warningDate(str(announcement, "editedAt"), now, zone);
+		String expires = str(announcement, "expiresAt");
+		return meta + (expires.isEmpty() ? " · never expires" : " · expires " + TsgHubRoster.warningDate(expires, now, zone));
+	}
+
+	private void renderList()
+	{
+		list.removeAll();
+		if (announcements == null)
+		{
+			list.add(caption("Loading..."));
+		}
+		else if (announcements.size() == 0)
+		{
+			list.add(wrapped("Nothing posted right now. Post one to get started.", MUTED, smallFont(), LIST_W - 30));
+		}
+		else
+		{
+			Instant now = clock.instant();
+			ZoneId zone = ZoneId.systemDefault();
+			String section = null;
+			for (JsonObject announcement : objects(announcements))
+			{
+				String next = bool(announcement, "draft") ? "Drafts" : bool(announcement, "pinned") ? "Pinned" : "Active";
+				if (!next.equals(section))
+				{
+					list.add(listHeading(next, section == null));
+					section = next;
+				}
+				list.add(listCard(announcement, now, zone));
+				list.add(Box.createVerticalStrut(LIST_GAP));
+			}
+		}
+		refresh(list);
+	}
+
+	private JComponent listCard(JsonObject announcement, Instant now, ZoneId zone)
+	{
+		String id = str(announcement, "id");
+		boolean isSelected = id.equals(selectedId);
+		JPanel card = card();
+		if (isSelected) card.setBorder(selectedBorder(true, CARD_HOVER));
+		card.setBackground(isSelected ? CARD_HOVER : BACKGROUND);
+		String by = (bool(announcement, "draft") ? "Draft by " : "") + str(announcement, "postedBy");
+		card.add(twoLines(shrinkable(boldLabel(str(announcement, "title"))),
+			caption(by + " · " + TsgHubRoster.warningDate(str(announcement, "postedAt"), now, zone))), BorderLayout.CENTER);
+		clickable(card, () -> show(announcement));
+		return fitHeight(card);
+	}
+
+	private static JPanel field(String label, JComponent input)
+	{
+		JPanel row = panel(new BorderLayout(0, 3));
+		row.add(caption(label), BorderLayout.NORTH);
+		row.add(input, BorderLayout.CENTER);
+		row.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+		return fitHeight(row);
+	}
+}

@@ -94,6 +94,7 @@ public class ReadmeScreenshots
 		set(plugin, "groups", new TsgHubGroups(plugin, null, (PartyService) unsafe().allocateInstance(PartyService.class), null, null, null));
 		set(plugin, "presence", new TsgHubPresence(plugin, null, null, null, null, stopped(), null, null, null, () -> ""));
 		set(plugin, "drops", new TsgHubDrops(plugin, null, null, stopped(), null, null));
+		set(plugin, "announcements", new TsgHubAnnouncements(plugin, stopped(), null, () -> null, line -> { }));
 
 		TsgHubSidebarPanel sidebar = new TsgHubSidebarPanel(plugin, new GroupMembersPanel(new GroupViewSettings() {}, null, null));
 
@@ -137,6 +138,18 @@ public class ReadmeScreenshots
 		shoot(sidebar, SIDEBAR_W, 400, "members");
 		sidebar.showDrops();
 		shoot(sidebar, SIDEBAR_W, 360, "drops");
+		if (data.has("announcementsList"))
+		{
+			JsonArray announcements = data.getAsJsonObject("announcementsList").getAsJsonArray("announcements");
+			plugin.announcements().apply(announcements);
+			sidebar.setAnnouncements(TsgHubAnnouncements.published(announcements));
+			sharing = false;
+			sidebar.showHome();
+			shoot(sidebar, SIDEBAR_W, 420, "news-home");
+			sidebar.showNews();
+			shoot(sidebar, SIDEBAR_W, 480, "news");
+			sharing = true;
+		}
 
 		sidebar.showMembers();
 		sharing = false;
@@ -153,6 +166,21 @@ public class ReadmeScreenshots
 		shoot(organizer, 860, 580, "admin-tasks");
 		selectTab(organizer, "Claims");
 		shoot(organizer, 860, 270, "admin-claims");
+		if (data.has("announcementsList"))
+		{
+			JsonArray announcements = data.getAsJsonObject("announcementsList").getAsJsonArray("announcements");
+			TsgHubNewsEditor news = new TsgHubNewsEditor(plugin);
+			news.setAnnouncements(announcements);
+			TsgHubAdminWindow window = new TsgHubAdminWindow(organizer, () -> { }, news, () -> { });
+			shoot(window, 860, 340, "admin-events");
+			selectTab(window, "Announcements");
+			news.showAnnouncement(TsgHubUi.str(announcements.get(0).getAsJsonObject(), "id"));
+			shoot(window, 860, 560, "admin-news");
+			((AbstractButton) find(window, "Edit", AbstractButton.class)).doClick();
+			shoot(window, 860, 560, "admin-news-edit");
+			((AbstractButton) find(window, "New announcement", AbstractButton.class)).doClick();
+			shoot(window, 860, 560, "admin-news-form");
+		}
 
 		hero(480, eventList, board, parties);
 	}
