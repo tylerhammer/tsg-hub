@@ -168,6 +168,7 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubPresence presence;
 	private TsgHubMemberMap memberMap;
 	private TsgHubMapOverlay mapOverlay;
+	private boolean worldMapOpen;
 	private boolean mapNoticeChecked;
 	private TsgHubDrops drops;
 	private TsgHubAnnouncements announcements;
@@ -477,6 +478,7 @@ public class TsgHubPlugin extends Plugin
 		if (state != GameState.LOGIN_SCREEN && state != GameState.LOGIN_SCREEN_AUTHENTICATOR) return;
 		if (presence != null) presence.onLoggedOut();
 		if (memberMap != null) memberMap.setOpen(false);
+		worldMapOpen = false;
 		mapNoticeChecked = false;
 		if (announcements != null) announcements.onLoggedOut();
 		detectedPlayerName = "";
@@ -523,6 +525,11 @@ public class TsgHubPlugin extends Plugin
 		{
 			boolean expand = "partyExpandMembers".equals(event.getKey());
 			ui(s -> s.groupSettingsChanged(expand));
+			return;
+		}
+		if ("showClanMap".equals(event.getKey()))
+		{
+			clientThread.invokeLater(this::syncMemberMap);
 			return;
 		}
 		if ("shareLocation".equals(event.getKey()))
@@ -1200,14 +1207,23 @@ public class TsgHubPlugin extends Plugin
 		});
 	}
 
+	private void syncMemberMap()
+	{
+		if (memberMap == null) return;
+		boolean show = worldMapOpen && config.showClanMap();
+		if (show == memberMap.isOpen()) return;
+		memberMap.setOpen(show);
+		syncSocketNow();
+		if (show && !socket.isLive()) memberMap.autoRefresh();
+	}
+
 	@Subscribe
 	public void onWidgetLoaded(WidgetLoaded event)
 	{
-		if (event.getGroupId() == InterfaceID.WORLDMAP && memberMap != null)
+		if (event.getGroupId() == InterfaceID.WORLDMAP)
 		{
-			memberMap.setOpen(true);
-			syncSocketNow();
-			if (!socket.isLive()) memberMap.autoRefresh();
+			worldMapOpen = true;
+			syncMemberMap();
 		}
 		if (sharingInClan() && TsgHubRules.get().rewardInterfaces.contains(event.getGroupId())) socket.rewardInterface(event.getGroupId(), true, client.getTickCount());
 	}
@@ -1215,10 +1231,10 @@ public class TsgHubPlugin extends Plugin
 	@Subscribe
 	public void onWidgetClosed(WidgetClosed event)
 	{
-		if (event.getGroupId() == InterfaceID.WORLDMAP && memberMap != null)
+		if (event.getGroupId() == InterfaceID.WORLDMAP)
 		{
-			memberMap.setOpen(false);
-			syncSocketNow();
+			worldMapOpen = false;
+			syncMemberMap();
 		}
 		if (sharingInClan() && TsgHubRules.get().rewardInterfaces.contains(event.getGroupId())) socket.rewardInterface(event.getGroupId(), false, client.getTickCount());
 	}
