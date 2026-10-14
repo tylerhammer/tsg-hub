@@ -38,7 +38,7 @@ final class TsgHubMapOverlay extends Overlay
 		this.memberMap = memberMap;
 		setPosition(OverlayPosition.DYNAMIC);
 		setLayer(OverlayLayer.MANUAL);
-		setPriority(PRIORITY_LOW);
+		setPriority(Math.nextUp(PRIORITY_HIGHEST));
 		drawAfterInterface(InterfaceID.WORLDMAP);
 	}
 
