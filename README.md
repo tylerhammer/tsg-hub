@@ -92,13 +92,17 @@ A party closes when its last member leaves. Members drop out after 3 minutes wit
 
 The **Members** section lists clanmates who are in clan chat with sharing on. Each row shows their world, area and what they're doing, such as `Mining · Motherlode Mine`, `Vorkath` or `Chambers of Xeric`. Clanmates on your world have their world shown in green.
 
-Activity is detected automatically from where you are and the XP you gain. Only the area name is sent, never your exact tile.
+Activity is detected automatically from where you are and the XP you gain.
 
 Anyone in clan chat with sharing on appears in the list. Your area and activity are only shown if you turn on **Share location and activity** under **Sharing** in the plugin settings; otherwise clanmates just see **Online** and your world, the same as clan chat shows. Leave clan chat to hide yourself, and you also drop off the list when you log out.
 
 Online clanmates are listed first, including those in clan chat without TSG Hub, who show just their world. The rest of the clan is listed under **Offline**; tick **Show offline** to expand it. Offline members who use TSG Hub show how long ago they were last online.
 
 <p align="center"><img src="docs/images/members.png" width="280" alt="Online clan members with their world, area and activity"></p>
+
+### World map
+
+Clanmates who share their location show as markers on your world map. Hover a marker to see who it is and their world. Positions update every few seconds while the map is open. Your own position is shared only with **Share location and activity** on, and never from inside an instance such as a raid, boss room or player-owned house.
 
 <details>
 <summary><b>Admin tools: notes, alts and warnings</b></summary>
@@ -179,10 +183,10 @@ Once you opt in, it sends the following to the TSG Hub service:
 - Progress for events you've joined: kill counts, drops, raid completions, collection log unlocks and skill XP
 - Loot you receive while a bingo event you've joined is active, so admins can reconcile a task from earlier drops if its item list changes
 - Whether you're currently in the clan chat channel and your world, so teammates' completion alerts reach you and clanmates see you as online
-- With **Share location and activity** on, your area name and current activity (never your exact tile)
+- With **Share location and activity** on, your area name, current activity and world map position (except inside instances)
 - Clan chat broadcasts for drops, raid loot, pets and collection log items, for the clan's **Drops** history. For your own broadcasts, also the monster or activity it came from and your kill count from the game message
 
-In a clan party, your stats, gear and inventory go to the other members through **RuneLite's party service**, not the TSG Hub service. The TSG Hub service only learns your display name, party and world, plus your area name if location sharing is on.
+In a clan party, your stats, gear and inventory go to the other members through **RuneLite's party service**, not the TSG Hub service. The TSG Hub service only learns your display name, party and world, plus your area name and position if location sharing is on.
 
 Turning sharing off, or disconnecting from an event, deletes your local token and asks the service to revoke it. Progress your team already earned stays with the clan.
 

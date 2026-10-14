@@ -381,6 +381,14 @@ final class TsgHubPresence
 		if (clanRank >= 0) payload.addProperty("clanRank", clanRank);
 		payload.addProperty("area", area == null ? "" : area.name);
 		payload.addProperty("activity", detailed ? activity.activity(area, System.currentTimeMillis()) : "Online");
+		WorldView view = player.getWorldView();
+		if (detailed && view != null && view.isTopLevel() && !view.isInstance())
+		{
+			WorldPoint at = player.getWorldLocation();
+			payload.addProperty("x", at.getX());
+			payload.addProperty("y", at.getY());
+			payload.addProperty("plane", at.getPlane());
+		}
 		return payload;
 	}
 
