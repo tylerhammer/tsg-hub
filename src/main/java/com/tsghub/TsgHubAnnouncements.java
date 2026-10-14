@@ -127,7 +127,7 @@ final class TsgHubAnnouncements
 	static List<String> chatLines(List<JsonObject> fresh)
 	{
 		List<String> lines = new ArrayList<>();
-		for (int i = 0; i < fresh.size() && i < MAX_CHAT_LINES; i++) lines.add("Clan announcement: " + TsgHubUi.str(fresh.get(i), "title"));
+		for (int i = 0; i < fresh.size() && i < MAX_CHAT_LINES; i++) lines.add("News: " + TsgHubUi.str(fresh.get(i), "title"));
 		int more = fresh.size() - MAX_CHAT_LINES;
 		if (more > 0) lines.add("+" + TsgHubUi.plural(more, "more announcement") + " in the TSG Hub sidebar.");
 		return lines;
