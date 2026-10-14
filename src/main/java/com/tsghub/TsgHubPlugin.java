@@ -92,7 +92,9 @@ import net.runelite.client.plugins.loottracker.LootReceived;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.Overlay;
+import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.ui.overlay.OverlayMenuEntry;
+import net.runelite.client.ui.overlay.worldmap.WorldMapOverlay;
 import net.runelite.client.ui.overlay.worldmap.WorldMapPointManager;
 import net.runelite.client.util.AsyncBufferedImage;
 import net.runelite.client.util.Filepath;
@@ -120,6 +122,8 @@ public class TsgHubPlugin extends Plugin
 	@Inject private HiscoreClient hiscoreClient;
 	@Inject private EventBus eventBus;
 	@Inject private WorldMapPointManager worldMapPointManager;
+	@Inject private WorldMapOverlay worldMapOverlay;
+	@Inject private OverlayManager overlayManager;
 	@Inject @Named("developerMode") private boolean developerMode;
 	private TsgHubPanel panel;
 	private TsgHubSidebarPanel sidebar;
@@ -163,6 +167,7 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubGroups groups;
 	private TsgHubPresence presence;
 	private TsgHubMemberMap memberMap;
+	private TsgHubMapOverlay mapOverlay;
 	private boolean mapNoticeChecked;
 	private TsgHubDrops drops;
 	private TsgHubAnnouncements announcements;
@@ -226,6 +231,8 @@ public class TsgHubPlugin extends Plugin
 		presence = new TsgHubPresence(this, client, clientThread, chatIconManager, spriteManager, executor, this::api, () -> sidebar, socket, this::adminKey);
 		executor.scheduleAtFixedRate(unlessLive(presence::autoRefresh), TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
 		memberMap = new TsgHubMemberMap(this, client, clientThread, worldMapPointManager, executor, this::api);
+		mapOverlay = new TsgHubMapOverlay(client, worldMapOverlay, memberMap);
+		overlayManager.add(mapOverlay);
 		executor.scheduleAtFixedRate(unlessLive(memberMap::autoRefresh), TsgHubMemberMap.REFRESH_SECONDS, TsgHubMemberMap.REFRESH_SECONDS, TimeUnit.SECONDS);
 		drops = new TsgHubDrops(this, client, clientThread, executor, this::api, () -> sidebar);
 		executor.scheduleAtFixedRate(unlessLive(drops::autoRefresh), TsgHubDrops.REFRESH_SECONDS, TsgHubDrops.REFRESH_SECONDS, TimeUnit.SECONDS);
@@ -263,6 +270,7 @@ public class TsgHubPlugin extends Plugin
 		if (hubWindow != null) SwingUtilities.invokeLater(hubWindow::dispose);
 		if (presence != null) presence.shutDown();
 		if (memberMap != null) memberMap.setOpen(false);
+		if (mapOverlay != null) overlayManager.remove(mapOverlay);
 		if (socket != null) socket.disconnect();
 		if (executor != null) executor.shutdownNow();
 		if (itemSearchExecutor != null) itemSearchExecutor.shutdownNow();

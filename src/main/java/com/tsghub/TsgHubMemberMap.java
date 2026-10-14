@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -43,6 +44,7 @@ final class TsgHubMemberMap
 	private final Client client;
 	private final Map<String, WorldMapPoint> points = new HashMap<>();
 	private final Map<String, BufferedImage> images = new HashMap<>();
+	private final Map<WorldMapPoint, List<Member>> groups = new IdentityHashMap<>();
 	private List<Member> members = new ArrayList<>();
 	private float zoom;
 	private volatile boolean open;
@@ -122,16 +124,24 @@ final class TsgHubMemberMap
 			if (point == null)
 			{
 				BufferedImage image = image(label);
-				point = WorldMapPoint.builder().image(image).imagePoint(new Point(DOT / 2, image.getHeight() / 2)).name(label).snapToEdge(true).jumpOnClick(true).build();
+				point = WorldMapPoint.builder().image(image).imagePoint(new Point(DOT / 2, image.getHeight() / 2)).name(label).snapToEdge(true).build();
 				manager.add(point);
 			}
 			point.setWorldPoint(lead.at);
-			point.setTooltip(tooltip(group));
 			next.put(key.toString(), point);
+			groups.put(point, group);
 		}
-		points.values().forEach(manager::remove);
+		points.values().forEach(point -> {
+			manager.remove(point);
+			groups.remove(point);
+		});
 		points.clear();
 		points.putAll(next);
+	}
+
+	Map<WorldMapPoint, List<Member>> groups()
+	{
+		return groups;
 	}
 
 	static List<List<Member>> group(List<Member> members, float zoom, Function<Member, BufferedImage> image)
@@ -164,18 +174,6 @@ final class TsgHubMemberMap
 		return Math.abs(dy) < Math.max(aImage.getHeight(), bImage.getHeight()) && dx < aImage.getWidth() && -dx < bImage.getWidth();
 	}
 
-	private static String tooltip(List<Member> group)
-	{
-		StringBuilder text = new StringBuilder();
-		for (Member m : group)
-		{
-			if (text.length() > 0) text.append(", ");
-			text.append(m.name);
-			if (m.world > 0) text.append(" (W").append(m.world).append(')');
-		}
-		return text.toString();
-	}
-
 	private BufferedImage image(String label)
 	{
 		return images.computeIfAbsent(label, TsgHubMemberMap::marker);
@@ -186,6 +184,7 @@ final class TsgHubMemberMap
 		clientThread.invokeLater(() -> {
 			points.values().forEach(manager::remove);
 			points.clear();
+			groups.clear();
 			members = new ArrayList<>();
 			images.clear();
 		});
