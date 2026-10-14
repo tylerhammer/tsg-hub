@@ -33,8 +33,8 @@ public class AnnouncementsTest
 	{
 		JsonArray announcements = list("[{\"id\":\"1\",\"title\":\"One\"},{\"id\":\"2\",\"title\":\"Two\"},{\"id\":\"3\",\"title\":\"Three\"},{\"id\":\"4\",\"title\":\"Four\"},{\"id\":\"5\",\"title\":\"Five\"}]");
 		List<String> lines = TsgHubAnnouncements.chatLines(TsgHubAnnouncements.unread(announcements, Collections.emptySet()));
-		assertEquals(Arrays.asList("Clan announcement: One", "Clan announcement: Two", "Clan announcement: Three", "+2 more announcements in the TSG Hub sidebar."), lines);
-		assertEquals(Collections.singletonList("Clan announcement: One"), TsgHubAnnouncements.chatLines(TsgHubAnnouncements.unread(list("[{\"id\":\"1\",\"title\":\"One\"}]"), Collections.emptySet())));
+		assertEquals(Arrays.asList("News: One", "News: Two", "News: Three", "+2 more announcements in the TSG Hub sidebar."), lines);
+		assertEquals(Collections.singletonList("News: One"), TsgHubAnnouncements.chatLines(TsgHubAnnouncements.unread(list("[{\"id\":\"1\",\"title\":\"One\"}]"), Collections.emptySet())));
 	}
 
 	@Test
