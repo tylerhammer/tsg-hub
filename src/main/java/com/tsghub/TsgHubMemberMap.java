@@ -24,7 +24,10 @@ final class TsgHubMemberMap
 {
 	static final int REFRESH_SECONDS = 10;
 	private static final int DOT = 8;
-	private static final int GAP = 3;
+	private static final int GAP = 2;
+	private static final int PAD_X = 4;
+	private static final int PAD_Y = 3;
+	private static final Color PILL = new Color(0x1F, 0x1D, 0x22, 225);
 
 	private final TsgHubPlugin plugin;
 	private final ClientThread clientThread;
@@ -115,8 +118,9 @@ final class TsgHubMemberMap
 		Graphics2D measure = probe.createGraphics();
 		FontMetrics metrics = measure.getFontMetrics(FontManager.getRunescapeSmallFont());
 		measure.dispose();
-		int height = Math.max(DOT, metrics.getAscent() + 1);
-		BufferedImage image = new BufferedImage(DOT + GAP + metrics.stringWidth(name) + 1, height, BufferedImage.TYPE_INT_ARGB);
+		int pillWidth = metrics.stringWidth(name) + PAD_X * 2;
+		int height = Math.max(DOT, metrics.getAscent() + PAD_Y * 2);
+		BufferedImage image = new BufferedImage(DOT + GAP + pillWidth, height, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g = image.createGraphics();
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		int top = (height - DOT) / 2;
@@ -124,14 +128,15 @@ final class TsgHubMemberMap
 		g.fillOval(0, top, DOT, DOT);
 		g.setColor(TsgHubTheme.ACCENT);
 		g.fillOval(1, top + 1, DOT - 2, DOT - 2);
+		int x = DOT + GAP;
+		g.setColor(PILL);
+		g.fillRoundRect(x, 0, pillWidth, height, 6, 6);
+		g.setColor(TsgHubTheme.ACCENT);
+		g.drawRoundRect(x, 0, pillWidth - 1, height - 1, 6, 6);
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
 		g.setFont(FontManager.getRunescapeSmallFont());
-		int x = DOT + GAP;
-		int baseline = (height + metrics.getAscent()) / 2 - 1;
-		g.setColor(Color.BLACK);
-		g.drawString(name, x + 1, baseline + 1);
-		g.setColor(Color.WHITE);
-		g.drawString(name, x, baseline);
+		g.setColor(TsgHubTheme.TEXT);
+		g.drawString(name, x + PAD_X, (height + metrics.getAscent()) / 2 - 1);
 		g.dispose();
 		return image;
 	}
