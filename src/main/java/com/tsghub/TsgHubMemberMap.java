@@ -124,7 +124,23 @@ final class TsgHubMemberMap
 			if (point == null)
 			{
 				BufferedImage image = image(label);
-				point = WorldMapPoint.builder().image(image).imagePoint(new Point(DOT / 2, image.getHeight() / 2)).name(label).snapToEdge(true).build();
+				point = new WorldMapPoint(lead.at, image)
+				{
+					@Override
+					public void onEdgeSnap()
+					{
+						setJumpOnClick(true);
+					}
+
+					@Override
+					public void onEdgeUnsnap()
+					{
+						setJumpOnClick(false);
+					}
+				};
+				point.setImagePoint(new Point(DOT / 2, image.getHeight() / 2));
+				point.setName(label);
+				point.setSnapToEdge(true);
 				manager.add(point);
 			}
 			point.setWorldPoint(lead.at);
