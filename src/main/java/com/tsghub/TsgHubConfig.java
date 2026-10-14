@@ -26,8 +26,14 @@ public interface TsgHubConfig extends Config
 		return false;
 	}
 
-	@ConfigItem(keyName = "shareLocation", position = 1, section = sharingSection, name = "Share location and activity", description = "Show clanmates your area name and what you're doing (for example Skilling - Mining) in the Members list. When off, you still appear while in clan chat, with just Online and your world. Your exact tile is never sent.")
+	@ConfigItem(keyName = "shareLocation", position = 1, section = sharingSection, name = "Share location and activity", description = "Show clanmates your area name and what you're doing (for example Skilling - Mining) in the Members list, and your position on their world map. Your position isn't shared inside instances. When off, you still appear while in clan chat, with just Online and your world, and your position is never sent.")
 	default boolean shareLocation()
+	{
+		return false;
+	}
+
+	@ConfigItem(keyName = "mapNoticeShown", name = "", description = "", hidden = true)
+	default boolean mapNoticeShown()
 	{
 		return false;
 	}

@@ -56,12 +56,14 @@ import net.runelite.api.clan.ClanSettings;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.ClanChannelChanged;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.events.StatChanged;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.events.WidgetClosed;
 import net.runelite.api.events.WidgetLoaded;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.gameval.ItemID;
 import net.runelite.client.callback.ClientThread;
@@ -91,6 +93,7 @@ import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayMenuEntry;
+import net.runelite.client.ui.overlay.worldmap.WorldMapPointManager;
 import net.runelite.client.util.AsyncBufferedImage;
 import net.runelite.client.util.Filepath;
 import net.runelite.client.util.ImageUtil;
@@ -116,6 +119,7 @@ public class TsgHubPlugin extends Plugin
 	@Inject private SpriteManager spriteManager;
 	@Inject private HiscoreClient hiscoreClient;
 	@Inject private EventBus eventBus;
+	@Inject private WorldMapPointManager worldMapPointManager;
 	@Inject @Named("developerMode") private boolean developerMode;
 	private TsgHubPanel panel;
 	private TsgHubSidebarPanel sidebar;
@@ -158,6 +162,8 @@ public class TsgHubPlugin extends Plugin
 	private volatile Filepath rulesCache;
 	private TsgHubGroups groups;
 	private TsgHubPresence presence;
+	private TsgHubMemberMap memberMap;
+	private boolean mapNoticeChecked;
 	private TsgHubDrops drops;
 	private TsgHubAnnouncements announcements;
 	private TsgHubNewsEditor newsEditor;
@@ -219,6 +225,8 @@ public class TsgHubPlugin extends Plugin
 		executor.scheduleAtFixedRate(unlessLive(groups::autoRefresh), TsgHubGroups.REFRESH_SECONDS, TsgHubGroups.REFRESH_SECONDS, TimeUnit.SECONDS);
 		presence = new TsgHubPresence(this, client, clientThread, chatIconManager, spriteManager, executor, this::api, () -> sidebar, socket, this::adminKey);
 		executor.scheduleAtFixedRate(unlessLive(presence::autoRefresh), TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
+		memberMap = new TsgHubMemberMap(this, client, clientThread, worldMapPointManager, executor, this::api);
+		executor.scheduleAtFixedRate(unlessLive(memberMap::autoRefresh), TsgHubMemberMap.REFRESH_SECONDS, TsgHubMemberMap.REFRESH_SECONDS, TimeUnit.SECONDS);
 		drops = new TsgHubDrops(this, client, clientThread, executor, this::api, () -> sidebar);
 		executor.scheduleAtFixedRate(unlessLive(drops::autoRefresh), TsgHubDrops.REFRESH_SECONDS, TsgHubDrops.REFRESH_SECONDS, TimeUnit.SECONDS);
 		navigationButton = NavigationButton.builder()
@@ -254,6 +262,7 @@ public class TsgHubPlugin extends Plugin
 		if (groups != null && groupTracker != null && groupTracker.isSharing()) partyService.changeParty(null);
 		if (hubWindow != null) SwingUtilities.invokeLater(hubWindow::dispose);
 		if (presence != null) presence.shutDown();
+		if (memberMap != null) memberMap.setOpen(false);
 		if (socket != null) socket.disconnect();
 		if (executor != null) executor.shutdownNow();
 		if (itemSearchExecutor != null) itemSearchExecutor.shutdownNow();
@@ -459,6 +468,8 @@ public class TsgHubPlugin extends Plugin
 		// Loading screens and world hops aren't logouts.
 		if (state != GameState.LOGIN_SCREEN && state != GameState.LOGIN_SCREEN_AUTHENTICATOR) return;
 		if (presence != null) presence.onLoggedOut();
+		if (memberMap != null) memberMap.setOpen(false);
+		mapNoticeChecked = false;
 		if (announcements != null) announcements.onLoggedOut();
 		detectedPlayerName = "";
 		detectedClanName = "";
@@ -794,6 +805,7 @@ public class TsgHubPlugin extends Plugin
 		topics.add("announcements");
 		topics.add("notifications");
 		if (sidebar == null) return topics;
+		if (memberMap != null && memberMap.isOpen()) topics.add("positions");
 		if (sidebar.wantsGroups()) topics.add("groups");
 		if (sidebar.wantsMembers()) topics.add("presence");
 		if (sidebar.wantsDrops()) topics.add("drops");
@@ -816,6 +828,9 @@ public class TsgHubPlugin extends Plugin
 				JsonObject roster = data.has("presence") && data.get("presence").isJsonObject() ? data.getAsJsonObject("presence") : null;
 				JsonObject notes = data.has("members") && data.get("members").isJsonObject() ? data.getAsJsonObject("members") : null;
 				if (roster != null) presence.apply(TsgHubUi.array(roster, "members"), notes == null ? null : TsgHubUi.array(notes, "members"));
+				break;
+			case "positions":
+				memberMap.apply(TsgHubUi.array(data, "members"));
 				break;
 			case "drops":
 				drops.onSnapshot(TsgHubUi.array(data, "drops"));
@@ -1180,12 +1195,23 @@ public class TsgHubPlugin extends Plugin
 	@Subscribe
 	public void onWidgetLoaded(WidgetLoaded event)
 	{
+		if (event.getGroupId() == InterfaceID.WORLDMAP && memberMap != null)
+		{
+			memberMap.setOpen(true);
+			syncSocketNow();
+			if (!socket.isLive()) memberMap.autoRefresh();
+		}
 		if (sharingInClan() && TsgHubRules.get().rewardInterfaces.contains(event.getGroupId())) socket.rewardInterface(event.getGroupId(), true, client.getTickCount());
 	}
 
 	@Subscribe
 	public void onWidgetClosed(WidgetClosed event)
 	{
+		if (event.getGroupId() == InterfaceID.WORLDMAP && memberMap != null)
+		{
+			memberMap.setOpen(false);
+			syncSocketNow();
+		}
 		if (sharingInClan() && TsgHubRules.get().rewardInterfaces.contains(event.getGroupId())) socket.rewardInterface(event.getGroupId(), false, client.getTickCount());
 	}
 
@@ -1254,9 +1280,16 @@ public class TsgHubPlugin extends Plugin
 	}
 
 	@Subscribe
+	public void onClientTick(ClientTick tick)
+	{
+		if (memberMap != null) memberMap.onClientTick();
+	}
+
+	@Subscribe
 	public void onGameTick(GameTick tick)
 	{
 		if (presence != null) presence.onGameTick();
+		if (!mapNoticeChecked && sharingInClan()) showMapNotice();
 		if (clanCheckTicks > 0)
 		{
 			clanCheckTicks--;
@@ -1485,6 +1518,14 @@ public class TsgHubPlugin extends Plugin
 		notifiedUpdate = version;
 		ui(s -> s.setUpdate(version));
 		showLocalChatMessage(new ChatMessageBuilder().append(ChatColorType.HIGHLIGHT).append("TSG Hub " + Text.escapeJagex(version) + " is available. Restart RuneLite to update."));
+	}
+
+	private void showMapNotice()
+	{
+		mapNoticeChecked = true;
+		if (config.mapNoticeShown()) return;
+		configManager.setConfiguration("tsghub", "mapNoticeShown", true);
+		if (locationSharingEnabled()) showLocalChatMessage(new ChatMessageBuilder().append(ChatColorType.HIGHLIGHT).append("Your position now shows on clanmates' world maps. Turn off Share location and activity to stop."));
 	}
 
 	private void showLocalChatMessage(ChatMessageBuilder body)
