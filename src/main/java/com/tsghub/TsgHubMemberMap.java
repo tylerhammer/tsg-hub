@@ -7,14 +7,20 @@ import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Function;
 import java.util.function.Supplier;
+import net.runelite.api.Client;
 import net.runelite.api.Point;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.api.worldmap.WorldMap;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.worldmap.WorldMapPoint;
@@ -34,12 +40,17 @@ final class TsgHubMemberMap
 	private final WorldMapPointManager manager;
 	private final ScheduledExecutorService executor;
 	private final Supplier<TsgHubApi> api;
+	private final Client client;
 	private final Map<String, WorldMapPoint> points = new HashMap<>();
+	private final Map<String, BufferedImage> images = new HashMap<>();
+	private List<Member> members = new ArrayList<>();
+	private float zoom;
 	private volatile boolean open;
 
-	TsgHubMemberMap(TsgHubPlugin plugin, ClientThread clientThread, WorldMapPointManager manager, ScheduledExecutorService executor, Supplier<TsgHubApi> api)
+	TsgHubMemberMap(TsgHubPlugin plugin, Client client, ClientThread clientThread, WorldMapPointManager manager, ScheduledExecutorService executor, Supplier<TsgHubApi> api)
 	{
 		this.plugin = plugin;
+		this.client = client;
 		this.clientThread = clientThread;
 		this.manager = manager;
 		this.executor = executor;
@@ -71,37 +82,103 @@ final class TsgHubMemberMap
 	{
 		if (!open) return;
 		String self = PlayerNames.normalize(plugin.getDetectedPlayerName());
+		List<Member> next = new ArrayList<>();
+		Set<String> seen = new HashSet<>();
+		for (JsonObject member : TsgHubUi.objects(members))
+		{
+			String name = TsgHubUi.str(member, "displayName");
+			String key = PlayerNames.normalize(name);
+			if (key.isEmpty() || key.equals(self) || !seen.add(key)) continue;
+			WorldPoint at = new WorldPoint(TsgHubUi.integer(member, "x", 0), TsgHubUi.integer(member, "y", 0), TsgHubUi.integer(member, "plane", 0));
+			next.add(new Member(name, key, TsgHubUi.integer(member, "world", 0), at));
+		}
+		next.sort(Comparator.comparing(m -> m.key));
 		clientThread.invokeLater(() -> {
 			if (!open) return;
-			Set<String> seen = new HashSet<>();
-			for (JsonObject member : TsgHubUi.objects(members))
-			{
-				String name = TsgHubUi.str(member, "displayName");
-				String key = PlayerNames.normalize(name);
-				if (key.isEmpty() || key.equals(self) || !seen.add(key)) continue;
-				WorldPoint at = new WorldPoint(TsgHubUi.integer(member, "x", 0), TsgHubUi.integer(member, "y", 0), TsgHubUi.integer(member, "plane", 0));
-				int world = TsgHubUi.integer(member, "world", 0);
-				String tooltip = world > 0 ? name + " (W" + world + ")" : name;
-				WorldMapPoint point = points.get(key);
-				if (point == null)
-				{
-					BufferedImage image = marker(name);
-					point = WorldMapPoint.builder().worldPoint(at).image(image).imagePoint(new Point(DOT / 2, image.getHeight() / 2)).name(name).tooltip(tooltip).snapToEdge(true).jumpOnClick(true).build();
-					points.put(key, point);
-					manager.add(point);
-				}
-				else
-				{
-					point.setWorldPoint(at);
-					point.setTooltip(tooltip);
-				}
-			}
-			points.entrySet().removeIf(entry -> {
-				if (seen.contains(entry.getKey())) return false;
-				manager.remove(entry.getValue());
-				return true;
-			});
+			this.members = next;
+			regroup();
 		});
+	}
+
+	void onClientTick()
+	{
+		if (!open || members.isEmpty()) return;
+		WorldMap map = client.getWorldMap();
+		if (map != null && map.getWorldMapZoom() != zoom) regroup();
+	}
+
+	private void regroup()
+	{
+		WorldMap map = client.getWorldMap();
+		zoom = map == null ? 0 : map.getWorldMapZoom();
+		Map<String, WorldMapPoint> next = new HashMap<>();
+		for (List<Member> group : group(members, zoom, m -> image(m.name)))
+		{
+			Member lead = group.get(0);
+			StringBuilder key = new StringBuilder();
+			group.forEach(m -> key.append(m.key).append('|'));
+			String label = group.size() == 1 ? lead.name : lead.name + " +" + (group.size() - 1);
+			WorldMapPoint point = points.remove(key.toString());
+			if (point == null)
+			{
+				BufferedImage image = image(label);
+				point = WorldMapPoint.builder().image(image).imagePoint(new Point(DOT / 2, image.getHeight() / 2)).name(label).snapToEdge(true).jumpOnClick(true).build();
+				manager.add(point);
+			}
+			point.setWorldPoint(lead.at);
+			point.setTooltip(tooltip(group));
+			next.put(key.toString(), point);
+		}
+		points.values().forEach(manager::remove);
+		points.clear();
+		points.putAll(next);
+	}
+
+	static List<List<Member>> group(List<Member> members, float zoom, Function<Member, BufferedImage> image)
+	{
+		List<List<Member>> groups = new ArrayList<>();
+		boolean[] taken = new boolean[members.size()];
+		for (int i = 0; i < members.size(); i++)
+		{
+			if (taken[i]) continue;
+			Member lead = members.get(i);
+			BufferedImage leadImage = image.apply(lead);
+			List<Member> group = new ArrayList<>();
+			group.add(lead);
+			for (int j = i + 1; j < members.size(); j++)
+			{
+				Member other = members.get(j);
+				if (taken[j] || !overlaps(lead, leadImage, other, image.apply(other), zoom)) continue;
+				taken[j] = true;
+				group.add(other);
+			}
+			groups.add(group);
+		}
+		return groups;
+	}
+
+	private static boolean overlaps(Member a, BufferedImage aImage, Member b, BufferedImage bImage, float zoom)
+	{
+		float dx = (b.at.getX() - a.at.getX()) * zoom;
+		float dy = (b.at.getY() - a.at.getY()) * zoom;
+		return Math.abs(dy) < Math.max(aImage.getHeight(), bImage.getHeight()) && dx < aImage.getWidth() && -dx < bImage.getWidth();
+	}
+
+	private static String tooltip(List<Member> group)
+	{
+		StringBuilder text = new StringBuilder();
+		for (Member m : group)
+		{
+			if (text.length() > 0) text.append(", ");
+			text.append(m.name);
+			if (m.world > 0) text.append(" (W").append(m.world).append(')');
+		}
+		return text.toString();
+	}
+
+	private BufferedImage image(String label)
+	{
+		return images.computeIfAbsent(label, TsgHubMemberMap::marker);
 	}
 
 	void clear()
@@ -109,7 +186,25 @@ final class TsgHubMemberMap
 		clientThread.invokeLater(() -> {
 			points.values().forEach(manager::remove);
 			points.clear();
+			members = new ArrayList<>();
+			images.clear();
 		});
+	}
+
+	static final class Member
+	{
+		final String name;
+		final String key;
+		final int world;
+		final WorldPoint at;
+
+		Member(String name, String key, int world, WorldPoint at)
+		{
+			this.name = name;
+			this.key = key;
+			this.world = world;
+			this.at = at;
+		}
 	}
 
 	static BufferedImage marker(String name)

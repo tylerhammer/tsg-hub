@@ -56,6 +56,7 @@ import net.runelite.api.clan.ClanSettings;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.ClanChannelChanged;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.events.StatChanged;
@@ -224,7 +225,7 @@ public class TsgHubPlugin extends Plugin
 		executor.scheduleAtFixedRate(unlessLive(groups::autoRefresh), TsgHubGroups.REFRESH_SECONDS, TsgHubGroups.REFRESH_SECONDS, TimeUnit.SECONDS);
 		presence = new TsgHubPresence(this, client, clientThread, chatIconManager, spriteManager, executor, this::api, () -> sidebar, socket, this::adminKey);
 		executor.scheduleAtFixedRate(unlessLive(presence::autoRefresh), TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
-		memberMap = new TsgHubMemberMap(this, clientThread, worldMapPointManager, executor, this::api);
+		memberMap = new TsgHubMemberMap(this, client, clientThread, worldMapPointManager, executor, this::api);
 		executor.scheduleAtFixedRate(unlessLive(memberMap::autoRefresh), TsgHubMemberMap.REFRESH_SECONDS, TsgHubMemberMap.REFRESH_SECONDS, TimeUnit.SECONDS);
 		drops = new TsgHubDrops(this, client, clientThread, executor, this::api, () -> sidebar);
 		executor.scheduleAtFixedRate(unlessLive(drops::autoRefresh), TsgHubDrops.REFRESH_SECONDS, TsgHubDrops.REFRESH_SECONDS, TimeUnit.SECONDS);
@@ -1276,6 +1277,12 @@ public class TsgHubPlugin extends Plugin
 		JsonArray outsiders = new JsonArray();
 		nonClanPlayers.forEach(outsiders::add);
 		chat.add("nonClanPlayers", outsiders);
+	}
+
+	@Subscribe
+	public void onClientTick(ClientTick tick)
+	{
+		if (memberMap != null) memberMap.onClientTick();
 	}
 
 	@Subscribe
