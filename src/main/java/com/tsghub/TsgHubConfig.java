@@ -38,6 +38,12 @@ public interface TsgHubConfig extends Config
 		return true;
 	}
 
+	@ConfigItem(keyName = "clanAnnouncements", position = 1, section = chatSection, name = "Clan announcements", description = "Show new clan announcements from the admins in your chatbox when you log in or when they're posted. They're always listed under News in the sidebar.")
+	default boolean clanAnnouncements()
+	{
+		return true;
+	}
+
 	@ConfigItem(keyName = "partyShowSelf", name = "Show yourself", description = "Show your own health, gear, inventory and skills at the top of your party, exactly as your party members see them.", section = partySection, position = 0)
 	default boolean partyShowSelf()
 	{

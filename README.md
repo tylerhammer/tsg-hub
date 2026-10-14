@@ -36,6 +36,7 @@ Join a bingo team, climb the Skill of the Week leaderboard, find a raid party, a
 | ⚔️ **[Clan parties](#clan-parties)** | Raids, bossing and skilling. One-click join, no passphrase, live health, prayer, gear, inventory and skills |
 | 👥 **[Members](#members)** | Which clanmates are online, their world, area and what they're doing |
 | 💎 **[Drops](#drops)** | The clan's big drops, raid loot, pets and collection log items, so you can catch up |
+| 📰 **[News](#news)** | Announcements from the admins, in the sidebar and your chatbox |
 | 📌 **[Split view](#split-view)** | Pin Members, Parties or Drops below the main view |
 | 🔗 **[Discord linking](#link-your-discord)** | Link your RuneScape account to the clan Discord |
 | 🛠️ **[Admin tools](#for-admins)** | Create events, teams and tasks, and review flagged claims, without leaving the game |
@@ -116,6 +117,10 @@ It's built from the clan chat broadcasts your clan already has turned on: drops 
 
 <p align="center"><img src="docs/images/drops.png" width="280" alt="Recent clan drops with item, player, value and time"></p>
 
+## News
+
+The **News** section lists announcements from the clan admins, pinned ones first. A pin marks pinned posts, a green dot marks ones you haven't read, and the **News** tile on the home screen shows how many are new. Each new announcement appears in your chatbox once, when you log in or when it's posted. Links in an announcement show the full address and ask before opening in your browser. Turn that off with **Clan announcements** under **Chat** in the plugin settings.
+
 ## Split view
 
 Click the pin icon on **Members**, **Parties** or **Drops** to dock it below the main view, then open an event or anything else above it. Drag the divider to resize, click the dock's bar or arrow to collapse it to a single row, and click **✕** to unpin. One section can be pinned at a time, and the dock remembers its size and what's pinned.
@@ -139,7 +144,7 @@ The plugin confirms the key in the sidebar and links your Discord account to the
 
 Admin tools use the same hub key. If you're a Discord admin (the server owner, a member with an admin role, or anyone with Manage Server), `/hub key` gives you a key with admin access. Keys from before hub keys existed, starting with `tsgadm_`, keep working and move into the **Hub key** setting by themselves.
 
-Once the key checks out, an admin button appears in the sidebar header. It opens a separate window with your clan's events on the left and the selected event on the right. Admins also see and can join hidden events. If you lose your Discord admin role, your key keeps linking your account but the admin tools disappear.
+Once the key checks out, an admin button appears in the sidebar header. It opens a separate window with **Events** and **Announcements** tabs. Events lists your clan's events on the left and the selected event on the right. Admins also see and can join hidden events. If you lose your Discord admin role, your key keeps linking your account but the admin tools disappear.
 
 Your in-game clan rank doesn't grant admin access. Owners and Deputy Owners keep admin tools through their Discord admin role.
 
@@ -158,6 +163,8 @@ Your in-game clan rank doesn't grant admin access. Owners and Deputy Owners keep
 </details>
 
 You can edit a task after the event starts. Progress the service already recorded is recalculated against the new requirements. To credit something the plugin couldn't see, open a team's **Details** and use **Mark complete** with a short note.
+
+The **Announcements** tab works the same way: drafts, pinned and active announcements on the left, and the selected one on the right with **Edit**, **Pin**/**Unpin** and delete. **New announcement** takes a title, an optional message, how long it stays up, and whether it's pinned to the top of News. **Post now** sends it to the clan. **Save as draft** keeps it visible to admins only, so another admin can review or edit it and **Publish** it when it's ready. Editing a posted announcement updates it without alerting players again.
 
 ---
 

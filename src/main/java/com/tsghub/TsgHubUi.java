@@ -13,6 +13,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Cursor;
+import java.awt.Insets;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
@@ -56,11 +57,19 @@ import javax.swing.BoxLayout;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.plaf.basic.BasicHTML;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.Element;
+import javax.swing.text.Position;
+import javax.swing.text.View;
+import javax.swing.text.html.HTML;
+import javax.swing.text.html.HTMLDocument;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.SwingUtilities;
 import javax.swing.JToolTip;
 import javax.swing.Scrollable;
 import javax.swing.Timer;
@@ -121,6 +130,83 @@ final class TsgHubUi
 		label.setFont(font);
 		label.setAlignmentX(Component.LEFT_ALIGNMENT);
 		return label;
+	}
+
+	private static final java.util.regex.Pattern URL = java.util.regex.Pattern.compile("https?://[^\\s<>\"']+");
+
+	private static final int LINK_TEXT_MAX = 24;
+
+	// Escapes plain text for HTML, keeps line breaks, and turns http(s) URLs into links. Long URLs show
+	// shortened: Swing can't wrap inside one, and a long one widens the whole label past its wrap width.
+	static String linkify(String text)
+	{
+		String raw = text == null ? "" : text;
+		StringBuilder out = new StringBuilder();
+		java.util.regex.Matcher matcher = URL.matcher(raw);
+		int last = 0;
+		while (matcher.find())
+		{
+			String url = matcher.group().replaceAll("[.,;:!?)]+$", "");
+			out.append(escape(raw.substring(last, matcher.start())));
+			out.append("<a href='").append(escape(url)).append("' style='color:").append(toHexColor(ACCENT)).append("'>")
+				.append(escape(linkText(url))).append("</a>");
+			last = matcher.start() + url.length();
+		}
+		out.append(escape(raw.substring(last)));
+		return out.toString().replace("\n", "<br>");
+	}
+
+	static String linkText(String url)
+	{
+		String shown = url.replaceFirst("^https?://(www\\.)?", "").replaceAll("/$", "");
+		return shown.length() > LINK_TEXT_MAX ? shown.substring(0, LINK_TEXT_MAX - 3) + "..." : shown;
+	}
+
+	// Wrapped text whose links open in the browser after confirming the full URL, with a hand cursor and the URL on hover.
+	static JLabel linkedText(String text, Color color, Font font, int widthPx)
+	{
+		JLabel label = label(html(linkify(text), widthPx), color, font);
+		MouseAdapter links = new MouseAdapter()
+		{
+			@Override
+			public void mouseClicked(MouseEvent e)
+			{
+				String href = linkAt(label, e.getPoint());
+				if (href != null && JOptionPane.showConfirmDialog(label, "Open this link in your browser?\n\n" + href, "Open link",
+					JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE) == JOptionPane.OK_OPTION)
+					net.runelite.client.util.LinkBrowser.browse(href);
+			}
+
+			@Override
+			public void mouseMoved(MouseEvent e)
+			{
+				String href = linkAt(label, e.getPoint());
+				label.setCursor(href == null ? Cursor.getDefaultCursor() : Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+				label.setToolTipText(href);
+			}
+		};
+		label.addMouseListener(links);
+		label.addMouseMotionListener(links);
+		return label;
+	}
+
+	private static String linkAt(JLabel label, Point point)
+	{
+		Object property = label.getClientProperty(BasicHTML.propertyKey);
+		if (!(property instanceof View)) return null;
+		View view = (View) property;
+		Insets insets = label.getInsets();
+		Rectangle bounds = new Rectangle(insets.left, insets.top, label.getWidth() - insets.left - insets.right, label.getHeight() - insets.top - insets.bottom);
+		Rectangle textRect = new Rectangle();
+		SwingUtilities.layoutCompoundLabel(label, label.getFontMetrics(label.getFont()), label.getText(), null, label.getVerticalAlignment(),
+			label.getHorizontalAlignment(), label.getVerticalTextPosition(), label.getHorizontalTextPosition(), bounds, new Rectangle(), textRect, 0);
+		if (!textRect.contains(point) || !(view.getDocument() instanceof HTMLDocument)) return null;
+		int offset = view.viewToModel(point.x, point.y, textRect, new Position.Bias[1]);
+		Element element = ((HTMLDocument) view.getDocument()).getCharacterElement(offset);
+		Object anchor = element.getAttributes().getAttribute(HTML.Tag.A);
+		if (!(anchor instanceof AttributeSet)) return null;
+		Object href = ((AttributeSet) anchor).getAttribute(HTML.Attribute.HREF);
+		return href == null ? null : href.toString();
 	}
 
 	static JLabel wrapped(String text, Color color, Font font, int widthPx)
@@ -359,6 +445,27 @@ final class TsgHubUi
 		if (from.equals(component.getBackground())) component.setBackground(to);
 		if (component instanceof Container)
 			for (Component child : ((Container) component).getComponents()) recolor(child, from, to);
+	}
+
+	static JComponent narrowPage(JPanel form)
+	{
+		JPanel holder = panel(new BorderLayout());
+		form.setMaximumSize(new Dimension(520, Integer.MAX_VALUE));
+		JPanel limiter = new JPanel()
+		{
+			@Override public Dimension getPreferredSize()
+			{
+				int available = holder.getWidth() > 0 ? holder.getWidth() : 520;
+				return new Dimension(Math.min(520, available), form.getPreferredSize().height);
+			}
+		};
+		limiter.setLayout(new BorderLayout());
+		limiter.setOpaque(false);
+		limiter.add(form, BorderLayout.CENTER);
+		holder.add(limiter, BorderLayout.WEST);
+		WidthTrackingPanel page = new WidthTrackingPanel();
+		page.add(holder);
+		return scroll(page);
 	}
 
 	static JScrollPane scroll(JComponent content)
@@ -1292,6 +1399,23 @@ final class TsgHubUi
 		}
 	}
 
+	static final class NewsIcon extends TileIcon
+	{
+		@Override void paint(Graphics2D g)
+		{
+			Path2D horn = new Path2D.Double();
+			horn.moveTo(2, 6);
+			horn.lineTo(6, 6);
+			horn.lineTo(13, 2);
+			horn.lineTo(13, 14);
+			horn.lineTo(6, 10);
+			horn.lineTo(2, 10);
+			horn.closePath();
+			g.draw(horn);
+			g.drawLine(4, 10, 5, 14);
+		}
+	}
+
 	static final class CogIcon extends HoverIcon
 	{
 		CogIcon() { super(16); }
@@ -1369,6 +1493,39 @@ final class TsgHubUi
 			tick.lineTo(6, 10);
 			tick.lineTo(10.5, 4.5);
 			g.draw(tick);
+			g.dispose();
+		}
+	}
+
+	static final class PinnedIcon implements Icon
+	{
+		@Override public int getIconWidth() { return 12; }
+		@Override public int getIconHeight() { return 12; }
+		@Override public void paintIcon(Component component, Graphics graphics, int x, int y)
+		{
+			Graphics2D g = (Graphics2D) graphics.create();
+			g.translate(x, y);
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			g.setColor(ACCENT);
+			g.fillRect(4, 1, 4, 5);
+			g.fillPolygon(new int[] {1, 11, 8, 4}, new int[] {8, 8, 5, 5}, 4);
+			g.setStroke(new BasicStroke(1.4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+			g.drawLine(3, 1, 9, 1);
+			g.drawLine(6, 8, 6, 11);
+			g.dispose();
+		}
+	}
+
+	static final class UnreadIcon implements Icon
+	{
+		@Override public int getIconWidth() { return 8; }
+		@Override public int getIconHeight() { return 8; }
+		@Override public void paintIcon(Component component, Graphics graphics, int x, int y)
+		{
+			Graphics2D g = (Graphics2D) graphics.create();
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			g.setColor(SUCCESS);
+			g.fillOval(x, y, 8, 8);
 			g.dispose();
 		}
 	}

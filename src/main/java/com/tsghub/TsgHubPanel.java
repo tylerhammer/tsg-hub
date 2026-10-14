@@ -1862,27 +1862,6 @@ final class TsgHubPanel extends JPanel
 		return fitHeight(footer);
 	}
 
-	private static JComponent narrowPage(JPanel form)
-	{
-		JPanel holder = panel(new BorderLayout());
-		form.setMaximumSize(new Dimension(520, Integer.MAX_VALUE));
-		JPanel limiter = new JPanel()
-		{
-			@Override public Dimension getPreferredSize()
-			{
-				int available = holder.getWidth() > 0 ? holder.getWidth() : 520;
-				return new Dimension(Math.min(520, available), form.getPreferredSize().height);
-			}
-		};
-		limiter.setLayout(new BorderLayout());
-		limiter.setOpaque(false);
-		limiter.add(form, BorderLayout.CENTER);
-		holder.add(limiter, BorderLayout.WEST);
-		WidthTrackingPanel page = new WidthTrackingPanel();
-		page.add(holder);
-		return scroll(page);
-	}
-
 	private JsonObject findTeam(String teamId)
 	{
 		for (JsonObject team : objects(array(currentEvent, "teams"))) if (str(team, "id").equals(teamId)) return team;

@@ -71,7 +71,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private static final int CARD_CONTRIBUTORS = 2;
 	private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("h:mm a");
 
-	private enum View { LOGGED_OUT, NOT_IN_CLAN, SHARING_OFF, HOME, EVENTS, PREVIEW, BOARD, COMPETITION_PREVIEW, COMPETITION, DROP_PARTY, GROUPS, MEMBERS, LOOKUP, DROPS }
+	private enum View { LOGGED_OUT, NOT_IN_CLAN, SHARING_OFF, HOME, EVENTS, PREVIEW, BOARD, COMPETITION_PREVIEW, COMPETITION, DROP_PARTY, GROUPS, MEMBERS, LOOKUP, DROPS, NEWS }
 
 	private final TsgHubPlugin plugin;
 	private final JButton back = iconButton(new BackIcon(), "Back to events");
@@ -137,6 +137,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private int lookupSeq;
 	private String update;
 	private JsonArray drops;
+	private JsonArray announcements;
 	private JsonObject competitionEvent;
 	private String competitionName = "";
 	private volatile String openCompetitionId;
@@ -193,7 +194,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 			new Section("Events", new CalendarIcon(), this::openEvents, this::eventsSummary, () -> liveEvents() > 0),
 			new Section("Parties", new PartyIcon(), this::showParties, this::partiesSummary, () -> plugin.groups().inGroup()),
 			new Section("Members", new MembersIcon(), this::showMembers, this::membersSummary, () -> onlineCount() > 0),
-			new Section("Drops", new DropsIcon(), this::showDrops, () -> "", () -> false));
+			new Section("Drops", new DropsIcon(), this::showDrops, () -> "", () -> false),
+			new Section("News", new NewsIcon(), this::showNews, this::newsSummary, () -> plugin.announcements().unreadCount() > 0));
 		setLayout(new BorderLayout(0, 6));
 		setBackground(BACKGROUND);
 		setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -251,7 +253,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 				reopen(lookupReturn);
 				return;
 			}
-			if (view == View.GROUPS || view == View.EVENTS || view == View.MEMBERS || view == View.DROPS)
+			if (view == View.GROUPS || view == View.EVENTS || view == View.MEMBERS || view == View.DROPS || view == View.NEWS)
 			{
 				showHome();
 				return;
@@ -275,8 +277,10 @@ final class TsgHubSidebarPanel extends PluginPanel
 				plugin.loadClanEvents();
 				plugin.groups().refresh();
 				plugin.presence().loadMembers(false);
+				plugin.announcements().load();
 			}
 			else if (view == View.GROUPS) plugin.groups().refresh();
+			else if (view == View.NEWS) plugin.announcements().load();
 			else if (view == View.MEMBERS) plugin.presence().loadMembers(false);
 			else if (view == View.LOOKUP) loadLookup();
 			else if (view == View.DROPS) plugin.drops().load(false);
@@ -1107,6 +1111,94 @@ final class TsgHubSidebarPanel extends PluginPanel
 		return label;
 	}
 
+	void setAnnouncements(JsonArray announcements)
+	{
+		this.announcements = announcements;
+		if (view == View.NEWS)
+		{
+			renderNews();
+			plugin.announcements().markRead();
+		}
+		else if (view == View.HOME) renderHome();
+	}
+
+	void showNews()
+	{
+		setView(View.NEWS);
+		renderNews();
+		plugin.announcements().markRead();
+		plugin.announcements().load();
+	}
+
+	private String newsSummary()
+	{
+		if (announcements == null) return "Loading...";
+		int unread = plugin.announcements().unreadCount();
+		if (unread > 0) return unread + " new";
+		return announcements.size() == 0 ? "No announcements" : plural(announcements.size(), "announcement");
+	}
+
+	private JPanel newsIcons(JsonObject announcement)
+	{
+		JPanel icons = panel(new FlowLayout(FlowLayout.RIGHT, 4, 4));
+		if (bool(announcement, "pinned"))
+		{
+			JLabel pinned = new JLabel(new PinnedIcon());
+			pinned.setToolTipText("Pinned");
+			icons.add(pinned);
+		}
+		if (plugin.announcements().isUnread(str(announcement, "id")))
+		{
+			JLabel unread = new JLabel(new UnreadIcon());
+			unread.setToolTipText("New");
+			icons.add(unread);
+		}
+		return icons;
+	}
+
+	private void renderNews()
+	{
+		setHeader("News", "", true, true);
+		page.removeAll();
+		if (announcements == null)
+		{
+			page.add(caption("Loading announcements..."));
+		}
+		else if (announcements.size() == 0)
+		{
+			page.add(errorPanel("No announcements", "When the admins post news for the clan, it shows up here."));
+		}
+		else
+		{
+			Instant now = clock.instant();
+			ZoneId zone = ZoneId.systemDefault();
+			for (JsonObject announcement : objects(announcements))
+			{
+				page.add(newsCard(announcement, now, zone));
+				page.add(Box.createVerticalStrut(LIST_GAP));
+			}
+		}
+		refreshPage();
+	}
+
+	private JPanel newsCard(JsonObject announcement, Instant now, ZoneId zone)
+	{
+		JPanel card = card();
+		JPanel lines = stack();
+		JPanel icons = newsIcons(announcement);
+		lines.add(row(label(html(escape(str(announcement, "title")), CARD_TEXT_W - icons.getPreferredSize().width - 6), TEXT, boldFont()), north(icons)));
+		String body = str(announcement, "body");
+		if (!body.isEmpty())
+		{
+			lines.add(Box.createVerticalStrut(GAP_XS));
+			lines.add(linkedText(body, TEXT, smallFont(), CARD_TEXT_W));
+		}
+		lines.add(Box.createVerticalStrut(GAP_XS));
+		lines.add(cardNote(str(announcement, "postedBy") + " · " + TsgHubRoster.warningDate(str(announcement, "postedAt"), now, zone)));
+		card.add(fillWidth(lines), BorderLayout.CENTER);
+		return fitHeight(card);
+	}
+
 	private void openEvents()
 	{
 		showEventList();
@@ -1680,7 +1772,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		dock.setShown(!gated(next));
 		pin.setVisible(pinnable(next));
 		title.setText(html(escape(titleText), titleWidth()));
-		back.setToolTipText(next == View.LOOKUP ? backLabel(lookupReturn) : next == View.EVENTS || next == View.GROUPS || next == View.MEMBERS || next == View.DROPS ? "Home" : "Back to events");
+		back.setToolTipText(next == View.LOOKUP ? backLabel(lookupReturn) : next == View.EVENTS || next == View.GROUPS || next == View.MEMBERS || next == View.DROPS || next == View.NEWS ? "Home" : "Back to events");
 	}
 
 	private static String cardName(View next)
