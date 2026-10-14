@@ -14,6 +14,9 @@ public interface TsgHubConfig extends Config
 	@ConfigSection(name = "Chat", description = "TSG Hub messages in your chatbox.", position = 5)
 	String chatSection = "chat";
 
+	@ConfigSection(name = "World map", description = "Clanmates on your world map.", position = 7)
+	String mapSection = "map";
+
 	@ConfigSection(name = "Party", description = "How clan parties look in the TSG Hub sidebar.", position = 10)
 	String partySection = "party";
 
@@ -46,6 +49,12 @@ public interface TsgHubConfig extends Config
 
 	@ConfigItem(keyName = "clanAnnouncements", position = 1, section = chatSection, name = "Clan announcements", description = "Show new clan announcements from the admins in your chatbox when you log in or when they're posted. They're always listed under News in the sidebar.")
 	default boolean clanAnnouncements()
+	{
+		return true;
+	}
+
+	@ConfigItem(keyName = "showClanMap", position = 0, section = mapSection, name = "Show clanmates", description = "Show clanmates who share their location as named markers on your world map. Turn off if they get in the way. This only hides them for you; it doesn't change what you share.")
+	default boolean showClanMap()
 	{
 		return true;
 	}

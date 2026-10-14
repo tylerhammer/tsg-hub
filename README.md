@@ -102,7 +102,7 @@ Online clanmates are listed first, including those in clan chat without TSG Hub,
 
 ### World map
 
-Clanmates who share their location show as markers on your world map. Hover a marker to see who it is and their world. Positions update every few seconds while the map is open. Your own position is shared only with **Share location and activity** on, and never from inside an instance such as a raid, boss room or player-owned house.
+Clanmates who share their location show on your world map with their name. Members close enough to overlap merge into one marker such as `Alice +2`, which splits apart as you zoom in. Hover a marker to see everyone in it and their worlds. Positions update every few seconds while the map is open. Your own position is shared only with **Share location and activity** on, and never from inside an instance such as a raid, boss room or player-owned house. To hide the markers, turn off **Show clanmates** under **World map** in the plugin settings; that doesn't change what you share.
 
 <details>
 <summary><b>Admin tools: notes, alts and warnings</b></summary>
