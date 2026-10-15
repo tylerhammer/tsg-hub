@@ -11,6 +11,7 @@ import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Graphics;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -414,18 +415,7 @@ final class TsgHubNewsEditor extends JPanel
 			? label("No message, just the title.", DIM, smallFont())
 			: linkedText(text, TEXT, plainFont(), TEXT_W));
 		JsonObject poll = TsgHubAnnouncements.poll(announcement);
-		if (poll != null)
-		{
-			viewBody.add(Box.createVerticalStrut(GAP_L));
-			viewBody.add(boldLabel(pollSummary(poll, expired)));
-			for (JsonObject option : objects(array(poll, "options")))
-			{
-				List<String> voters = strings(array(option, "voters"));
-				String line = escape(str(option, "label")) + ": " + plural(integer(option, "votes", 0), "vote");
-				if (!voters.isEmpty()) line += tipLine(MUTED, " (" + escape(String.join(", ", voters)) + ")");
-				viewBody.add(label(html(line, TEXT_W), TEXT, plainFont()));
-			}
-		}
+		if (poll != null) addPollResults(poll, expired);
 		refresh(viewBody);
 		detailLayout.show(detail, "view");
 	}
@@ -489,8 +479,83 @@ final class TsgHubNewsEditor extends JPanel
 		String by = (bool(announcement, "draft") ? "Draft by " : "") + str(announcement, "postedBy");
 		card.add(twoLines(shrinkable(boldLabel(str(announcement, "title"))),
 			caption(by + " · " + TsgHubRoster.warningDate(str(announcement, "postedAt"), now, zone))), BorderLayout.CENTER);
+		JsonObject poll = TsgHubAnnouncements.poll(announcement);
+		if (poll != null)
+		{
+			JLabel tag = badge("Poll · " + integer(poll, "voters", 0), ACCENT);
+			tag.setToolTipText(plural(integer(poll, "voters", 0), "voter"));
+			card.add(north(tag), BorderLayout.EAST);
+		}
 		clickable(card, () -> show(announcement));
 		return fitHeight(card);
+	}
+
+	private void addPollResults(JsonObject poll, boolean closed)
+	{
+		viewBody.add(Box.createVerticalStrut(GAP_M));
+		viewBody.add(sectionTitle(closed ? "Final results" : "Poll results"));
+		JPanel tags = panel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+		int voters = integer(poll, "voters", 0);
+		for (JLabel tag : new JLabel[]{
+			badge(bool(poll, "multi") ? "Pick any" : "Pick one", MUTED),
+			badge(bool(poll, "anonymous") ? "Anonymous" : "Public votes", MUTED),
+			closed ? badge("Closed", MUTED) : bool(poll, "locked") ? badge("Options locked", WARNING) : null})
+		{
+			if (tag == null) continue;
+			tags.add(tag);
+			tags.add(Box.createHorizontalStrut(GAP_S));
+		}
+		tags.add(Box.createHorizontalStrut(GAP_S));
+		tags.add(caption(voters == 0 ? "No votes yet" : plural(voters, "voter")));
+		viewBody.add(fitHeight(tags));
+		viewBody.add(Box.createVerticalStrut(GAP_M));
+		List<JsonObject> options = objects(array(poll, "options"));
+		int top = 0;
+		for (JsonObject option : options) top = Math.max(top, integer(option, "votes", 0));
+		for (JsonObject option : options)
+		{
+			viewBody.add(pollOptionCard(option, voters, top, bool(poll, "anonymous")));
+			viewBody.add(Box.createVerticalStrut(LIST_GAP));
+		}
+	}
+
+	private static JComponent pollOptionCard(JsonObject option, int voters, int top, boolean anonymous)
+	{
+		int votes = integer(option, "votes", 0);
+		boolean leading = votes > 0 && votes == top;
+		JPanel card = card();
+		JPanel lines = stack();
+		String share = voters == 0 ? "" : " · " + Math.round(votes * 100f / voters) + "%";
+		lines.add(fitHeight(row(shrinkable(boldLabel(str(option, "label"))),
+			label(plural(votes, "vote") + share, leading ? ACCENT : MUTED, leading ? boldFont() : smallFont()))));
+		lines.add(Box.createVerticalStrut(GAP_S));
+		lines.add(voteBar(votes, voters, leading));
+		List<String> names = strings(array(option, "voters"));
+		if (!anonymous && !names.isEmpty())
+		{
+			lines.add(Box.createVerticalStrut(GAP_S));
+			lines.add(wrapped(String.join(", ", names), MUTED, smallFont(), TEXT_W - 30));
+		}
+		card.add(lines, BorderLayout.CENTER);
+		return fitHeight(card);
+	}
+
+	private static JComponent voteBar(int votes, int voters, boolean leading)
+	{
+		JComponent bar = new JComponent()
+		{
+			@Override
+			protected void paintComponent(Graphics g)
+			{
+				g.setColor(BACKGROUND);
+				g.fillRect(0, 0, getWidth(), getHeight());
+				g.setColor(leading ? ACCENT.darker() : ACCENT.darker().darker());
+				g.fillRect(0, 0, voters == 0 ? 0 : Math.round(getWidth() * votes / (float) voters), getHeight());
+			}
+		};
+		bar.setPreferredSize(new Dimension(100, 6));
+		bar.setMinimumSize(new Dimension(0, 6));
+		return fitHeight(bar);
 	}
 
 	static String pollSummary(JsonObject poll, boolean closed)
