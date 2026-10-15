@@ -1,5 +1,7 @@
 package com.tsghub;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Locale;
@@ -15,6 +17,7 @@ final class ActivityDetector
 	private static final Set<Skill> COMBAT = EnumSet.of(Skill.ATTACK, Skill.STRENGTH, Skill.DEFENCE, Skill.RANGED, Skill.HITPOINTS);
 
 	private final Map<Skill, Integer> xp = new EnumMap<>(Skill.class);
+	private final Map<Skill, Deque<Long>> drops = new EnumMap<>(Skill.class);
 	private Skill lastSkill;
 	private long lastSkillAt;
 	private long lastCombatAt;
@@ -35,11 +38,23 @@ final class ActivityDetector
 		Integer previous = xp.put(skill, value);
 		if (previous == null || value <= previous) return;
 		if (skill == Skill.HITPOINTS) lastCombatAt = now;
-		else if (skill != Skill.SLAYER && !COMBAT.contains(skill))
+		else if (skill != Skill.SLAYER && !COMBAT.contains(skill) && training(skill, now))
 		{
 			lastSkill = skill;
 			lastSkillAt = now;
 		}
+	}
+
+	private boolean training(Skill skill, long now)
+	{
+		if (skill == lastSkill && now - lastSkillAt < RECENT_MILLIS) return true;
+		TsgHubRules rules = TsgHubRules.get();
+		Deque<Long> recent = drops.computeIfAbsent(skill, s -> new ArrayDeque<>());
+		while (!recent.isEmpty() && now - recent.peekFirst() >= rules.skillingWindowMillis) recent.pollFirst();
+		recent.addLast(now);
+		if (recent.size() < rules.skillingDrops) return false;
+		recent.clear();
+		return true;
 	}
 
 	void onOpponent(String npcName, long now)
@@ -79,6 +94,7 @@ final class ActivityDetector
 	void reset()
 	{
 		xp.clear();
+		drops.clear();
 		lastSkill = null;
 		lastSkillAt = 0;
 		lastCombatAt = 0;
