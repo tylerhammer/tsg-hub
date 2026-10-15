@@ -28,6 +28,8 @@ final class TsgHubRules
 	final List<String> petMessages;
 	final List<String> dropContext;
 	final int dropDelayMs;
+	final int skillingDrops;
+	final long skillingWindowMillis;
 	final Set<Integer> pets;
 	final Set<Integer> rewardInterfaces;
 	final Map<String, String> bosses;
@@ -44,6 +46,9 @@ final class TsgHubRules
 		petMessages = strings(json, "petMessages");
 		dropContext = strings(json, "dropContext");
 		dropDelayMs = json.has("dropDelayMs") && json.get("dropDelayMs").isJsonPrimitive() ? json.get("dropDelayMs").getAsInt() : 1200;
+		JsonObject skilling = json.has("skilling") && json.get("skilling").isJsonObject() ? json.getAsJsonObject("skilling") : new JsonObject();
+		skillingDrops = skilling.has("minDrops") && skilling.get("minDrops").isJsonPrimitive() ? skilling.get("minDrops").getAsInt() : 3;
+		skillingWindowMillis = skilling.has("windowMillis") && skilling.get("windowMillis").isJsonPrimitive() ? skilling.get("windowMillis").getAsLong() : 120_000;
 		pets = ints(json, "pets");
 		rewardInterfaces = ints(json, "rewardInterfaces");
 		Map<String, String> bossNames = new HashMap<>();
