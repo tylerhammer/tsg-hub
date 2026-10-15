@@ -1224,7 +1224,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		Runnable sync = () -> vote.setEnabled(canVote && !picks.isEmpty() && !picks.equals(mine) && !voting.contains(id));
 		ButtonGroup group = new ButtonGroup();
 		block.add(Box.createVerticalStrut(GAP_S));
-		block.add(cardNote(TsgHubNewsEditor.pollSummary(poll)));
+		block.add(cardNote(TsgHubNewsEditor.pollSummary(poll, false)));
 		List<JsonObject> options = objects(array(poll, "options"));
 		for (int i = 0; i < options.size(); i++)
 		{

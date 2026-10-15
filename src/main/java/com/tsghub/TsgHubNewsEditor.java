@@ -67,6 +67,7 @@ final class TsgHubNewsEditor extends JPanel
 	private final JLabel viewTitle = label(" ", TEXT, titleFont());
 	private final JLabel viewMeta = label(" ", MUTED, smallFont());
 	private final JLabel draftNote = label("Draft: only admins can see this. Publish it when it's ready.", WARNING, smallFont());
+	private final JLabel expiredNote = label("Expired: only admins can see this now. It's removed 90 days after expiring.", MUTED, smallFont());
 	private final JPanel viewBody = stack();
 	private final JButton edit = button("Edit");
 	private final JButton publish = primaryButton("Publish");
@@ -182,6 +183,7 @@ final class TsgHubNewsEditor extends JPanel
 		titles.add(Box.createVerticalStrut(GAP_XS));
 		titles.add(viewMeta);
 		titles.add(draftNote);
+		titles.add(expiredNote);
 		header.add(titles, BorderLayout.CENTER);
 		edit.addActionListener(e -> beginEdit());
 		publish.addActionListener(e -> confirmPublish());
@@ -397,9 +399,12 @@ final class TsgHubNewsEditor extends JPanel
 		viewTitle.setText(html(escape(str(announcement, "title")), TEXT_W));
 		viewMeta.setText(html(escape(meta(announcement, now, zone)), TEXT_W));
 		boolean isDraft = bool(announcement, "draft");
+		boolean expired = bool(announcement, "expired");
 		draftNote.setVisible(isDraft);
+		expiredNote.setVisible(expired);
+		edit.setVisible(!expired);
 		publish.setVisible(isDraft);
-		pin.setVisible(!isDraft);
+		pin.setVisible(!isDraft && !expired);
 		boolean isPinned = bool(announcement, "pinned");
 		pin.setText(isPinned ? "Unpin" : "Pin");
 		pin.setToolTipText(isPinned ? "Stop keeping this at the top of News" : "Keep this at the top of News");
@@ -412,7 +417,7 @@ final class TsgHubNewsEditor extends JPanel
 		if (poll != null)
 		{
 			viewBody.add(Box.createVerticalStrut(GAP_L));
-			viewBody.add(boldLabel(pollSummary(poll)));
+			viewBody.add(boldLabel(pollSummary(poll, expired)));
 			for (JsonObject option : objects(array(poll, "options")))
 			{
 				List<String> voters = strings(array(option, "voters"));
@@ -439,7 +444,8 @@ final class TsgHubNewsEditor extends JPanel
 		if (!str(announcement, "editedAt").isEmpty())
 			meta += " · edited by " + str(announcement, "editedBy") + " " + TsgHubRoster.warningDate(str(announcement, "editedAt"), now, zone);
 		String expires = str(announcement, "expiresAt");
-		return meta + (expires.isEmpty() ? " · never expires" : " · expires " + TsgHubRoster.warningDate(expires, now, zone));
+		if (expires.isEmpty()) return meta + " · never expires";
+		return meta + (bool(announcement, "expired") ? " · expired " : " · expires ") + TsgHubRoster.warningDate(expires, now, zone);
 	}
 
 	private void renderList()
@@ -460,7 +466,7 @@ final class TsgHubNewsEditor extends JPanel
 			String section = null;
 			for (JsonObject announcement : objects(announcements))
 			{
-				String next = bool(announcement, "draft") ? "Drafts" : bool(announcement, "pinned") ? "Pinned" : "Active";
+				String next = bool(announcement, "draft") ? "Drafts" : bool(announcement, "expired") ? "Expired" : bool(announcement, "pinned") ? "Pinned" : "Active";
 				if (!next.equals(section))
 				{
 					list.add(listHeading(next, section == null));
@@ -487,9 +493,9 @@ final class TsgHubNewsEditor extends JPanel
 		return fitHeight(card);
 	}
 
-	static String pollSummary(JsonObject poll)
+	static String pollSummary(JsonObject poll, boolean closed)
 	{
-		return "Poll · " + (bool(poll, "multi") ? "pick any" : "pick one") + (bool(poll, "anonymous") ? " · anonymous" : "")
+		return (closed ? "Closed poll · " : "Poll · ") + (bool(poll, "multi") ? "pick any" : "pick one") + (bool(poll, "anonymous") ? " · anonymous" : "")
 			+ " · " + plural(integer(poll, "voters", 0), "voter");
 	}
 

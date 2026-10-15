@@ -63,9 +63,9 @@ public class AnnouncementsTest
 	}
 
 	@Test
-	public void publishedDropsDrafts()
+	public void publishedDropsDraftsAndExpired()
 	{
-		JsonArray published = TsgHubAnnouncements.published(list("[{\"id\":\"d\",\"draft\":true},{\"id\":\"a\"}]"));
+		JsonArray published = TsgHubAnnouncements.published(list("[{\"id\":\"d\",\"draft\":true},{\"id\":\"a\"},{\"id\":\"x\",\"expired\":true}]"));
 		assertEquals(1, published.size());
 		assertEquals("a", TsgHubUi.str(published.get(0).getAsJsonObject(), "id"));
 	}

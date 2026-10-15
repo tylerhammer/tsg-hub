@@ -63,7 +63,8 @@ final class TsgHubAnnouncements
 	static JsonArray published(JsonArray all)
 	{
 		JsonArray out = new JsonArray();
-		for (JsonObject announcement : TsgHubUi.objects(all)) if (!TsgHubUi.bool(announcement, "draft")) out.add(announcement);
+		for (JsonObject announcement : TsgHubUi.objects(all))
+			if (!TsgHubUi.bool(announcement, "draft") && !TsgHubUi.bool(announcement, "expired")) out.add(announcement);
 		return out;
 	}
 
