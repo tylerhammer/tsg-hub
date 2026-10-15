@@ -1,6 +1,7 @@
 package com.tsghub;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.tsghub.TsgHubUi.Tone;
 import java.util.ArrayList;
@@ -38,8 +39,10 @@ final class TsgHubAnnouncements
 		if (!plugin.canUseHub() || executor.isShutdown()) return;
 		String clan = TsgHubApi.encode(plugin.getDetectedClanName());
 		String token = plugin.adminKey();
+		String hash = plugin.accountHash();
+		String query = "/v1/announcements?clanName=" + clan + (hash.isEmpty() ? "" : "&accountHash=" + hash);
 		executor.submit(() -> {
-			try { apply(TsgHubUi.array(api.get().request("GET", "/v1/announcements?clanName=" + clan, token.isEmpty() ? null : token, null), "announcements")); }
+			try { apply(TsgHubUi.array(api.get().request("GET", query, token.isEmpty() ? null : token, null), "announcements")); }
 			catch (Exception ignored) { }
 		});
 	}
@@ -127,19 +130,60 @@ final class TsgHubAnnouncements
 	static List<String> chatLines(List<JsonObject> fresh)
 	{
 		List<String> lines = new ArrayList<>();
-		for (int i = 0; i < fresh.size() && i < MAX_CHAT_LINES; i++) lines.add("News: " + TsgHubUi.str(fresh.get(i), "title"));
+		for (int i = 0; i < fresh.size() && i < MAX_CHAT_LINES; i++)
+			lines.add("News: " + TsgHubUi.str(fresh.get(i), "title") + (poll(fresh.get(i)) == null ? "" : " (poll)"));
 		int more = fresh.size() - MAX_CHAT_LINES;
 		if (more > 0) lines.add("+" + TsgHubUi.plural(more, "more announcement") + " in the TSG Hub sidebar.");
 		return lines;
 	}
 
-	void save(String id, String title, String body, boolean pinned, Integer expiresInDays, boolean publish)
+	static JsonObject poll(JsonObject announcement)
+	{
+		return announcement != null && announcement.has("poll") && announcement.get("poll").isJsonObject() ? announcement.getAsJsonObject("poll") : null;
+	}
+
+	static List<Integer> myVote(JsonObject poll)
+	{
+		List<Integer> picks = new ArrayList<>();
+		for (JsonElement pick : TsgHubUi.array(poll, "myVote")) if (pick.isJsonPrimitive()) picks.add(pick.getAsInt());
+		return picks;
+	}
+
+	void vote(String id, List<Integer> options, Consumer<String> failed)
+	{
+		String hash = plugin.accountHash();
+		if (hash.isEmpty() || !plugin.canUseHub() || executor.isShutdown())
+		{
+			failed.accept("Log in to vote.");
+			return;
+		}
+		JsonObject request = adminBody();
+		request.addProperty("accountHash", hash);
+		JsonArray picks = new JsonArray();
+		for (int option : options) picks.add(option);
+		request.add("options", picks);
+		executor.submit(() -> {
+			try
+			{
+				api.get().request("POST", path(id) + "/vote", null, request);
+				load();
+			}
+			catch (Exception e)
+			{
+				String message = "Couldn't vote. " + TsgHubUi.friendlyError(e);
+				SwingUtilities.invokeLater(() -> failed.accept(message));
+			}
+		});
+	}
+
+	void save(String id, String title, String body, boolean pinned, Integer expiresInHours, JsonElement poll, boolean publish)
 	{
 		JsonObject request = adminBody();
 		request.addProperty("title", title);
 		request.addProperty("body", body);
 		request.addProperty("pinned", pinned);
-		if (expiresInDays != null) request.addProperty("expiresInDays", expiresInDays);
+		if (expiresInHours != null) request.addProperty("expiresInHours", expiresInHours);
+		if (poll != null) request.add("poll", poll);
 		String success = publish ? "Announcement published." : "Saved.";
 		if (id.isEmpty())
 		{

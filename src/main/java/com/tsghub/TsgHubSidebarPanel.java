@@ -34,11 +34,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
+import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
+import javax.swing.ButtonGroup;
 import javax.swing.BoxLayout;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
@@ -49,6 +55,7 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
@@ -138,6 +145,9 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private String update;
 	private JsonArray drops;
 	private JsonArray announcements;
+	private final Map<String, Set<Integer>> pollPicks = new HashMap<>();
+	private final Map<String, String> pollErrors = new HashMap<>();
+	private final Set<String> voting = new HashSet<>();
 	private JsonObject competitionEvent;
 	private String competitionName = "";
 	private volatile String openCompetitionId;
@@ -1114,6 +1124,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	void setAnnouncements(JsonArray announcements)
 	{
 		this.announcements = announcements;
+		voting.clear();
 		if (view == View.NEWS)
 		{
 			renderNews();
@@ -1193,10 +1204,71 @@ final class TsgHubSidebarPanel extends PluginPanel
 			lines.add(Box.createVerticalStrut(GAP_XS));
 			lines.add(linkedText(body, TEXT, smallFont(), CARD_TEXT_W));
 		}
+		JsonObject poll = TsgHubAnnouncements.poll(announcement);
+		if (poll != null) lines.add(pollBlock(str(announcement, "id"), poll));
 		lines.add(Box.createVerticalStrut(GAP_XS));
 		lines.add(cardNote(str(announcement, "postedBy") + " · " + TsgHubRoster.warningDate(str(announcement, "postedAt"), now, zone)));
 		card.add(fillWidth(lines), BorderLayout.CENTER);
 		return fitHeight(card);
+	}
+
+	private JPanel pollBlock(String id, JsonObject poll)
+	{
+		JPanel block = stack();
+		boolean multi = bool(poll, "multi");
+		boolean canVote = !plugin.accountHash().isEmpty();
+		Set<Integer> mine = new TreeSet<>(TsgHubAnnouncements.myVote(poll));
+		Set<Integer> picks = pollPicks.computeIfAbsent(id, k -> new TreeSet<>(mine));
+		int voters = integer(poll, "voters", 0);
+		JButton vote = primaryButton(mine.isEmpty() ? "Vote" : "Change vote");
+		Runnable sync = () -> vote.setEnabled(canVote && !picks.isEmpty() && !picks.equals(mine) && !voting.contains(id));
+		ButtonGroup group = new ButtonGroup();
+		block.add(Box.createVerticalStrut(GAP_S));
+		block.add(cardNote(TsgHubNewsEditor.pollSummary(poll)));
+		List<JsonObject> options = objects(array(poll, "options"));
+		for (int i = 0; i < options.size(); i++)
+		{
+			JsonObject option = options.get(i);
+			int index = i;
+			int votes = integer(option, "votes", 0);
+			AbstractButton toggle = plain(multi ? new JCheckBox() : new JRadioButton(), TEXT);
+			toggle.setText(html(escape(str(option, "label")), CARD_TEXT_W - 24));
+			toggle.setFont(smallFont());
+			toggle.setSelected(picks.contains(index));
+			toggle.setEnabled(canVote);
+			toggle.addActionListener(e -> {
+				if (!multi) picks.clear();
+				if (toggle.isSelected()) picks.add(index);
+				else picks.remove(index);
+				sync.run();
+			});
+			if (!multi) group.add(toggle);
+			List<String> names = strings(array(option, "voters"));
+			if (!names.isEmpty()) toggle.setToolTipText(html(escape(String.join(", ", names)), 200));
+			block.add(fitHeight(toggle));
+			ProgressBar bar = progressBar(votes, Math.max(voters, 1));
+			bar.setForeground(ACCENT.darker().darker());
+			bar.setCenterLabel(voters == 0 ? "0" : votes + " · " + Math.round(votes * 100f / voters) + "%");
+			block.add(bar);
+			block.add(Box.createVerticalStrut(GAP_XS));
+		}
+		String error = pollErrors.get(id);
+		if (error != null) block.add(label(html(escape(error), CARD_TEXT_W), TsgHubTheme.ERROR, smallFont()));
+		vote.addActionListener(e -> {
+			voting.add(id);
+			pollErrors.remove(id);
+			vote.setEnabled(false);
+			plugin.announcements().vote(id, new ArrayList<>(picks), message -> {
+				voting.remove(id);
+				pollErrors.put(id, message);
+				if (view == View.NEWS) renderNews();
+			});
+		});
+		sync.run();
+		String note = !canVote ? "Log in to vote." : mine.isEmpty() ? "" : "You voted.";
+		block.add(Box.createVerticalStrut(GAP_XS));
+		block.add(fitHeight(row(label(note, MUTED, smallFont()), vote)));
+		return block;
 	}
 
 	private void openEvents()

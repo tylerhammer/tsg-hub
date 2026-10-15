@@ -38,6 +38,31 @@ public class AnnouncementsTest
 	}
 
 	@Test
+	public void pollsAreMarkedInChatAndReadBack()
+	{
+		JsonArray announcements = list("[{\"id\":\"1\",\"title\":\"Which day?\",\"poll\":{\"options\":[],\"myVote\":[2,0]}},{\"id\":\"2\",\"title\":\"Plain\"}]");
+		List<JsonObject> rows = TsgHubAnnouncements.unread(announcements, Collections.emptySet());
+		assertEquals(Arrays.asList("News: Which day? (poll)", "News: Plain"), TsgHubAnnouncements.chatLines(rows));
+		assertEquals(Arrays.asList(2, 0), TsgHubAnnouncements.myVote(TsgHubAnnouncements.poll(rows.get(0))));
+		assertEquals(null, TsgHubAnnouncements.poll(rows.get(1)));
+	}
+
+	@Test
+	public void pollLinesTrimAndDropDuplicates()
+	{
+		assertEquals(Arrays.asList("Fri", "Sat"), TsgHubNewsEditor.pollLines(" Fri \n\nSat\nfri\n"));
+	}
+
+	@Test
+	public void draftExpiryReadsHoursOrDays()
+	{
+		assertEquals(6, TsgHubNewsEditor.draftHours(new JsonParser().parse("{\"expiresInHours\":6}").getAsJsonObject()));
+		assertEquals(72, TsgHubNewsEditor.draftHours(new JsonParser().parse("{\"expiresInDays\":3}").getAsJsonObject()));
+		assertEquals("6 hours", TsgHubNewsEditor.hours(6));
+		assertEquals("3 days", TsgHubNewsEditor.hours(72));
+	}
+
+	@Test
 	public void publishedDropsDrafts()
 	{
 		JsonArray published = TsgHubAnnouncements.published(list("[{\"id\":\"d\",\"draft\":true},{\"id\":\"a\"}]"));
