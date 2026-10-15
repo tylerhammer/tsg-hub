@@ -136,7 +136,10 @@ final class TsgHubNewsEditor extends JPanel
 		body.setFont(title.getFont());
 		JScrollPane bodyScroll = new JScrollPane(body);
 		bodyScroll.setBorder(title.getBorder());
-		form.add(field("Message (optional)", bodyScroll));
+		JPanel message = panel(new BorderLayout(0, 3));
+		message.add(bodyScroll, BorderLayout.CENTER);
+		message.add(label("Supports **bold**, *italic*, # headings, - lists, 1. steps, > quotes and [links](url)", MUTED, smallFont()), BorderLayout.SOUTH);
+		form.add(field("Message (optional)", message));
 		JPanel expiryRow = panel(new FlowLayout(FlowLayout.LEFT, 0, 0));
 		expiryRow.add(expiry);
 		expiryRow.add(Box.createHorizontalStrut(GAP_M));
@@ -413,7 +416,7 @@ final class TsgHubNewsEditor extends JPanel
 		String text = str(announcement, "body");
 		viewBody.add(text.isEmpty()
 			? label("No message, just the title.", DIM, smallFont())
-			: linkedText(text, TEXT, plainFont(), TEXT_W));
+			: linkedHtml(postHtml(text), TEXT, plainFont(), TEXT_W));
 		JsonObject poll = TsgHubAnnouncements.poll(announcement);
 		if (poll != null) addPollResults(poll, expired);
 		refresh(viewBody);
