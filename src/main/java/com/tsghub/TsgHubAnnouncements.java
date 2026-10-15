@@ -146,7 +146,7 @@ final class TsgHubAnnouncements
 	{
 		List<String> lines = new ArrayList<>();
 		for (int i = 0; i < fresh.size() && i < MAX_CHAT_LINES; i++)
-			lines.add("News: " + TsgHubUi.str(fresh.get(i), "title") + (poll(fresh.get(i)) == null ? "" : " (poll)"));
+			lines.add(TsgHubUi.str(fresh.get(i), "title"));
 		int more = fresh.size() - MAX_CHAT_LINES;
 		if (more > 0) lines.add("+" + TsgHubUi.plural(more, "more announcement") + " in the TSG Hub sidebar.");
 		return lines;

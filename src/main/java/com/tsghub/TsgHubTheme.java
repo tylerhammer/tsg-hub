@@ -27,6 +27,8 @@ public final class TsgHubTheme
 	public static final Color SUCCESS = new Color(0x6BD68A);
 	public static final Color ERROR = new Color(0xE86060);
 	public static final Color WARNING = new Color(0xE8BE5A);
+	public static final Color CHAT = new Color(0x3F2575);
+	public static final Color CHAT_SUCCESS = new Color(0x1A5028);
 
 	public static final Color SELF_CARD = new Color(0x2A2238);
 	public static final Color SELF_CARD_HOVER = new Color(0x342A45);
