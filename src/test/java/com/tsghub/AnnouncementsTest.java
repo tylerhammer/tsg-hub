@@ -78,4 +78,28 @@ public class AnnouncementsTest
 		assertEquals("javascript:alert(1)", TsgHubUi.linkify("javascript:alert(1)"));
 		assertEquals("discord.com/channels/...", TsgHubUi.linkText("https://discord.com/channels/123456/789012/345678"));
 	}
+
+	@Test
+	public void postHtmlFormatsBulletsAndParagraphs()
+	{
+		assertEquals("<p style='margin:0;margin-top:0px'>Intro</p>"
+			+ "<ul style='margin-left:10px;margin-bottom:0;margin-top:4px'><li><b>Events:</b> boards</li><li>a &amp; b</li></ul>"
+			+ "<p style='margin:0;margin-top:4px'>Line one<br>Line two</p>",
+			TsgHubUi.postHtml("Intro\n\n- Events: boards\n* a & b\n\nLine one\nLine two"));
+		assertEquals("<ul style='margin-left:10px;margin-bottom:0;margin-top:0px'><li><a href='https://x.io' style='color:" + net.runelite.client.util.ColorUtil.toHexColor(TsgHubTheme.ACCENT) + "'>x.io</a></li></ul>",
+			TsgHubUi.postHtml("- https://x.io"));
+	}
+
+	@Test
+	public void postHtmlFormatsMarkdownSubset()
+	{
+		String accent = net.runelite.client.util.ColorUtil.toHexColor(TsgHubTheme.ACCENT);
+		assertEquals("<p style='margin:0;margin-top:0px'><b>bold</b> <i>it</i> <i>it</i> <u>under</u> <strike>gone</strike> snake_case_name 2*3*4</p>",
+			TsgHubUi.postHtml("**bold** *it* _it_ __under__ ~~gone~~ snake_case_name 2*3*4"));
+		assertEquals("<p style='margin:0;margin-top:0px'><font size='+1'><b>Title</b></font></p><p style='margin:0;margin-top:6px'><b>Sub</b></p>",
+			TsgHubUi.postHtml("# Title\n## Sub"));
+		assertEquals("<ol style='margin-left:16px;margin-bottom:0;margin-top:0px'><li>one</li><li><a href='https://x.io/a_b' style='color:" + accent + "'>the <b>site</b></a></li></ol>",
+			TsgHubUi.postHtml("1. one\n2) [the **site**](https://x.io/a_b)"));
+		assertEquals("<p style='margin:0;margin-top:0px'>&lt;b&gt;no&lt;/b&gt;</p>", TsgHubUi.postHtml("<b>no</b>"));
+	}
 }

@@ -23,6 +23,7 @@ final class TsgHubAnnouncements
 	private final Supplier<TsgHubApi> api;
 	private final Supplier<TsgHubNewsEditor> panel;
 	private final Consumer<String> chat;
+	private final TsgHubNewsPoll polls;
 	private volatile JsonArray list;
 
 	TsgHubAnnouncements(TsgHubPlugin plugin, ScheduledExecutorService executor, Supplier<TsgHubApi> api, Supplier<TsgHubNewsEditor> panel, Consumer<String> chat)
@@ -32,6 +33,17 @@ final class TsgHubAnnouncements
 		this.api = api;
 		this.panel = panel;
 		this.chat = chat;
+		this.polls = new TsgHubNewsPoll(plugin, this, () -> plugin.newsWindow(TsgHubNewsWindow::render));
+	}
+
+	TsgHubNewsPoll polls()
+	{
+		return polls;
+	}
+
+	JsonArray list()
+	{
+		return list;
 	}
 
 	void load()
@@ -52,7 +64,9 @@ final class TsgHubAnnouncements
 		if (!plugin.canUseHub()) return;
 		JsonArray announcements = published(all);
 		list = announcements;
+		SwingUtilities.invokeLater(polls::reset);
 		plugin.ui(s -> s.setAnnouncements(announcements));
+		plugin.newsWindow(w -> w.setAnnouncements(announcements));
 		SwingUtilities.invokeLater(() -> {
 			TsgHubNewsEditor admin = panel.get();
 			if (admin != null) admin.setAnnouncements(all);

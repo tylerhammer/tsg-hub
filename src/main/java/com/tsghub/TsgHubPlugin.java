@@ -128,6 +128,8 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubPanel panel;
 	private TsgHubSidebarPanel sidebar;
 	private volatile JFrame hubWindow;
+	private volatile JFrame newsFrame;
+	private TsgHubNewsWindow newsWindow;
 	private NavigationButton navigationButton;
 	private ScheduledExecutorService executor;
 	private ExecutorService itemSearchExecutor;
@@ -269,6 +271,7 @@ public class TsgHubPlugin extends Plugin
 		// Stay listed across a brief restart, but leave the RuneLite party.
 		if (groups != null && groupTracker != null && groupTracker.isSharing()) partyService.changeParty(null);
 		if (hubWindow != null) SwingUtilities.invokeLater(hubWindow::dispose);
+		if (newsFrame != null) SwingUtilities.invokeLater(newsFrame::dispose);
 		if (presence != null) presence.shutDown();
 		if (memberMap != null) memberMap.setOpen(false);
 		if (mapOverlay != null) overlayManager.remove(mapOverlay);
@@ -301,6 +304,33 @@ public class TsgHubPlugin extends Plugin
 			organizer.loadManagedEvents();
 			syncSocketNow();
 		});
+	}
+
+	void openNews(String id)
+	{
+		SwingUtilities.invokeLater(() -> {
+			if (newsFrame == null || !newsFrame.isDisplayable())
+			{
+				newsWindow = new TsgHubNewsWindow(announcements.polls());
+				newsWindow.setAnnouncements(announcements.list());
+				newsFrame = new JFrame("TSG Hub · News");
+				newsFrame.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
+				newsFrame.setContentPane(newsWindow);
+				newsFrame.setMinimumSize(new Dimension(TsgHubNewsWindow.TEXT_W + 60, 320));
+				newsFrame.setSize(TsgHubNewsWindow.TEXT_W + 60, 640);
+				Window owner = SwingUtilities.getWindowAncestor(client.getCanvas());
+				if (owner != null && owner.getIconImages() != null) newsFrame.setIconImages(owner.getIconImages());
+				newsFrame.setLocationRelativeTo(owner);
+			}
+			newsWindow.show(id);
+			newsFrame.setVisible(true);
+			newsFrame.toFront();
+		});
+	}
+
+	void newsWindow(Consumer<TsgHubNewsWindow> action)
+	{
+		SwingUtilities.invokeLater(() -> { if (newsWindow != null) action.accept(newsWindow); });
 	}
 
 	@Provides
@@ -500,6 +530,7 @@ public class TsgHubPlugin extends Plugin
 				sidebar.showLoggedOut();
 			}
 			if (hubWindow != null) hubWindow.setVisible(false);
+			if (newsFrame != null) newsFrame.setVisible(false);
 		});
 	}
 
@@ -555,6 +586,7 @@ public class TsgHubPlugin extends Plugin
 			clearAllSessions();
 			SwingUtilities.invokeLater(() -> {
 				if (hubWindow != null) hubWindow.setVisible(false);
+				if (newsFrame != null) newsFrame.setVisible(false);
 			});
 		}
 		syncSocketNow();
