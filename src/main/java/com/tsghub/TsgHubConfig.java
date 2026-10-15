@@ -1,5 +1,6 @@
 package com.tsghub;
 
+import java.awt.Color;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
@@ -51,6 +52,12 @@ public interface TsgHubConfig extends Config
 	default boolean clanAnnouncements()
 	{
 		return true;
+	}
+
+	@ConfigItem(keyName = "chatColor", position = 2, section = chatSection, name = "Message color", description = "Color of the TSG Hub tag and highlighted text in TSG Hub chat messages.")
+	default Color chatColor()
+	{
+		return TsgHubTheme.CHAT;
 	}
 
 	@ConfigItem(keyName = "showClanMap", position = 0, section = mapSection, name = "Show clanmates", description = "Show clanmates who share their location as named markers on your world map. Turn off if they get in the way. This only hides them for you; it doesn't change what you share.")

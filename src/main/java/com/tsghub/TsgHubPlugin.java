@@ -97,6 +97,7 @@ import net.runelite.client.ui.overlay.OverlayMenuEntry;
 import net.runelite.client.ui.overlay.worldmap.WorldMapOverlay;
 import net.runelite.client.ui.overlay.worldmap.WorldMapPointManager;
 import net.runelite.client.util.AsyncBufferedImage;
+import net.runelite.client.util.ColorUtil;
 import net.runelite.client.util.Filepath;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
@@ -112,6 +113,7 @@ public class TsgHubPlugin extends Plugin
 	@Inject private TsgHubConfig config;
 	@Inject private ConfigManager configManager;
 	@Inject private ClientThread clientThread;
+	private final Set<String> localMessages = ConcurrentHashMap.newKeySet();
 	@Inject private ClientToolbar clientToolbar;
 	@Inject private OkHttpClient okHttpClient;
 	@Inject private ChatMessageManager chatMessageManager;
@@ -1293,8 +1295,9 @@ public class TsgHubPlugin extends Plugin
 	@Subscribe
 	public void onChatMessage(ChatMessage event)
 	{
-		if (!isInHubClan()) return;
-		if (event == null || event.getMessage() == null || client.getLocalPlayer() == null) return;
+		if (event == null || event.getMessage() == null) return;
+		if (event.getType() == ChatMessageType.CLAN_MESSAGE && localMessages.remove(Text.removeTags(event.getMessage()))) return;
+		if (!isInHubClan() || client.getLocalPlayer() == null) return;
 		if (drops != null) drops.onChatMessage(event);
 		if (event.getType() != ChatMessageType.GAMEMESSAGE && event.getType() != ChatMessageType.SPAM) return;
 		if (!sharingInClan()) return;
@@ -1548,7 +1551,7 @@ public class TsgHubPlugin extends Plugin
 		ChatMessageBuilder message = new ChatMessageBuilder();
 		if (!complete.isEmpty())
 		{
-			message.append(TsgHubTheme.SUCCESS.darker(), "task".equals(complete) ? "Task complete: " : "Your part is done: ")
+			message.append(TsgHubTheme.CHAT_SUCCESS, "task".equals(complete) ? "Task complete: " : "Your part is done: ")
 				.append(ChatColorType.HIGHLIGHT).append(title)
 				.append(ChatColorType.NORMAL).append(" (" + count + ")");
 		}
@@ -1559,13 +1562,13 @@ public class TsgHubPlugin extends Plugin
 	private void announce(String text)
 	{
 		if (!config.eventAnnouncements()) return;
-		showLocalChatMessage(new ChatMessageBuilder().append(ChatColorType.HIGHLIGHT).append(Text.escapeJagex(text)));
+		showClanChatMessage("Event", new ChatMessageBuilder().append(ChatColorType.HIGHLIGHT).append(Text.escapeJagex(text)));
 	}
 
 	private void clanAnnouncement(String text)
 	{
 		if (!config.clanAnnouncements()) return;
-		showLocalChatMessage(new ChatMessageBuilder().append(ChatColorType.HIGHLIGHT).append(Text.escapeJagex(text)));
+		showClanChatMessage("Announcement", new ChatMessageBuilder().append(ChatColorType.HIGHLIGHT).append(Text.escapeJagex(text)));
 	}
 
 	private void updateAvailable(String version)
@@ -1586,8 +1589,20 @@ public class TsgHubPlugin extends Plugin
 
 	private void showLocalChatMessage(ChatMessageBuilder body)
 	{
-		String message = new ChatMessageBuilder().append(TsgHubTheme.ACCENT.darker(), "[TSG Hub] ").build() + body.build();
+		String message = new ChatMessageBuilder().append(config.chatColor(), "[TSG Hub] ").build() + body.build();
 		chatMessageManager.queue(QueuedMessage.builder().type(ChatMessageType.GAMEMESSAGE).runeLiteFormattedMessage(message).build());
+	}
+
+	private void showClanChatMessage(String tag, ChatMessageBuilder body)
+	{
+		if (!isInHubClan())
+		{
+			showLocalChatMessage(body);
+			return;
+		}
+		String message = new ChatMessageBuilder().append(config.chatColor(), "[" + tag + "] ").build() + body.build().replace("<colHIGHLIGHT>", ColorUtil.colorTag(config.chatColor()));
+		localMessages.add(Text.removeTags(message));
+		chatMessageManager.queue(QueuedMessage.builder().type(ChatMessageType.CLAN_MESSAGE).sender(detectedClanName).runeLiteFormattedMessage(message).build());
 	}
 
 	private void memberStatus(String message, Tone tone)
