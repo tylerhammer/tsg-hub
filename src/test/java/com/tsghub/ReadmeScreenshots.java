@@ -65,6 +65,12 @@ public class ReadmeScreenshots
 		TsgHubPlugin plugin = new TsgHubPlugin()
 		{
 			@Override
+			String accountHash()
+			{
+				return "1";
+			}
+
+			@Override
 			AsyncBufferedImage getItemImage(int itemId)
 			{
 				return itemIcon(itemId);

@@ -1002,7 +1002,7 @@ public class TsgHubPlugin extends Plugin
 		});
 	}
 
-	private String accountHash()
+	String accountHash()
 	{
 		long hash = client.getAccountHash();
 		return hash == -1 ? "" : Long.toString(hash);
