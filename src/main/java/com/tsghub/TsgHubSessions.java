@@ -110,7 +110,7 @@ final class TsgHubSessions
 
 	private void joinFailed(String message)
 	{
-		plugin.ui(s -> s.joinFailed(message));
+		plugin.ui(s -> s.eventsView.joinFailed(message));
 	}
 
 	void leaveEvent(String eventId)
@@ -120,7 +120,7 @@ final class TsgHubSessions
 		session().clear(MEMBER_TOKEN + eventId, MEMBER_NAME + eventId);
 		if (eventId.equals(session().get(EVENT_ID))) session().clear(TOKEN, EVENT_ID);
 		plugin.memberStatus("Disconnected. Rejoin anytime with your team code.", Tone.SUCCESS);
-		plugin.ui(s -> s.showEventList());
+		plugin.ui(s -> s.eventsView.showEventList());
 		loadClanEvents();
 	}
 
@@ -184,7 +184,7 @@ final class TsgHubSessions
 	void applyBoard(String eventId, String token, JsonObject event, boolean open)
 	{
 		syncClanRank(eventId, token, event);
-		plugin.ui(s -> s.showBoard(event, session().get(DISPLAY_NAME), open));
+		plugin.ui(s -> s.boardView.showBoard(event, session().get(DISPLAY_NAME), open));
 	}
 
 	private void eventLoadFailed(String eventId, Exception e, String failure)
@@ -204,7 +204,7 @@ final class TsgHubSessions
 	{
 		if (sidebar == null) return;
 		if (sidebar.wantsAutoRefresh()) refreshBoard();
-		String competitionId = sidebar.openCompetitionId();
+		String competitionId = sidebar.competitionView.openCompetitionId();
 		if (competitionId != null) openCompetition(competitionId);
 	}
 
@@ -225,7 +225,7 @@ final class TsgHubSessions
 				loadClanEvents();
 				openCompetition(eventId, true);
 			}
-			catch (Exception e) { plugin.ui(s -> s.competitionJoinFailed(TsgHubFormat.friendlyError(e))); }
+			catch (Exception e) { plugin.ui(s -> s.competitionView.competitionJoinFailed(TsgHubFormat.friendlyError(e))); }
 			finally { plugin.sidebarBusy(false); }
 		}, executor);
 	}
@@ -245,7 +245,7 @@ final class TsgHubSessions
 			try
 			{
 				JsonObject event = TsgHubApi.result(response, error).getAsJsonObject("event");
-				plugin.ui(s -> s.showCompetition(event, name, open));
+				plugin.ui(s -> s.competitionView.showCompetition(event, name, open));
 			}
 			catch (Exception e) { eventLoadFailed(eventId, e, "Couldn't load the leaderboard. "); }
 			finally { plugin.sidebarBusy(false); }
@@ -298,7 +298,7 @@ final class TsgHubSessions
 		String clanName = plugin.clan().name();
 		if (clanName.trim().isEmpty())
 		{
-			plugin.ui(s -> s.setEvents(new JsonArray()));
+			plugin.ui(s -> s.eventsView.setEvents(new JsonArray()));
 			return;
 		}
 		plugin.sidebarBusy(true);
@@ -332,7 +332,7 @@ final class TsgHubSessions
 			event.addProperty("joined", !savedToken.isEmpty());
 		}
 		joinedCompetitions = joinedCompetitionIds(events);
-		plugin.ui(s -> s.setEvents(events));
+		plugin.ui(s -> s.eventsView.setEvents(events));
 	}
 
 	private List<String> joinedCompetitionIds(JsonArray events)
@@ -400,7 +400,7 @@ final class TsgHubSessions
 		if (eventId.equals(session.get(EVENT_ID)))
 		{
 			session.clear(TOKEN, EVENT_ID);
-			plugin.ui(s -> s.closeBoard());
+			plugin.ui(s -> s.boardView.closeBoard());
 		}
 	}
 

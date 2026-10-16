@@ -362,13 +362,13 @@ public class TsgHubPlugin extends Plugin
 		if ("partyShowSelf".equals(event.getKey()))
 		{
 			if (config.partyShowSelf()) groupTracker.refreshSelf();
-			else ui(s -> s.groupSelfHidden());
+			else ui(s -> s.partiesView.groupSelfHidden());
 			return;
 		}
 		if (event.getKey().startsWith("party"))
 		{
 			boolean expand = "partyExpandMembers".equals(event.getKey());
-			ui(s -> s.groupSettingsChanged(expand));
+			ui(s -> s.partiesView.groupSettingsChanged(expand));
 			return;
 		}
 		if ("showClanMap".equals(event.getKey()))
@@ -378,7 +378,7 @@ public class TsgHubPlugin extends Plugin
 		}
 		if ("shareLocation".equals(event.getKey()))
 		{
-			ui(s -> s.locationSharingChanged());
+			ui(s -> s.membersView.locationSharingChanged());
 			return;
 		}
 		if ("hubKey".equals(event.getKey()))
@@ -454,7 +454,7 @@ public class TsgHubPlugin extends Plugin
 			if (pending) { sidebar.showCheckingClan(); return; }
 			if (!clan.isHubClan()) { sidebar.showNotInClan(clan.hubName(), clan.name()); return; }
 			if (!config.dataSharingOptIn()) { sidebar.showSharingOff(); return; }
-			sidebar.showHome();
+			sidebar.homeView.showHome();
 			if (!live())
 			{
 				sessions.loadClanEvents();
