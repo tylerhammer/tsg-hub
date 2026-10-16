@@ -79,11 +79,7 @@ final class TsgHubOrganizer
 		String credential = listCredential();
 		if (credential.isEmpty()) { status("Couldn't load events. Join or create an event first.", Tone.ERROR); return; }
 		request("GET", "/v1/managed-events", credential, null).whenCompleteAsync((response, error) -> {
-			try
-			{
-				JsonArray events = TsgHubApi.result(response, error).getAsJsonArray("events");
-				SwingUtilities.invokeLater(() -> panel.get().setManagedEvents(events));
-			}
+			try { showManagedEvents(TsgHubApi.result(response, error).getAsJsonArray("events")); }
 			catch (Exception e) { error("Couldn't load events. ", e); }
 		}, executor);
 	}
@@ -367,11 +363,21 @@ final class TsgHubOrganizer
 		refreshPending = false;
 		String eventId = plugin.getOrganizerEventId();
 		if (eventId.isEmpty() || executor == null || executor.isShutdown()) return;
-		event(eventId).thenAccept(event -> SwingUtilities.invokeLater(() -> {
+		event(eventId).thenAccept(event -> showLive(eventId, event));
+	}
+
+	void showLive(String eventId, JsonObject event)
+	{
+		SwingUtilities.invokeLater(() -> {
 			if (!eventId.equals(plugin.getOrganizerEventId())) return;
 			if (panel.get().editingText()) refreshPending = true;
 			else panel.get().showEvent(event);
-		}));
+		});
+	}
+
+	void showManagedEvents(JsonArray events)
+	{
+		SwingUtilities.invokeLater(() -> panel.get().setManagedEvents(events));
 	}
 
 	void searchItems(String query, Consumer<List<ItemSuggestion>> callback)

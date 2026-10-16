@@ -14,22 +14,24 @@ final class TsgHubReports
 
 	interface Poster
 	{
-		void post(String path, JsonObject body) throws Exception;
+		void post(String path, String token, JsonObject body) throws Exception;
 	}
 
 	private static final class Pending extends TsgHubOutbox.Item
 	{
 		final String type;
 		final String path;
+		final String token;
 		final JsonObject body;
 		long nextAt;
 		boolean socketTried;
 
-		Pending(String type, String path, JsonObject body, long now)
+		Pending(String type, String path, String token, JsonObject body, long now)
 		{
 			super(now);
 			this.type = type;
 			this.path = path;
+			this.token = token;
 			this.body = body;
 			this.nextAt = now;
 		}
@@ -52,11 +54,16 @@ final class TsgHubReports
 		this.clock = clock;
 	}
 
-	synchronized boolean send(String type, String path, JsonObject body)
+	boolean send(String type, String path, JsonObject body)
+	{
+		return send(type, path, null, body);
+	}
+
+	synchronized boolean send(String type, String path, String token, JsonObject body)
 	{
 		if (!body.has("id")) body.addProperty("id", TsgHubSignals.newId());
 		long now = clock.getAsLong();
-		Pending entry = new Pending(type, path, body, now);
+		Pending entry = new Pending(type, path, token, body, now);
 		pending.add(body.get("id").getAsString(), entry);
 		return sendSocket(entry, now);
 	}
@@ -71,6 +78,7 @@ final class TsgHubReports
 		Pending entry = pending.get(id);
 		if (entry == null) return;
 		if (status == 429) entry.nextAt = clock.getAsLong() + RETRY_MILLIS;
+		else if (status == 401 && entry.token != null) entry.nextAt = clock.getAsLong();
 		else pending.remove(id);
 	}
 
@@ -108,7 +116,7 @@ final class TsgHubReports
 			String id = entry.body.get("id").getAsString();
 			try
 			{
-				poster.post(entry.path, entry.body);
+				poster.post(entry.path, entry.token, entry.body);
 				acked(id);
 			}
 			catch (TsgHubApi.HttpError e)
