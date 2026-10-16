@@ -564,6 +564,7 @@ public class TsgHubPlugin extends Plugin
 	public void onConfigChanged(ConfigChanged event)
 	{
 		if (!"tsghub".equals(event.getGroup())) return;
+		if ("dataSharingOptIn".equals(event.getKey()) && !config.dataSharingOptIn() && reports != null) reports.clear();
 		if ("partyShowSelf".equals(event.getKey()))
 		{
 			if (config.partyShowSelf()) groupTracker.refreshSelf();
@@ -833,6 +834,7 @@ public class TsgHubPlugin extends Plugin
 
 	private void socketTick()
 	{
+		if (!sharingEnabled()) reports.clear();
 		reports.flush();
 		if (!sharingInClan())
 		{
