@@ -132,7 +132,7 @@ public class ActivityTest
 	}
 
 	@Test
-	public void weeklyChartBucketsAndSteps()
+	public void chartBucketsFollowWindow()
 	{
 		LocalDate end = LocalDate.of(2026, 10, 16);
 		java.util.Map<LocalDate, Integer> minutes = new java.util.HashMap<>();
@@ -141,14 +141,39 @@ public class ActivityTest
 		minutes.put(end.minusDays(7), 60);
 		minutes.put(end.minusDays(90), 10);
 		minutes.put(end.minusDays(91), 999);
-		int[] weeks = TsgHubActivityDetail.WeeklyChart.weekMinutes(minutes, end);
-		assertEquals(13, weeks.length);
+		assertEquals(91, TsgHubActivityDetail.ActivityChart.requestDays(90));
+		assertEquals(30, TsgHubActivityDetail.ActivityChart.requestDays(30));
+		int[] weeks = TsgHubActivityDetail.ActivityChart.bucketMinutes(minutes, end, 13, 7);
 		assertEquals(75, weeks[12]);
 		assertEquals(60, weeks[11]);
 		assertEquals(10, weeks[0]);
-		assertEquals(60, TsgHubActivityDetail.WeeklyChart.step(0));
-		assertEquals(60, TsgHubActivityDetail.WeeklyChart.step(200));
-		assertEquals(300, TsgHubActivityDetail.WeeklyChart.step(900));
-		assertEquals(12000, TsgHubActivityDetail.WeeklyChart.step(30000));
+		int[] days = TsgHubActivityDetail.ActivityChart.bucketMinutes(minutes, end, 7, 1);
+		assertEquals(30, days[6]);
+		assertEquals(45, days[0]);
+	}
+
+	@Test
+	public void chartAxisUsesMinutesForSmallValues()
+	{
+		assertEquals(5, TsgHubActivityDetail.ActivityChart.step(0));
+		assertEquals(10, TsgHubActivityDetail.ActivityChart.step(25));
+		assertEquals(60, TsgHubActivityDetail.ActivityChart.step(200));
+		assertEquals(12000, TsgHubActivityDetail.ActivityChart.step(30000));
+		assertEquals("0", TsgHubActivityDetail.ActivityChart.axisLabel(0));
+		assertEquals("15m", TsgHubActivityDetail.ActivityChart.axisLabel(15));
+		assertEquals("2h", TsgHubActivityDetail.ActivityChart.axisLabel(120));
+	}
+
+	@Test
+	public void captionOnlyCountsTrackedDays()
+	{
+		LocalDate end = LocalDate.of(2026, 10, 16);
+		java.util.Map<LocalDate, Integer> minutes = new java.util.HashMap<>();
+		minutes.put(end, 25);
+		LocalDate windowStart = end.minusDays(90);
+		assertEquals("Avg 25 min a day · active 1 of 1 tracked day.", TsgHubActivityDetail.chartCaption(minutes, 25, end, windowStart, end, 7));
+		minutes.put(end.minusDays(13), 95);
+		assertEquals("Avg 1.0h a week · active 2 of 14 tracked days.", TsgHubActivityDetail.chartCaption(minutes, 120, end, windowStart, end.minusDays(13), 7));
+		assertEquals("No time online recorded.", TsgHubActivityDetail.chartCaption(new java.util.HashMap<>(), 0, end, windowStart, null, 1));
 	}
 }

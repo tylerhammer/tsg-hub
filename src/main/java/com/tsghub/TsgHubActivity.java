@@ -30,7 +30,6 @@ import net.runelite.client.util.Text;
 
 final class TsgHubActivity
 {
-	static final int DETAIL_DAYS = 91;
 	static final int NO_RANK = Integer.MIN_VALUE;
 	private static final String NO_CLAN = "No clan detected. Log in to a clan member character.";
 
@@ -197,7 +196,7 @@ final class TsgHubActivity
 		});
 	}
 
-	void loadMember(String name, Consumer<JsonObject> loaded, Consumer<String> failed)
+	void loadMember(String name, int days, Consumer<JsonObject> loaded, Consumer<String> failed)
 	{
 		String token = plugin.adminKey();
 		if (token.isEmpty() || executor.isShutdown())
@@ -211,7 +210,7 @@ final class TsgHubActivity
 			return;
 		}
 		String query = "/v1/admin/activity/member?clanName=" + TsgHubApi.encode(plugin.getDetectedClanName())
-			+ "&name=" + TsgHubApi.encode(name) + "&days=" + DETAIL_DAYS;
+			+ "&name=" + TsgHubApi.encode(name) + "&days=" + TsgHubActivityDetail.ActivityChart.requestDays(days);
 		executor.submit(() -> {
 			try
 			{

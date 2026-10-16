@@ -310,7 +310,8 @@ final class TsgHubActivityPanel extends JPanel
 		detailDialog.toFront();
 		if (!member.onHub()) return;
 		String name = TsgHubUi.str(member.stats, "displayName");
-		activity.loadMember(name.isEmpty() ? member.name : name, loaded -> detail.setDetail(member, loaded), message -> detail.failed(member, message));
+		int window = days;
+		activity.loadMember(name.isEmpty() ? member.name : name, window, loaded -> detail.setDetail(member, loaded, window), message -> detail.failed(member, message));
 	}
 
 	private final class Model extends AbstractTableModel
