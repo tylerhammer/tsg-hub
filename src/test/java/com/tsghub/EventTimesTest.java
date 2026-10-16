@@ -80,9 +80,6 @@ public class EventTimesTest
 		event.addProperty("startDate", "2000-01-01");
 		assertEquals(Instant.parse("2026-10-05T08:00:00Z"), TsgHubUi.eventStart(event));
 		assertEquals(Instant.parse("2026-10-12T08:00:00Z"), TsgHubUi.eventEnd(event));
-		assertFalse(TsgHubUi.running(event, Instant.parse("2026-10-05T07:59:59Z")));
-		assertTrue(TsgHubUi.running(event, Instant.parse("2026-10-05T08:00:00Z")));
-		assertFalse(TsgHubUi.running(event, Instant.parse("2026-10-12T08:00:00Z")));
 	}
 
 	@Test
@@ -111,7 +108,6 @@ public class EventTimesTest
 		event.add("config", config);
 		assertEquals(Instant.parse("2026-10-04T08:00:00Z"), TsgHubUi.eventStart(event));
 		assertNull(TsgHubUi.eventEnd(event));
-		assertTrue(TsgHubUi.running(event, NOW));
 		event.addProperty("status", "ended");
 		assertEquals("ended", TsgHubUi.eventRelative(event));
 	}

@@ -41,7 +41,7 @@ final class TsgHubNewsWindow extends JPanel
 	void setAnnouncements(JsonArray announcements)
 	{
 		this.announcements = announcements;
-		render();
+		if (isShowing()) render();
 	}
 
 	void render()
@@ -78,9 +78,6 @@ final class TsgHubNewsWindow extends JPanel
 
 	private JsonObject find()
 	{
-		if (announcements == null) return null;
-		for (JsonObject announcement : objects(announcements))
-			if (id.equals(str(announcement, "id"))) return announcement;
-		return null;
+		return byId(announcements, id);
 	}
 }

@@ -1589,16 +1589,6 @@ public class TsgHubPlugin extends Plugin
 		return recentLootEvents.putIfAbsent(key, tick) != null;
 	}
 
-	private static JsonObject claim(String taskId, String evidenceId, String source, JsonObject evidence)
-	{
-		JsonObject claim = new JsonObject();
-		claim.addProperty("taskId", taskId);
-		claim.addProperty("evidenceId", evidenceId);
-		claim.addProperty("source", source);
-		claim.add("evidence", evidence);
-		return claim;
-	}
-
 	private List<String> joinedCompetitionIds(JsonArray events)
 	{
 		List<String> ids = new ArrayList<>();

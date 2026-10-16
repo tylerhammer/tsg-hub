@@ -250,12 +250,6 @@ final class TsgHubUi
 		return shown.length() > LINK_TEXT_MAX ? shown.substring(0, LINK_TEXT_MAX - 3) + "..." : shown;
 	}
 
-	// Wrapped text whose links open in the browser after confirming the full URL, with a hand cursor and the URL on hover.
-	static JLabel linkedText(String text, Color color, Font font, int widthPx)
-	{
-		return linkedHtml(linkify(text), color, font, widthPx);
-	}
-
 	static JLabel linkedHtml(String innerHtml, Color color, Font font, int widthPx)
 	{
 		JLabel label = label(html(innerHtml, widthPx), color, font);
@@ -796,6 +790,13 @@ final class TsgHubUi
 		return bool(progress, "override") && !bool(progress, "overrideCredited");
 	}
 
+	static JsonObject byId(JsonArray items, String id)
+	{
+		if (items == null || id == null) return null;
+		for (JsonObject item : objects(items)) if (id.equals(str(item, "id"))) return item;
+		return null;
+	}
+
 	static boolean samePlayer(String a, String b)
 	{
 		String left = PlayerNames.key(a);
@@ -858,14 +859,6 @@ final class TsgHubUi
 		Instant end = instant(str(event, "endsAt"));
 		if (end != null || "drop-party".equals(str(event, "type"))) return end;
 		return midnight(str(event, "endDate"), eventZone(event), 1);
-	}
-
-	static boolean running(JsonObject event, Instant now)
-	{
-		Instant start = eventStart(event);
-		Instant end = eventEnd(event);
-		if (start == null || end == null) return "active".equals(str(event, "status"));
-		return !now.isBefore(start) && now.isBefore(end);
 	}
 
 	static String zoneName(ZonedDateTime time)

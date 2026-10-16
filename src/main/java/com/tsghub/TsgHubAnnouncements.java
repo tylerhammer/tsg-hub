@@ -64,7 +64,7 @@ final class TsgHubAnnouncements
 		if (!plugin.canUseHub()) return;
 		JsonArray announcements = published(all);
 		list = announcements;
-		SwingUtilities.invokeLater(polls::reset);
+		SwingUtilities.invokeLater(() -> polls.reset(announcements));
 		plugin.ui(s -> s.setAnnouncements(announcements));
 		plugin.newsWindow(w -> w.setAnnouncements(announcements));
 		SwingUtilities.invokeLater(() -> {

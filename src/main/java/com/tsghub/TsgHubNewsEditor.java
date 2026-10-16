@@ -379,7 +379,7 @@ final class TsgHubNewsEditor extends JPanel
 		this.announcements = announcements;
 		if (formOpen)
 		{
-			JsonObject match = find(selectedId);
+			JsonObject match = byId(announcements, selectedId);
 			if (match != null)
 			{
 				selected = match;
@@ -391,17 +391,9 @@ final class TsgHubNewsEditor extends JPanel
 		select();
 	}
 
-	private JsonObject find(String id)
-	{
-		if (announcements != null)
-			for (JsonObject announcement : objects(announcements))
-				if (str(announcement, "id").equals(id)) return announcement;
-		return null;
-	}
-
 	private void select()
 	{
-		JsonObject match = find(selectedId);
+		JsonObject match = byId(announcements, selectedId);
 		if (match != null) show(match);
 		else if (!selectedId.isEmpty() && announcements != null) show(null);
 		else renderList();
@@ -579,12 +571,6 @@ final class TsgHubNewsEditor extends JPanel
 		bar.setPreferredSize(new Dimension(100, 6));
 		bar.setMinimumSize(new Dimension(0, 6));
 		return fitHeight(bar);
-	}
-
-	static String pollSummary(JsonObject poll, boolean closed)
-	{
-		return (closed ? "Closed poll · " : "Poll · ") + (bool(poll, "multi") ? "pick any" : "pick one") + (bool(poll, "anonymous") ? " · anonymous" : "")
-			+ " · " + plural(integer(poll, "voters", 0), "voter");
 	}
 
 	private static JPanel field(String label, JComponent input)

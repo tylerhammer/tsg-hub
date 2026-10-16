@@ -110,9 +110,7 @@ final class TsgHubGroups implements GroupTracker.Listener
 		JsonObject current = group;
 		if (current != null && inGroup())
 		{
-			JsonObject next = null;
-			for (int i = 0; i < groups.size(); i++)
-				if (TsgHubUi.str(groups.get(i).getAsJsonObject(), "id").equals(TsgHubUi.str(current, "id"))) next = groups.get(i).getAsJsonObject();
+			JsonObject next = TsgHubUi.byId(groups, TsgHubUi.str(current, "id"));
 			if (next != null) group = next;
 			if ((next == null || !memberNames(next).equals(memberNames(current))) && !executor.isShutdown()) executor.submit(this::heartbeat);
 		}
