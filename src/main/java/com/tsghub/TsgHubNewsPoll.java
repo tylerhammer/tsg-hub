@@ -58,7 +58,7 @@ final class TsgHubNewsPoll
 	{
 		JPanel block = stack();
 		boolean multi = bool(poll, "multi");
-		boolean canVote = !plugin.accountHash().isEmpty();
+		boolean canVote = !plugin.clan().accountHash().isEmpty();
 		Set<Integer> mine = new TreeSet<>(TsgHubAnnouncements.myVote(poll));
 		Set<Integer> chosen = picks.computeIfAbsent(id, k -> new TreeSet<>(mine));
 		int voters = integer(poll, "voters", 0);

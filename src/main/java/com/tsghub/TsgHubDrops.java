@@ -96,9 +96,9 @@ final class TsgHubDrops
 		String message = broadcast(event.getMessage());
 		long hash = client.getAccountHash();
 		if (message == null || hash == -1 || executor.isShutdown()) return;
-		String self = plugin.getDetectedPlayerName();
+		String self = plugin.clan().playerName();
 		JsonObject body = new JsonObject();
-		body.addProperty("clanName", plugin.getDetectedClanName());
+		body.addProperty("clanName", plugin.clan().name());
 		body.addProperty("accountHash", Long.toString(hash));
 		body.addProperty("message", message);
 		body.addProperty("reporter", self);
@@ -126,7 +126,7 @@ final class TsgHubDrops
 
 	private void post(JsonObject body)
 	{
-		plugin.report("drop", "/v1/drops", body);
+		plugin.tracker().report("drop", "/v1/drops", body);
 	}
 
 	static boolean fromSelf(String message, String self)
@@ -146,8 +146,8 @@ final class TsgHubDrops
 
 	void load(boolean quiet)
 	{
-		if (!plugin.isInHubClan() || !plugin.sharingEnabled() || executor.isShutdown()) return;
-		String clan = TsgHubApi.encode(plugin.getDetectedClanName());
+		if (!plugin.clan().isHubClan() || !plugin.sharingEnabled() || executor.isShutdown()) return;
+		String clan = TsgHubApi.encode(plugin.clan().name());
 		String query = query();
 		Runnable done = quiet ? null : () -> plugin.ui(s -> s.setBusy(false));
 		if (!quiet) plugin.ui(s -> s.setBusy(true));
