@@ -209,7 +209,6 @@ public class TsgHubPlugin extends Plugin
 				refreshRules(rulesVersion);
 				signals.resend();
 				reports.resend();
-				resyncLiveViews();
 			}
 			@Override public void onChanged(String topic, String eventId) { liveChange(topic, eventId); }
 			@Override public void onAdminRevoked(String token) { recheckHubKey(token); }
@@ -230,7 +229,7 @@ public class TsgHubPlugin extends Plugin
 			@Override public void onGroupRejected(int status) { groups.beatRejected(status); }
 		});
 		signals = new TsgHubSignals(socket, this::api, this::signalReply);
-		reports = new TsgHubReports(socket::send, (path, body) -> api().request("POST", path, null, body));
+		reports = new TsgHubReports(socket::send, (path, token, body) -> api().request("POST", path, token, body));
 		executor.execute(this::loadCachedRules);
 		executor.scheduleAtFixedRate(this::socketTick, 2, 5, TimeUnit.SECONDS);
 		executor.scheduleAtFixedRate(unlessLive(this::autoRefreshBoard), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
@@ -493,7 +492,7 @@ public class TsgHubPlugin extends Plugin
 				keyCheckBackoff.reset();
 				boolean admin = grantsAdmin(result);
 				if (admin != adminVerified) setAdminVerified(admin);
-				if (admin) loadClanEvents();
+				if (admin && !live()) loadClanEvents();
 				String linkError = TsgHubJson.str(result, "linkError");
 				boolean linked = TsgHubJson.bool(result, "linked");
 				if (!linkError.isEmpty()) memberStatus(linkError, Tone.ERROR);
@@ -544,7 +543,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		adminVerified = verified;
 		syncSocketNow();
-		if (presence != null) presence.autoRefresh();
+		if (presence != null && !(verified && live())) presence.autoRefresh();
 		boolean access = canManageOrganizerUi();
 		SwingUtilities.invokeLater(() -> {
 			if (sidebar != null) sidebar.setOrganizerAccess(access);
@@ -928,6 +927,12 @@ public class TsgHubPlugin extends Plugin
 		String eventId = session.get(EVENT_ID);
 		if (sidebar.wantsAutoRefresh() && !eventId.isEmpty()) topics.add("event:" + eventId);
 		if (competitionId != null) topics.add("event:" + competitionId);
+		if (adminWindowOpen())
+		{
+			topics.add("managed-events");
+			String organizerEventId = getOrganizerEventId();
+			if (!organizerEventId.isEmpty()) topics.add("organizer:" + organizerEventId);
+		}
 		return topics;
 	}
 
@@ -956,7 +961,12 @@ public class TsgHubPlugin extends Plugin
 				break;
 			case "events":
 				applyClanEvents(TsgHubJson.array(data, "events"));
-				if (adminWindowOpen()) organizer.loadManagedEvents();
+				break;
+			case "managed-events":
+				if (adminWindowOpen()) organizer.showManagedEvents(TsgHubJson.array(data, "events"));
+				break;
+			case "organizer":
+				if (adminWindowOpen() && eventId.equals(getOrganizerEventId())) organizer.showLive(eventId, data);
 				break;
 			case "notifications":
 				if (eventId.equals(session.get(EVENT_ID))) showNotifications(TsgHubJson.array(data, "notifications"));
@@ -964,7 +974,6 @@ public class TsgHubPlugin extends Plugin
 			case "event":
 				if (!data.has("event") || !data.get("event").isJsonObject()) break;
 				JsonObject event = data.getAsJsonObject("event");
-				if (adminWindowOpen() && eventId.equals(getOrganizerEventId())) organizer.liveRefresh();
 				if (sidebar == null) break;
 				if (eventId.equals(session.get(EVENT_ID)) && sidebar.wantsAutoRefresh()) applyBoard(eventId, session.get(TOKEN), event, false);
 				if (eventId.equals(sidebar.openCompetitionId()))
@@ -974,15 +983,6 @@ public class TsgHubPlugin extends Plugin
 				}
 				break;
 			default:
-		}
-	}
-
-	private void resyncLiveViews()
-	{
-		if (adminWindowOpen())
-		{
-			organizer.loadManagedEvents();
-			organizer.liveRefresh();
 		}
 	}
 
@@ -1011,15 +1011,19 @@ public class TsgHubPlugin extends Plugin
 			case "notifications":
 				if (eventId.equals(session.get(EVENT_ID))) pollTeamNotifications();
 				break;
-			case "event":
+			case "organizer":
 				if (adminWindowOpen() && eventId.equals(getOrganizerEventId())) organizer.liveRefresh();
+				break;
+			case "managed-events":
+				if (adminWindowOpen()) organizer.loadManagedEvents();
+				break;
+			case "event":
 				if (sidebar == null) break;
 				if (eventId.equals(session.get(EVENT_ID)) && sidebar.wantsAutoRefresh()) refreshBoard();
 				if (eventId.equals(sidebar.openCompetitionId())) openCompetition(eventId);
 				break;
 			case "events":
 				loadClanEvents();
-				if (adminWindowOpen()) organizer.loadManagedEvents();
 				break;
 			default:
 		}
@@ -1151,7 +1155,7 @@ public class TsgHubPlugin extends Plugin
 			try
 			{
 				JsonObject result = TsgHubApi.result(response, error);
-				if (TsgHubJson.bool(result, "updated") && !session.get(EVENT_ID).isEmpty()) refreshBoard();
+				if (TsgHubJson.bool(result, "updated") && !session.get(EVENT_ID).isEmpty() && !live()) refreshBoard();
 			}
 			catch (Exception e) { syncedIdentity = ""; }
 		}, executor);
@@ -1243,10 +1247,12 @@ public class TsgHubPlugin extends Plugin
 		Integer synced = syncedClanRanks.get(key);
 		if (synced != null && synced == rank) return;
 		JsonObject body = new JsonObject();
+		body.addProperty("eventId", eventId);
 		body.addProperty("displayName", displayName);
 		body.addProperty("clanName", detectedClanName);
 		body.addProperty("clanRank", rank);
-		api().call("POST", "/v1/events/" + eventId + "/clan-rank", token, body).thenRun(() -> syncedClanRanks.put(key, rank));
+		syncedClanRanks.put(key, rank);
+		report("clan-rank", "/v1/events/" + eventId + "/clan-rank", token, body);
 	}
 
 	void forgetEvent(String eventId)
@@ -1407,7 +1413,12 @@ public class TsgHubPlugin extends Plugin
 
 	void report(String type, String path, JsonObject body)
 	{
-		if (reports == null || reports.send(type, path, body) || executor == null || executor.isShutdown()) return;
+		report(type, path, null, body);
+	}
+
+	private void report(String type, String path, String token, JsonObject body)
+	{
+		if (reports == null || reports.send(type, path, token, body) || executor == null || executor.isShutdown()) return;
 		if (client.isClientThread()) executor.execute(reports::flush);
 		else reports.flush();
 	}

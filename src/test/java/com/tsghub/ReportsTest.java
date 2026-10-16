@@ -14,6 +14,7 @@ public class ReportsTest
 {
 	private final List<JsonObject> socketSent = new ArrayList<>();
 	private final List<JsonObject> posted = new ArrayList<>();
+	private final List<String> tokens = new ArrayList<>();
 	private boolean live = true;
 	private int status = 200;
 	private long now = 1_000;
@@ -26,8 +27,9 @@ public class ReportsTest
 			message.addProperty("type", type);
 			socketSent.add(message);
 			return true;
-		}, (path, body) -> {
+		}, (path, token, body) -> {
 			posted.add(body.deepCopy());
+			tokens.add(token);
 			if (status == -1) throw new IOException("offline");
 			if (status != 200) throw new TsgHubApi.HttpError(status, "HTTP " + status);
 		}, () -> now);
@@ -178,5 +180,22 @@ public class ReportsTest
 		assertEquals(TsgHubOutbox.MAX_PENDING, reports.size());
 		reports.acked(socketSent.get(socketSent.size() - 1).get("id").getAsString());
 		assertEquals(TsgHubOutbox.MAX_PENDING - 1, reports.size());
+	}
+
+	@Test
+	public void unauthorizedTokenReportFallsBackToRest()
+	{
+		TsgHubReports reports = reports();
+		reports.send("clan-rank", "/v1/events/e1/clan-rank", "member-token", drop());
+		reports.failed(socketSent.get(0).get("id").getAsString(), 401);
+		assertEquals(1, reports.size());
+		reports.flush();
+		assertEquals(1, posted.size());
+		assertEquals("member-token", tokens.get(0));
+		assertEquals(0, reports.size());
+
+		reports.send("drop", "/v1/drops", drop());
+		reports.failed(socketSent.get(1).get("id").getAsString(), 401);
+		assertEquals(0, reports.size());
 	}
 }
