@@ -23,7 +23,7 @@ final class TsgHubMemberPicker extends TsgHubSearchField
 	@Override
 	boolean isExact(String query)
 	{
-		return names.stream().anyMatch(name -> TsgHubUi.samePlayer(name, query));
+		return names.stream().anyMatch(name -> PlayerNames.samePlayer(name, query));
 	}
 
 	@Override

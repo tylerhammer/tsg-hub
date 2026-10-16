@@ -9,8 +9,10 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import javax.swing.SwingUtilities;
 
@@ -53,10 +55,8 @@ final class TsgHubAnnouncements
 		String token = plugin.adminKey();
 		String hash = plugin.accountHash();
 		String query = "/v1/announcements?clanName=" + clan + (hash.isEmpty() ? "" : "&accountHash=" + hash);
-		executor.submit(() -> {
-			try { apply(TsgHubUi.array(api.get().request("GET", query, token.isEmpty() ? null : token, null), "announcements")); }
-			catch (Exception ignored) { }
-		});
+		api.get().call("GET", query, token.isEmpty() ? null : token, null)
+			.thenAcceptAsync(result -> apply(TsgHubJson.array(result, "announcements")), executor);
 	}
 
 	void apply(JsonArray all)
@@ -64,7 +64,7 @@ final class TsgHubAnnouncements
 		if (!plugin.canUseHub()) return;
 		JsonArray announcements = published(all);
 		list = announcements;
-		SwingUtilities.invokeLater(polls::reset);
+		SwingUtilities.invokeLater(() -> polls.reset(announcements));
 		plugin.ui(s -> s.setAnnouncements(announcements));
 		plugin.newsWindow(w -> w.setAnnouncements(announcements));
 		SwingUtilities.invokeLater(() -> {
@@ -77,8 +77,8 @@ final class TsgHubAnnouncements
 	static JsonArray published(JsonArray all)
 	{
 		JsonArray out = new JsonArray();
-		for (JsonObject announcement : TsgHubUi.objects(all))
-			if (!TsgHubUi.bool(announcement, "draft") && !TsgHubUi.bool(announcement, "expired")) out.add(announcement);
+		for (JsonObject announcement : TsgHubJson.objects(all))
+			if (!TsgHubJson.bool(announcement, "draft") && !TsgHubJson.bool(announcement, "expired")) out.add(announcement);
 		return out;
 	}
 
@@ -89,12 +89,12 @@ final class TsgHubAnnouncements
 		List<JsonObject> fresh = unread(announcements, skip);
 		if (fresh.isEmpty()) return;
 		Set<String> alerted = new LinkedHashSet<>();
-		for (JsonObject announcement : TsgHubUi.objects(announcements))
+		for (JsonObject announcement : TsgHubJson.objects(announcements))
 		{
-			String id = TsgHubUi.str(announcement, "id");
+			String id = TsgHubJson.str(announcement, "id");
 			if (skip.contains(id) || fresh.contains(announcement)) alerted.add(id);
 		}
-		TsgHubSession.set(TsgHubSession.ANNOUNCEMENTS_ALERTED, String.join(",", alerted));
+		plugin.session().set(TsgHubSession.ANNOUNCEMENTS_ALERTED, String.join(",", alerted));
 		for (String line : chatLines(fresh)) chat.accept(line);
 	}
 
@@ -119,26 +119,26 @@ final class TsgHubAnnouncements
 		JsonArray current = list;
 		if (current == null) return;
 		Set<String> ids = new LinkedHashSet<>();
-		for (JsonObject announcement : TsgHubUi.objects(current)) ids.add(TsgHubUi.str(announcement, "id"));
-		TsgHubSession.set(TsgHubSession.ANNOUNCEMENTS_READ, String.join(",", ids));
+		for (JsonObject announcement : TsgHubJson.objects(current)) ids.add(TsgHubJson.str(announcement, "id"));
+		plugin.session().set(TsgHubSession.ANNOUNCEMENTS_READ, String.join(",", ids));
 	}
 
-	private static Set<String> readIds()
+	private Set<String> readIds()
 	{
 		return ids(TsgHubSession.ANNOUNCEMENTS_READ);
 	}
 
-	private static Set<String> ids(String key)
+	private Set<String> ids(String key)
 	{
-		String stored = TsgHubSession.get(key);
+		String stored = plugin.session().get(key);
 		return stored.isEmpty() ? new LinkedHashSet<>() : new LinkedHashSet<>(Arrays.asList(stored.split(",")));
 	}
 
 	static List<JsonObject> unread(JsonArray announcements, Set<String> read)
 	{
 		List<JsonObject> out = new ArrayList<>();
-		for (JsonObject announcement : TsgHubUi.objects(announcements))
-			if (!read.contains(TsgHubUi.str(announcement, "id"))) out.add(announcement);
+		for (JsonObject announcement : TsgHubJson.objects(announcements))
+			if (!read.contains(TsgHubJson.str(announcement, "id"))) out.add(announcement);
 		return out;
 	}
 
@@ -146,9 +146,9 @@ final class TsgHubAnnouncements
 	{
 		List<String> lines = new ArrayList<>();
 		for (int i = 0; i < fresh.size() && i < MAX_CHAT_LINES; i++)
-			lines.add(TsgHubUi.str(fresh.get(i), "title"));
+			lines.add(TsgHubJson.str(fresh.get(i), "title"));
 		int more = fresh.size() - MAX_CHAT_LINES;
-		if (more > 0) lines.add("+" + TsgHubUi.plural(more, "more announcement") + " in the TSG Hub sidebar.");
+		if (more > 0) lines.add("+" + TsgHubFormat.plural(more, "more announcement") + " in the TSG Hub sidebar.");
 		return lines;
 	}
 
@@ -160,7 +160,7 @@ final class TsgHubAnnouncements
 	static List<Integer> myVote(JsonObject poll)
 	{
 		List<Integer> picks = new ArrayList<>();
-		for (JsonElement pick : TsgHubUi.array(poll, "myVote")) if (pick.isJsonPrimitive()) picks.add(pick.getAsInt());
+		for (JsonElement pick : TsgHubJson.array(poll, "myVote")) if (pick.isJsonPrimitive()) picks.add(pick.getAsInt());
 		return picks;
 	}
 
@@ -177,18 +177,18 @@ final class TsgHubAnnouncements
 		JsonArray picks = new JsonArray();
 		for (int option : options) picks.add(option);
 		request.add("options", picks);
-		executor.submit(() -> {
+		api.get().call("POST", path(id) + "/vote", null, request).whenCompleteAsync((response, error) -> {
 			try
 			{
-				api.get().request("POST", path(id) + "/vote", null, request);
-				load();
+				TsgHubApi.result(response, error);
+				if (!plugin.live()) load();
 			}
 			catch (Exception e)
 			{
-				String message = "Couldn't vote. " + TsgHubUi.friendlyError(e);
+				String message = "Couldn't vote. " + TsgHubFormat.friendlyError(e);
 				SwingUtilities.invokeLater(() -> failed.accept(message));
 			}
-		});
+		}, executor);
 	}
 
 	void save(String id, String title, String body, boolean pinned, Integer expiresInHours, JsonElement poll, boolean publish)
@@ -203,35 +203,30 @@ final class TsgHubAnnouncements
 		if (id.isEmpty())
 		{
 			request.addProperty("draft", !publish);
-			submit(success, true, token -> announcementId(api.get().request("POST", "/v1/announcements", token, request)));
+			submit(success, true, token -> api.get().call("POST", "/v1/announcements", token, request).thenApply(TsgHubAnnouncements::announcementId));
 			return;
 		}
-		submit(success, true, token -> {
-			api.get().request("PATCH", path(id), token, request);
-			if (publish) api.get().request("POST", path(id) + "/publish", token, adminBody());
-			return id;
-		});
+		submit(success, true, token -> api.get().call("PATCH", path(id), token, request)
+			.thenCompose(saved -> publish ? api.get().call("POST", path(id) + "/publish", token, adminBody()) : CompletableFuture.completedFuture(saved))
+			.thenApply(done -> id));
 	}
 
 	void publish(String id)
 	{
-		submit("Announcement published.", false, token -> announcementId(api.get().request("POST", path(id) + "/publish", token, adminBody())));
+		submit("Announcement published.", false, token -> api.get().call("POST", path(id) + "/publish", token, adminBody()).thenApply(TsgHubAnnouncements::announcementId));
 	}
 
 	void setPinned(String id, boolean pinned)
 	{
 		JsonObject request = adminBody();
 		request.addProperty("pinned", pinned);
-		submit(pinned ? "Pinned." : "Unpinned.", false, token -> announcementId(api.get().request("PATCH", path(id), token, request)));
+		submit(pinned ? "Pinned." : "Unpinned.", false, token -> api.get().call("PATCH", path(id), token, request).thenApply(TsgHubAnnouncements::announcementId));
 	}
 
 	void delete(String id)
 	{
 		String clan = TsgHubApi.encode(plugin.getDetectedClanName());
-		submit("Announcement deleted.", false, token -> {
-			api.get().request("DELETE", path(id) + "?clanName=" + clan, token, null);
-			return "";
-		});
+		submit("Announcement deleted.", false, token -> api.get().call("DELETE", path(id) + "?clanName=" + clan, token, null).thenApply(done -> ""));
 	}
 
 	private static String path(String id)
@@ -241,7 +236,7 @@ final class TsgHubAnnouncements
 
 	private static String announcementId(JsonObject result)
 	{
-		return TsgHubUi.str(TsgHubUi.object(result, "announcement"), "id");
+		return TsgHubJson.str(TsgHubJson.object(result, "announcement"), "id");
 	}
 
 	private JsonObject adminBody()
@@ -251,12 +246,7 @@ final class TsgHubAnnouncements
 		return body;
 	}
 
-	private interface Write
-	{
-		String run(String token) throws Exception;
-	}
-
-	private void submit(String success, boolean form, Write write)
+	private void submit(String success, boolean form, Function<String, CompletableFuture<String>> write)
 	{
 		String token = plugin.adminKey();
 		if (token.isEmpty() || executor.isShutdown())
@@ -266,20 +256,17 @@ final class TsgHubAnnouncements
 			return;
 		}
 		status("Saving...", Tone.INFO);
-		executor.submit(() -> {
-			try
+		write.apply(token).whenCompleteAsync((id, error) -> {
+			if (error != null)
 			{
-				String id = write.run(token);
-				status(success, Tone.SUCCESS);
-				if (form) SwingUtilities.invokeLater(() -> panel.get().showAnnouncement(id));
-				load();
-			}
-			catch (Exception e)
-			{
-				status("Couldn't save. " + TsgHubUi.friendlyError(e), Tone.ERROR);
+				status("Couldn't save. " + TsgHubFormat.friendlyError(error), Tone.ERROR);
 				if (form) SwingUtilities.invokeLater(() -> panel.get().failed());
+				return;
 			}
-		});
+			status(success, Tone.SUCCESS);
+			if (form) SwingUtilities.invokeLater(() -> panel.get().showAnnouncement(id));
+			if (!plugin.live()) load();
+		}, executor);
 	}
 
 	private void status(String message, Tone tone)

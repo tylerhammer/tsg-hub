@@ -1,5 +1,8 @@
 package com.tsghub;
 
+import static com.tsghub.TsgHubFormat.*;
+import static com.tsghub.TsgHubHtml.*;
+import static com.tsghub.TsgHubJson.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 import com.google.gson.JsonArray;
@@ -41,7 +44,7 @@ final class TsgHubNewsWindow extends JPanel
 	void setAnnouncements(JsonArray announcements)
 	{
 		this.announcements = announcements;
-		render();
+		if (isShowing()) render();
 	}
 
 	void render()
@@ -56,7 +59,7 @@ final class TsgHubNewsWindow extends JPanel
 		{
 			page.add(wrapped(str(announcement, "title"), TEXT, headingFont(), TEXT_W));
 			page.add(Box.createVerticalStrut(GAP_XS));
-			page.add(wrapped(str(announcement, "postedBy") + " · " + TsgHubRoster.warningDate(str(announcement, "postedAt"), clock.instant(), ZoneId.systemDefault()), MUTED, smallFont(), TEXT_W));
+			page.add(wrapped(str(announcement, "postedBy") + " · " + TsgHubFormat.shortDate(str(announcement, "postedAt"), clock.instant(), ZoneId.systemDefault()), MUTED, smallFont(), TEXT_W));
 			String body = str(announcement, "body");
 			if (!body.isEmpty())
 			{
@@ -78,9 +81,6 @@ final class TsgHubNewsWindow extends JPanel
 
 	private JsonObject find()
 	{
-		if (announcements == null) return null;
-		for (JsonObject announcement : objects(announcements))
-			if (id.equals(str(announcement, "id"))) return announcement;
-		return null;
+		return byId(announcements, id);
 	}
 }

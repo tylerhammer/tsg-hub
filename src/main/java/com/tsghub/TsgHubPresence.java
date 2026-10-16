@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Supplier;
@@ -36,7 +37,6 @@ import net.runelite.api.gameval.SpriteID;
 import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.api.gameval.VarbitID;
 import net.runelite.client.callback.ClientThread;
-import net.runelite.client.game.ChatIconManager;
 import net.runelite.client.game.SpriteManager;
 import net.runelite.client.util.Text;
 
@@ -51,9 +51,8 @@ final class TsgHubPresence
 	private final TsgHubPlugin plugin;
 	private final Client client;
 	private final ClientThread clientThread;
-	private final ChatIconManager chatIcons;
+	private final TsgHubRankIcons rankIcons;
 	private final SpriteManager sprites;
-	private final Map<Integer, BufferedImage> rankIcons = new ConcurrentHashMap<>();
 	private final Map<Integer, BufferedImage> accountIcons = new ConcurrentHashMap<>();
 	private final Map<String, BufferedImage> nameIcons = new ConcurrentHashMap<>();
 	private final ScheduledExecutorService executor;
@@ -68,7 +67,7 @@ final class TsgHubPresence
 	private volatile AreaNames.Area area;
 	private boolean slayerDirty = true;
 
-	TsgHubPresence(TsgHubPlugin plugin, Client client, ClientThread clientThread, ChatIconManager chatIcons, SpriteManager sprites, ScheduledExecutorService executor,
+	TsgHubPresence(TsgHubPlugin plugin, Client client, ClientThread clientThread, TsgHubRankIcons rankIcons, SpriteManager sprites, ScheduledExecutorService executor,
 		Supplier<TsgHubApi> api, Supplier<TsgHubSidebarPanel> sidebar, TsgHubSocket socket, Supplier<String> key)
 	{
 		this.key = key;
@@ -76,7 +75,7 @@ final class TsgHubPresence
 		this.plugin = plugin;
 		this.client = client;
 		this.clientThread = clientThread;
-		this.chatIcons = chatIcons;
+		this.rankIcons = rankIcons;
 		this.sprites = sprites;
 		this.executor = executor;
 		this.api = api;
@@ -121,17 +120,15 @@ final class TsgHubPresence
 	void leave()
 	{
 		JsonObject body = leaveBody();
-		if (body == null || socket.presence(null) || executor.isShutdown()) return;
-		executor.submit(() -> post("/v1/presence/leave", body));
+		if (body == null || socket.presence(null)) return;
+		api.get().call("POST", "/v1/presence/leave", null, body);
 	}
 
 	void shutDown()
 	{
 		JsonObject body = leaveBody();
-		if (body == null) return;
-		Thread thread = new Thread(() -> post("/v1/presence/leave", body), "tsg-hub-presence-leave");
-		thread.setDaemon(true);
-		thread.start();
+		if (body == null || socket.presence(null)) return;
+		api.get().call("POST", "/v1/presence/leave", null, body);
 	}
 
 	void loadMembers(boolean quiet)
@@ -139,16 +136,16 @@ final class TsgHubPresence
 		if (!plugin.canUseHub() || executor.isShutdown()) return;
 		String clan = TsgHubApi.encode(plugin.getDetectedClanName());
 		if (!quiet) plugin.ui(s -> s.setBusy(true));
-		executor.submit(() -> {
-			try
-			{
-				String token = key.get();
-				JsonArray members = TsgHubUi.array(api.get().request("GET", "/v1/presence?clanName=" + clan, token, null), "members");
-				apply(members, loadNotes(clan, token));
-			}
-			catch (Exception e) { if (!quiet) plugin.ui(s -> s.setStatus("Couldn't load members. " + TsgHubUi.friendlyError(e), Tone.ERROR)); }
-			finally { if (!quiet) plugin.ui(s -> s.setBusy(false)); }
-		});
+		String token = key.get();
+		CompletableFuture<JsonObject> notesCall = api.get().call("GET", "/v1/members?clanName=" + clan, token, null)
+			.exceptionally(error -> null);
+		api.get().call("GET", "/v1/presence?clanName=" + clan, token, null).thenCombineAsync(notesCall, (roster, loaded) -> {
+			apply(TsgHubJson.array(roster, "members"), loaded == null ? null : TsgHubJson.array(loaded, "members"));
+			return roster;
+		}, executor).whenCompleteAsync((response, error) -> {
+			if (error != null && !quiet) plugin.ui(s -> s.setStatus("Couldn't load members. " + TsgHubFormat.friendlyError(error), Tone.ERROR));
+			if (!quiet) plugin.ui(s -> s.setBusy(false));
+		}, executor);
 	}
 
 	void apply(JsonArray members, JsonArray loaded)
@@ -164,12 +161,6 @@ final class TsgHubPresence
 			loadAccountIcons(roster[1]);
 			plugin.ui(s -> s.setMembers(roster[0], roster[1], known != null));
 		});
-	}
-
-	private JsonArray loadNotes(String clan, String token)
-	{
-		try { return TsgHubUi.array(api.get().request("GET", "/v1/members?clanName=" + clan, token, null), "members"); }
-		catch (Exception e) { return null; }
 	}
 
 	private Map<String, Integer> chatWorlds()
@@ -203,7 +194,7 @@ final class TsgHubPresence
 		{
 			if (!notes.get(i).isJsonObject()) continue;
 			JsonObject note = notes.get(i).getAsJsonObject();
-			byName.put(PlayerNames.normalize(TsgHubUi.str(note, "displayName")), note);
+			byName.put(PlayerNames.key(TsgHubJson.str(note, "displayName")), note);
 		}
 		List<JsonObject> online = new ArrayList<>();
 		Set<String> seen = new HashSet<>();
@@ -211,11 +202,11 @@ final class TsgHubPresence
 		{
 			if (!presence.get(i).isJsonObject()) continue;
 			JsonObject member = presence.get(i).getAsJsonObject();
-			if (seen.add(PlayerNames.normalize(TsgHubUi.str(member, "displayName")))) online.add(member);
+			if (seen.add(PlayerNames.key(TsgHubJson.str(member, "displayName")))) online.add(member);
 		}
 		for (Map.Entry<String, Integer> entry : chatWorlds.entrySet())
 		{
-			if (!seen.add(PlayerNames.normalize(entry.getKey()))) continue;
+			if (!seen.add(PlayerNames.key(entry.getKey()))) continue;
 			JsonObject member = new JsonObject();
 			member.addProperty("displayName", entry.getKey());
 			if (entry.getValue() > 0) member.addProperty("world", entry.getValue());
@@ -224,7 +215,7 @@ final class TsgHubPresence
 		List<JsonObject> offline = new ArrayList<>();
 		for (String name : clanNames)
 		{
-			if (!seen.add(PlayerNames.normalize(name))) continue;
+			if (!seen.add(PlayerNames.key(name))) continue;
 			JsonObject member = new JsonObject();
 			member.addProperty("displayName", name);
 			offline.add(member);
@@ -234,11 +225,11 @@ final class TsgHubPresence
 
 	private static JsonArray sorted(List<JsonObject> members, Map<String, JsonObject> notes)
 	{
-		members.sort(Comparator.comparing(m -> TsgHubUi.str(m, "displayName").toLowerCase(Locale.ROOT)));
+		members.sort(Comparator.comparing(m -> TsgHubJson.str(m, "displayName").toLowerCase(Locale.ROOT)));
 		JsonArray out = new JsonArray();
 		for (JsonObject member : members)
 		{
-			JsonObject note = notes.get(PlayerNames.normalize(TsgHubUi.str(member, "displayName")));
+			JsonObject note = notes.get(PlayerNames.key(TsgHubJson.str(member, "displayName")));
 			if (note != null)
 			{
 				for (String field : new String[] {"altOf", "alts", "note", "lastSeenAt", "warnings", "accountType", "previousNames"})
@@ -288,16 +279,16 @@ final class TsgHubPresence
 		String token = key.get();
 		if (token.isEmpty() || executor.isShutdown()) return;
 		plugin.ui(s -> s.setBusy(true));
-		executor.submit(() -> {
+		api.get().call(method, path, token, body).whenCompleteAsync((response, error) -> {
 			try
 			{
-				api.get().request(method, path, token, body);
+				TsgHubApi.result(response, error);
 				plugin.ui(s -> s.setStatus(success, Tone.SUCCESS));
 				loadMembers(true);
 			}
-			catch (Exception e) { plugin.ui(s -> s.setStatus("Couldn't save. " + TsgHubUi.friendlyError(e), Tone.ERROR)); }
+			catch (Exception e) { plugin.ui(s -> s.setStatus("Couldn't save. " + TsgHubFormat.friendlyError(e), Tone.ERROR)); }
 			finally { plugin.ui(s -> s.setBusy(false)); }
-		});
+		}, executor);
 	}
 
 	void autoRefresh()
@@ -313,14 +304,13 @@ final class TsgHubPresence
 		for (int i = 0; i < members.size(); i++)
 		{
 			JsonObject member = members.get(i).getAsJsonObject();
-			ClanMember found = settings.findMember(TsgHubUi.str(member, "displayName"));
+			ClanMember found = settings.findMember(TsgHubJson.str(member, "displayName"));
 			if (found == null || found.getRank() == null) continue;
 			ClanTitle title = settings.titleForRank(found.getRank());
 			if (title == null) continue;
 			if (title.getName() != null) member.addProperty("rank", title.getName());
 			member.addProperty("rankId", title.getId());
-			BufferedImage icon = chatIcons.getRankImage(title);
-			if (icon != null) rankIcons.put(title.getId(), icon);
+			rankIcons.load(title);
 		}
 	}
 
@@ -337,12 +327,12 @@ final class TsgHubPresence
 
 	BufferedImage nameIcon(JsonObject member)
 	{
-		BufferedImage rank = member.has("rankId") ? rankIcons.get(TsgHubUi.integer(member, "rankId", 0)) : null;
+		BufferedImage rank = member.has("rankId") && rankIcons != null ? rankIcons.get(TsgHubJson.integer(member, "rankId", 0)) : null;
 		int type = accountType(member);
 		BufferedImage account = accountIcons.get(type);
 		if (account == null) return rank;
 		if (rank == null) return account;
-		return nameIcons.computeIfAbsent(TsgHubUi.integer(member, "rankId", 0) + ":" + type, k -> sideBySide(rank, account));
+		return nameIcons.computeIfAbsent(TsgHubJson.integer(member, "rankId", 0) + ":" + type, k -> sideBySide(rank, account));
 	}
 
 	private static BufferedImage sideBySide(BufferedImage left, BufferedImage right)
@@ -357,7 +347,7 @@ final class TsgHubPresence
 
 	static int accountType(JsonObject member)
 	{
-		int type = TsgHubUi.integer(member, "accountType", 0);
+		int type = TsgHubJson.integer(member, "accountType", 0);
 		return type > 0 && type < ACCOUNT_ICONS.length ? type : 0;
 	}
 
@@ -461,7 +451,7 @@ final class TsgHubPresence
 	{
 		listed = payload;
 		sentAt = now;
-		if (!socket.presence(payload) && !executor.isShutdown()) executor.submit(() -> post("/v1/presence", payload));
+		if (!socket.presence(payload)) api.get().call("POST", "/v1/presence", null, payload);
 	}
 
 	private JsonObject leaveBody()
@@ -474,11 +464,5 @@ final class TsgHubPresence
 		body.add("clanName", current.get("clanName"));
 		body.add("accountHash", current.get("accountHash"));
 		return body;
-	}
-
-	private void post(String path, JsonObject body)
-	{
-		try { api.get().request("POST", path, null, body); }
-		catch (Exception ignored) { }
 	}
 }

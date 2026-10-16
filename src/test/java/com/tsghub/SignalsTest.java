@@ -5,15 +5,16 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -25,10 +26,17 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 import okio.Buffer;
 import org.junit.After;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class SignalsTest
 {
+	@BeforeClass
+	public static void rules()
+	{
+		TsgHubRules.loadBundled(new Gson());
+	}
+
 	private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 	private final List<JsonObject> posted = new ArrayList<>();
 	private final List<JsonObject> received = new ArrayList<>();
@@ -55,8 +63,8 @@ public class SignalsTest
 			return new Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(code).message("")
 				.body(ResponseBody.create(MediaType.get("application/json"), reply)).build();
 		}).build();
-		TsgHubSocket socket = new TsgHubSocket(http, "https://hub.test", executor, null);
-		TsgHubApi api = new TsgHubApi(http, "https://hub.test");
+		TsgHubSocket socket = new TsgHubSocket(http, new Gson(), "https://hub.test", executor, null);
+		TsgHubApi api = new TsgHubApi(http, new Gson(), "https://hub.test");
 		return new TsgHubSignals(socket, () -> api, received::add);
 	}
 
@@ -88,7 +96,7 @@ public class SignalsTest
 	@Test
 	public void socketSendFallsBackWhenNotReady()
 	{
-		TsgHubSocket socket = new TsgHubSocket(new OkHttpClient(), "https://hub.test", executor, null);
+		TsgHubSocket socket = new TsgHubSocket(new OkHttpClient(), new Gson(), "https://hub.test", executor, null);
 		JsonObject body = new JsonObject();
 		body.addProperty("message", "Bob received a drop: Abyssal whip");
 		assertFalse(socket.send("drop", body));
@@ -105,7 +113,7 @@ public class SignalsTest
 			TsgHubRules.save(server, cache);
 			restoreBundled();
 			assertEquals("", TsgHubRules.get().version);
-			TsgHubRules.loadCached(cache);
+			TsgHubRules.loadCached(cache, new Gson());
 			assertEquals("v2", TsgHubRules.get().version);
 			assertTrue(TsgHubRules.get().chat.contains("you catch"));
 		}
@@ -149,7 +157,7 @@ public class SignalsTest
 		cache.write("{\"plugin\":\"0.0.1\",\"rules\":{\"version\":\"old\"}}");
 		try
 		{
-			TsgHubRules.loadCached(cache);
+			TsgHubRules.loadCached(cache, new Gson());
 			assertEquals("", TsgHubRules.get().version);
 			assertTrue(TsgHubRules.get().petMessages.contains("you feel something weird sneaking into your backpack"));
 		}

@@ -77,6 +77,8 @@ public final class GroupTracker
 		.build();
 	private static final long IDLE_MINUTES = 30;
 	public static final int KEEPALIVE_SECONDS = 30;
+	private static final int PRAYER_REFRESH_TICKS = 100;
+	private static final Set<Integer> PRAYER_VARBITS = prayerVarbits();
 
 	// Member callbacks run on the Swing thread.
 	public interface Listener
@@ -105,6 +107,7 @@ public final class GroupTracker
 
 	private final Map<Long, PartyPlayer> partyMembers = new ConcurrentHashMap<>();
 	private volatile PartyPlayer myPlayer;
+	private boolean prayersDirty = true;
 	private volatile PartyPlayer selfView;
 	private volatile Instant lastLogout = Instant.now();
 	private TsgGroupUpdate currentChange = new TsgGroupUpdate();
@@ -133,7 +136,7 @@ public final class GroupTracker
 
 	public void stop()
 	{
-		if (isSharing() && myPlayer != null)
+		if (isSharing() && myPlayer != null && partyService.getLocalMember() != null)
 		{
 			final TsgGroupUpdate clean = partyPlayerAsBatchedChange();
 			clean.setI(new int[0]);
@@ -308,13 +311,14 @@ public final class GroupTracker
 			myPlayer.setPrayers(new Prayers(client));
 			prayersChanged = true;
 		}
-		else
+		else if (prayersDirty || client.getTickCount() % PRAYER_REFRESH_TICKS == 0)
 		{
 			for (final PrayerSprites p : PrayerSprites.values())
 			{
 				prayersChanged = myPlayer.getPrayers().updatePrayerState(p, client) || prayersChanged;
 			}
 		}
+		prayersDirty = false;
 		// Unlisted prayers count as off, so send all three sets together.
 		if (prayersChanged) setPrayers(currentChange);
 
@@ -340,6 +344,7 @@ public final class GroupTracker
 	@Subscribe
 	public void onStatChanged(final StatChanged event)
 	{
+		if (event.getSkill() == Skill.PRAYER) prayersDirty = true;
 		if (myPlayer == null || myPlayer.getStats() == null || !isSharing()) return;
 
 		// Store the real level as virtual so the display setting can change later.
@@ -414,6 +419,11 @@ public final class GroupTracker
 	@Subscribe
 	public void onVarbitChanged(final VarbitChanged event)
 	{
+		if (PRAYER_VARBITS.contains(event.getVarbitId())) prayersDirty = true;
+		if ((event.getVarbitId() == VarbitID.PRAYER_DEADEYE_UNLOCKED || event.getVarbitId() == VarbitID.PRAYER_MYSTIC_VIGOUR_UNLOCKED) && myPlayer != null && myPlayer.getPrayers() != null)
+		{
+			myPlayer.getPrayers().resetPrayerIds();
+		}
 		if (myPlayer == null || myPlayer.getStats() == null || !isSharing()) return;
 
 		final int specialPercent = client.getVarpValue(VarPlayerID.SA_ENERGY) / 10;
@@ -645,6 +655,14 @@ public final class GroupTracker
 		c.setMemberId(partyService.getLocalMember().getMemberId());
 		c.removeDefaults();
 		return c;
+	}
+
+	private static Set<Integer> prayerVarbits()
+	{
+		ImmutableSet.Builder<Integer> varbits = ImmutableSet.builder();
+		for (final Prayer p : Prayer.values()) varbits.add(p.getVarbit());
+		varbits.add(VarbitID.PRAYER_DEADEYE_UNLOCKED, VarbitID.PRAYER_MYSTIC_VIGOUR_UNLOCKED);
+		return varbits.build();
 	}
 
 	private static int messageFreq(int partySize)

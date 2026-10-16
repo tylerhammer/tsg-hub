@@ -1,8 +1,8 @@
 package com.tsghub;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -38,40 +38,41 @@ final class TsgHubRules
 	final Map<String, String> bosses;
 	final Map<Integer, AreaNames.Area> areas;
 
-	private static volatile TsgHubRules current = bundled();
+	private static final TsgHubRules EMPTY = new TsgHubRules(new JsonObject());
+	private static volatile TsgHubRules current = EMPTY;
 
 	private TsgHubRules(JsonObject json)
 	{
-		version = TsgHubUi.str(json, "version");
+		version = TsgHubJson.str(json, "version");
 		chat = strings(json, "chat");
 		players = strings(json, "players");
 		dropKeywords = strings(json, "dropKeywords");
 		petMessages = strings(json, "petMessages");
 		dropContext = strings(json, "dropContext");
 		groupContent = strings(json, "groupContent");
-		dropDelayMs = json.has("dropDelayMs") && json.get("dropDelayMs").isJsonPrimitive() ? json.get("dropDelayMs").getAsInt() : 1200;
-		dropContextTicks = json.has("dropContextTicks") && json.get("dropContextTicks").isJsonPrimitive() ? json.get("dropContextTicks").getAsInt() : 50;
-		dropContextKeep = json.has("dropContextKeep") && json.get("dropContextKeep").isJsonPrimitive() ? json.get("dropContextKeep").getAsInt() : 16;
-		JsonObject skilling = json.has("skilling") && json.get("skilling").isJsonObject() ? json.getAsJsonObject("skilling") : new JsonObject();
-		skillingDrops = skilling.has("minDrops") && skilling.get("minDrops").isJsonPrimitive() ? skilling.get("minDrops").getAsInt() : 3;
-		skillingWindowMillis = skilling.has("windowMillis") && skilling.get("windowMillis").isJsonPrimitive() ? skilling.get("windowMillis").getAsLong() : 120_000;
+		dropDelayMs = TsgHubJson.integer(json, "dropDelayMs", 1200);
+		dropContextTicks = TsgHubJson.integer(json, "dropContextTicks", 50);
+		dropContextKeep = TsgHubJson.integer(json, "dropContextKeep", 16);
+		JsonObject skilling = TsgHubJson.object(json, "skilling");
+		skillingDrops = TsgHubJson.integer(skilling, "minDrops", 3);
+		skillingWindowMillis = TsgHubJson.longValue(skilling, "windowMillis", 120_000);
 		pets = ints(json, "pets");
 		rewardInterfaces = ints(json, "rewardInterfaces");
 		Map<String, String> bossNames = new HashMap<>();
-		for (JsonObject boss : TsgHubUi.objects(TsgHubUi.array(json, "bosses")))
+		for (JsonObject boss : TsgHubJson.objects(TsgHubJson.array(json, "bosses")))
 		{
-			String name = TsgHubUi.str(boss, "name");
-			for (JsonElement npc : TsgHubUi.array(boss, "npcs")) bossNames.put(npc.getAsString().trim().toLowerCase(Locale.ROOT), name);
+			String name = TsgHubJson.str(boss, "name");
+			for (JsonElement npc : TsgHubJson.array(boss, "npcs")) bossNames.put(npc.getAsString().trim().toLowerCase(Locale.ROOT), name);
 		}
 		bosses = Collections.unmodifiableMap(bossNames);
 		Map<Integer, AreaNames.Area> regions = new HashMap<>();
-		for (JsonObject area : TsgHubUi.objects(TsgHubUi.array(json, "areas")))
+		for (JsonObject area : TsgHubJson.objects(TsgHubJson.array(json, "areas")))
 		{
 			AreaNames.Type type;
-			try { type = AreaNames.Type.valueOf(TsgHubUi.str(area, "type")); }
+			try { type = AreaNames.Type.valueOf(TsgHubJson.str(area, "type")); }
 			catch (IllegalArgumentException e) { continue; }
-			AreaNames.Area named = new AreaNames.Area(TsgHubUi.str(area, "name"), type);
-			for (JsonElement region : TsgHubUi.array(area, "regions")) regions.putIfAbsent(region.getAsInt(), named);
+			AreaNames.Area named = new AreaNames.Area(TsgHubJson.str(area, "name"), type);
+			for (JsonElement region : TsgHubJson.array(area, "regions")) regions.putIfAbsent(region.getAsInt(), named);
 		}
 		areas = Collections.unmodifiableMap(regions);
 	}
@@ -95,13 +96,18 @@ final class TsgHubRules
 		}
 	}
 
-	static void loadCached(Filepath cache)
+	static void reset()
+	{
+		current = EMPTY;
+	}
+
+	static void loadCached(Filepath cache, Gson gson)
 	{
 		if (cache == null || !cache.exists()) return;
 		try (Reader reader = cache.openReader())
 		{
-			JsonObject saved = new JsonParser().parse(reader).getAsJsonObject();
-			if (TsgHubVersion.VERSION.equals(TsgHubUi.str(saved, "plugin")) && saved.has("rules") && saved.get("rules").isJsonObject()) apply(saved.getAsJsonObject("rules"));
+			JsonObject saved = gson.fromJson(reader, JsonObject.class);
+			if (TsgHubVersion.VERSION.equals(TsgHubJson.str(saved, "plugin")) && saved.has("rules") && saved.get("rules").isJsonObject()) apply(saved.getAsJsonObject("rules"));
 		}
 		catch (Exception e) { log.debug("TSG Hub cached rules unreadable", e); }
 	}
@@ -120,32 +126,28 @@ final class TsgHubRules
 		catch (Exception e) { log.debug("TSG Hub rules cache not written", e); }
 	}
 
-	private static TsgHubRules bundled()
+	static void loadBundled(Gson gson)
 	{
 		InputStream in = TsgHubRules.class.getResourceAsStream("rules.json");
-		if (in == null) return new TsgHubRules(new JsonObject());
+		if (in == null) return;
 		try (InputStreamReader reader = new InputStreamReader(in, StandardCharsets.UTF_8))
 		{
-			return new TsgHubRules(new JsonParser().parse(reader).getAsJsonObject());
+			apply(gson.fromJson(reader, JsonObject.class));
 		}
-		catch (Exception e)
-		{
-			log.debug("TSG Hub bundled rules unreadable", e);
-			return new TsgHubRules(new JsonObject());
-		}
+		catch (Exception e) { log.debug("TSG Hub bundled rules unreadable", e); }
 	}
 
 	private static List<String> strings(JsonObject json, String key)
 	{
 		List<String> out = new ArrayList<>();
-		for (JsonElement value : TsgHubUi.array(json, key)) out.add(value.getAsString().toLowerCase(Locale.ROOT));
+		for (JsonElement value : TsgHubJson.array(json, key)) out.add(value.getAsString().toLowerCase(Locale.ROOT));
 		return Collections.unmodifiableList(out);
 	}
 
 	private static Set<Integer> ints(JsonObject json, String key)
 	{
 		Set<Integer> out = new HashSet<>();
-		for (JsonElement value : TsgHubUi.array(json, key)) out.add(value.getAsInt());
+		for (JsonElement value : TsgHubJson.array(json, key)) out.add(value.getAsInt());
 		return Collections.unmodifiableSet(out);
 	}
 }

@@ -13,7 +13,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -25,7 +24,6 @@ import net.runelite.api.clan.ClanRank;
 import net.runelite.api.clan.ClanSettings;
 import net.runelite.api.clan.ClanTitle;
 import net.runelite.client.callback.ClientThread;
-import net.runelite.client.game.ChatIconManager;
 import net.runelite.client.util.Text;
 
 final class TsgHubActivity
@@ -64,32 +62,32 @@ final class TsgHubActivity
 
 		Instant lastSeen()
 		{
-			return stats == null ? null : TsgHubUi.instant(TsgHubUi.str(stats, "lastSeenAt"));
+			return stats == null ? null : TsgHubJson.instant(TsgHubJson.str(stats, "lastSeenAt"));
 		}
 
 		int stat(String key)
 		{
-			return stats == null ? -1 : TsgHubUi.integer(stats, key, 0);
+			return stats == null ? -1 : TsgHubJson.integer(stats, key, 0);
 		}
 
 		String version()
 		{
-			return TsgHubUi.str(stats, "pluginVersion");
+			return TsgHubJson.str(stats, "pluginVersion");
 		}
 
 		boolean outdated()
 		{
-			return TsgHubUi.bool(stats, "outdated");
+			return TsgHubJson.bool(stats, "outdated");
 		}
 
 		boolean discordLinked()
 		{
-			return TsgHubUi.bool(stats, "discordLinked");
+			return TsgHubJson.bool(stats, "discordLinked");
 		}
 
 		List<String> previousNames()
 		{
-			return TsgHubUi.strings(TsgHubUi.array(stats, "previousNames"));
+			return TsgHubJson.strings(TsgHubJson.array(stats, "previousNames"));
 		}
 
 		boolean inactive(Instant now, int thresholdDays)
@@ -136,20 +134,19 @@ final class TsgHubActivity
 	private final TsgHubPlugin plugin;
 	private final Client client;
 	private final ClientThread clientThread;
-	private final ChatIconManager chatIcons;
+	private final TsgHubRankIcons rankIcons;
 	private final ScheduledExecutorService executor;
 	private final Supplier<TsgHubApi> api;
 	private final Supplier<TsgHubActivityPanel> panel;
-	private final Map<Integer, BufferedImage> rankIcons = new ConcurrentHashMap<>();
 	private final AtomicInteger requests = new AtomicInteger();
 
-	TsgHubActivity(TsgHubPlugin plugin, Client client, ClientThread clientThread, ChatIconManager chatIcons, ScheduledExecutorService executor,
+	TsgHubActivity(TsgHubPlugin plugin, Client client, ClientThread clientThread, TsgHubRankIcons rankIcons, ScheduledExecutorService executor,
 		Supplier<TsgHubApi> api, Supplier<TsgHubActivityPanel> panel)
 	{
 		this.plugin = plugin;
 		this.client = client;
 		this.clientThread = clientThread;
-		this.chatIcons = chatIcons;
+		this.rankIcons = rankIcons;
 		this.executor = executor;
 		this.api = api;
 		this.panel = panel;
@@ -177,23 +174,23 @@ final class TsgHubActivity
 		int request = requests.incrementAndGet();
 		String query = "/v1/admin/activity?clanName=" + TsgHubApi.encode(plugin.getDetectedClanName()) + "&days=" + days;
 		ui(p -> p.setStatus("Loading clan activity...", Tone.INFO));
-		executor.submit(() -> {
+		api.get().call("GET", query, token, null).whenCompleteAsync((response, error) -> {
 			try
 			{
-				JsonObject result = api.get().request("GET", query, token, null);
+				JsonObject result = TsgHubApi.result(response, error);
 				clientThread.invokeLater(() -> {
 					List<Member> clan = clanMembers();
-					Snapshot snapshot = new Snapshot(merge(clan, TsgHubUi.array(result, "members")), TsgHubUi.integer(result, "days", days),
-						TsgHubUi.integer(result, "eventsInWindow", 0), TsgHubUi.str(result, "latestVersion"), clan != null);
+					Snapshot snapshot = new Snapshot(merge(clan, TsgHubJson.array(result, "members")), TsgHubJson.integer(result, "days", days),
+						TsgHubJson.integer(result, "eventsInWindow", 0), TsgHubJson.str(result, "latestVersion"), clan != null);
 					ui(p -> { if (request == requests.get()) p.setActivity(snapshot); });
 				});
 			}
 			catch (Exception e)
 			{
-				String message = "Couldn't load clan activity. " + TsgHubUi.friendlyError(e);
+				String message = "Couldn't load clan activity. " + TsgHubFormat.friendlyError(e);
 				ui(p -> { if (request == requests.get()) p.failed(message); });
 			}
-		});
+		}, executor);
 	}
 
 	void loadMember(String name, int days, Consumer<JsonObject> loaded, Consumer<String> failed)
@@ -211,28 +208,28 @@ final class TsgHubActivity
 		}
 		String query = "/v1/admin/activity/member?clanName=" + TsgHubApi.encode(plugin.getDetectedClanName())
 			+ "&name=" + TsgHubApi.encode(name) + "&days=" + TsgHubActivityDetail.ActivityChart.requestDays(days);
-		executor.submit(() -> {
+		api.get().call("GET", query, token, null).whenCompleteAsync((response, error) -> {
 			try
 			{
-				JsonObject result = api.get().request("GET", query, token, null);
+				JsonObject result = TsgHubApi.result(response, error);
 				SwingUtilities.invokeLater(() -> loaded.accept(result));
 			}
 			catch (TsgHubApi.HttpError e)
 			{
-				String message = e.status == 404 ? name + " has no TSG Hub activity yet." : "Couldn't load " + name + ". " + TsgHubUi.friendlyError(e);
+				String message = e.status == 404 ? name + " has no TSG Hub activity yet." : "Couldn't load " + name + ". " + TsgHubFormat.friendlyError(e);
 				SwingUtilities.invokeLater(() -> failed.accept(message));
 			}
 			catch (Exception e)
 			{
-				String message = "Couldn't load " + name + ". " + TsgHubUi.friendlyError(e);
+				String message = "Couldn't load " + name + ". " + TsgHubFormat.friendlyError(e);
 				SwingUtilities.invokeLater(() -> failed.accept(message));
 			}
-		});
+		}, executor);
 	}
 
 	BufferedImage rankIcon(int rankId)
 	{
-		return rankIcons.get(rankId);
+		return rankIcons == null ? null : rankIcons.get(rankId);
 	}
 
 	private void ui(Consumer<TsgHubActivityPanel> action)
@@ -253,11 +250,7 @@ final class TsgHubActivity
 			if (member == null || member.getName() == null) continue;
 			ClanRank rank = member.getRank();
 			ClanTitle title = rank == null ? null : settings.titleForRank(rank);
-			if (title != null && !rankIcons.containsKey(title.getId()))
-			{
-				BufferedImage icon = chatIcons.getRankImage(title);
-				if (icon != null) rankIcons.put(title.getId(), icon);
-			}
+			rankIcons.load(title);
 			members.add(new Member(Text.toJagexName(member.getName()), title == null || title.getName() == null ? "" : title.getName(),
 				rank == null ? NO_RANK : rank.getRank(), title == null ? -1 : title.getId(), member.getJoinDate(), null));
 		}
@@ -271,27 +264,27 @@ final class TsgHubActivity
 		List<Member> out = new ArrayList<>();
 		if (clan == null)
 		{
-			for (JsonObject stats : records) out.add(new Member(TsgHubUi.str(stats, "displayName"), "", NO_RANK, -1, null, stats));
+			for (JsonObject stats : records) out.add(new Member(TsgHubJson.str(stats, "displayName"), "", NO_RANK, -1, null, stats));
 			return out;
 		}
 		Set<String> clanNames = new HashSet<>();
-		for (Member member : clan) clanNames.add(PlayerNames.canonical(member.name));
+		for (Member member : clan) clanNames.add(PlayerNames.key(member.name));
 		Map<String, JsonObject> current = new HashMap<>();
 		Map<String, JsonObject> previous = new HashMap<>();
 		for (JsonObject stats : records)
 		{
-			String key = PlayerNames.canonical(TsgHubUi.str(stats, "displayName"));
+			String key = PlayerNames.key(TsgHubJson.str(stats, "displayName"));
 			if (!key.isEmpty()) current.putIfAbsent(key, stats);
 			if (clanNames.contains(key)) continue;
-			for (String old : TsgHubUi.strings(TsgHubUi.array(stats, "previousNames")))
+			for (String old : TsgHubJson.strings(TsgHubJson.array(stats, "previousNames")))
 			{
-				String oldKey = PlayerNames.canonical(old);
+				String oldKey = PlayerNames.key(old);
 				if (!oldKey.isEmpty()) previous.putIfAbsent(oldKey, stats);
 			}
 		}
 		for (Member member : clan)
 		{
-			String key = PlayerNames.canonical(member.name);
+			String key = PlayerNames.key(member.name);
 			JsonObject stats = current.get(key);
 			out.add(member.withStats(stats != null ? stats : previous.get(key)));
 		}
@@ -338,14 +331,6 @@ final class TsgHubActivity
 
 	static String ago(Instant when, Instant now)
 	{
-		if (when == null) return "never";
-		long minutes = Math.max(0, Duration.between(when, now).toMinutes());
-		if (minutes < 1) return "just now";
-		if (minutes < 60) return minutes + "m ago";
-		long hours = minutes / 60;
-		if (hours < 24) return hours + "h ago";
-		long days = hours / 24;
-		if (days < 60) return days + "d ago";
-		return days / 30 + "mo ago";
+		return when == null ? "never" : TsgHubFormat.ago(when, now);
 	}
 }

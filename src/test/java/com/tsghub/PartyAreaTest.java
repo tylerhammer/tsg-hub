@@ -4,14 +4,22 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import net.runelite.api.Skill;
 import net.runelite.api.coords.WorldPoint;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class PartyAreaTest
 {
+	@BeforeClass
+	public static void rules()
+	{
+		TsgHubRules.loadBundled(new Gson());
+	}
+
 	@Test
 	public void wildernessLevel()
 	{

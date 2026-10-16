@@ -5,7 +5,6 @@ import com.google.gson.JsonObject;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -18,28 +17,25 @@ import lombok.extern.slf4j.Slf4j;
 final class TsgHubSignals
 {
 	private static final long RETRY_MILLIS = 10_000;
-	private static final long MAX_AGE_MILLIS = 600_000;
-	private static final int MAX_PENDING = 200;
 	private static final int MAX_BATCH = 50;
 
-	private static final class Pending
+	private static final class Pending extends TsgHubOutbox.Item
 	{
 		final JsonObject message;
-		final long createdAt;
 		final Set<String> deliveredTo = new HashSet<>();
 		long sentAt;
 
 		Pending(JsonObject message, long now)
 		{
+			super(now);
 			this.message = message;
-			this.createdAt = now;
 		}
 	}
 
 	private final TsgHubSocket socket;
 	private final Supplier<TsgHubApi> api;
 	private final Consumer<JsonObject> receiver;
-	private final Map<String, Pending> pending = new LinkedHashMap<>();
+	private final TsgHubOutbox<Pending> pending = new TsgHubOutbox<>();
 	private final Map<String, Integer> offlineXp = new HashMap<>();
 
 	TsgHubSignals(TsgHubSocket socket, Supplier<TsgHubApi> api, Consumer<JsonObject> receiver)
@@ -78,8 +74,7 @@ final class TsgHubSignals
 		Pending entry = new Pending(message, now);
 		synchronized (this)
 		{
-			pending.put(message.get("id").getAsString(), entry);
-			while (pending.size() > MAX_PENDING) pending.remove(pending.keySet().iterator().next());
+			pending.add(message.get("id").getAsString(), entry);
 			if (socket.sendSignal(message)) entry.sentAt = now;
 		}
 	}
@@ -114,7 +109,7 @@ final class TsgHubSignals
 		List<Pending> entries = new ArrayList<>();
 		synchronized (this)
 		{
-			pending.values().removeIf(entry -> now - entry.createdAt > MAX_AGE_MILLIS);
+			pending.expire(now);
 			if (socket.signaling())
 			{
 				offlineXp.clear();
@@ -159,7 +154,7 @@ final class TsgHubSignals
 			{
 				JsonObject result = api.get().request("POST", "/v1/events/" + event.getKey() + "/signals", event.getValue(), body);
 				delivered(undelivered, event.getKey());
-				for (JsonObject message : TsgHubUi.objects(TsgHubUi.array(result, "messages"))) receiver.accept(message);
+				for (JsonObject message : TsgHubJson.objects(TsgHubJson.array(result, "messages"))) receiver.accept(message);
 			}
 			catch (TsgHubApi.HttpError e)
 			{

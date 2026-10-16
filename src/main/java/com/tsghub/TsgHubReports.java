@@ -2,9 +2,7 @@ package com.tsghub;
 
 import com.google.gson.JsonObject;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.BiPredicate;
 import java.util.function.LongSupplier;
 import lombok.extern.slf4j.Slf4j;
@@ -13,29 +11,26 @@ import lombok.extern.slf4j.Slf4j;
 final class TsgHubReports
 {
 	static final long RETRY_MILLIS = 10_000;
-	static final long MAX_AGE_MILLIS = 600_000;
-	static final int MAX_PENDING = 200;
 
 	interface Poster
 	{
 		void post(String path, JsonObject body) throws Exception;
 	}
 
-	private static final class Pending
+	private static final class Pending extends TsgHubOutbox.Item
 	{
 		final String type;
 		final String path;
 		final JsonObject body;
-		final long createdAt;
 		long nextAt;
 		boolean socketTried;
 
 		Pending(String type, String path, JsonObject body, long now)
 		{
+			super(now);
 			this.type = type;
 			this.path = path;
 			this.body = body;
-			this.createdAt = now;
 			this.nextAt = now;
 		}
 	}
@@ -43,7 +38,7 @@ final class TsgHubReports
 	private final BiPredicate<String, JsonObject> socket;
 	private final Poster poster;
 	private final LongSupplier clock;
-	private final Map<String, Pending> pending = new LinkedHashMap<>();
+	private final TsgHubOutbox<Pending> pending = new TsgHubOutbox<>();
 
 	TsgHubReports(BiPredicate<String, JsonObject> socket, Poster poster)
 	{
@@ -62,8 +57,7 @@ final class TsgHubReports
 		if (!body.has("id")) body.addProperty("id", TsgHubSignals.newId());
 		long now = clock.getAsLong();
 		Pending entry = new Pending(type, path, body, now);
-		pending.put(body.get("id").getAsString(), entry);
-		while (pending.size() > MAX_PENDING) pending.remove(pending.keySet().iterator().next());
+		pending.add(body.get("id").getAsString(), entry);
 		return sendSocket(entry, now);
 	}
 
@@ -102,7 +96,7 @@ final class TsgHubReports
 		List<Pending> due = new ArrayList<>();
 		synchronized (this)
 		{
-			pending.values().removeIf(entry -> now - entry.createdAt > MAX_AGE_MILLIS);
+			pending.expire(now);
 			for (Pending entry : pending.values())
 			{
 				if (entry.nextAt > now || (!entry.socketTried && sendSocket(entry, now))) continue;

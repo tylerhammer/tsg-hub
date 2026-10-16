@@ -66,8 +66,8 @@ public final class GroupMembersPanel extends JPanel
 
 	public void setOrder(List<String> names)
 	{
-		List<String> keys = preferred.stream().filter(k -> names.stream().anyMatch(n -> PlayerNames.normalize(n).equals(k))).collect(Collectors.toList());
-		names.stream().map(PlayerNames::normalize).filter(k -> !keys.contains(k)).forEach(keys::add);
+		List<String> keys = preferred.stream().filter(k -> names.stream().anyMatch(n -> PlayerNames.key(n).equals(k))).collect(Collectors.toList());
+		names.stream().map(PlayerNames::key).filter(k -> !keys.contains(k)).forEach(keys::add);
 		if (keys.equals(order)) return;
 		order = keys;
 		rebuild();
@@ -178,7 +178,7 @@ public final class GroupMembersPanel extends JPanel
 	private boolean inRoster(PartyPlayer player)
 	{
 		if (player.getMember().getMemberId() == selfId || order.isEmpty() || Strings.isNullOrEmpty(player.getUsername())) return true;
-		return order.contains(PlayerNames.normalize(player.getUsername()));
+		return order.contains(PlayerNames.key(player.getUsername()));
 	}
 
 	private static boolean isOffline(PartyPlayer player)
@@ -188,7 +188,7 @@ public final class GroupMembersPanel extends JPanel
 
 	private int position(PartyPlayer player)
 	{
-		int index = Strings.isNullOrEmpty(player.getUsername()) ? -1 : order.indexOf(PlayerNames.normalize(player.getUsername()));
+		int index = Strings.isNullOrEmpty(player.getUsername()) ? -1 : order.indexOf(PlayerNames.key(player.getUsername()));
 		return index < 0 ? Integer.MAX_VALUE : index;
 	}
 
@@ -216,7 +216,7 @@ public final class GroupMembersPanel extends JPanel
 		PartyPlayer player = players.get(id);
 		if (player == null) return;
 		String username = player.getUsername();
-		int index = Strings.isNullOrEmpty(username) ? -1 : order.indexOf(PlayerNames.normalize(username));
+		int index = Strings.isNullOrEmpty(username) ? -1 : order.indexOf(PlayerNames.key(username));
 		JPopupMenu menu = new JPopupMenu();
 		if (index >= 0 && order.size() >= 2)
 		{

@@ -1,5 +1,6 @@
 package com.tsghub;
 
+import static com.tsghub.TsgHubHtml.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 
@@ -88,7 +89,7 @@ final class TsgHubHiscores
 	static String subtitle(HiscoreResult result)
 	{
 		int total = level(result, HiscoreSkill.OVERALL);
-		return "Combat " + combatLevel(result) + (total > 0 ? " · Total " + String.format("%,d", total) : "");
+		return "Combat " + combatLevel(result) + (total > 0 ? " · Total " + TsgHubFormat.number(total) : "");
 	}
 
 	static JPanel skillGrid(HiscoreResult result)
@@ -118,12 +119,12 @@ final class TsgHubHiscores
 		JPanel row = card();
 		Skill overall = result.getSkill(HiscoreSkill.OVERALL);
 		int total = overall == null ? -1 : overall.getLevel();
-		JLabel left = label("Total " + (total > 0 ? String.format("%,d", total) : "--"), TEXT, boldFont());
+		JLabel left = label("Total " + (total > 0 ? TsgHubFormat.number(total) : "--"), TEXT, boldFont());
 		left.setIcon(skillIcon(HiscoreSkill.OVERALL));
 		left.setIconTextGap(6);
 		row.add(left, BorderLayout.CENTER);
 		if (overall != null && overall.getExperience() > 0)
-			row.add(label(String.format("%,d xp", overall.getExperience()), MUTED, smallFont()), BorderLayout.EAST);
+			row.add(label(TsgHubFormat.number(overall.getExperience()) + " xp", MUTED, smallFont()), BorderLayout.EAST);
 		row.setToolTipText(skillTip(overall, "Overall"));
 		return fitHeight(row);
 	}
@@ -143,7 +144,7 @@ final class TsgHubHiscores
 		}
 		row.add(icon, BorderLayout.WEST);
 		row.add(name, BorderLayout.CENTER);
-		row.add(label(String.format("%,d", level(result, skill)), ACCENT, smallFont()), BorderLayout.EAST);
+		row.add(label(TsgHubFormat.number(level(result, skill)), ACCENT, smallFont()), BorderLayout.EAST);
 		row.setToolTipText(skillTip(result.getSkill(skill), skill.getName()));
 		return fitHeight(row);
 	}
@@ -151,8 +152,8 @@ final class TsgHubHiscores
 	private static String skillTip(Skill skill, String name)
 	{
 		if (skill == null || skill.getRank() <= 0) return "<html><b>" + escape(name) + "</b><br>Not ranked</html>";
-		String detail = skill.getExperience() >= 0 ? "XP: " + String.format("%,d", skill.getExperience()) + "<br>" : "";
-		return "<html><b>" + escape(name) + "</b><br>" + detail + "Rank: " + String.format("%,d", skill.getRank()) + "</html>";
+		String detail = skill.getExperience() >= 0 ? "XP: " + TsgHubFormat.number(skill.getExperience()) + "<br>" : "";
+		return "<html><b>" + escape(name) + "</b><br>" + detail + "Rank: " + TsgHubFormat.number(skill.getRank()) + "</html>";
 	}
 
 	private static synchronized ImageIcon skillIcon(HiscoreSkill skill)

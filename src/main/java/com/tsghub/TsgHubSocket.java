@@ -3,7 +3,7 @@ package com.tsghub;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.Gson;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -51,13 +51,15 @@ final class TsgHubSocket
 		void onReply(JsonObject message);
 
 		void onXpRequest(String skills);
+
+		void onGroupHeartbeat(JsonObject message);
+
+		void onGroupRejected(int status);
 	}
 
 	private static final int CLOSE_NORMAL = 1000;
 	private static final int CLOSE_GOING_AWAY = 1001;
 	private static final long PING_SECONDS = 30;
-	private static final long MIN_BACKOFF_MILLIS = 1_000;
-	private static final long MAX_BACKOFF_MILLIS = 60_000;
 	private static final long RESTART_MIN_MILLIS = 2_000;
 	private static final long RESTART_SPREAD_MILLIS = 8_000;
 
@@ -88,6 +90,7 @@ final class TsgHubSocket
 	}
 
 	private final OkHttpClient http;
+	private final Gson gson;
 	private final HttpUrl url;
 	private final ScheduledExecutorService executor;
 	private final Listener listener;
@@ -102,11 +105,12 @@ final class TsgHubSocket
 	private String clanName = "";
 	private String rejectedClan = "";
 	private boolean ready;
-	private int attempts;
+	private final TsgHubBackoff backoff = new TsgHubBackoff(1_000, 60_000);
 	private State state = State.DISCONNECTED;
 
-	TsgHubSocket(OkHttpClient http, String baseUrl, ScheduledExecutorService executor, Listener listener)
+	TsgHubSocket(OkHttpClient http, Gson gson, String baseUrl, ScheduledExecutorService executor, Listener listener)
 	{
+		this.gson = gson;
 		this.http = http.newBuilder().pingInterval(PING_SECONDS, TimeUnit.SECONDS).build();
 		this.url = HttpUrl.get(baseUrl.replaceAll("/+$", "") + "/v1/ws");
 		this.executor = executor;
@@ -124,7 +128,7 @@ final class TsgHubSocket
 		if (clan.equals(clanName) && (socket != null || retry != null)) return;
 		close();
 		clanName = clan;
-		attempts = 0;
+		backoff.reset();
 		open();
 	}
 
@@ -176,8 +180,19 @@ final class TsgHubSocket
 
 	synchronized boolean send(String type, JsonObject body)
 	{
-		if (!ready || socket == null) return false;
+		return emit(type, body.deepCopy());
+	}
+
+	synchronized boolean groupHeartbeat(String token, JsonObject body)
+	{
 		JsonObject message = body.deepCopy();
+		message.addProperty("token", token);
+		return emit("group.heartbeat", message);
+	}
+
+	private boolean emit(String type, JsonObject message)
+	{
+		if (!ready || socket == null) return false;
 		message.addProperty("type", type);
 		return socket.send(message.toString());
 	}
@@ -194,24 +209,22 @@ final class TsgHubSocket
 
 	synchronized boolean xp(String skill, int xp, int tick)
 	{
-		if (!ready || socket == null || confirmed.isEmpty()) return false;
+		if (confirmed.isEmpty()) return false;
 		JsonObject message = new JsonObject();
-		message.addProperty("type", "xp");
 		message.addProperty("skill", skill);
 		message.addProperty("xp", xp);
 		message.addProperty("tick", tick);
-		return socket.send(message.toString());
+		return emit("xp", message);
 	}
 
 	synchronized void rewardInterface(int group, boolean open, int tick)
 	{
-		if (!ready || socket == null || confirmed.isEmpty()) return;
+		if (confirmed.isEmpty()) return;
 		JsonObject message = new JsonObject();
-		message.addProperty("type", "interface");
 		message.addProperty("group", group);
 		message.addProperty("open", open);
 		message.addProperty("tick", tick);
-		socket.send(message.toString());
+		emit("interface", message);
 	}
 
 	synchronized void watch(Set<String> topics)
@@ -226,9 +239,8 @@ final class TsgHubSocket
 		JsonArray topics = new JsonArray();
 		watching.forEach(topics::add);
 		JsonObject message = new JsonObject();
-		message.addProperty("type", "watch");
 		message.add("topics", topics);
-		socket.send(message.toString());
+		emit("watch", message);
 	}
 
 	synchronized void admin(String token)
@@ -242,16 +254,13 @@ final class TsgHubSocket
 	private void sendAdmin()
 	{
 		JsonObject message = new JsonObject();
-		message.addProperty("type", "admin");
 		message.addProperty("token", adminToken);
-		socket.send(message.toString());
+		emit("admin", message);
 	}
 
 	private void sendPresence()
 	{
-		JsonObject message = presence.deepCopy();
-		message.addProperty("type", "presence");
-		socket.send(message.toString());
+		emit("presence", presence.deepCopy());
 	}
 
 	private void open()
@@ -274,23 +283,21 @@ final class TsgHubSocket
 
 	private void send(String type, String eventId, String token, boolean inClanChat)
 	{
-		if (!ready || socket == null) return;
 		JsonObject message = new JsonObject();
-		message.addProperty("type", type);
 		message.addProperty("eventId", eventId);
 		if (token != null)
 		{
 			message.addProperty("token", token);
 			message.addProperty("inClanChat", inClanChat);
 		}
-		socket.send(message.toString());
+		emit(type, message);
 	}
 
 	private synchronized void opened(WebSocket ws, JsonObject message)
 	{
 		if (ws != socket) return;
 		ready = true;
-		attempts = 0;
+		backoff.reset();
 		for (Map.Entry<String, Subscription> entry : subscriptions.entrySet())
 		{
 			send("subscribe", entry.getKey(), entry.getValue().token, entry.getValue().inClanChat);
@@ -299,7 +306,7 @@ final class TsgHubSocket
 		if (!adminToken.isEmpty()) sendAdmin();
 		if (!watching.isEmpty()) sendWatch();
 		changed();
-		String rulesVersion = TsgHubUi.str(message, "rules");
+		String rulesVersion = TsgHubJson.str(message, "rules");
 		executor.execute(() -> listener.onReady(rulesVersion));
 	}
 
@@ -339,7 +346,7 @@ final class TsgHubSocket
 		}
 		if (!clanName.isEmpty() && !executor.isShutdown())
 		{
-			long delay = code == CLOSE_GOING_AWAY ? restartDelay() : backoff(attempts++);
+			long delay = code == CLOSE_GOING_AWAY ? restartDelay() : backoff.next();
 			retry = executor.schedule(this::reopen, delay, TimeUnit.MILLISECONDS);
 		}
 		changed();
@@ -359,12 +366,6 @@ final class TsgHubSocket
 		open();
 	}
 
-	private static long backoff(int attempt)
-	{
-		long ceiling = Math.min(MAX_BACKOFF_MILLIS, MIN_BACKOFF_MILLIS << Math.min(attempt, 6));
-		return ceiling / 2 + ThreadLocalRandom.current().nextLong(ceiling / 2 + 1);
-	}
-
 	private static long restartDelay()
 	{
 		return RESTART_MIN_MILLIS + ThreadLocalRandom.current().nextLong(RESTART_SPREAD_MILLIS);
@@ -378,20 +379,20 @@ final class TsgHubSocket
 			JsonObject message;
 			try
 			{
-				JsonElement element = new JsonParser().parse(text);
-				if (!element.isJsonObject()) return;
+				JsonElement element = gson.fromJson(text, JsonElement.class);
+				if (element == null || !element.isJsonObject()) return;
 				message = element.getAsJsonObject();
 			}
 			catch (RuntimeException e) { return; }
-			String type = TsgHubUi.str(message, "type");
-			String eventId = TsgHubUi.str(message, "eventId");
+			String type = TsgHubJson.str(message, "type");
+			String eventId = TsgHubJson.str(message, "eventId");
 			switch (type)
 			{
 				case "ready":
 					opened(ws, message);
 					break;
 				case "changed":
-					String topic = TsgHubUi.str(message, "topic");
+					String topic = TsgHubJson.str(message, "topic");
 					dispatch(ws, () -> listener.onChanged(topic, eventId));
 					break;
 				case "subscribed":
@@ -405,32 +406,37 @@ final class TsgHubSocket
 				case "state":
 					dispatch(ws, () -> listener.onSnapshot(message));
 					break;
+				case "group.heartbeat":
+					dispatch(ws, () -> listener.onGroupHeartbeat(message));
+					break;
 				case "ack":
-					String id = TsgHubUi.str(message, "id");
+					String id = TsgHubJson.str(message, "id");
 					if (!id.isEmpty()) dispatch(ws, () -> listener.onAck(id));
 					break;
 				case "xp.request":
-					String skills = TsgHubUi.str(message, "skills");
+					String skills = TsgHubJson.str(message, "skills");
 					if (!skills.isEmpty()) dispatch(ws, () -> listener.onXpRequest(skills));
 					break;
 				case "admin.revoked":
 					adminRevoked(ws);
 					break;
 				case "announcement":
-					String announcement = TsgHubUi.str(message, "text");
+					String announcement = TsgHubJson.str(message, "text");
 					if (!announcement.isEmpty()) dispatch(ws, () -> listener.onAnnouncement(announcement));
 					break;
 				case "update":
-					String version = TsgHubUi.str(message, "version");
+					String version = TsgHubJson.str(message, "version");
 					if (!version.isEmpty()) dispatch(ws, () -> listener.onUpdateAvailable(version));
 					break;
 				case "error":
-					String failed = TsgHubUi.str(message, "id");
-					int status = TsgHubUi.integer(message, "status", 0);
+					String failed = TsgHubJson.str(message, "id");
+					int status = TsgHubJson.integer(message, "status", 0);
 					if (!failed.isEmpty()) dispatch(ws, () -> listener.onRejected(failed, status));
+					String errorTopic = TsgHubJson.str(message, "topic");
 					if (!eventId.isEmpty()) rejected(ws, eventId);
-					else if ("admin".equals(TsgHubUi.str(message, "topic")) && status == 401) adminRevoked(ws);
-					log.debug("TSG Hub socket error: {}", TsgHubUi.str(message, "message"));
+					else if ("admin".equals(errorTopic) && status == 401) adminRevoked(ws);
+					else if ("group".equals(errorTopic)) dispatch(ws, () -> listener.onGroupRejected(status));
+					log.debug("TSG Hub socket error: {}", TsgHubJson.str(message, "message"));
 					break;
 				default:
 			}

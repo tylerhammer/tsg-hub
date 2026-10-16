@@ -1,5 +1,9 @@
 package com.tsghub;
 
+import static com.tsghub.TsgHubFormat.*;
+import static com.tsghub.TsgHubHtml.*;
+import static com.tsghub.TsgHubIcons.*;
+import static com.tsghub.TsgHubJson.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 import com.google.gson.JsonArray;
@@ -79,6 +83,7 @@ final class TsgHubNewsEditor extends JPanel
 	private JsonObject selected;
 	private String selectedId = "";
 	private JsonObject editing;
+	private boolean formOpen;
 
 	TsgHubNewsEditor(TsgHubPlugin plugin)
 	{
@@ -225,6 +230,7 @@ final class TsgHubNewsEditor extends JPanel
 	private void openForm(JsonObject announcement)
 	{
 		editing = announcement;
+		formOpen = true;
 		boolean isDraft = announcement != null && bool(announcement, "draft");
 		boolean live = announcement != null && !isDraft;
 		formTitle.setText(announcement == null ? "New announcement" : isDraft ? "Edit draft" : "Edit announcement");
@@ -335,8 +341,7 @@ final class TsgHubNewsEditor extends JPanel
 	private void confirmPublish()
 	{
 		if (selected == null) return;
-		if (javax.swing.JOptionPane.showConfirmDialog(this, "Publish \"" + str(selected, "title") + "\"? Clan members get a chat message and see it under News.",
-			"Publish announcement", javax.swing.JOptionPane.OK_CANCEL_OPTION, javax.swing.JOptionPane.QUESTION_MESSAGE) == javax.swing.JOptionPane.OK_OPTION)
+		if (confirm(this, "Publish announcement", "Publish \"" + str(selected, "title") + "\"? Clan members get a chat message and see it under News.", "Publish", false))
 			plugin.announcements().publish(str(selected, "id"));
 	}
 
@@ -348,7 +353,7 @@ final class TsgHubNewsEditor extends JPanel
 	private void confirmDelete()
 	{
 		if (selected == null) return;
-		if (TsgHubUi.confirmDelete(this, "Delete announcement", "Delete \"" + str(selected, "title") + "\"? Members won't see it anymore.", "Delete"))
+		if (confirm(this, "Delete announcement", "Delete \"" + str(selected, "title") + "\"? Members won't see it anymore.", "Delete", true))
 			plugin.announcements().delete(str(selected, "id"));
 	}
 
@@ -362,6 +367,7 @@ final class TsgHubNewsEditor extends JPanel
 		draft.setEnabled(true);
 		post.setEnabled(true);
 		selectedId = id;
+		formOpen = false;
 		select();
 	}
 
@@ -374,22 +380,31 @@ final class TsgHubNewsEditor extends JPanel
 	void setAnnouncements(JsonArray announcements)
 	{
 		this.announcements = announcements;
-		renderList();
+		if (formOpen)
+		{
+			JsonObject match = byId(announcements, selectedId);
+			if (match != null)
+			{
+				selected = match;
+				if (editing != null) editing = match;
+			}
+			renderList();
+			return;
+		}
 		select();
 	}
 
 	private void select()
 	{
-		JsonObject match = null;
-		if (announcements != null)
-			for (JsonObject announcement : objects(announcements))
-				if (str(announcement, "id").equals(selectedId)) match = announcement;
+		JsonObject match = byId(announcements, selectedId);
 		if (match != null) show(match);
 		else if (!selectedId.isEmpty() && announcements != null) show(null);
+		else renderList();
 	}
 
 	private void show(JsonObject announcement)
 	{
+		formOpen = false;
 		selected = announcement;
 		selectedId = announcement == null ? "" : str(announcement, "id");
 		renderList();
@@ -425,7 +440,7 @@ final class TsgHubNewsEditor extends JPanel
 
 	static String meta(JsonObject announcement, Instant now, ZoneId zone)
 	{
-		String when = TsgHubRoster.warningDate(str(announcement, "postedAt"), now, zone);
+		String when = TsgHubFormat.shortDate(str(announcement, "postedAt"), now, zone);
 		if (bool(announcement, "draft"))
 		{
 			int hours = draftHours(announcement);
@@ -435,10 +450,10 @@ final class TsgHubNewsEditor extends JPanel
 		String meta = "Posted by " + str(announcement, "postedBy") + " · " + when;
 		if (!str(announcement, "publishedBy").isEmpty()) meta += " · published by " + str(announcement, "publishedBy");
 		if (!str(announcement, "editedAt").isEmpty())
-			meta += " · edited by " + str(announcement, "editedBy") + " " + TsgHubRoster.warningDate(str(announcement, "editedAt"), now, zone);
+			meta += " · edited by " + str(announcement, "editedBy") + " " + TsgHubFormat.shortDate(str(announcement, "editedAt"), now, zone);
 		String expires = str(announcement, "expiresAt");
 		if (expires.isEmpty()) return meta + " · never expires";
-		return meta + (bool(announcement, "expired") ? " · expired " : " · expires ") + TsgHubRoster.warningDate(expires, now, zone);
+		return meta + (bool(announcement, "expired") ? " · expired " : " · expires ") + TsgHubFormat.shortDate(expires, now, zone);
 	}
 
 	private void renderList()
@@ -481,7 +496,7 @@ final class TsgHubNewsEditor extends JPanel
 		card.setBackground(isSelected ? CARD_HOVER : BACKGROUND);
 		String by = (bool(announcement, "draft") ? "Draft by " : "") + str(announcement, "postedBy");
 		card.add(twoLines(shrinkable(boldLabel(str(announcement, "title"))),
-			caption(by + " · " + TsgHubRoster.warningDate(str(announcement, "postedAt"), now, zone))), BorderLayout.CENTER);
+			caption(by + " · " + TsgHubFormat.shortDate(str(announcement, "postedAt"), now, zone))), BorderLayout.CENTER);
 		JsonObject poll = TsgHubAnnouncements.poll(announcement);
 		if (poll != null)
 		{
@@ -559,20 +574,5 @@ final class TsgHubNewsEditor extends JPanel
 		bar.setPreferredSize(new Dimension(100, 6));
 		bar.setMinimumSize(new Dimension(0, 6));
 		return fitHeight(bar);
-	}
-
-	static String pollSummary(JsonObject poll, boolean closed)
-	{
-		return (closed ? "Closed poll · " : "Poll · ") + (bool(poll, "multi") ? "pick any" : "pick one") + (bool(poll, "anonymous") ? " · anonymous" : "")
-			+ " · " + plural(integer(poll, "voters", 0), "voter");
-	}
-
-	private static JPanel field(String label, JComponent input)
-	{
-		JPanel row = panel(new BorderLayout(0, 3));
-		row.add(caption(label), BorderLayout.NORTH);
-		row.add(input, BorderLayout.CENTER);
-		row.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
-		return fitHeight(row);
 	}
 }

@@ -1,7 +1,11 @@
 package com.tsghub;
 
+import static com.tsghub.TsgHubFormat.*;
+import static com.tsghub.TsgHubHtml.*;
+import static com.tsghub.TsgHubJson.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -35,9 +39,19 @@ final class TsgHubNewsPoll
 		this.changed = changed;
 	}
 
-	void reset()
+	void reset(JsonArray announcements)
 	{
+		Set<String> ids = new HashSet<>();
+		for (JsonObject announcement : objects(announcements)) ids.add(str(announcement, "id"));
+		picks.keySet().retainAll(ids);
+		errors.keySet().retainAll(ids);
 		voting.clear();
+	}
+
+	static String summary(JsonObject poll)
+	{
+		return "Poll · " + (bool(poll, "multi") ? "pick any" : "pick one") + (bool(poll, "anonymous") ? " · anonymous" : "")
+			+ " · " + plural(integer(poll, "voters", 0), "voter");
 	}
 
 	JPanel block(String id, JsonObject poll, int widthPx)
@@ -52,7 +66,7 @@ final class TsgHubNewsPoll
 		Runnable sync = () -> vote.setEnabled(canVote && !chosen.isEmpty() && !chosen.equals(mine) && !voting.contains(id));
 		ButtonGroup group = new ButtonGroup();
 		block.add(Box.createVerticalStrut(GAP_S));
-		block.add(wrapped(TsgHubNewsEditor.pollSummary(poll, false), MUTED, smallFont(), widthPx));
+		block.add(wrapped(summary(poll), MUTED, smallFont(), widthPx));
 		List<JsonObject> options = objects(array(poll, "options"));
 		for (int i = 0; i < options.size(); i++)
 		{

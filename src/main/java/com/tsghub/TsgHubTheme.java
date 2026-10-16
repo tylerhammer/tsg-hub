@@ -74,15 +74,18 @@ public final class TsgHubTheme
 		return boldFont().deriveFont(20f);
 	}
 
+	private static final Border CARD_EDGE = BorderFactory.createEmptyBorder(CARD_PAD_V, CARD_PAD_H, CARD_PAD_V, CARD_PAD_H);
+	private static final Border SELF_EDGE = BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(SELF_BORDER),
+		BorderFactory.createEmptyBorder(CARD_PAD_V - 1, CARD_PAD_H - 1, CARD_PAD_V - 1, CARD_PAD_H - 1));
+
 	public static Border cardBorder()
 	{
-		return BorderFactory.createEmptyBorder(CARD_PAD_V, CARD_PAD_H, CARD_PAD_V, CARD_PAD_H);
+		return CARD_EDGE;
 	}
 
 	public static Border selfBorder()
 	{
-		return BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(SELF_BORDER),
-			BorderFactory.createEmptyBorder(CARD_PAD_V - 1, CARD_PAD_H - 1, CARD_PAD_V - 1, CARD_PAD_H - 1));
+		return SELF_EDGE;
 	}
 
 	public static Border selectedBorder(boolean selected, Color idle)
@@ -109,16 +112,11 @@ public final class TsgHubTheme
 			{
 				String extra = super.getToolTipText(event);
 				if (!truncated(this)) return extra;
-				return "<html><b>" + escape(getText()) + "</b>" + (extra == null ? "" : "<br>" + escape(extra)) + "</html>";
+				return "<html><b>" + TsgHubHtml.escape(getText()) + "</b>" + (extra == null ? "" : "<br>" + TsgHubHtml.escape(extra)) + "</html>";
 			}
 		};
 		ToolTipManager.sharedInstance().registerComponent(label);
 		return label;
-	}
-
-	private static String escape(String text)
-	{
-		return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
 	}
 
 	public static void highlightSelf(JComponent card)

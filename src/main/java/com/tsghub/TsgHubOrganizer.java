@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
@@ -55,18 +57,18 @@ final class TsgHubOrganizer
 	void selectEvent(String eventId)
 	{
 		if (eventId.trim().isEmpty()) return;
-		TsgHubSession.set(ORGANIZER_EVENT_ID, eventId.trim());
+		plugin.session().set(ORGANIZER_EVENT_ID, eventId.trim());
 		plugin.syncSocketNow();
 		status("Loading event...", Tone.INFO);
-		executor.submit(() -> {
+		event(eventId.trim()).whenCompleteAsync((response, error) -> {
 			try
 			{
-				JsonObject event = event(eventId.trim());
+				JsonObject event = TsgHubApi.result(response, error);
 				SwingUtilities.invokeLater(() -> panel.get().openOrganizerEvent(event));
 				status("", Tone.INFO);
 			}
 			catch (Exception e) { error("Couldn't open event. ", e); }
-		});
+		}, executor);
 	}
 
 	void loadManagedEvents()
@@ -74,16 +76,16 @@ final class TsgHubOrganizer
 		if (!plugin.isInHubClan()) return;
 		if (!plugin.sharingEnabled()) { status("Turn on sharing in the TSG Hub sidebar first.", Tone.ERROR); return; }
 		if (!plugin.canManageOrganizerUi()) return;
-		executor.submit(() -> {
+		String credential = listCredential();
+		if (credential.isEmpty()) { status("Couldn't load events. Join or create an event first.", Tone.ERROR); return; }
+		request("GET", "/v1/managed-events", credential, null).whenCompleteAsync((response, error) -> {
 			try
 			{
-				String credential = listCredential();
-				if (credential.isEmpty()) throw new IllegalStateException("Join or create an event first");
-				JsonObject response = request("GET", "/v1/managed-events", credential, null);
-				SwingUtilities.invokeLater(() -> panel.get().setManagedEvents(response.getAsJsonArray("events")));
+				JsonArray events = TsgHubApi.result(response, error).getAsJsonArray("events");
+				SwingUtilities.invokeLater(() -> panel.get().setManagedEvents(events));
 			}
 			catch (Exception e) { error("Couldn't load events. ", e); }
-		});
+		}, executor);
 	}
 
 	void createEvent(String name, Instant startsAt, Instant endsAt, boolean hideScores, boolean hidden, String type, JsonObject typeConfig, JsonArray prizes)
@@ -112,22 +114,21 @@ final class TsgHubOrganizer
 		body.add("config", typeConfig == null ? new JsonObject() : typeConfig);
 		body.add("prizes", prizes);
 		status("Creating event...", Tone.INFO);
-		executor.submit(() -> {
+		request("POST", "/v1/events", credential, body).whenCompleteAsync((created, error) -> {
 			try
 			{
-				JsonObject response = request("POST", "/v1/events", credential, body);
+				JsonObject response = TsgHubApi.result(created, error);
 				JsonObject result = response.getAsJsonObject("event");
 				String id = result.get("id").getAsString();
-				TsgHubSession.set(ORGANIZER_EVENT_ID, id);
-				TsgHubSession.set(ORGANIZER_TOKEN + id, response.get("organizerToken").getAsString());
-				TsgHubSession.set(ORGANIZER_NAME + id, creatorName);
+				plugin.session().set(ORGANIZER_EVENT_ID, id);
+				plugin.session().set(ORGANIZER_TOKEN + id, response.get("organizerToken").getAsString());
+				plugin.session().set(ORGANIZER_NAME + id, creatorName);
 				SwingUtilities.invokeLater(() -> panel.get().eventCreated(result));
 				status("Event created. Add teams next.", Tone.SUCCESS);
-				loadManagedEvents();
-				plugin.loadClanEvents();
+				refreshListsUnlessLive();
 			}
 			catch (Exception e) { failed(e, null, this::eventFormFailed); }
-		});
+		}, executor);
 	}
 
 	private static void addEventTimes(JsonObject body, Instant startsAt, Instant endsAt)
@@ -150,12 +151,12 @@ final class TsgHubOrganizer
 
 	void publishEvent(JsonObject event)
 	{
-		String eventId = TsgHubUi.str(event, "id");
+		String eventId = TsgHubJson.str(event, "id");
 		JsonObject body = new JsonObject();
-		body.addProperty("name", TsgHubUi.str(event, "name"));
-		Instant startsAt = TsgHubUi.eventStart(event);
+		body.addProperty("name", TsgHubJson.str(event, "name"));
+		Instant startsAt = TsgHubEvents.eventStart(event);
 		if (startsAt == null) { status("Couldn't publish. The event has no start time.", Tone.ERROR); return; }
-		addEventTimes(body, startsAt, TsgHubUi.eventEnd(event));
+		addEventTimes(body, startsAt, TsgHubEvents.eventEnd(event));
 		body.addProperty("hidden", false);
 		eventAction(eventId, "PATCH", "", body, "Publishing...", "Event published. Players can see it now.", "Couldn't publish. ", () -> refreshEvent(true));
 	}
@@ -169,17 +170,23 @@ final class TsgHubOrganizer
 	{
 		String credential = credential(eventId);
 		status(pending, Tone.INFO);
-		executor.submit(() -> {
+		request(method, "/v1/events/" + eventId + suffix, credential, body).whenCompleteAsync((response, error) -> {
 			try
 			{
-				request(method, "/v1/events/" + eventId + suffix, credential, body);
+				TsgHubApi.result(response, error);
 				done.run();
 				status(success, Tone.SUCCESS);
-				loadManagedEvents();
-				plugin.loadClanEvents();
+				refreshListsUnlessLive();
 			}
 			catch (Exception e) { failed(e, failure, failure == null ? this::eventFormFailed : null); }
-		});
+		}, executor);
+	}
+
+	private void refreshListsUnlessLive()
+	{
+		if (plugin.live()) return;
+		loadManagedEvents();
+		plugin.loadClanEvents();
 	}
 
 	private void failed(Exception e, String failure, Consumer<String> onError)
@@ -187,7 +194,7 @@ final class TsgHubOrganizer
 		if (onError == null) error(failure, e);
 		else
 		{
-			onError.accept(TsgHubUi.friendlyError(e));
+			onError.accept(TsgHubFormat.friendlyError(e));
 			status("", Tone.INFO);
 		}
 	}
@@ -216,72 +223,69 @@ final class TsgHubOrganizer
 	void saveTask(String taskId, String title, String description, int selectedType, int selectedScope, int selectedKillSignal, int dropCategory, String targetNamesText, JsonArray selectedItems, int dropRuleMode, String targetCount, String points)
 	{
 		JsonObject body = new JsonObject();
-		String type = selectedType == 1 ? "kill" : selectedType == 2 || selectedType == 3 ? "drop" : selectedType == 4 ? "raid" : "manual";
+		String type = selectedType == 4 ? "raid" : selectedType == 2 || selectedType == 3 ? "drop" : "kill";
 		body.addProperty("title", title.trim());
 		body.addProperty("description", description.trim());
 		body.addProperty("type", type);
 		body.addProperty("scope", selectedScope == 1 ? "individual" : selectedScope == 2 ? "solo" : "team");
 		try { body.addProperty("points", Integer.parseInt(points.trim())); }
 		catch (NumberFormatException e) { taskFormFailed("Points must be a whole number."); return; }
-		if (!"manual".equals(type))
+		JsonObject cfg = new JsonObject();
+		List<String> targetNames = new ArrayList<>();
+		if (selectedType == 2 || selectedType == 3)
 		{
-			JsonObject cfg = new JsonObject();
-			List<String> targetNames = new ArrayList<>();
-			if (selectedType == 2 || selectedType == 3)
-			{
-				for (JsonObject item : TsgHubUi.objects(selectedItems)) targetNames.add(item.get("name").getAsString());
-			}
-			else for (String name : targetNamesText.split("\\R")) if (!name.trim().isEmpty()) targetNames.add(name.trim());
-			if (targetNames.isEmpty() && !(selectedType == 2 && dropCategory > 0)) { taskFormFailed(selectedType == 2 || selectedType == 3 ? "Search for and add at least one item." : "Enter at least one target name or raid mode."); return; }
-			if (selectedType != 3)
-			{
-				try { cfg.addProperty("targetCount", Integer.parseInt(targetCount.trim())); }
-				catch (NumberFormatException e) { taskFormFailed("Target count must be a whole number."); return; }
-			}
-			if ("kill".equals(type))
-			{
-				if (targetNames.size() != 1) { taskFormFailed("A boss kill task takes one NPC name."); return; }
-				cfg.addProperty("npcName", targetNames.get(0));
-				cfg.addProperty("signal", selectedKillSignal == 0 ? "chat" : "loot");
-			}
-			else if ("raid".equals(type))
-			{
-				JsonArray modes = new JsonArray();
-				for (String mode : targetNames) modes.add(mode.toLowerCase(Locale.ROOT));
-				cfg.add("modes", modes);
-				cfg.addProperty("clanOnly", true);
-			}
-			else if (selectedType == 2 && dropCategory > 0)
-			{
-				cfg.addProperty("itemGroup", dropCategory == 1 ? "jar" : "pet");
-			}
-			else
-			{
-				JsonArray itemNames = new JsonArray();
-				targetNames.forEach(itemNames::add);
-				cfg.add("itemNames", itemNames);
-				JsonArray itemIds = new JsonArray();
-				for (JsonObject item : TsgHubUi.objects(selectedItems)) itemIds.add(item.get("id").getAsInt());
-				cfg.add("itemIds", itemIds);
-				// Completing any one set group finishes the task.
-				if (selectedType == 3 || dropRuleMode == 1)
-				{
-					Map<Integer, JsonArray> groupedItems = new TreeMap<>();
-					for (JsonObject selected : TsgHubUi.objects(selectedItems))
-					{
-						JsonArray groupItems = groupedItems.computeIfAbsent(Math.max(0, selected.get("group").getAsInt()), ignored -> new JsonArray());
-						JsonObject item = new JsonObject();
-						item.addProperty("name", selected.get("name").getAsString());
-						item.addProperty("id", selected.get("id").getAsInt());
-						groupItems.add(item);
-					}
-					JsonArray groups = new JsonArray();
-					groupedItems.values().forEach(groups::add);
-					cfg.add("itemGroups", groups);
-				}
-			}
-			body.add("config", cfg);
+			for (JsonObject item : TsgHubJson.objects(selectedItems)) targetNames.add(item.get("name").getAsString());
 		}
+		else for (String name : targetNamesText.split("\\R")) if (!name.trim().isEmpty()) targetNames.add(name.trim());
+		if (targetNames.isEmpty() && !(selectedType == 2 && dropCategory > 0)) { taskFormFailed(selectedType == 2 || selectedType == 3 ? "Search for and add at least one item." : "Enter at least one target name or raid mode."); return; }
+		if (selectedType != 3)
+		{
+			try { cfg.addProperty("targetCount", Integer.parseInt(targetCount.trim())); }
+			catch (NumberFormatException e) { taskFormFailed("Target count must be a whole number."); return; }
+		}
+		if ("kill".equals(type))
+		{
+			if (targetNames.size() != 1) { taskFormFailed("A boss kill task takes one NPC name."); return; }
+			cfg.addProperty("npcName", targetNames.get(0));
+			cfg.addProperty("signal", selectedKillSignal == 0 ? "chat" : "loot");
+		}
+		else if ("raid".equals(type))
+		{
+			JsonArray modes = new JsonArray();
+			for (String mode : targetNames) modes.add(mode.toLowerCase(Locale.ROOT));
+			cfg.add("modes", modes);
+			cfg.addProperty("clanOnly", true);
+		}
+		else if (selectedType == 2 && dropCategory > 0)
+		{
+			cfg.addProperty("itemGroup", dropCategory == 1 ? "jar" : "pet");
+		}
+		else
+		{
+			JsonArray itemNames = new JsonArray();
+			targetNames.forEach(itemNames::add);
+			cfg.add("itemNames", itemNames);
+			JsonArray itemIds = new JsonArray();
+			for (JsonObject item : TsgHubJson.objects(selectedItems)) itemIds.add(item.get("id").getAsInt());
+			cfg.add("itemIds", itemIds);
+			// Completing any one set group finishes the task.
+			if (selectedType == 3 || dropRuleMode == 1)
+			{
+				Map<Integer, JsonArray> groupedItems = new TreeMap<>();
+				for (JsonObject selected : TsgHubJson.objects(selectedItems))
+				{
+					JsonArray groupItems = groupedItems.computeIfAbsent(Math.max(0, selected.get("group").getAsInt()), ignored -> new JsonArray());
+					JsonObject item = new JsonObject();
+					item.addProperty("name", selected.get("name").getAsString());
+					item.addProperty("id", selected.get("id").getAsInt());
+					groupItems.add(item);
+				}
+				JsonArray groups = new JsonArray();
+				groupedItems.values().forEach(groups::add);
+				cfg.add("itemGroups", groups);
+			}
+		}
+		body.add("config", cfg);
 		Consumer<JsonObject> done = result -> {
 			SwingUtilities.invokeLater(() -> panel.get().finishTaskEdit());
 			refreshEvent(false);
@@ -335,34 +339,27 @@ final class TsgHubOrganizer
 				SwingUtilities.invokeLater(() -> panel.get().confirmReconcile(taskId, result));
 				return;
 			}
-			int count = TsgHubUi.integer(result, "count", 0);
+			int count = TsgHubJson.integer(result, "count", 0);
 			status("Credited " + count + (count == 1 ? " match" : " matches") + " from the loot log.", Tone.SUCCESS);
 			refreshEvent(false);
 		}, null);
-	}
-
-	void reviewClaim(String claimId, boolean approve)
-	{
-		JsonObject body = new JsonObject();
-		body.addProperty("status", approve ? "approved" : "rejected");
-		eventRequest("POST", "/claims/" + claimId + "/review", body, approve ? "Claim approved." : "Claim rejected.", result -> refreshEvent(false), null);
 	}
 
 	private void refreshEvent(boolean open)
 	{
 		String eventId = plugin.getOrganizerEventId();
 		if (eventId.isEmpty() || executor == null || executor.isShutdown()) return;
-		executor.submit(() -> {
+		event(eventId).whenCompleteAsync((response, error) -> {
 			try
 			{
-				JsonObject event = event(eventId);
+				JsonObject event = TsgHubApi.result(response, error);
 				SwingUtilities.invokeLater(() -> {
 					if (open) panel.get().openOrganizerEvent(event);
 					else panel.get().showEvent(event);
 				});
 			}
 			catch (Exception e) { error("Couldn't refresh the event. ", e); }
-		});
+		}, executor);
 	}
 
 	void liveRefresh()
@@ -370,18 +367,11 @@ final class TsgHubOrganizer
 		refreshPending = false;
 		String eventId = plugin.getOrganizerEventId();
 		if (eventId.isEmpty() || executor == null || executor.isShutdown()) return;
-		executor.submit(() -> {
-			try
-			{
-				JsonObject event = event(eventId);
-				SwingUtilities.invokeLater(() -> {
-					if (!eventId.equals(plugin.getOrganizerEventId())) return;
-					if (panel.get().editingText()) refreshPending = true;
-					else panel.get().showEvent(event);
-				});
-			}
-			catch (Exception ignored) { }
-		});
+		event(eventId).thenAccept(event -> SwingUtilities.invokeLater(() -> {
+			if (!eventId.equals(plugin.getOrganizerEventId())) return;
+			if (panel.get().editingText()) refreshPending = true;
+			else panel.get().showEvent(event);
+		}));
 	}
 
 	void searchItems(String query, Consumer<List<ItemSuggestion>> callback)
@@ -426,7 +416,7 @@ final class TsgHubOrganizer
 
 	private void error(String failure, Exception e)
 	{
-		status(failure + TsgHubUi.friendlyError(e), Tone.ERROR);
+		status(failure + TsgHubFormat.friendlyError(e), Tone.ERROR);
 	}
 
 	private void status(String message, Tone tone)
@@ -440,40 +430,38 @@ final class TsgHubOrganizer
 		if (eventId.isEmpty()) { status("Open an event first.", Tone.ERROR); return; }
 		String credential = credential(eventId);
 		status("Saving...", Tone.INFO);
-		executor.submit(() -> {
+		request(method, "/v1/events/" + eventId + suffix, credential, payload).whenCompleteAsync((response, error) -> {
 			try
 			{
-				JsonObject result = request(method, "/v1/events/" + eventId + suffix, credential, payload);
+				JsonObject result = TsgHubApi.result(response, error);
 				status(success, Tone.SUCCESS);
 				callback.accept(result);
 			}
 			catch (Exception e) { failed(e, "", onError); }
+		}, executor);
+	}
+
+	private CompletableFuture<JsonObject> request(String method, String path, String credential, JsonObject payload)
+	{
+		return plugin.api().call(method, path, credential, payload).whenComplete((response, error) -> {
+			Throwable cause = error instanceof CompletionException ? error.getCause() : error;
+			if (cause instanceof TsgHubApi.HttpError && ((TsgHubApi.HttpError) cause).status == 401 && !credential.isEmpty() && credential.equals(plugin.adminKey())) plugin.keyRejected(credential);
 		});
 	}
 
-	private JsonObject request(String method, String path, String credential, JsonObject payload) throws Exception
-	{
-		try { return plugin.api().request(method, path, credential, payload); }
-		catch (TsgHubApi.HttpError e)
-		{
-			if (e.status == 401 && !credential.isEmpty() && credential.equals(plugin.adminKey())) plugin.keyRejected(credential);
-			throw e;
-		}
-	}
-
-	private JsonObject event(String eventId) throws Exception
+	private CompletableFuture<JsonObject> event(String eventId)
 	{
 		return request("GET", "/v1/events/" + eventId + "/organizer", credential(eventId), null);
 	}
 
 	String credential(String eventId)
 	{
-		String ownerToken = TsgHubSession.get(ORGANIZER_TOKEN + eventId);
-		String creatorName = TsgHubSession.get(ORGANIZER_NAME + eventId);
-		if (!ownerToken.isEmpty() && !creatorName.isEmpty() && TsgHubUi.samePlayer(creatorName, plugin.getDetectedPlayerName())) return ownerToken;
+		String ownerToken = plugin.session().get(ORGANIZER_TOKEN + eventId);
+		String creatorName = plugin.session().get(ORGANIZER_NAME + eventId);
+		if (!ownerToken.isEmpty() && !creatorName.isEmpty() && PlayerNames.samePlayer(creatorName, plugin.getDetectedPlayerName())) return ownerToken;
 		String adminToken = plugin.adminKey();
 		if (!adminToken.isEmpty()) return adminToken;
-		return TsgHubSession.get(TOKEN);
+		return plugin.session().get(TOKEN);
 	}
 
 	private String listCredential()
@@ -486,13 +474,13 @@ final class TsgHubOrganizer
 			String credential = credential(eventId);
 			if (!credential.isEmpty()) return credential;
 		}
-		String memberToken = TsgHubSession.get(TOKEN);
+		String memberToken = plugin.session().get(TOKEN);
 		if (!memberToken.isEmpty()) return memberToken;
-		for (String key : TsgHubSession.keysWithPrefix(ORGANIZER_TOKEN))
+		for (String key : plugin.session().keysWithPrefix(ORGANIZER_TOKEN))
 		{
 			String candidateId = key.substring(ORGANIZER_TOKEN.length());
-			String creator = TsgHubSession.get(ORGANIZER_NAME + candidateId);
-			if (!creator.isEmpty() && TsgHubUi.samePlayer(creator, plugin.getDetectedPlayerName())) return TsgHubSession.get(key);
+			String creator = plugin.session().get(ORGANIZER_NAME + candidateId);
+			if (!creator.isEmpty() && PlayerNames.samePlayer(creator, plugin.getDetectedPlayerName())) return plugin.session().get(key);
 		}
 		return "";
 	}

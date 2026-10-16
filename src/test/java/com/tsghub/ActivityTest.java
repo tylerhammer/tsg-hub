@@ -5,6 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonParser;
 import com.tsghub.TsgHubActivity.Member;
@@ -12,10 +13,17 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class ActivityTest
 {
+	@BeforeClass
+	public static void rules()
+	{
+		TsgHubRules.loadBundled(new Gson());
+	}
+
 	private static final Instant NOW = Instant.parse("2026-10-16T12:00:00Z");
 
 	private static JsonArray list(String json)
@@ -41,7 +49,7 @@ public class ActivityTest
 		assertEquals("Recruit", merged.get(0).rank);
 		assertEquals(LocalDate.of(2025, 1, 2), merged.get(0).joined);
 		assertEquals(2, merged.get(0).stat("eventsAttended"));
-		assertEquals("New Name", TsgHubUi.str(merged.get(1).stats, "displayName"));
+		assertEquals("New Name", TsgHubJson.str(merged.get(1).stats, "displayName"));
 		assertFalse(merged.get(2).onHub());
 		assertEquals(-1, merged.get(2).stat("drops"));
 	}
