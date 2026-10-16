@@ -6,13 +6,17 @@ import com.tsghub.TsgHubActivity.Member;
 import com.tsghub.TsgHubActivity.Snapshot;
 import com.tsghub.TsgHubActivity.Summary;
 import com.tsghub.TsgHubUi.Tone;
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dialog;
 import java.awt.FlowLayout;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GridLayout;
+import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
@@ -27,6 +31,7 @@ import java.util.Locale;
 import java.util.function.IntSupplier;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
+import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -50,9 +55,9 @@ import net.runelite.client.util.ColorUtil;
 
 final class TsgHubActivityPanel extends JPanel
 {
-	private static final String[] COLUMNS = {"Member", "Rank", "Joined clan", "Last seen", "Active days", "Hours", "Events", "Parties", "Drops", "Hub"};
-	private static final int[] WIDTHS = {150, 110, 90, 80, 70, 60, 60, 60, 50, 150};
-	private static final int MEMBER = 0, RANK = 1, JOINED = 2, SEEN = 3, ACTIVE = 4, HOURS = 5, EVENTS = 6, PARTIES = 7, DROPS = 8, HUB = 9;
+	private static final String[] COLUMNS = {"Member", "Rank", "Joined clan", "Last seen", "Active days", "Hours", "Events", "Parties", "Drops", "Version", "Discord"};
+	private static final int[] WIDTHS = {150, 110, 90, 80, 70, 60, 60, 60, 50, 120, 60};
+	private static final int MEMBER = 0, RANK = 1, JOINED = 2, SEEN = 3, ACTIVE = 4, HOURS = 5, EVENTS = 6, PARTIES = 7, DROPS = 8, VERSION = 9, DISCORD = 10;
 	private static final String[] WINDOW_LABELS = {"Last 7 days", "Last 30 days", "Last 90 days"};
 	private static final int[] WINDOW_DAYS = {7, 30, 90};
 	private static final int DEFAULT_WINDOW = 1;
@@ -199,7 +204,8 @@ final class TsgHubActivityPanel extends JPanel
 		sorter.setComparator(EVENTS, Comparator.comparingInt((Member m) -> m.stat("eventsAttended")).thenComparingInt(m -> m.stat("eventsJoined")));
 		sorter.setComparator(PARTIES, Comparator.comparingInt((Member m) -> m.stat("parties")));
 		sorter.setComparator(DROPS, Comparator.comparingInt((Member m) -> m.stat("drops")));
-		sorter.setComparator(HUB, Comparator.comparing((Member m) -> m.onHub()).thenComparing(m -> !m.outdated()).thenComparing(Member::version, TsgHubActivity::compareVersions));
+		sorter.setComparator(DISCORD, Comparator.comparing((Member m) -> m.onHub()).thenComparing(Member::discordLinked));
+		sorter.setComparator(VERSION, Comparator.comparing((Member m) -> m.onHub()).thenComparing(m -> !m.outdated()).thenComparing(Member::version, TsgHubActivity::compareVersions));
 		List<RowSorter.SortKey> keys = new ArrayList<>();
 		keys.add(new RowSorter.SortKey(SEEN, SortOrder.DESCENDING));
 		sorter.setSortKeys(keys);
@@ -333,15 +339,20 @@ final class TsgHubActivityPanel extends JPanel
 			boolean inactive = member.inactive(now, threshold.getAsInt());
 			setBackground(selected ? CARD_HOVER : inactive ? INACTIVE_ROW : CARD);
 			Color color = !member.onHub() ? DIM : column == SEEN && inactive ? TsgHubTheme.ERROR : TEXT;
-			if (column == HUB && member.outdated()) color = WARNING;
-			if (column == HUB && !member.onHub()) color = MUTED;
+			if (column == VERSION && member.outdated()) color = WARNING;
+			if ((column == VERSION || column == DISCORD) && !member.onHub()) color = MUTED;
 			setForeground(color);
 			if (column == RANK)
 			{
 				BufferedImage icon = activity.rankIcon(member.rankId);
 				if (icon != null) setIcon(new ImageIcon(icon));
 			}
-			setHorizontalAlignment(column >= ACTIVE && column <= DROPS ? RIGHT : LEFT);
+			if (column == DISCORD && member.discordLinked())
+			{
+				setText("");
+				setIcon(CHECK);
+			}
+			setHorizontalAlignment(column == DISCORD ? CENTER : column >= ACTIVE && column <= DROPS ? RIGHT : LEFT);
 			return this;
 		}
 
@@ -358,7 +369,8 @@ final class TsgHubActivityPanel extends JPanel
 				case EVENTS: return member.onHub() ? member.stat("eventsAttended") + "/" + (snapshot == null ? 0 : snapshot.eventsInWindow) : "-";
 				case PARTIES: return count(member, "parties");
 				case DROPS: return count(member, "drops");
-				case HUB: return hubText(member);
+				case VERSION: return versionText(member);
+				case DISCORD: return "-";
 				default: return "";
 			}
 		}
@@ -372,7 +384,8 @@ final class TsgHubActivityPanel extends JPanel
 				return "Took part in " + member.stat("eventsAttended") + " of " + plural(window, "event") + ", joined " + member.stat("eventsJoined");
 			}
 			if (column == SEEN && member.lastSeen() != null) return localDate(member.lastSeen(), ZoneId.systemDefault());
-			if (column == HUB && member.outdated()) return "Running an older plugin than " + (snapshot == null ? "the latest" : snapshot.latestVersion);
+			if (column == VERSION && member.outdated()) return "Running an older plugin than " + (snapshot == null ? "the latest" : snapshot.latestVersion);
+			if (column == DISCORD && member.discordLinked()) return "Linked to Discord";
 			return null;
 		}
 	}
@@ -382,10 +395,36 @@ final class TsgHubActivityPanel extends JPanel
 		return member.onHub() ? String.valueOf(member.stat(key)) : "-";
 	}
 
-	private static String hubText(Member member)
+	private static String versionText(Member member)
 	{
 		if (!member.onHub()) return "Not on hub";
 		String version = member.version().isEmpty() ? "unknown" : member.version();
-		return version + (member.outdated() ? " (outdated)" : "") + (member.discordLinked() ? " · Discord" : "");
+		return version + (member.outdated() ? " (outdated)" : "");
 	}
+
+	private static final Icon CHECK = new Icon()
+	{
+		@Override
+		public void paintIcon(Component c, Graphics g, int x, int y)
+		{
+			Graphics2D g2 = (Graphics2D) g.create();
+			g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			g2.setColor(TsgHubTheme.SUCCESS);
+			g2.setStroke(new BasicStroke(2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+			g2.drawPolyline(new int[]{x + 2, x + 5, x + 10}, new int[]{y + 6, y + 9, y + 3}, 3);
+			g2.dispose();
+		}
+
+		@Override
+		public int getIconWidth()
+		{
+			return 12;
+		}
+
+		@Override
+		public int getIconHeight()
+		{
+			return 12;
+		}
+	};
 }
