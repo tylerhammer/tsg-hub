@@ -11,7 +11,7 @@ import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
 
 final class TsgHubAdminWindow extends JPanel
 {
-	TsgHubAdminWindow(TsgHubPanel events, Runnable loadEvents, TsgHubNewsEditor news, Runnable loadNews)
+	TsgHubAdminWindow(TsgHubPanel events, Runnable loadEvents, TsgHubNewsEditor news, Runnable loadNews, TsgHubActivityPanel activity, Runnable loadActivity)
 	{
 		super(new BorderLayout());
 		setBackground(BACKGROUND);
@@ -29,8 +29,14 @@ final class TsgHubAdminWindow extends JPanel
 			loadNews.run();
 			return true;
 		});
+		MaterialTab activityTab = themedTab("Activity", tabs, activity);
+		activityTab.setOnSelectEvent(() -> {
+			loadActivity.run();
+			return true;
+		});
 		tabs.addTab(eventsTab);
 		tabs.addTab(newsTab);
+		tabs.addTab(activityTab);
 		tabs.select(eventsTab);
 
 		JPanel tabRow = panel(new BorderLayout());

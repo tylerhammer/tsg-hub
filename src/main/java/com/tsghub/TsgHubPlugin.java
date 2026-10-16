@@ -177,6 +177,8 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubDrops drops;
 	private TsgHubAnnouncements announcements;
 	private TsgHubNewsEditor newsEditor;
+	private TsgHubActivity activity;
+	private TsgHubActivityPanel activityPanel;
 	private GroupTracker groupTracker;
 
 	@Override
@@ -218,6 +220,8 @@ public class TsgHubPlugin extends Plugin
 		announcements = new TsgHubAnnouncements(this, executor, this::api, () -> newsEditor, this::clanAnnouncement);
 		panel = new TsgHubPanel(this);
 		newsEditor = new TsgHubNewsEditor(this);
+		activity = new TsgHubActivity(this, client, clientThread, chatIconManager, executor, this::api, () -> activityPanel);
+		activityPanel = new TsgHubActivityPanel(activity, config::inactivityDays);
 		GroupMembersPanel groupMembers = new GroupMembersPanel(new GroupViewSettings()
 		{
 			@Override public boolean autoExpandMembers() { return config.partyExpandMembers(); }
@@ -294,7 +298,7 @@ public class TsgHubPlugin extends Plugin
 			{
 				hubWindow = new JFrame("TSG Hub · Admin");
 				hubWindow.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
-				hubWindow.setContentPane(new TsgHubAdminWindow(panel, organizer::loadManagedEvents, newsEditor, announcements::load));
+				hubWindow.setContentPane(new TsgHubAdminWindow(panel, organizer::loadManagedEvents, newsEditor, announcements::load, activityPanel, activity::load));
 				hubWindow.setMinimumSize(new Dimension(680, 480));
 				hubWindow.setSize(860, 640);
 				Window owner = SwingUtilities.getWindowAncestor(client.getCanvas());
