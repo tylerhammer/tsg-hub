@@ -38,8 +38,14 @@ public final class PlayerNames
 	static String resolveName(List<String> names, String typed)
 	{
 		if (typed.isEmpty()) return typed;
-		for (String name : names) if (TsgHubUi.samePlayer(name, typed)) return name;
+		for (String name : names) if (samePlayer(name, typed)) return name;
 		List<String> matches = matchNames(names, typed, 2);
 		return matches.size() == 1 ? matches.get(0) : typed;
+	}
+
+	static boolean samePlayer(String a, String b)
+	{
+		String left = key(a);
+		return !left.isEmpty() && left.equals(key(b));
 	}
 }

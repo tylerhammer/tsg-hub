@@ -75,7 +75,7 @@ final class TsgHubMemberMap
 		if (!open || !plugin.canUseHub() || executor.isShutdown()) return;
 		String clan = TsgHubApi.encode(plugin.getDetectedClanName());
 		api.get().call("GET", "/v1/presence/positions?clanName=" + clan, null, null)
-			.thenAcceptAsync(result -> apply(TsgHubUi.array(result, "members")), executor);
+			.thenAcceptAsync(result -> apply(TsgHubJson.array(result, "members")), executor);
 	}
 
 	void apply(JsonArray members)
@@ -84,13 +84,13 @@ final class TsgHubMemberMap
 		String self = PlayerNames.key(plugin.getDetectedPlayerName());
 		List<Member> next = new ArrayList<>();
 		Set<String> seen = new HashSet<>();
-		for (JsonObject member : TsgHubUi.objects(members))
+		for (JsonObject member : TsgHubJson.objects(members))
 		{
-			String name = TsgHubUi.str(member, "displayName");
+			String name = TsgHubJson.str(member, "displayName");
 			String key = PlayerNames.key(name);
 			if (key.isEmpty() || key.equals(self) || !seen.add(key)) continue;
-			WorldPoint at = new WorldPoint(TsgHubUi.integer(member, "x", 0), TsgHubUi.integer(member, "y", 0), TsgHubUi.integer(member, "plane", 0));
-			next.add(new Member(name, key, TsgHubUi.integer(member, "world", 0), at));
+			WorldPoint at = new WorldPoint(TsgHubJson.integer(member, "x", 0), TsgHubJson.integer(member, "y", 0), TsgHubJson.integer(member, "plane", 0));
+			next.add(new Member(name, key, TsgHubJson.integer(member, "world", 0), at));
 		}
 		next.sort(Comparator.comparing(m -> m.key));
 		clientThread.invokeLater(() -> {

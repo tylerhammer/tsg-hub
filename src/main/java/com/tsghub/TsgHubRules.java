@@ -43,7 +43,7 @@ final class TsgHubRules
 
 	private TsgHubRules(JsonObject json)
 	{
-		version = TsgHubUi.str(json, "version");
+		version = TsgHubJson.str(json, "version");
 		chat = strings(json, "chat");
 		players = strings(json, "players");
 		dropKeywords = strings(json, "dropKeywords");
@@ -59,20 +59,20 @@ final class TsgHubRules
 		pets = ints(json, "pets");
 		rewardInterfaces = ints(json, "rewardInterfaces");
 		Map<String, String> bossNames = new HashMap<>();
-		for (JsonObject boss : TsgHubUi.objects(TsgHubUi.array(json, "bosses")))
+		for (JsonObject boss : TsgHubJson.objects(TsgHubJson.array(json, "bosses")))
 		{
-			String name = TsgHubUi.str(boss, "name");
-			for (JsonElement npc : TsgHubUi.array(boss, "npcs")) bossNames.put(npc.getAsString().trim().toLowerCase(Locale.ROOT), name);
+			String name = TsgHubJson.str(boss, "name");
+			for (JsonElement npc : TsgHubJson.array(boss, "npcs")) bossNames.put(npc.getAsString().trim().toLowerCase(Locale.ROOT), name);
 		}
 		bosses = Collections.unmodifiableMap(bossNames);
 		Map<Integer, AreaNames.Area> regions = new HashMap<>();
-		for (JsonObject area : TsgHubUi.objects(TsgHubUi.array(json, "areas")))
+		for (JsonObject area : TsgHubJson.objects(TsgHubJson.array(json, "areas")))
 		{
 			AreaNames.Type type;
-			try { type = AreaNames.Type.valueOf(TsgHubUi.str(area, "type")); }
+			try { type = AreaNames.Type.valueOf(TsgHubJson.str(area, "type")); }
 			catch (IllegalArgumentException e) { continue; }
-			AreaNames.Area named = new AreaNames.Area(TsgHubUi.str(area, "name"), type);
-			for (JsonElement region : TsgHubUi.array(area, "regions")) regions.putIfAbsent(region.getAsInt(), named);
+			AreaNames.Area named = new AreaNames.Area(TsgHubJson.str(area, "name"), type);
+			for (JsonElement region : TsgHubJson.array(area, "regions")) regions.putIfAbsent(region.getAsInt(), named);
 		}
 		areas = Collections.unmodifiableMap(regions);
 	}
@@ -107,7 +107,7 @@ final class TsgHubRules
 		try (Reader reader = cache.openReader())
 		{
 			JsonObject saved = gson.fromJson(reader, JsonObject.class);
-			if (TsgHubVersion.VERSION.equals(TsgHubUi.str(saved, "plugin")) && saved.has("rules") && saved.get("rules").isJsonObject()) apply(saved.getAsJsonObject("rules"));
+			if (TsgHubVersion.VERSION.equals(TsgHubJson.str(saved, "plugin")) && saved.has("rules") && saved.get("rules").isJsonObject()) apply(saved.getAsJsonObject("rules"));
 		}
 		catch (Exception e) { log.debug("TSG Hub cached rules unreadable", e); }
 	}
@@ -140,14 +140,14 @@ final class TsgHubRules
 	private static List<String> strings(JsonObject json, String key)
 	{
 		List<String> out = new ArrayList<>();
-		for (JsonElement value : TsgHubUi.array(json, key)) out.add(value.getAsString().toLowerCase(Locale.ROOT));
+		for (JsonElement value : TsgHubJson.array(json, key)) out.add(value.getAsString().toLowerCase(Locale.ROOT));
 		return Collections.unmodifiableList(out);
 	}
 
 	private static Set<Integer> ints(JsonObject json, String key)
 	{
 		Set<Integer> out = new HashSet<>();
-		for (JsonElement value : TsgHubUi.array(json, key)) out.add(value.getAsInt());
+		for (JsonElement value : TsgHubJson.array(json, key)) out.add(value.getAsInt());
 		return Collections.unmodifiableSet(out);
 	}
 }

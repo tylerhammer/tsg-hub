@@ -159,7 +159,7 @@ final class TsgHubSignals
 			{
 				JsonObject result = api.get().request("POST", "/v1/events/" + event.getKey() + "/signals", event.getValue(), body);
 				delivered(undelivered, event.getKey());
-				for (JsonObject message : TsgHubUi.objects(TsgHubUi.array(result, "messages"))) receiver.accept(message);
+				for (JsonObject message : TsgHubJson.objects(TsgHubJson.array(result, "messages"))) receiver.accept(message);
 			}
 			catch (TsgHubApi.HttpError e)
 			{

@@ -308,7 +308,7 @@ final class TsgHubSocket
 		if (!adminToken.isEmpty()) sendAdmin();
 		if (!watching.isEmpty()) sendWatch();
 		changed();
-		String rulesVersion = TsgHubUi.str(message, "rules");
+		String rulesVersion = TsgHubJson.str(message, "rules");
 		executor.execute(() -> listener.onReady(rulesVersion));
 	}
 
@@ -392,15 +392,15 @@ final class TsgHubSocket
 				message = element.getAsJsonObject();
 			}
 			catch (RuntimeException e) { return; }
-			String type = TsgHubUi.str(message, "type");
-			String eventId = TsgHubUi.str(message, "eventId");
+			String type = TsgHubJson.str(message, "type");
+			String eventId = TsgHubJson.str(message, "eventId");
 			switch (type)
 			{
 				case "ready":
 					opened(ws, message);
 					break;
 				case "changed":
-					String topic = TsgHubUi.str(message, "topic");
+					String topic = TsgHubJson.str(message, "topic");
 					dispatch(ws, () -> listener.onChanged(topic, eventId));
 					break;
 				case "subscribed":
@@ -418,33 +418,33 @@ final class TsgHubSocket
 					dispatch(ws, () -> listener.onGroupHeartbeat(message));
 					break;
 				case "ack":
-					String id = TsgHubUi.str(message, "id");
+					String id = TsgHubJson.str(message, "id");
 					if (!id.isEmpty()) dispatch(ws, () -> listener.onAck(id));
 					break;
 				case "xp.request":
-					String skills = TsgHubUi.str(message, "skills");
+					String skills = TsgHubJson.str(message, "skills");
 					if (!skills.isEmpty()) dispatch(ws, () -> listener.onXpRequest(skills));
 					break;
 				case "admin.revoked":
 					adminRevoked(ws);
 					break;
 				case "announcement":
-					String announcement = TsgHubUi.str(message, "text");
+					String announcement = TsgHubJson.str(message, "text");
 					if (!announcement.isEmpty()) dispatch(ws, () -> listener.onAnnouncement(announcement));
 					break;
 				case "update":
-					String version = TsgHubUi.str(message, "version");
+					String version = TsgHubJson.str(message, "version");
 					if (!version.isEmpty()) dispatch(ws, () -> listener.onUpdateAvailable(version));
 					break;
 				case "error":
-					String failed = TsgHubUi.str(message, "id");
-					int status = TsgHubUi.integer(message, "status", 0);
+					String failed = TsgHubJson.str(message, "id");
+					int status = TsgHubJson.integer(message, "status", 0);
 					if (!failed.isEmpty()) dispatch(ws, () -> listener.onRejected(failed, status));
-					String errorTopic = TsgHubUi.str(message, "topic");
+					String errorTopic = TsgHubJson.str(message, "topic");
 					if (!eventId.isEmpty()) rejected(ws, eventId);
 					else if ("admin".equals(errorTopic) && status == 401) adminRevoked(ws);
 					else if ("group".equals(errorTopic)) dispatch(ws, () -> listener.onGroupRejected(status));
-					log.debug("TSG Hub socket error: {}", TsgHubUi.str(message, "message"));
+					log.debug("TSG Hub socket error: {}", TsgHubJson.str(message, "message"));
 					break;
 				default:
 			}

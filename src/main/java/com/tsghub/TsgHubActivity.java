@@ -64,32 +64,32 @@ final class TsgHubActivity
 
 		Instant lastSeen()
 		{
-			return stats == null ? null : TsgHubUi.instant(TsgHubUi.str(stats, "lastSeenAt"));
+			return stats == null ? null : TsgHubJson.instant(TsgHubJson.str(stats, "lastSeenAt"));
 		}
 
 		int stat(String key)
 		{
-			return stats == null ? -1 : TsgHubUi.integer(stats, key, 0);
+			return stats == null ? -1 : TsgHubJson.integer(stats, key, 0);
 		}
 
 		String version()
 		{
-			return TsgHubUi.str(stats, "pluginVersion");
+			return TsgHubJson.str(stats, "pluginVersion");
 		}
 
 		boolean outdated()
 		{
-			return TsgHubUi.bool(stats, "outdated");
+			return TsgHubJson.bool(stats, "outdated");
 		}
 
 		boolean discordLinked()
 		{
-			return TsgHubUi.bool(stats, "discordLinked");
+			return TsgHubJson.bool(stats, "discordLinked");
 		}
 
 		List<String> previousNames()
 		{
-			return TsgHubUi.strings(TsgHubUi.array(stats, "previousNames"));
+			return TsgHubJson.strings(TsgHubJson.array(stats, "previousNames"));
 		}
 
 		boolean inactive(Instant now, int thresholdDays)
@@ -183,14 +183,14 @@ final class TsgHubActivity
 				JsonObject result = TsgHubApi.result(response, error);
 				clientThread.invokeLater(() -> {
 					List<Member> clan = clanMembers();
-					Snapshot snapshot = new Snapshot(merge(clan, TsgHubUi.array(result, "members")), TsgHubUi.integer(result, "days", days),
-						TsgHubUi.integer(result, "eventsInWindow", 0), TsgHubUi.str(result, "latestVersion"), clan != null);
+					Snapshot snapshot = new Snapshot(merge(clan, TsgHubJson.array(result, "members")), TsgHubJson.integer(result, "days", days),
+						TsgHubJson.integer(result, "eventsInWindow", 0), TsgHubJson.str(result, "latestVersion"), clan != null);
 					ui(p -> { if (request == requests.get()) p.setActivity(snapshot); });
 				});
 			}
 			catch (Exception e)
 			{
-				String message = "Couldn't load clan activity. " + TsgHubUi.friendlyError(e);
+				String message = "Couldn't load clan activity. " + TsgHubFormat.friendlyError(e);
 				ui(p -> { if (request == requests.get()) p.failed(message); });
 			}
 		}, executor);
@@ -219,12 +219,12 @@ final class TsgHubActivity
 			}
 			catch (TsgHubApi.HttpError e)
 			{
-				String message = e.status == 404 ? name + " has no TSG Hub activity yet." : "Couldn't load " + name + ". " + TsgHubUi.friendlyError(e);
+				String message = e.status == 404 ? name + " has no TSG Hub activity yet." : "Couldn't load " + name + ". " + TsgHubFormat.friendlyError(e);
 				SwingUtilities.invokeLater(() -> failed.accept(message));
 			}
 			catch (Exception e)
 			{
-				String message = "Couldn't load " + name + ". " + TsgHubUi.friendlyError(e);
+				String message = "Couldn't load " + name + ". " + TsgHubFormat.friendlyError(e);
 				SwingUtilities.invokeLater(() -> failed.accept(message));
 			}
 		}, executor);
@@ -271,7 +271,7 @@ final class TsgHubActivity
 		List<Member> out = new ArrayList<>();
 		if (clan == null)
 		{
-			for (JsonObject stats : records) out.add(new Member(TsgHubUi.str(stats, "displayName"), "", NO_RANK, -1, null, stats));
+			for (JsonObject stats : records) out.add(new Member(TsgHubJson.str(stats, "displayName"), "", NO_RANK, -1, null, stats));
 			return out;
 		}
 		Set<String> clanNames = new HashSet<>();
@@ -280,10 +280,10 @@ final class TsgHubActivity
 		Map<String, JsonObject> previous = new HashMap<>();
 		for (JsonObject stats : records)
 		{
-			String key = PlayerNames.key(TsgHubUi.str(stats, "displayName"));
+			String key = PlayerNames.key(TsgHubJson.str(stats, "displayName"));
 			if (!key.isEmpty()) current.putIfAbsent(key, stats);
 			if (clanNames.contains(key)) continue;
-			for (String old : TsgHubUi.strings(TsgHubUi.array(stats, "previousNames")))
+			for (String old : TsgHubJson.strings(TsgHubJson.array(stats, "previousNames")))
 			{
 				String oldKey = PlayerNames.key(old);
 				if (!oldKey.isEmpty()) previous.putIfAbsent(oldKey, stats);

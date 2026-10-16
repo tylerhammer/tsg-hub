@@ -1,14 +1,21 @@
 package com.tsghub;
 
-import static com.tsghub.TsgHubTheme.*;
-import static com.tsghub.TsgHubUi.*;
-import static net.runelite.client.util.ColorUtil.toHexColor;
+import static com.tsghub.PlayerNames.*;
+import static com.tsghub.TsgHubBingo.*;
+import static com.tsghub.TsgHubEvents.*;
+import static com.tsghub.TsgHubFormat.*;
+import static com.tsghub.TsgHubHtml.*;
+import static com.tsghub.TsgHubIcons.*;
+import static com.tsghub.TsgHubJson.*;
 import static com.tsghub.TsgHubSession.DOCK_VIEW;
 import static com.tsghub.TsgHubSession.DROP_TYPE;
 import static com.tsghub.TsgHubSession.DROP_VALUE;
 import static com.tsghub.TsgHubSession.HIDE_COMPLETED;
 import static com.tsghub.TsgHubSession.MEMBER_TOKEN;
 import static com.tsghub.TsgHubSession.SHOW_OFFLINE;
+import static com.tsghub.TsgHubTheme.*;
+import static com.tsghub.TsgHubUi.*;
+import static net.runelite.client.util.ColorUtil.toHexColor;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -2015,7 +2022,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			visible.sort(Comparator
 				.comparing((JsonObject e) -> !bool(e, "joined"))
 				.thenComparing(e -> !"active".equals(str(e, "status")))
-				.thenComparing(TsgHubUi::eventStart, Comparator.nullsLast(Comparator.naturalOrder())));
+				.thenComparing(TsgHubEvents::eventStart, Comparator.nullsLast(Comparator.naturalOrder())));
 			if (visible.isEmpty())
 			{
 				page.add(errorPanel("No events yet", "When an admin creates an event, it will show up here."));

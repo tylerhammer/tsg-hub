@@ -1,5 +1,8 @@
 package com.tsghub;
 
+import static com.tsghub.TsgHubFormat.*;
+import static com.tsghub.TsgHubHtml.*;
+import static com.tsghub.TsgHubJson.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 import com.google.gson.JsonElement;
@@ -280,7 +283,7 @@ final class TsgHubActivityDetail extends JPanel
 		private static final DateTimeFormatter TIP = DateTimeFormatter.ofPattern("EEE d MMM", Locale.US);
 		private static final DateTimeFormatter AXIS_DATE = DateTimeFormatter.ofPattern("d MMM", Locale.US);
 		private Map<LocalDate, Integer> minutes = new HashMap<>();
-		private LocalDate end = LocalDate.now(TsgHubUi.clock);
+		private LocalDate end = LocalDate.now(TsgHubFormat.clock);
 		private LocalDate trackedFrom;
 		private int size = 1;
 		private int count = 30;
@@ -323,7 +326,7 @@ final class TsgHubActivityDetail extends JPanel
 
 		static LocalDate lastDay(Map<LocalDate, Integer> minutes)
 		{
-			LocalDate today = LocalDate.now(TsgHubUi.clock);
+			LocalDate today = LocalDate.now(TsgHubFormat.clock);
 			for (LocalDate day : minutes.keySet()) if (day.isAfter(today)) today = day;
 			return today;
 		}

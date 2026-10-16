@@ -1,5 +1,12 @@
 package com.tsghub;
 
+import static com.tsghub.PlayerNames.*;
+import static com.tsghub.TsgHubBingo.*;
+import static com.tsghub.TsgHubEvents.*;
+import static com.tsghub.TsgHubFormat.*;
+import static com.tsghub.TsgHubHtml.*;
+import static com.tsghub.TsgHubIcons.*;
+import static com.tsghub.TsgHubJson.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 
@@ -628,7 +635,7 @@ final class TsgHubPanel extends JPanel
 		List<JsonObject> sorted = objects(events);
 		sorted.sort(Comparator
 			.comparingInt((JsonObject e) -> statusOrder(str(e, "status")))
-			.thenComparing(TsgHubUi::eventStart, Comparator.nullsLast(Comparator.naturalOrder())));
+			.thenComparing(TsgHubEvents::eventStart, Comparator.nullsLast(Comparator.naturalOrder())));
 		String section = null;
 		for (JsonObject event : sorted)
 		{
@@ -685,7 +692,7 @@ final class TsgHubPanel extends JPanel
 	{
 		if (event.equals(currentEvent)) return;
 		currentEvent = event.deepCopy();
-		eventTitle.setText(TsgHubUi.eventName(event));
+		eventTitle.setText(TsgHubEvents.eventName(event));
 		String state = str(event, "status");
 		String type = str(event, "type");
 		boolean bingo = type.isEmpty() || "bingo".equals(type);
@@ -761,7 +768,7 @@ final class TsgHubPanel extends JPanel
 	private void confirmEndEvent()
 	{
 		if (currentEvent == null) return;
-		String message = "End \"" + TsgHubUi.eventName(currentEvent) + "\" now?\n\n"
+		String message = "End \"" + TsgHubEvents.eventName(currentEvent) + "\" now?\n\n"
 			+ "It moves to ended and online clanmates get an announcement that it's over.";
 		if (confirmDelete(this, "End event", message, "End event")) plugin.organizer().endEvent(str(currentEvent, "id"));
 	}
@@ -772,7 +779,7 @@ final class TsgHubPanel extends JPanel
 		int teams = array(currentEvent, "teams").size();
 		int tasks = array(currentEvent, "tasks").size();
 		int members = array(currentEvent, "members").size();
-		String message = "Delete \"" + TsgHubUi.eventName(currentEvent) + "\"?\n\n"
+		String message = "Delete \"" + TsgHubEvents.eventName(currentEvent) + "\"?\n\n"
 			+ "This permanently removes its " + plural(teams, "team") + ", " + plural(tasks, "task") + " and all progress.\n"
 			+ (members > 0 ? plural(members, "player") + " will be disconnected.\n" : "")
 			+ "This can't be undone.";
@@ -1241,8 +1248,8 @@ final class TsgHubPanel extends JPanel
 		detectedClan.setVisible(false);
 		eventFormSave.setText("Save changes");
 		eventName.setText(str(currentEvent, "name"));
-		Instant start = TsgHubUi.eventStart(currentEvent);
-		Instant end = TsgHubUi.eventEnd(currentEvent);
+		Instant start = TsgHubEvents.eventStart(currentEvent);
+		Instant end = TsgHubEvents.eventEnd(currentEvent);
 		setEventTimes(start == null ? null : start.atZone(ZoneId.systemDefault()), end == null ? null : end.atZone(ZoneId.systemDefault()));
 		eventHideScores.setSelected(bool(currentEvent, "hideScores"));
 		eventHidden.setSelected(bool(currentEvent, "hidden"));
@@ -1802,7 +1809,7 @@ final class TsgHubPanel extends JPanel
 		{
 			int options = array(progress, "alternatives").size();
 			List<String> missing = missingPieces(array(best, "items"));
-			return TsgHubUi.setName(best) + " " + integer(best, "progress", 0) + "/" + integer(best, "target", 1)
+			return TsgHubBingo.setName(best) + " " + integer(best, "progress", 0) + "/" + integer(best, "target", 1)
 				+ (options > 1 ? " (closest of " + options + ")" : "") + (missing.isEmpty() ? "" : " · need " + String.join(", ", missing));
 		}
 		return integer(progress, "progress", 0) + "/" + integer(progress, "target", 1);

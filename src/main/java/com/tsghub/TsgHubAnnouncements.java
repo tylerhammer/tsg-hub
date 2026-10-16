@@ -56,7 +56,7 @@ final class TsgHubAnnouncements
 		String hash = plugin.accountHash();
 		String query = "/v1/announcements?clanName=" + clan + (hash.isEmpty() ? "" : "&accountHash=" + hash);
 		api.get().call("GET", query, token.isEmpty() ? null : token, null)
-			.thenAcceptAsync(result -> apply(TsgHubUi.array(result, "announcements")), executor);
+			.thenAcceptAsync(result -> apply(TsgHubJson.array(result, "announcements")), executor);
 	}
 
 	void apply(JsonArray all)
@@ -77,8 +77,8 @@ final class TsgHubAnnouncements
 	static JsonArray published(JsonArray all)
 	{
 		JsonArray out = new JsonArray();
-		for (JsonObject announcement : TsgHubUi.objects(all))
-			if (!TsgHubUi.bool(announcement, "draft") && !TsgHubUi.bool(announcement, "expired")) out.add(announcement);
+		for (JsonObject announcement : TsgHubJson.objects(all))
+			if (!TsgHubJson.bool(announcement, "draft") && !TsgHubJson.bool(announcement, "expired")) out.add(announcement);
 		return out;
 	}
 
@@ -89,9 +89,9 @@ final class TsgHubAnnouncements
 		List<JsonObject> fresh = unread(announcements, skip);
 		if (fresh.isEmpty()) return;
 		Set<String> alerted = new LinkedHashSet<>();
-		for (JsonObject announcement : TsgHubUi.objects(announcements))
+		for (JsonObject announcement : TsgHubJson.objects(announcements))
 		{
-			String id = TsgHubUi.str(announcement, "id");
+			String id = TsgHubJson.str(announcement, "id");
 			if (skip.contains(id) || fresh.contains(announcement)) alerted.add(id);
 		}
 		plugin.session().set(TsgHubSession.ANNOUNCEMENTS_ALERTED, String.join(",", alerted));
@@ -119,7 +119,7 @@ final class TsgHubAnnouncements
 		JsonArray current = list;
 		if (current == null) return;
 		Set<String> ids = new LinkedHashSet<>();
-		for (JsonObject announcement : TsgHubUi.objects(current)) ids.add(TsgHubUi.str(announcement, "id"));
+		for (JsonObject announcement : TsgHubJson.objects(current)) ids.add(TsgHubJson.str(announcement, "id"));
 		plugin.session().set(TsgHubSession.ANNOUNCEMENTS_READ, String.join(",", ids));
 	}
 
@@ -137,8 +137,8 @@ final class TsgHubAnnouncements
 	static List<JsonObject> unread(JsonArray announcements, Set<String> read)
 	{
 		List<JsonObject> out = new ArrayList<>();
-		for (JsonObject announcement : TsgHubUi.objects(announcements))
-			if (!read.contains(TsgHubUi.str(announcement, "id"))) out.add(announcement);
+		for (JsonObject announcement : TsgHubJson.objects(announcements))
+			if (!read.contains(TsgHubJson.str(announcement, "id"))) out.add(announcement);
 		return out;
 	}
 
@@ -146,9 +146,9 @@ final class TsgHubAnnouncements
 	{
 		List<String> lines = new ArrayList<>();
 		for (int i = 0; i < fresh.size() && i < MAX_CHAT_LINES; i++)
-			lines.add(TsgHubUi.str(fresh.get(i), "title"));
+			lines.add(TsgHubJson.str(fresh.get(i), "title"));
 		int more = fresh.size() - MAX_CHAT_LINES;
-		if (more > 0) lines.add("+" + TsgHubUi.plural(more, "more announcement") + " in the TSG Hub sidebar.");
+		if (more > 0) lines.add("+" + TsgHubFormat.plural(more, "more announcement") + " in the TSG Hub sidebar.");
 		return lines;
 	}
 
@@ -160,7 +160,7 @@ final class TsgHubAnnouncements
 	static List<Integer> myVote(JsonObject poll)
 	{
 		List<Integer> picks = new ArrayList<>();
-		for (JsonElement pick : TsgHubUi.array(poll, "myVote")) if (pick.isJsonPrimitive()) picks.add(pick.getAsInt());
+		for (JsonElement pick : TsgHubJson.array(poll, "myVote")) if (pick.isJsonPrimitive()) picks.add(pick.getAsInt());
 		return picks;
 	}
 
@@ -185,7 +185,7 @@ final class TsgHubAnnouncements
 			}
 			catch (Exception e)
 			{
-				String message = "Couldn't vote. " + TsgHubUi.friendlyError(e);
+				String message = "Couldn't vote. " + TsgHubFormat.friendlyError(e);
 				SwingUtilities.invokeLater(() -> failed.accept(message));
 			}
 		}, executor);
@@ -236,7 +236,7 @@ final class TsgHubAnnouncements
 
 	private static String announcementId(JsonObject result)
 	{
-		return TsgHubUi.str(TsgHubUi.object(result, "announcement"), "id");
+		return TsgHubJson.str(TsgHubJson.object(result, "announcement"), "id");
 	}
 
 	private JsonObject adminBody()
@@ -259,7 +259,7 @@ final class TsgHubAnnouncements
 		write.apply(token).whenCompleteAsync((id, error) -> {
 			if (error != null)
 			{
-				status("Couldn't save. " + TsgHubUi.friendlyError(error), Tone.ERROR);
+				status("Couldn't save. " + TsgHubFormat.friendlyError(error), Tone.ERROR);
 				if (form) SwingUtilities.invokeLater(() -> panel.get().failed());
 				return;
 			}

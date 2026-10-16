@@ -1,5 +1,7 @@
 package com.tsghub;
 
+import static com.tsghub.TsgHubFormat.*;
+import static com.tsghub.TsgHubIcons.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 import com.tsghub.TsgHubActivity.Member;
@@ -302,7 +304,7 @@ final class TsgHubActivityPanel extends JPanel
 		detailDialog.setVisible(true);
 		detailDialog.toFront();
 		if (!member.onHub()) return;
-		String name = TsgHubUi.str(member.stats, "displayName");
+		String name = TsgHubJson.str(member.stats, "displayName");
 		int window = days;
 		activity.loadMember(name.isEmpty() ? member.name : name, window, loaded -> detail.setDetail(member, loaded, window), message -> detail.failed(member, message));
 	}

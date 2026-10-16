@@ -61,7 +61,7 @@ public class ReadmeScreenshots
 	{
 		RuneLiteLAF.setup();
 		Instant now = Instant.parse(str("now"));
-		TsgHubUi.clock = Clock.fixed(now, ZoneOffset.UTC);
+		TsgHubFormat.clock = Clock.fixed(now, ZoneOffset.UTC);
 		TsgHubPlugin plugin = new TsgHubPlugin()
 		{
 			@Override
@@ -109,12 +109,12 @@ public class ReadmeScreenshots
 		for (int i = 0; i < events.size(); i++)
 		{
 			JsonObject event = events.get(i).getAsJsonObject();
-			String id = TsgHubUi.str(event, "id");
+			String id = TsgHubJson.str(event, "id");
 			event.addProperty("joined", id.equals(str("bingo")) || id.equals(str("skill")));
 		}
 		sidebar.setEvents(events);
 		sidebar.setGroups(data.getAsJsonObject("groupsList").getAsJsonArray("groups"));
-		sidebar.setMembers(data.getAsJsonObject("membersList").getAsJsonArray("members"), TsgHubUi.array(data.getAsJsonObject("membersList"), "offline"), true);
+		sidebar.setMembers(data.getAsJsonObject("membersList").getAsJsonArray("members"), TsgHubJson.array(data.getAsJsonObject("membersList"), "offline"), true);
 		JsonArray drops = data.getAsJsonObject("dropsList").getAsJsonArray("drops");
 		for (int i = 0; i < drops.size(); i++)
 		{
@@ -179,7 +179,7 @@ public class ReadmeScreenshots
 			TsgHubAdminWindow window = new TsgHubAdminWindow(organizer, () -> { }, news, () -> { }, new TsgHubActivityPanel(null, () -> 14), () -> { });
 			shoot(window, 860, 340, "admin-events");
 			selectTab(window, "Announcements");
-			news.showAnnouncement(TsgHubUi.str(announcements.get(0).getAsJsonObject(), "id"));
+			news.showAnnouncement(TsgHubJson.str(announcements.get(0).getAsJsonObject(), "id"));
 			shoot(window, 860, 560, "admin-news");
 			((AbstractButton) find(window, "Edit", AbstractButton.class)).doClick();
 			shoot(window, 860, 560, "admin-news-edit");

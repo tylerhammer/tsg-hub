@@ -27,12 +27,12 @@ public class DropsPanelTest
 	@Test
 	public void formatGp()
 	{
-		assertEquals("", TsgHubUi.formatGp(0));
-		assertEquals("950 gp", TsgHubUi.formatGp(950));
-		assertEquals("7.2K", TsgHubUi.formatGp(7_250));
-		assertEquals("1.5M", TsgHubUi.formatGp(1_512_345));
-		assertEquals("12M", TsgHubUi.formatGp(12_000_000));
-		assertEquals("1.2B", TsgHubUi.formatGp(1_234_567_890L));
+		assertEquals("", TsgHubFormat.formatGp(0));
+		assertEquals("950 gp", TsgHubFormat.formatGp(950));
+		assertEquals("7.2K", TsgHubFormat.formatGp(7_250));
+		assertEquals("1.5M", TsgHubFormat.formatGp(1_512_345));
+		assertEquals("12M", TsgHubFormat.formatGp(12_000_000));
+		assertEquals("1.2B", TsgHubFormat.formatGp(1_234_567_890L));
 	}
 
 	@Test

@@ -1,5 +1,6 @@
 package com.tsghub;
 
+import static com.tsghub.TsgHubHtml.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 

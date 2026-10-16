@@ -49,7 +49,7 @@ public class ActivityTest
 		assertEquals("Recruit", merged.get(0).rank);
 		assertEquals(LocalDate.of(2025, 1, 2), merged.get(0).joined);
 		assertEquals(2, merged.get(0).stat("eventsAttended"));
-		assertEquals("New Name", TsgHubUi.str(merged.get(1).stats, "displayName"));
+		assertEquals("New Name", TsgHubJson.str(merged.get(1).stats, "displayName"));
 		assertFalse(merged.get(2).onHub());
 		assertEquals(-1, merged.get(2).stat("drops"));
 	}

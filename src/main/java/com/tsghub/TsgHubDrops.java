@@ -1,5 +1,10 @@
 package com.tsghub;
 
+import static com.tsghub.PlayerNames.*;
+import static com.tsghub.TsgHubBingo.*;
+import static com.tsghub.TsgHubFormat.*;
+import static com.tsghub.TsgHubHtml.*;
+import static com.tsghub.TsgHubJson.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 
@@ -159,7 +164,7 @@ final class TsgHubDrops
 			catch (Exception e)
 			{
 				if (quiet) return;
-				plugin.ui(s -> s.setStatus("Couldn't load drops. " + TsgHubUi.friendlyError(e), Tone.ERROR));
+				plugin.ui(s -> s.setStatus("Couldn't load drops. " + TsgHubFormat.friendlyError(e), Tone.ERROR));
 				plugin.ui(s -> s.setBusy(false));
 			}
 		}, executor);
@@ -208,7 +213,7 @@ final class TsgHubDrops
 		for (int i = 0; i < drops.size(); i++)
 		{
 			JsonObject drop = drops.get(i).getAsJsonObject();
-			Integer id = itemIds.get(TsgHubUi.str(drop, "item").toLowerCase(Locale.ROOT));
+			Integer id = itemIds.get(TsgHubJson.str(drop, "item").toLowerCase(Locale.ROOT));
 			if (id != null) drop.addProperty("itemId", id);
 		}
 	}

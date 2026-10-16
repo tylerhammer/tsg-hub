@@ -1,9 +1,11 @@
 package com.tsghub;
 
-import static com.tsghub.TsgHubTheme.*;
-import static com.tsghub.TsgHubUi.*;
+import static com.tsghub.TsgHubFormat.*;
+import static com.tsghub.TsgHubIcons.*;
 import static com.tsghub.TsgHubSession.DOCK_COLLAPSED;
 import static com.tsghub.TsgHubSession.DOCK_SPLIT;
+import static com.tsghub.TsgHubTheme.*;
+import static com.tsghub.TsgHubUi.*;
 
 import java.awt.BorderLayout;
 import java.awt.Component;

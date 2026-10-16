@@ -151,12 +151,12 @@ final class TsgHubOrganizer
 
 	void publishEvent(JsonObject event)
 	{
-		String eventId = TsgHubUi.str(event, "id");
+		String eventId = TsgHubJson.str(event, "id");
 		JsonObject body = new JsonObject();
-		body.addProperty("name", TsgHubUi.str(event, "name"));
-		Instant startsAt = TsgHubUi.eventStart(event);
+		body.addProperty("name", TsgHubJson.str(event, "name"));
+		Instant startsAt = TsgHubEvents.eventStart(event);
 		if (startsAt == null) { status("Couldn't publish. The event has no start time.", Tone.ERROR); return; }
-		addEventTimes(body, startsAt, TsgHubUi.eventEnd(event));
+		addEventTimes(body, startsAt, TsgHubEvents.eventEnd(event));
 		body.addProperty("hidden", false);
 		eventAction(eventId, "PATCH", "", body, "Publishing...", "Event published. Players can see it now.", "Couldn't publish. ", () -> refreshEvent(true));
 	}
@@ -194,7 +194,7 @@ final class TsgHubOrganizer
 		if (onError == null) error(failure, e);
 		else
 		{
-			onError.accept(TsgHubUi.friendlyError(e));
+			onError.accept(TsgHubFormat.friendlyError(e));
 			status("", Tone.INFO);
 		}
 	}
@@ -234,7 +234,7 @@ final class TsgHubOrganizer
 		List<String> targetNames = new ArrayList<>();
 		if (selectedType == 2 || selectedType == 3)
 		{
-			for (JsonObject item : TsgHubUi.objects(selectedItems)) targetNames.add(item.get("name").getAsString());
+			for (JsonObject item : TsgHubJson.objects(selectedItems)) targetNames.add(item.get("name").getAsString());
 		}
 		else for (String name : targetNamesText.split("\\R")) if (!name.trim().isEmpty()) targetNames.add(name.trim());
 		if (targetNames.isEmpty() && !(selectedType == 2 && dropCategory > 0)) { taskFormFailed(selectedType == 2 || selectedType == 3 ? "Search for and add at least one item." : "Enter at least one target name or raid mode."); return; }
@@ -266,13 +266,13 @@ final class TsgHubOrganizer
 			targetNames.forEach(itemNames::add);
 			cfg.add("itemNames", itemNames);
 			JsonArray itemIds = new JsonArray();
-			for (JsonObject item : TsgHubUi.objects(selectedItems)) itemIds.add(item.get("id").getAsInt());
+			for (JsonObject item : TsgHubJson.objects(selectedItems)) itemIds.add(item.get("id").getAsInt());
 			cfg.add("itemIds", itemIds);
 			// Completing any one set group finishes the task.
 			if (selectedType == 3 || dropRuleMode == 1)
 			{
 				Map<Integer, JsonArray> groupedItems = new TreeMap<>();
-				for (JsonObject selected : TsgHubUi.objects(selectedItems))
+				for (JsonObject selected : TsgHubJson.objects(selectedItems))
 				{
 					JsonArray groupItems = groupedItems.computeIfAbsent(Math.max(0, selected.get("group").getAsInt()), ignored -> new JsonArray());
 					JsonObject item = new JsonObject();
@@ -339,7 +339,7 @@ final class TsgHubOrganizer
 				SwingUtilities.invokeLater(() -> panel.get().confirmReconcile(taskId, result));
 				return;
 			}
-			int count = TsgHubUi.integer(result, "count", 0);
+			int count = TsgHubJson.integer(result, "count", 0);
 			status("Credited " + count + (count == 1 ? " match" : " matches") + " from the loot log.", Tone.SUCCESS);
 			refreshEvent(false);
 		}, null);
@@ -416,7 +416,7 @@ final class TsgHubOrganizer
 
 	private void error(String failure, Exception e)
 	{
-		status(failure + TsgHubUi.friendlyError(e), Tone.ERROR);
+		status(failure + TsgHubFormat.friendlyError(e), Tone.ERROR);
 	}
 
 	private void status(String message, Tone tone)
@@ -458,7 +458,7 @@ final class TsgHubOrganizer
 	{
 		String ownerToken = plugin.session().get(ORGANIZER_TOKEN + eventId);
 		String creatorName = plugin.session().get(ORGANIZER_NAME + eventId);
-		if (!ownerToken.isEmpty() && !creatorName.isEmpty() && TsgHubUi.samePlayer(creatorName, plugin.getDetectedPlayerName())) return ownerToken;
+		if (!ownerToken.isEmpty() && !creatorName.isEmpty() && PlayerNames.samePlayer(creatorName, plugin.getDetectedPlayerName())) return ownerToken;
 		String adminToken = plugin.adminKey();
 		if (!adminToken.isEmpty()) return adminToken;
 		return plugin.session().get(TOKEN);
@@ -480,7 +480,7 @@ final class TsgHubOrganizer
 		{
 			String candidateId = key.substring(ORGANIZER_TOKEN.length());
 			String creator = plugin.session().get(ORGANIZER_NAME + candidateId);
-			if (!creator.isEmpty() && TsgHubUi.samePlayer(creator, plugin.getDetectedPlayerName())) return plugin.session().get(key);
+			if (!creator.isEmpty() && PlayerNames.samePlayer(creator, plugin.getDetectedPlayerName())) return plugin.session().get(key);
 		}
 		return "";
 	}

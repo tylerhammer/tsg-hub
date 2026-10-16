@@ -22,11 +22,11 @@ public class MembersPanelTest
 	@Test
 	public void samePlayer()
 	{
-		assertTrue(TsgHubUi.samePlayer("Foo Bar", "foo bar"));
-		assertTrue(TsgHubUi.samePlayer("Foo\u00A0Bar", "Foo Bar"));
-		assertTrue(TsgHubUi.samePlayer("Foo_Bar", "Foo Bar"));
-		assertFalse(TsgHubUi.samePlayer("Foo Bar", "FooBar"));
-		assertFalse(TsgHubUi.samePlayer("", ""));
+		assertTrue(PlayerNames.samePlayer("Foo Bar", "foo bar"));
+		assertTrue(PlayerNames.samePlayer("Foo\u00A0Bar", "Foo Bar"));
+		assertTrue(PlayerNames.samePlayer("Foo_Bar", "Foo Bar"));
+		assertFalse(PlayerNames.samePlayer("Foo Bar", "FooBar"));
+		assertFalse(PlayerNames.samePlayer("", ""));
 	}
 
 	@Test
