@@ -59,7 +59,7 @@ final class TsgHubNewsWindow extends JPanel
 		{
 			page.add(wrapped(str(announcement, "title"), TEXT, headingFont(), TEXT_W));
 			page.add(Box.createVerticalStrut(GAP_XS));
-			page.add(wrapped(str(announcement, "postedBy") + " · " + TsgHubRoster.warningDate(str(announcement, "postedAt"), clock.instant(), ZoneId.systemDefault()), MUTED, smallFont(), TEXT_W));
+			page.add(wrapped(str(announcement, "postedBy") + " · " + TsgHubFormat.shortDate(str(announcement, "postedAt"), clock.instant(), ZoneId.systemDefault()), MUTED, smallFont(), TEXT_W));
 			String body = str(announcement, "body");
 			if (!body.isEmpty())
 			{

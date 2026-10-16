@@ -110,9 +110,9 @@ public class MembersPanelTest
 	@Test
 	public void warningDate()
 	{
-		assertEquals("12 Sep", TsgHubRoster.warningDate("2026-09-12T10:00:00Z", NOW, java.time.ZoneOffset.UTC));
-		assertEquals("3 Jun 2025", TsgHubRoster.warningDate("2025-06-03T10:00:00Z", NOW, java.time.ZoneOffset.UTC));
-		assertEquals("", TsgHubRoster.warningDate("", NOW, java.time.ZoneOffset.UTC));
+		assertEquals("12 Sep", TsgHubFormat.shortDate("2026-09-12T10:00:00Z", NOW, java.time.ZoneOffset.UTC));
+		assertEquals("3 Jun 2025", TsgHubFormat.shortDate("2025-06-03T10:00:00Z", NOW, java.time.ZoneOffset.UTC));
+		assertEquals("", TsgHubFormat.shortDate("", NOW, java.time.ZoneOffset.UTC));
 	}
 
 	@Test

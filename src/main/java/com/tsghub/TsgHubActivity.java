@@ -338,14 +338,6 @@ final class TsgHubActivity
 
 	static String ago(Instant when, Instant now)
 	{
-		if (when == null) return "never";
-		long minutes = Math.max(0, Duration.between(when, now).toMinutes());
-		if (minutes < 1) return "just now";
-		if (minutes < 60) return minutes + "m ago";
-		long hours = minutes / 60;
-		if (hours < 24) return hours + "h ago";
-		long days = hours / 24;
-		if (days < 60) return days + "d ago";
-		return days / 30 + "mo ago";
+		return when == null ? "never" : TsgHubFormat.ago(when, now);
 	}
 }

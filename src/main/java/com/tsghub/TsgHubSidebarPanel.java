@@ -932,7 +932,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		JPanel form = stack();
 		for (JsonObject warning : active)
 		{
-			String meta = TsgHubRoster.warningDate(str(warning, "issuedAt"), now, zone) + " · " + escape(str(warning, "issuedBy"));
+			String meta = TsgHubFormat.shortDate(str(warning, "issuedAt"), now, zone) + " · " + escape(str(warning, "issuedBy"));
 			javax.swing.JRadioButton choice = plain(new javax.swing.JRadioButton(html(escape(str(warning, "reason")) + "<br>" + tipLine(MUTED, meta), 220)), TEXT);
 			choice.setSelected(choices.isEmpty());
 			group.add(choice);
@@ -1238,7 +1238,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		lines.add(row(label(html(escape(str(announcement, "title")), CARD_TEXT_W - icons.getPreferredSize().width - 6), TEXT, boldFont()), north(icons)));
 		String poll = TsgHubAnnouncements.poll(announcement) == null ? "" : " · Poll";
 		lines.add(Box.createVerticalStrut(GAP_XS));
-		lines.add(cardNote(str(announcement, "postedBy") + " · " + TsgHubRoster.warningDate(str(announcement, "postedAt"), now, zone) + poll));
+		lines.add(cardNote(str(announcement, "postedBy") + " · " + TsgHubFormat.shortDate(str(announcement, "postedAt"), now, zone) + poll));
 		card.add(fillWidth(lines), BorderLayout.CENTER);
 		String id = str(announcement, "id");
 		clickable(card, () -> plugin.openNews(id));
@@ -1362,7 +1362,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 		else
 		{
-			lines.add(label("+" + String.format("%,d", mine == null ? 0 : integer(mine, "gained", 0)) + " " + unit(), SUCCESS, boldFont()));
+			lines.add(label("+" + TsgHubFormat.number(mine == null ? 0 : integer(mine, "gained", 0)) + " " + unit(), SUCCESS, boldFont()));
 			if (!tracking)
 			{
 				lines.add(Box.createVerticalStrut(GAP_XS));
@@ -1397,7 +1397,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 				if (me) highlightSelf(card);
 				if (started) card.add(rankLabel(rank, boldFont(), 18), BorderLayout.WEST);
 				card.add(wrapped(str(row, "displayName"), TEXT, plainFont(), 110), BorderLayout.CENTER);
-				String gained = bool(row, "tracking") ? String.format("%,d", integer(row, "gained", 0)) : "-";
+				String gained = bool(row, "tracking") ? TsgHubFormat.number(integer(row, "gained", 0)) : "-";
 				if (started) card.add(label(gained, rank == 1 ? ACCENT : TEXT, boldFont()), BorderLayout.EAST);
 				page.add(fitHeight(card));
 				page.add(Box.createVerticalStrut(LIST_GAP));
@@ -1406,9 +1406,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 		page.add(Box.createVerticalStrut(GAP_L));
 		JButton leave = dangerButton("Leave competition");
 		leave.addActionListener(e -> {
-			int choice = JOptionPane.showConfirmDialog(this, "Leave \"" + eventName(event) + "\"?\nYou'll drop off the leaderboard on this device. You can rejoin while it's running.",
-				"Leave competition", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
-			if (choice == JOptionPane.OK_OPTION) plugin.leaveEvent(str(event, "id"));
+			if (confirm(this, "Leave competition", "Leave \"" + eventName(event) + "\"?\nYou'll drop off the leaderboard on this device. You can rejoin while it's running.", "Leave", true))
+				plugin.leaveEvent(str(event, "id"));
 		});
 		page.add(fitHeight(leave));
 		refreshPage();
@@ -1577,9 +1576,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	private void confirmKick(String name)
 	{
-		if (JOptionPane.showConfirmDialog(this,
-			"Remove " + name + " from the party?\nThey won't be able to rejoin it.",
-			"Remove member", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.OK_OPTION) return;
+		if (!confirm(this, "Remove member", "Remove " + name + " from the party?\nThey won't be able to rejoin it.", "Remove", true)) return;
 		plugin.groups().kick(name);
 	}
 
@@ -1761,9 +1758,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 				return;
 			}
 			if (groupBusy) return;
-			if (current != null && JOptionPane.showConfirmDialog(this,
-				"Leave " + currentTitle(current) + " and join " + title + "?",
-				"Switch parties", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE) != JOptionPane.OK_OPTION) return;
+			if (current != null && !confirm(this, "Switch parties", "Leave " + currentTitle(current) + " and join " + title + "?", "Switch", false)) return;
 			groupBusy = true;
 			groupError.setVisible(false);
 			renderGroups();
@@ -1807,9 +1802,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		if (groupBusy) return;
 		JsonObject current = plugin.groups().inGroup() ? plugin.groups().currentGroup() : null;
-		if (current != null && JOptionPane.showConfirmDialog(this,
-			"Leave " + currentTitle(current) + " and start a new party?",
-			"Start a new party", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE) != JOptionPane.OK_OPTION) return;
+		if (current != null && !confirm(this, "Start a new party", "Leave " + currentTitle(current) + " and start a new party?", "Start", false)) return;
 		groupBusy = true;
 		groupError.setVisible(false);
 		renderGroups();
@@ -2498,10 +2491,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private void confirmLeave()
 	{
 		if (boardEvent == null) return;
-		int choice = JOptionPane.showConfirmDialog(this,
-			"Stop tracking \"" + eventName(boardEvent) + "\" on this device?\nYour team keeps its progress and you can rejoin with your team code.",
-			"Disconnect from event", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
-		if (choice == JOptionPane.OK_OPTION) plugin.leaveEvent(str(boardEvent, "id"));
+		if (confirm(this, "Disconnect from event", "Stop tracking \"" + eventName(boardEvent) + "\" on this device?\nYour team keeps its progress and you can rejoin with your team code.", "Disconnect", true))
+			plugin.leaveEvent(str(boardEvent, "id"));
 	}
 
 	private void addBar(JPanel body, int value, int max, String label)

@@ -17,8 +17,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 final class TsgHubFormat
 {
-	private static final DateTimeFormatter DATE_WITH_YEAR = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.US);
-	private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("EEE d MMM", Locale.US);
+	static final DateTimeFormatter DATE_WITH_YEAR = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.US);
+	static final DateTimeFormatter SHORT_DATE = DateTimeFormatter.ofPattern("d MMM", Locale.US);
+	static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("EEE d MMM", Locale.US);
+	static final DateTimeFormatter CLOCK_24 = DateTimeFormatter.ofPattern("HH:mm", Locale.US);
 	private static final DateTimeFormatter DAY_WITH_YEAR = DateTimeFormatter.ofPattern("EEE d MMM yyyy", Locale.US);
 	private static final DateTimeFormatter HOUR = DateTimeFormatter.ofPattern("h", Locale.US);
 	private static final DateTimeFormatter HOUR_MINUTE = DateTimeFormatter.ofPattern("h:mm", Locale.US);
@@ -27,6 +29,31 @@ final class TsgHubFormat
 
 	private TsgHubFormat()
 	{
+	}
+
+	static String number(long value)
+	{
+		return String.format(Locale.US, "%,d", value);
+	}
+
+	static String elapsed(Instant then, Instant now)
+	{
+		long minutes = Math.max(0, Duration.between(then, now).toMinutes());
+		if (minutes < 1) return "";
+		if (minutes < 60) return minutes + "m";
+		long hours = minutes / 60;
+		if (hours < 24) return hours + "h";
+		long days = hours / 24;
+		if (days < 14) return days + "d";
+		if (days < 60) return days / 7 + "w";
+		if (days < 365) return days / 30 + "mo";
+		return days / 365 + "y";
+	}
+
+	static String ago(Instant then, Instant now)
+	{
+		String elapsed = elapsed(then, now);
+		return elapsed.isEmpty() ? "just now" : elapsed + " ago";
 	}
 
 	static String friendlyError(Throwable error)
@@ -58,6 +85,14 @@ final class TsgHubFormat
 	{
 		String name = zoneName(now.atZone(zone));
 		return name.equals(zone.getId()) ? name : name + " (" + zone.getId() + ")";
+	}
+
+	static String shortDate(String iso, Instant now, ZoneId zone)
+	{
+		Instant at = TsgHubJson.instant(iso);
+		if (at == null) return "";
+		ZonedDateTime day = at.atZone(zone);
+		return day.format(day.getYear() == now.atZone(zone).getYear() ? SHORT_DATE : DATE_WITH_YEAR);
 	}
 
 	static String localDate(Instant when, ZoneId zone)

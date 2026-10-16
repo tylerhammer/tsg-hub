@@ -24,7 +24,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -45,7 +44,6 @@ final class TsgHubActivityDetail extends JPanel
 {
 	static final int DETAIL_W = 520;
 	private static final int MAX_GROUP_CONTENT = 20;
-	private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.US);
 
 	private final JLabel name = label(" ", TEXT, titleFont());
 	private final JLabel rankBadge = badge(" ", MUTED);
@@ -109,7 +107,7 @@ final class TsgHubActivityDetail extends JPanel
 		rankBadge.setVisible(!member.rank.isEmpty());
 		previously.setText(member.previousNames().isEmpty() ? "" : "previously " + String.join(", ", member.previousNames()));
 		previously.setVisible(!member.previousNames().isEmpty());
-		joinedValue.setText(member.joined == null ? "-" : member.joined.format(DATE));
+		joinedValue.setText(member.joined == null ? "-" : member.joined.format(TsgHubFormat.DATE_WITH_YEAR));
 		seenValue.setText(member.onHub() ? TsgHubActivity.ago(member.lastSeen(), now) : "-");
 		avgTitle.setText("AVG A DAY");
 		avgValue.setText("-");
@@ -210,7 +208,7 @@ final class TsgHubActivityDetail extends JPanel
 		boolean weekly = size == 7 && days >= 7;
 		float average = weekly ? total * 7f / days : total / (float) days;
 		String avg = average >= 60 ? String.format(Locale.US, "%.1fh", average / 60f) : Math.round(average) + " min";
-		String tip = from.equals(windowStart) ? null : "Tracking started " + from.format(DATE);
+		String tip = from.equals(windowStart) ? null : "Tracking started " + from.format(TsgHubFormat.DATE_WITH_YEAR);
 		return new ChartStats(weekly, avg, active + " of " + plural(days, "day"), tip);
 	}
 
@@ -219,7 +217,7 @@ final class TsgHubActivityDetail extends JPanel
 		boolean attended = !event.has("attended") || bool(event, "attended");
 		String title = str(event, "name").isEmpty() ? "Untitled event" : str(event, "name");
 		Instant joined = instant(str(event, "joinedAt"));
-		JPanel top = row(shrinkable(label(title, attended ? TEXT : MUTED, boldFont())), caption(joined == null ? "" : format(joined, DATE)));
+		JPanel top = row(shrinkable(label(title, attended ? TEXT : MUTED, boldFont())), caption(joined == null ? "" : localDate(joined, ZoneId.systemDefault())));
 		List<String> parts = new ArrayList<>();
 		String type = capitalize(str(event, "type").replace('_', ' '));
 		if (!type.isEmpty()) parts.add(type);
@@ -248,7 +246,7 @@ final class TsgHubActivityDetail extends JPanel
 			if (name.isJsonPrimitive()) with.add(name.getAsString());
 		}
 		JPanel top = row(shrinkable(label(content + " · " + plural(integer(group, "completions", 0), "completion"), TEXT, plainFont())),
-			caption(last == null ? "" : format(last, DATE)));
+			caption(last == null ? "" : localDate(last, ZoneId.systemDefault())));
 		JLabel detail = label(with.isEmpty() ? "" : "with " + String.join(", ", with), MUTED, smallFont());
 		return listCard(twoLines(top, detail));
 	}
@@ -263,11 +261,6 @@ final class TsgHubActivityDetail extends JPanel
 		return fitHeight(card);
 	}
 
-	private static String format(Instant when, DateTimeFormatter formatter)
-	{
-		return when.atZone(ZoneId.systemDefault()).format(formatter);
-	}
-
 	private static LocalDate parseDay(String day)
 	{
 		try { return day.isEmpty() ? null : LocalDate.parse(day); }
@@ -280,8 +273,6 @@ final class TsgHubActivityDetail extends JPanel
 		private static final int AXIS = 16;
 		private static final int TOP = 6;
 		private static final int[] STEPS = {5, 10, 15, 30, 60, 120, 300, 600, 1200, 1500, 3000, 6000};
-		private static final DateTimeFormatter TIP = DateTimeFormatter.ofPattern("EEE d MMM", Locale.US);
-		private static final DateTimeFormatter AXIS_DATE = DateTimeFormatter.ofPattern("d MMM", Locale.US);
 		private Map<LocalDate, Integer> minutes = new HashMap<>();
 		private LocalDate end = LocalDate.now(TsgHubFormat.clock);
 		private LocalDate trackedFrom;
@@ -381,7 +372,7 @@ final class TsgHubActivityDetail extends JPanel
 			int bucket = bucketAt(event.getX());
 			if (bucket < 0) return null;
 			LocalDate start = bucketStart(end, bucket, count, size);
-			String range = size == 1 ? start.format(TIP) : start.format(AXIS_DATE) + " to " + start.plusDays(size - 1).format(AXIS_DATE);
+			String range = size == 1 ? start.format(TsgHubFormat.DAY) : start.format(TsgHubFormat.SHORT_DATE) + " to " + start.plusDays(size - 1).format(TsgHubFormat.SHORT_DATE);
 			if (untracked(bucket)) return range + ": not tracked yet";
 			int total = 0, active = 0;
 			for (int day = 0; day < size; day++)
@@ -446,8 +437,8 @@ final class TsgHubActivityDetail extends JPanel
 			}
 			g.setColor(MUTED);
 			int baseline = getHeight() - 2;
-			g.drawString(bucketStart(end, 0, count, size).format(AXIS_DATE), gutter, baseline);
-			String last = bucketStart(end, count - 1, count, size).format(AXIS_DATE);
+			g.drawString(bucketStart(end, 0, count, size).format(TsgHubFormat.SHORT_DATE), gutter, baseline);
+			String last = bucketStart(end, count - 1, count, size).format(TsgHubFormat.SHORT_DATE);
 			g.drawString(last, width - metrics.stringWidth(last), baseline);
 			g.dispose();
 		}

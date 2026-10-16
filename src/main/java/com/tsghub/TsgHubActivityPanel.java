@@ -24,7 +24,6 @@ import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -67,7 +66,6 @@ final class TsgHubActivityPanel extends JPanel
 	private static final int[] WINDOW_DAYS = {7, 30, 90};
 	private static final int DEFAULT_WINDOW = 1;
 	private static final Color INACTIVE_ROW = ColorUtil.colorLerp(CARD, TsgHubTheme.ERROR, 0.12);
-	private static final DateTimeFormatter JOINED_DATE = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.US);
 	private static final int STATUS_W = 600;
 	private static final Border CELL_BORDER = BorderFactory.createEmptyBorder(0, 6, 0, 6);
 
@@ -369,7 +367,7 @@ final class TsgHubActivityPanel extends JPanel
 			{
 				case MEMBER: return member.name;
 				case RANK: return member.rank;
-				case JOINED: return member.joined == null ? "-" : member.joined.format(JOINED_DATE);
+				case JOINED: return member.joined == null ? "-" : member.joined.format(TsgHubFormat.DATE_WITH_YEAR);
 				case SEEN: return member.onHub() ? TsgHubActivity.ago(member.lastSeen(), now) : "-";
 				case ACTIVE: return count(member, "activeDays");
 				case HOURS: return member.onHub() ? String.format(Locale.US, "%.1f", member.stat("minutesOnline") / 60f) : "-";

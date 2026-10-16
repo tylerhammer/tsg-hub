@@ -29,7 +29,6 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -770,7 +769,7 @@ final class TsgHubPanel extends JPanel
 		if (currentEvent == null) return;
 		String message = "End \"" + TsgHubEvents.eventName(currentEvent) + "\" now?\n\n"
 			+ "It moves to ended and online clanmates get an announcement that it's over.";
-		if (confirmDelete(this, "End event", message, "End event")) plugin.organizer().endEvent(str(currentEvent, "id"));
+		if (confirm(this, "End event", message, "End event", true)) plugin.organizer().endEvent(str(currentEvent, "id"));
 	}
 
 	private void confirmDeleteEvent()
@@ -783,7 +782,7 @@ final class TsgHubPanel extends JPanel
 			+ "This permanently removes its " + plural(teams, "team") + ", " + plural(tasks, "task") + " and all progress.\n"
 			+ (members > 0 ? plural(members, "player") + " will be disconnected.\n" : "")
 			+ "This can't be undone.";
-		if (confirmDelete(this, "Delete event", message, "Delete event")) plugin.organizer().deleteEvent(str(currentEvent, "id"));
+		if (confirm(this, "Delete event", message, "Delete event", true)) plugin.organizer().deleteEvent(str(currentEvent, "id"));
 	}
 
 	private void confirmDeleteTeam(JsonObject team, int members)
@@ -792,7 +791,7 @@ final class TsgHubPanel extends JPanel
 			+ (members > 0 ? "Its " + plural(members, "member") + " will be removed from the event, and " : "")
 			+ (members > 0 ? "its" : "Its") + " progress will be deleted. Its invite code stops working.\n"
 			+ "This can't be undone.";
-		if (confirmDelete(this, "Delete team", message, "Delete team")) plugin.organizer().deleteTeam(str(team, "id"));
+		if (confirm(this, "Delete team", message, "Delete team", true)) plugin.organizer().deleteTeam(str(team, "id"));
 	}
 
 	private static boolean reconcilable(JsonObject task)
@@ -827,7 +826,7 @@ final class TsgHubPanel extends JPanel
 	{
 		String message = "Delete task \"" + str(task, "title") + "\"?\n\n"
 			+ "Every team's progress and claims for it will be deleted.\nThis can't be undone.";
-		if (confirmDelete(this, "Delete task", message, "Delete task")) plugin.organizer().deleteTask(str(task, "id"));
+		if (confirm(this, "Delete task", message, "Delete task", true)) plugin.organizer().deleteTask(str(task, "id"));
 	}
 
 	void finishTaskEdit()
@@ -1108,7 +1107,7 @@ final class TsgHubPanel extends JPanel
 			if (started)
 			{
 				boolean tracking = bool(row, "tracking");
-				String gained = tracking ? "+" + String.format("%,d", integer(row, "gained", 0)) + " " + unit : "Waiting for first " + ("XP".equals(unit) ? "XP" : "kill");
+				String gained = tracking ? "+" + TsgHubFormat.number(integer(row, "gained", 0)) + " " + unit : "Waiting for first " + ("XP".equals(unit) ? "XP" : "kill");
 				card.add(label(gained, !tracking ? MUTED : rank == 1 ? ACCENT : TEXT, tracking ? boldFont() : smallFont()), BorderLayout.EAST);
 			}
 			leaderboardTab.add(fitHeight(card));
@@ -1321,11 +1320,10 @@ final class TsgHubPanel extends JPanel
 
 	private void setEventTimes(ZonedDateTime start, ZonedDateTime end)
 	{
-		DateTimeFormatter clock = DateTimeFormatter.ofPattern("HH:mm");
 		eventStart.setDate(start == null ? LocalDate.now() : start.toLocalDate());
-		eventStartTime.setText(start == null ? "" : start.format(clock));
+		eventStartTime.setText(start == null ? "" : start.format(TsgHubFormat.CLOCK_24));
 		eventEnd.setDate(end == null ? eventStart.getDate() : end.toLocalDate());
-		eventEndTime.setText(end == null ? "" : end.format(clock));
+		eventEndTime.setText(end == null ? "" : end.format(TsgHubFormat.CLOCK_24));
 	}
 
 	private void defaultEventEnd()

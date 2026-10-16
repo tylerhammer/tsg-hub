@@ -97,8 +97,7 @@ final class TsgHubUi
 			public void mouseClicked(MouseEvent e)
 			{
 				String href = linkAt(label, e.getPoint());
-				if (href != null && JOptionPane.showConfirmDialog(label, "Open this link in your browser?\n\n" + href, "Open link",
-					JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE) == JOptionPane.OK_OPTION)
+				if (href != null && confirm(label, "Open link", "Open this link in your browser?\n\n" + href, "Open", false))
 					net.runelite.client.util.LinkBrowser.browse(href);
 			}
 
@@ -638,11 +637,11 @@ final class TsgHubUi
 		if (value < 10_000_000) return TEXT;
 		return COIN_HIGH;
 	}
-	static boolean confirmDelete(Component parent, String title, String message, String action)
+	static boolean confirm(Component parent, String title, String message, String action, boolean danger)
 	{
 		Object[] options = {action, "Cancel"};
 		int choice = JOptionPane.showOptionDialog(parent, message, title, JOptionPane.DEFAULT_OPTION,
-			JOptionPane.WARNING_MESSAGE, null, options, options[1]);
+			danger ? JOptionPane.WARNING_MESSAGE : JOptionPane.QUESTION_MESSAGE, null, options, options[danger ? 1 : 0]);
 		return choice == 0;
 	}
 

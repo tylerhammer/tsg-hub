@@ -7,11 +7,8 @@ import static com.tsghub.TsgHubTheme.*;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.awt.Color;
-import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -20,8 +17,6 @@ final class TsgHubRoster
 {
 	private static final String ALT_RANK = "Gnome Child";
 	private static final int MAX_PAST_WARNINGS = 3;
-	private static final DateTimeFormatter WARNING_DAY = DateTimeFormatter.ofPattern("d MMM", java.util.Locale.ENGLISH);
-	private static final DateTimeFormatter WARNING_DAY_YEAR = DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale.ENGLISH);
 
 	private TsgHubRoster()
 	{
@@ -50,17 +45,7 @@ final class TsgHubRoster
 	static String lastSeen(String iso, Instant now)
 	{
 		Instant then = instant(iso);
-		if (then == null) return "";
-		long minutes = Math.max(0, java.time.Duration.between(then, now).toMinutes());
-		if (minutes < 1) return "just now";
-		if (minutes < 60) return minutes + "m ago";
-		long hours = minutes / 60;
-		if (hours < 24) return hours + "h ago";
-		long days = hours / 24;
-		if (days < 14) return days + "d ago";
-		if (days < 60) return days / 7 + "w ago";
-		if (days < 365) return days / 30 + "mo ago";
-		return days / 365 + "y ago";
+		return then == null ? "" : TsgHubFormat.ago(then, now);
 	}
 
 	static String rosterTooltip(String location, JsonArray previousNames, String altOf, JsonArray alts, String note, JsonArray warnings, Instant now, ZoneId zone)
@@ -120,7 +105,7 @@ final class TsgHubRoster
 		for (JsonObject warning : ordered)
 		{
 			boolean active = bool(warning, "active");
-			String meta = warningDate(str(warning, "issuedAt"), now, zone) + " · " + escape(str(warning, "issuedBy")) + " · " + warningStatus(warning, now, zone);
+			String meta = TsgHubFormat.shortDate(str(warning, "issuedAt"), now, zone) + " · " + escape(str(warning, "issuedBy")) + " · " + warningStatus(warning, now, zone);
 			Color text = active ? TEXT : DIM;
 			out.append(tipCard(active ? TsgHubTheme.ERROR : BORDER, tipLine(text, escape(str(warning, "reason"))) + "<br>" + tipLine(active ? MUTED : DIM, meta)));
 		}
@@ -133,15 +118,7 @@ final class TsgHubRoster
 		if (!str(warning, "revokedAt").isEmpty()) return "revoked by " + escape(str(warning, "revokedBy"));
 		String expires = str(warning, "expiresAt");
 		if (expires.isEmpty()) return "no expiry";
-		return bool(warning, "active") ? "expires " + warningDate(expires, now, zone) : "expired";
-	}
-
-	static String warningDate(String iso, Instant now, ZoneId zone)
-	{
-		Instant at = instant(iso);
-		if (at == null) return "";
-		LocalDate day = at.atZone(zone).toLocalDate();
-		return day.format(day.getYear() == now.atZone(zone).getYear() ? WARNING_DAY : WARNING_DAY_YEAR);
+		return bool(warning, "active") ? "expires " + TsgHubFormat.shortDate(expires, now, zone) : "expired";
 	}
 
 	static boolean isAltRank(String rank)

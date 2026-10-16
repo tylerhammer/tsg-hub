@@ -11,11 +11,9 @@ import static com.tsghub.TsgHubUi.*;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.tsghub.TsgHubUi.Tone;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.AbstractMap;
 import java.util.ArrayDeque;
@@ -37,7 +35,6 @@ import net.runelite.client.util.Text;
 
 final class TsgHubDrops
 {
-	private static final DateTimeFormatter CLOCK_TIME = DateTimeFormatter.ofPattern("HH:mm");
 	private static final Set<String> COX_ITEMS = Set.of(
 		"Dexterous prayer scroll", "Arcane prayer scroll", "Twisted buckler", "Dragon hunter crossbow",
 		"Dinh's bulwark", "Ancestral hat", "Ancestral robe top", "Ancestral robe bottom", "Dragon claws",
@@ -250,7 +247,7 @@ final class TsgHubDrops
 			out += tipSection(true, tipLine(MUTED, "<b>DROPPED BY</b>"))
 				+ tipCard(ACCENT, "<b>" + escape(source) + "</b>" + (rate.isEmpty() ? "" : "<br>" + escape(rate) + tipLine(MUTED, " drop rate")));
 		}
-		if (kc > 0) out += tipSection(out.isEmpty(), tipLine(MUTED, "<b>KILL COUNT</b> ") + String.format(Locale.US, "%,d", kc));
+		if (kc > 0) out += tipSection(out.isEmpty(), tipLine(MUTED, "<b>KILL COUNT</b> ") + TsgHubFormat.number(kc));
 		return out;
 	}
 
@@ -299,15 +296,10 @@ final class TsgHubDrops
 
 	static String dropAge(String iso, Instant now)
 	{
-		Instant then;
-		try { then = Instant.parse(iso); }
-		catch (Exception e) { return ""; }
-		long minutes = Math.max(0, Duration.between(then, now).toMinutes());
-		if (minutes < 1) return "now";
-		if (minutes < 60) return minutes + "m";
-		long hours = minutes / 60;
-		if (hours < 24) return hours + "h";
-		return hours / 24 + "d";
+		Instant then = TsgHubJson.instant(iso);
+		if (then == null) return "";
+		String elapsed = TsgHubFormat.elapsed(then, now);
+		return elapsed.isEmpty() ? "now" : elapsed;
 	}
 
 	static String dropWhen(String iso, Instant now, ZoneId zone)
@@ -315,7 +307,7 @@ final class TsgHubDrops
 		String day = dropDay(iso, now, zone);
 		if ("Earlier".equals(day)) return "";
 		if ("Today".equals(day)) return dropAge(iso, now);
-		return Instant.parse(iso).atZone(zone).format(CLOCK_TIME);
+		return Instant.parse(iso).atZone(zone).format(TsgHubFormat.CLOCK_24);
 	}
 
 	static String dropDay(String iso, Instant now, ZoneId zone)

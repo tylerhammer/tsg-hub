@@ -341,8 +341,7 @@ final class TsgHubNewsEditor extends JPanel
 	private void confirmPublish()
 	{
 		if (selected == null) return;
-		if (javax.swing.JOptionPane.showConfirmDialog(this, "Publish \"" + str(selected, "title") + "\"? Clan members get a chat message and see it under News.",
-			"Publish announcement", javax.swing.JOptionPane.OK_CANCEL_OPTION, javax.swing.JOptionPane.QUESTION_MESSAGE) == javax.swing.JOptionPane.OK_OPTION)
+		if (confirm(this, "Publish announcement", "Publish \"" + str(selected, "title") + "\"? Clan members get a chat message and see it under News.", "Publish", false))
 			plugin.announcements().publish(str(selected, "id"));
 	}
 
@@ -354,7 +353,7 @@ final class TsgHubNewsEditor extends JPanel
 	private void confirmDelete()
 	{
 		if (selected == null) return;
-		if (TsgHubUi.confirmDelete(this, "Delete announcement", "Delete \"" + str(selected, "title") + "\"? Members won't see it anymore.", "Delete"))
+		if (confirm(this, "Delete announcement", "Delete \"" + str(selected, "title") + "\"? Members won't see it anymore.", "Delete", true))
 			plugin.announcements().delete(str(selected, "id"));
 	}
 
@@ -441,7 +440,7 @@ final class TsgHubNewsEditor extends JPanel
 
 	static String meta(JsonObject announcement, Instant now, ZoneId zone)
 	{
-		String when = TsgHubRoster.warningDate(str(announcement, "postedAt"), now, zone);
+		String when = TsgHubFormat.shortDate(str(announcement, "postedAt"), now, zone);
 		if (bool(announcement, "draft"))
 		{
 			int hours = draftHours(announcement);
@@ -451,10 +450,10 @@ final class TsgHubNewsEditor extends JPanel
 		String meta = "Posted by " + str(announcement, "postedBy") + " · " + when;
 		if (!str(announcement, "publishedBy").isEmpty()) meta += " · published by " + str(announcement, "publishedBy");
 		if (!str(announcement, "editedAt").isEmpty())
-			meta += " · edited by " + str(announcement, "editedBy") + " " + TsgHubRoster.warningDate(str(announcement, "editedAt"), now, zone);
+			meta += " · edited by " + str(announcement, "editedBy") + " " + TsgHubFormat.shortDate(str(announcement, "editedAt"), now, zone);
 		String expires = str(announcement, "expiresAt");
 		if (expires.isEmpty()) return meta + " · never expires";
-		return meta + (bool(announcement, "expired") ? " · expired " : " · expires ") + TsgHubRoster.warningDate(expires, now, zone);
+		return meta + (bool(announcement, "expired") ? " · expired " : " · expires ") + TsgHubFormat.shortDate(expires, now, zone);
 	}
 
 	private void renderList()
@@ -497,7 +496,7 @@ final class TsgHubNewsEditor extends JPanel
 		card.setBackground(isSelected ? CARD_HOVER : BACKGROUND);
 		String by = (bool(announcement, "draft") ? "Draft by " : "") + str(announcement, "postedBy");
 		card.add(twoLines(shrinkable(boldLabel(str(announcement, "title"))),
-			caption(by + " · " + TsgHubRoster.warningDate(str(announcement, "postedAt"), now, zone))), BorderLayout.CENTER);
+			caption(by + " · " + TsgHubFormat.shortDate(str(announcement, "postedAt"), now, zone))), BorderLayout.CENTER);
 		JsonObject poll = TsgHubAnnouncements.poll(announcement);
 		if (poll != null)
 		{
