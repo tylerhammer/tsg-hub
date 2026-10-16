@@ -130,4 +130,25 @@ public class ActivityTest
 		assertTrue(TsgHubRules.get().groupContent.contains("kill count is:"));
 		assertTrue(TsgHubRules.get().groupContent.contains("amount of rifts you have closed"));
 	}
+
+	@Test
+	public void weeklyChartBucketsAndSteps()
+	{
+		LocalDate end = LocalDate.of(2026, 10, 16);
+		java.util.Map<LocalDate, Integer> minutes = new java.util.HashMap<>();
+		minutes.put(end, 30);
+		minutes.put(end.minusDays(6), 45);
+		minutes.put(end.minusDays(7), 60);
+		minutes.put(end.minusDays(90), 10);
+		minutes.put(end.minusDays(91), 999);
+		int[] weeks = TsgHubActivityDetail.WeeklyChart.weekMinutes(minutes, end);
+		assertEquals(13, weeks.length);
+		assertEquals(75, weeks[12]);
+		assertEquals(60, weeks[11]);
+		assertEquals(10, weeks[0]);
+		assertEquals(60, TsgHubActivityDetail.WeeklyChart.step(0));
+		assertEquals(60, TsgHubActivityDetail.WeeklyChart.step(200));
+		assertEquals(300, TsgHubActivityDetail.WeeklyChart.step(900));
+		assertEquals(12000, TsgHubActivityDetail.WeeklyChart.step(30000));
+	}
 }

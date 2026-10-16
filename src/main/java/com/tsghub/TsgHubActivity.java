@@ -30,7 +30,7 @@ import net.runelite.client.util.Text;
 
 final class TsgHubActivity
 {
-	static final int DETAIL_DAYS = 90;
+	static final int DETAIL_DAYS = 91;
 	static final int NO_RANK = Integer.MIN_VALUE;
 	private static final String NO_CLAN = "No clan detected. Log in to a clan member character.";
 

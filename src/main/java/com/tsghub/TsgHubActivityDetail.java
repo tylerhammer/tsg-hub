@@ -42,7 +42,7 @@ final class TsgHubActivityDetail extends JPanel
 	private final JLabel name = label(" ", TEXT, titleFont());
 	private final JLabel meta = caption(" ");
 	private final JLabel message = caption(" ");
-	private final MinutesChart chart = new MinutesChart();
+	private final WeeklyChart chart = new WeeklyChart();
 	private final JLabel chartCaption = caption(" ");
 	private final JPanel events = stack();
 	private final JPanel groupContent = stack();
@@ -61,7 +61,7 @@ final class TsgHubActivityDetail extends JPanel
 		content.add(Box.createVerticalStrut(GAP_M));
 		content.add(message);
 
-		body.add(sectionTitle("Time online, last " + TsgHubActivity.DETAIL_DAYS + " days"));
+		body.add(sectionTitle("Hours per week, last " + WeeklyChart.WEEKS + " weeks"));
 		body.add(chart);
 		body.add(Box.createVerticalStrut(GAP_XS));
 		body.add(chartCaption);
@@ -114,8 +114,11 @@ final class TsgHubActivityDetail extends JPanel
 			minutes.merge(date, value, Integer::sum);
 			total += value;
 		}
-		chart.setMinutes(minutes);
-		chartCaption.setText(minutes.isEmpty() ? "No time online recorded." : String.format(Locale.US, "%.1f hours across %s.", total / 60f, plural(minutes.size(), "day")));
+		LocalDate last = WeeklyChart.lastDay(minutes);
+		chart.setMinutes(minutes, last);
+		int active = 0;
+		for (LocalDate day : minutes.keySet()) if (!day.isBefore(WeeklyChart.weekStart(last, 0))) active++;
+		chartCaption.setText(minutes.isEmpty() ? "No time online recorded." : String.format(Locale.US, "Avg %.1fh a week · active %d of %d days.", total / 60f / WeeklyChart.WEEKS, active, TsgHubActivity.DETAIL_DAYS));
 
 		events.removeAll();
 		List<JsonObject> eventRows = objects(array(detail, "events"));
@@ -192,16 +195,20 @@ final class TsgHubActivityDetail extends JPanel
 		catch (DateTimeParseException e) { return null; }
 	}
 
-	static final class MinutesChart extends JComponent
+	static final class WeeklyChart extends JComponent
 	{
-		private static final int HEIGHT = 120;
-		private static final int AXIS = 14;
-		private static final DateTimeFormatter TIP = DateTimeFormatter.ofPattern("EEE d MMM", Locale.US);
+		static final int WEEKS = TsgHubActivity.DETAIL_DAYS / 7;
+		private static final int HEIGHT = 140;
+		private static final int AXIS = 16;
+		private static final int TOP = 6;
+		private static final int[] STEPS = {60, 120, 300, 600, 1200, 1500, 3000, 6000};
+		private static final DateTimeFormatter TIP = DateTimeFormatter.ofPattern("d MMM", Locale.US);
 		private static final DateTimeFormatter AXIS_DATE = DateTimeFormatter.ofPattern("d MMM", Locale.US);
 		private Map<LocalDate, Integer> minutes = new HashMap<>();
 		private LocalDate end = LocalDate.now(TsgHubUi.clock);
+		private int gutter;
 
-		MinutesChart()
+		WeeklyChart()
 		{
 			setPreferredSize(new Dimension(DETAIL_W, HEIGHT));
 			setMaximumSize(new Dimension(Integer.MAX_VALUE, HEIGHT));
@@ -210,28 +217,72 @@ final class TsgHubActivityDetail extends JPanel
 			ToolTipManager.sharedInstance().registerComponent(this);
 		}
 
-		void setMinutes(Map<LocalDate, Integer> next)
+		void setMinutes(Map<LocalDate, Integer> next, LocalDate last)
 		{
 			minutes = next;
-			LocalDate today = LocalDate.now(TsgHubUi.clock);
-			for (LocalDate day : next.keySet()) if (day.isAfter(today)) today = day;
-			end = today;
+			end = last;
 			repaint();
 		}
 
-		private LocalDate dayAt(int index)
+		static LocalDate lastDay(Map<LocalDate, Integer> minutes)
 		{
-			return end.minusDays(TsgHubActivity.DETAIL_DAYS - 1 - index);
+			LocalDate today = LocalDate.now(TsgHubUi.clock);
+			for (LocalDate day : minutes.keySet()) if (day.isAfter(today)) today = day;
+			return today;
+		}
+
+		static LocalDate weekStart(LocalDate end, int week)
+		{
+			return end.minusDays(7L * (WEEKS - week) - 1);
+		}
+
+		static int[] weekMinutes(Map<LocalDate, Integer> minutes, LocalDate end)
+		{
+			int[] weeks = new int[WEEKS];
+			for (int week = 0; week < WEEKS; week++)
+			{
+				LocalDate start = weekStart(end, week);
+				for (int day = 0; day < 7; day++) weeks[week] += minutes.getOrDefault(start.plusDays(day), 0);
+			}
+			return weeks;
+		}
+
+		static int step(int max)
+		{
+			for (int step : STEPS) if (max <= step * 4) return step;
+			int step = STEPS[STEPS.length - 1];
+			while (max > step * 4) step *= 2;
+			return step;
+		}
+
+		private static String hours(int minutes)
+		{
+			return minutes % 60 == 0 ? minutes / 60 + "h" : span(Duration.ofMinutes(minutes));
+		}
+
+		private int weekAt(int x)
+		{
+			int width = getWidth() - gutter;
+			if (width <= 0 || x < gutter) return -1;
+			int week = (int) ((x - gutter) / (width / (double) WEEKS));
+			return week >= 0 && week < WEEKS ? week : -1;
 		}
 
 		@Override
 		public String getToolTipText(MouseEvent event)
 		{
-			int index = (int) (event.getX() / (getWidth() / (double) TsgHubActivity.DETAIL_DAYS));
-			if (index < 0 || index >= TsgHubActivity.DETAIL_DAYS) return null;
-			LocalDate day = dayAt(index);
-			int value = minutes.getOrDefault(day, 0);
-			return day.format(TIP) + ": " + (value == 0 ? "offline" : value >= 60 ? span(Duration.ofMinutes(value)) : value + " min");
+			int week = weekAt(event.getX());
+			if (week < 0) return null;
+			LocalDate start = weekStart(end, week);
+			int total = 0, active = 0;
+			for (int day = 0; day < 7; day++)
+			{
+				int value = minutes.getOrDefault(start.plusDays(day), 0);
+				total += value;
+				if (value > 0) active++;
+			}
+			String range = start.format(TIP) + " to " + start.plusDays(6).format(TIP);
+			return range + ": " + (total == 0 ? "offline" : (total >= 60 ? span(Duration.ofMinutes(total)) : total + " min") + ", active " + active + " of 7 days");
 		}
 
 		@Override
@@ -239,40 +290,42 @@ final class TsgHubActivityDetail extends JPanel
 		{
 			Graphics2D g = (Graphics2D) graphics.create();
 			g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-			int width = getWidth(), plot = getHeight() - AXIS;
-			g.setColor(CARD);
-			g.fillRect(0, 0, width, plot);
-			int max = 1;
-			for (int value : minutes.values()) max = Math.max(max, value);
-			double slot = width / (double) TsgHubActivity.DETAIL_DAYS;
-			int gap = slot >= 4 ? 1 : 0;
-			for (int i = 0; i < TsgHubActivity.DETAIL_DAYS; i++)
+			g.setFont(getFont());
+			FontMetrics metrics = g.getFontMetrics();
+			int[] weeks = weekMinutes(minutes, end);
+			int max = 0;
+			for (int value : weeks) max = Math.max(max, value);
+			int step = step(max);
+			int top = Math.max(step, (max + step - 1) / step * step);
+			gutter = 0;
+			for (int value = 0; value <= top; value += step) gutter = Math.max(gutter, metrics.stringWidth(hours(value)));
+			gutter += 8;
+			int width = getWidth(), plot = getHeight() - AXIS, height = plot - TOP;
+			for (int value = 0; value <= top; value += step)
 			{
-				int value = minutes.getOrDefault(dayAt(i), 0);
-				int x = (int) Math.round(i * slot);
-				int w = Math.max(1, (int) Math.round((i + 1) * slot) - x - gap);
-				if (value <= 0)
-				{
-					g.setColor(BORDER);
-					g.fillRect(x, plot - 1, w, 1);
-					continue;
-				}
-				int h = Math.max(2, (int) Math.round((plot - 6) * value / (double) max));
-				g.setColor(ACCENT);
+				int y = plot - (int) Math.round(height * value / (double) top);
+				g.setColor(value == 0 ? MUTED : BORDER);
+				g.fillRect(gutter, y, width - gutter, 1);
+				g.setColor(MUTED);
+				String label = hours(value);
+				g.drawString(label, gutter - 6 - metrics.stringWidth(label), y + metrics.getAscent() / 2 - 1);
+			}
+			double slot = (width - gutter) / (double) WEEKS;
+			int gap = Math.max(2, (int) (slot / 4));
+			g.setColor(ACCENT);
+			for (int week = 0; week < WEEKS; week++)
+			{
+				if (weeks[week] <= 0) continue;
+				int x = gutter + (int) Math.round(week * slot) + gap / 2;
+				int w = Math.max(1, (int) Math.round(slot) - gap);
+				int h = Math.max(2, (int) Math.round(height * weeks[week] / (double) top));
 				g.fillRect(x, plot - h, w, h);
 			}
 			g.setColor(MUTED);
-			g.setFont(getFont());
-			FontMetrics metrics = g.getFontMetrics();
 			int baseline = getHeight() - 2;
-			g.drawString(dayAt(0).format(AXIS_DATE), 0, baseline);
-			String today = end.format(AXIS_DATE);
-			g.drawString(today, width - metrics.stringWidth(today), baseline);
-			if (!minutes.isEmpty())
-			{
-				String peak = (max >= 60 ? span(Duration.ofMinutes(max)) : max + " min") + " max";
-				g.drawString(peak, width - metrics.stringWidth(peak), metrics.getAscent());
-			}
+			g.drawString(weekStart(end, 0).format(AXIS_DATE), gutter, baseline);
+			String last = weekStart(end, WEEKS - 1).format(AXIS_DATE);
+			g.drawString(last, width - metrics.stringWidth(last), baseline);
 			g.dispose();
 		}
 	}
