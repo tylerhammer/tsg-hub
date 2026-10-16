@@ -9,8 +9,10 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import javax.swing.SwingUtilities;
 
@@ -53,10 +55,8 @@ final class TsgHubAnnouncements
 		String token = plugin.adminKey();
 		String hash = plugin.accountHash();
 		String query = "/v1/announcements?clanName=" + clan + (hash.isEmpty() ? "" : "&accountHash=" + hash);
-		executor.submit(() -> {
-			try { apply(TsgHubUi.array(api.get().request("GET", query, token.isEmpty() ? null : token, null), "announcements")); }
-			catch (Exception ignored) { }
-		});
+		api.get().call("GET", query, token.isEmpty() ? null : token, null)
+			.thenAcceptAsync(result -> apply(TsgHubUi.array(result, "announcements")), executor);
 	}
 
 	void apply(JsonArray all)
@@ -177,18 +177,18 @@ final class TsgHubAnnouncements
 		JsonArray picks = new JsonArray();
 		for (int option : options) picks.add(option);
 		request.add("options", picks);
-		executor.submit(() -> {
+		api.get().call("POST", path(id) + "/vote", null, request).whenCompleteAsync((response, error) -> {
 			try
 			{
-				api.get().request("POST", path(id) + "/vote", null, request);
-				load();
+				TsgHubApi.result(response, error);
+				if (!plugin.live()) load();
 			}
 			catch (Exception e)
 			{
 				String message = "Couldn't vote. " + TsgHubUi.friendlyError(e);
 				SwingUtilities.invokeLater(() -> failed.accept(message));
 			}
-		});
+		}, executor);
 	}
 
 	void save(String id, String title, String body, boolean pinned, Integer expiresInHours, JsonElement poll, boolean publish)
@@ -203,35 +203,30 @@ final class TsgHubAnnouncements
 		if (id.isEmpty())
 		{
 			request.addProperty("draft", !publish);
-			submit(success, true, token -> announcementId(api.get().request("POST", "/v1/announcements", token, request)));
+			submit(success, true, token -> api.get().call("POST", "/v1/announcements", token, request).thenApply(TsgHubAnnouncements::announcementId));
 			return;
 		}
-		submit(success, true, token -> {
-			api.get().request("PATCH", path(id), token, request);
-			if (publish) api.get().request("POST", path(id) + "/publish", token, adminBody());
-			return id;
-		});
+		submit(success, true, token -> api.get().call("PATCH", path(id), token, request)
+			.thenCompose(saved -> publish ? api.get().call("POST", path(id) + "/publish", token, adminBody()) : CompletableFuture.completedFuture(saved))
+			.thenApply(done -> id));
 	}
 
 	void publish(String id)
 	{
-		submit("Announcement published.", false, token -> announcementId(api.get().request("POST", path(id) + "/publish", token, adminBody())));
+		submit("Announcement published.", false, token -> api.get().call("POST", path(id) + "/publish", token, adminBody()).thenApply(TsgHubAnnouncements::announcementId));
 	}
 
 	void setPinned(String id, boolean pinned)
 	{
 		JsonObject request = adminBody();
 		request.addProperty("pinned", pinned);
-		submit(pinned ? "Pinned." : "Unpinned.", false, token -> announcementId(api.get().request("PATCH", path(id), token, request)));
+		submit(pinned ? "Pinned." : "Unpinned.", false, token -> api.get().call("PATCH", path(id), token, request).thenApply(TsgHubAnnouncements::announcementId));
 	}
 
 	void delete(String id)
 	{
 		String clan = TsgHubApi.encode(plugin.getDetectedClanName());
-		submit("Announcement deleted.", false, token -> {
-			api.get().request("DELETE", path(id) + "?clanName=" + clan, token, null);
-			return "";
-		});
+		submit("Announcement deleted.", false, token -> api.get().call("DELETE", path(id) + "?clanName=" + clan, token, null).thenApply(done -> ""));
 	}
 
 	private static String path(String id)
@@ -251,12 +246,7 @@ final class TsgHubAnnouncements
 		return body;
 	}
 
-	private interface Write
-	{
-		String run(String token) throws Exception;
-	}
-
-	private void submit(String success, boolean form, Write write)
+	private void submit(String success, boolean form, Function<String, CompletableFuture<String>> write)
 	{
 		String token = plugin.adminKey();
 		if (token.isEmpty() || executor.isShutdown())
@@ -266,20 +256,17 @@ final class TsgHubAnnouncements
 			return;
 		}
 		status("Saving...", Tone.INFO);
-		executor.submit(() -> {
-			try
+		write.apply(token).whenCompleteAsync((id, error) -> {
+			if (error != null)
 			{
-				String id = write.run(token);
-				status(success, Tone.SUCCESS);
-				if (form) SwingUtilities.invokeLater(() -> panel.get().showAnnouncement(id));
-				load();
-			}
-			catch (Exception e)
-			{
-				status("Couldn't save. " + TsgHubUi.friendlyError(e), Tone.ERROR);
+				status("Couldn't save. " + TsgHubUi.friendlyError(error), Tone.ERROR);
 				if (form) SwingUtilities.invokeLater(() -> panel.get().failed());
+				return;
 			}
-		});
+			status(success, Tone.SUCCESS);
+			if (form) SwingUtilities.invokeLater(() -> panel.get().showAnnouncement(id));
+			if (!plugin.live()) load();
+		}, executor);
 	}
 
 	private void status(String message, Tone tone)

@@ -7,7 +7,10 @@ import com.google.gson.JsonParseException;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -35,6 +38,7 @@ final class TsgHubApi
 	private final String baseUrl;
 	private final OkHttpClient http;
 	private final Gson gson;
+	private final Map<String, CompletableFuture<JsonObject>> inFlight = new ConcurrentHashMap<>();
 
 	TsgHubApi(OkHttpClient http, Gson gson, String baseUrl)
 	{
@@ -55,6 +59,26 @@ final class TsgHubApi
 	}
 
 	CompletableFuture<JsonObject> call(String method, String path, String token, JsonObject payload)
+	{
+		if (!"GET".equals(method)) return send(method, path, token, payload);
+		String key = path + " " + (token == null ? "" : token);
+		CompletableFuture<JsonObject> shared = inFlight.computeIfAbsent(key, k -> {
+			CompletableFuture<JsonObject> started = send(method, path, token, null);
+			started.whenComplete((result, error) -> inFlight.remove(k, started));
+			return started;
+		});
+		return shared.thenApply(JsonObject::deepCopy);
+	}
+
+	static JsonObject result(JsonObject value, Throwable error) throws Exception
+	{
+		if (error == null) return value;
+		Throwable cause = error instanceof CompletionException && error.getCause() != null ? error.getCause() : error;
+		if (cause instanceof Exception) throw (Exception) cause;
+		throw new IllegalStateException(cause);
+	}
+
+	private CompletableFuture<JsonObject> send(String method, String path, String token, JsonObject payload)
 	{
 		CompletableFuture<JsonObject> future = new CompletableFuture<>();
 		http.newCall(build(method, path, token, payload)).enqueue(new Callback()

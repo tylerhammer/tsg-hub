@@ -149,10 +149,10 @@ final class TsgHubDrops
 		String query = query();
 		Runnable done = quiet ? null : () -> plugin.ui(s -> s.setBusy(false));
 		if (!quiet) plugin.ui(s -> s.setBusy(true));
-		executor.submit(() -> {
+		api.get().call("GET", "/v1/drops?clanName=" + clan + query, null, null).whenCompleteAsync((response, error) -> {
 			try
 			{
-				JsonArray drops = api.get().request("GET", "/v1/drops?clanName=" + clan + query, null, null).getAsJsonArray("drops");
+				JsonArray drops = TsgHubApi.result(response, error).getAsJsonArray("drops");
 				if (query.equals(query())) apply(drops, done);
 				else if (done != null) done.run();
 			}
@@ -162,7 +162,7 @@ final class TsgHubDrops
 				plugin.ui(s -> s.setStatus("Couldn't load drops. " + TsgHubUi.friendlyError(e), Tone.ERROR));
 				plugin.ui(s -> s.setBusy(false));
 			}
-		});
+		}, executor);
 	}
 
 	void onSnapshot(JsonArray drops)

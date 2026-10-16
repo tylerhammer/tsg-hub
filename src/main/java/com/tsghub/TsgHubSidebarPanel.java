@@ -261,7 +261,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 				return;
 			}
 			showEventList();
-			plugin.loadClanEvents();
+			if (!plugin.live()) plugin.loadClanEvents();
 		});
 		titleRow.add(back, BorderLayout.WEST);
 
@@ -1129,7 +1129,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		setView(View.NEWS);
 		renderNews();
 		plugin.announcements().markRead();
-		plugin.announcements().load();
+		if (!plugin.live()) plugin.announcements().load();
 	}
 
 	private String newsSummary()
@@ -1201,7 +1201,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private void openEvents()
 	{
 		showEventList();
-		plugin.loadClanEvents();
+		if (!plugin.live()) plugin.loadClanEvents();
 	}
 
 	void showEventList()

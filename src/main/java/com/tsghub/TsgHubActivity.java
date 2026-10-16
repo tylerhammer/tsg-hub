@@ -177,10 +177,10 @@ final class TsgHubActivity
 		int request = requests.incrementAndGet();
 		String query = "/v1/admin/activity?clanName=" + TsgHubApi.encode(plugin.getDetectedClanName()) + "&days=" + days;
 		ui(p -> p.setStatus("Loading clan activity...", Tone.INFO));
-		executor.submit(() -> {
+		api.get().call("GET", query, token, null).whenCompleteAsync((response, error) -> {
 			try
 			{
-				JsonObject result = api.get().request("GET", query, token, null);
+				JsonObject result = TsgHubApi.result(response, error);
 				clientThread.invokeLater(() -> {
 					List<Member> clan = clanMembers();
 					Snapshot snapshot = new Snapshot(merge(clan, TsgHubUi.array(result, "members")), TsgHubUi.integer(result, "days", days),
@@ -193,7 +193,7 @@ final class TsgHubActivity
 				String message = "Couldn't load clan activity. " + TsgHubUi.friendlyError(e);
 				ui(p -> { if (request == requests.get()) p.failed(message); });
 			}
-		});
+		}, executor);
 	}
 
 	void loadMember(String name, int days, Consumer<JsonObject> loaded, Consumer<String> failed)
@@ -211,10 +211,10 @@ final class TsgHubActivity
 		}
 		String query = "/v1/admin/activity/member?clanName=" + TsgHubApi.encode(plugin.getDetectedClanName())
 			+ "&name=" + TsgHubApi.encode(name) + "&days=" + TsgHubActivityDetail.ActivityChart.requestDays(days);
-		executor.submit(() -> {
+		api.get().call("GET", query, token, null).whenCompleteAsync((response, error) -> {
 			try
 			{
-				JsonObject result = api.get().request("GET", query, token, null);
+				JsonObject result = TsgHubApi.result(response, error);
 				SwingUtilities.invokeLater(() -> loaded.accept(result));
 			}
 			catch (TsgHubApi.HttpError e)
@@ -227,7 +227,7 @@ final class TsgHubActivity
 				String message = "Couldn't load " + name + ". " + TsgHubUi.friendlyError(e);
 				SwingUtilities.invokeLater(() -> failed.accept(message));
 			}
-		});
+		}, executor);
 	}
 
 	BufferedImage rankIcon(int rankId)

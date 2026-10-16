@@ -97,7 +97,8 @@ public class ReadmeScreenshots
 		set(plugin, "detectedClanName", "TSGaming");
 		set(plugin, "detectedClanRank", 100);
 		set(plugin, "detectedPlayerName", "Crab Legs");
-		set(plugin, "groups", new TsgHubGroups(plugin, null, (PartyService) unsafe().allocateInstance(PartyService.class), null, null, null));
+		set(plugin, "session", new TsgHubSession(null));
+		set(plugin, "groups", new TsgHubGroups(plugin, null, (PartyService) unsafe().allocateInstance(PartyService.class), null, null, null, null));
 		set(plugin, "presence", new TsgHubPresence(plugin, null, null, null, null, stopped(), null, null, null, () -> ""));
 		set(plugin, "drops", new TsgHubDrops(plugin, null, null, stopped(), null, null));
 		set(plugin, "announcements", new TsgHubAnnouncements(plugin, stopped(), null, () -> null, line -> { }));

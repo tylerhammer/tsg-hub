@@ -51,6 +51,10 @@ final class TsgHubSocket
 		void onReply(JsonObject message);
 
 		void onXpRequest(String skills);
+
+		void onGroupHeartbeat(JsonObject message);
+
+		void onGroupRejected(int status);
 	}
 
 	private static final int CLOSE_NORMAL = 1000;
@@ -178,8 +182,19 @@ final class TsgHubSocket
 
 	synchronized boolean send(String type, JsonObject body)
 	{
-		if (!ready || socket == null) return false;
+		return emit(type, body.deepCopy());
+	}
+
+	synchronized boolean groupHeartbeat(String token, JsonObject body)
+	{
 		JsonObject message = body.deepCopy();
+		message.addProperty("token", token);
+		return emit("group.heartbeat", message);
+	}
+
+	private boolean emit(String type, JsonObject message)
+	{
+		if (!ready || socket == null) return false;
 		message.addProperty("type", type);
 		return socket.send(message.toString());
 	}
@@ -196,24 +211,22 @@ final class TsgHubSocket
 
 	synchronized boolean xp(String skill, int xp, int tick)
 	{
-		if (!ready || socket == null || confirmed.isEmpty()) return false;
+		if (confirmed.isEmpty()) return false;
 		JsonObject message = new JsonObject();
-		message.addProperty("type", "xp");
 		message.addProperty("skill", skill);
 		message.addProperty("xp", xp);
 		message.addProperty("tick", tick);
-		return socket.send(message.toString());
+		return emit("xp", message);
 	}
 
 	synchronized void rewardInterface(int group, boolean open, int tick)
 	{
-		if (!ready || socket == null || confirmed.isEmpty()) return;
+		if (confirmed.isEmpty()) return;
 		JsonObject message = new JsonObject();
-		message.addProperty("type", "interface");
 		message.addProperty("group", group);
 		message.addProperty("open", open);
 		message.addProperty("tick", tick);
-		socket.send(message.toString());
+		emit("interface", message);
 	}
 
 	synchronized void watch(Set<String> topics)
@@ -228,9 +241,8 @@ final class TsgHubSocket
 		JsonArray topics = new JsonArray();
 		watching.forEach(topics::add);
 		JsonObject message = new JsonObject();
-		message.addProperty("type", "watch");
 		message.add("topics", topics);
-		socket.send(message.toString());
+		emit("watch", message);
 	}
 
 	synchronized void admin(String token)
@@ -244,16 +256,13 @@ final class TsgHubSocket
 	private void sendAdmin()
 	{
 		JsonObject message = new JsonObject();
-		message.addProperty("type", "admin");
 		message.addProperty("token", adminToken);
-		socket.send(message.toString());
+		emit("admin", message);
 	}
 
 	private void sendPresence()
 	{
-		JsonObject message = presence.deepCopy();
-		message.addProperty("type", "presence");
-		socket.send(message.toString());
+		emit("presence", presence.deepCopy());
 	}
 
 	private void open()
@@ -276,16 +285,14 @@ final class TsgHubSocket
 
 	private void send(String type, String eventId, String token, boolean inClanChat)
 	{
-		if (!ready || socket == null) return;
 		JsonObject message = new JsonObject();
-		message.addProperty("type", type);
 		message.addProperty("eventId", eventId);
 		if (token != null)
 		{
 			message.addProperty("token", token);
 			message.addProperty("inClanChat", inClanChat);
 		}
-		socket.send(message.toString());
+		emit(type, message);
 	}
 
 	private synchronized void opened(WebSocket ws, JsonObject message)
@@ -407,6 +414,9 @@ final class TsgHubSocket
 				case "state":
 					dispatch(ws, () -> listener.onSnapshot(message));
 					break;
+				case "group.heartbeat":
+					dispatch(ws, () -> listener.onGroupHeartbeat(message));
+					break;
 				case "ack":
 					String id = TsgHubUi.str(message, "id");
 					if (!id.isEmpty()) dispatch(ws, () -> listener.onAck(id));
@@ -430,8 +440,10 @@ final class TsgHubSocket
 					String failed = TsgHubUi.str(message, "id");
 					int status = TsgHubUi.integer(message, "status", 0);
 					if (!failed.isEmpty()) dispatch(ws, () -> listener.onRejected(failed, status));
+					String errorTopic = TsgHubUi.str(message, "topic");
 					if (!eventId.isEmpty()) rejected(ws, eventId);
-					else if ("admin".equals(TsgHubUi.str(message, "topic")) && status == 401) adminRevoked(ws);
+					else if ("admin".equals(errorTopic) && status == 401) adminRevoked(ws);
+					else if ("group".equals(errorTopic)) dispatch(ws, () -> listener.onGroupRejected(status));
 					log.debug("TSG Hub socket error: {}", TsgHubUi.str(message, "message"));
 					break;
 				default:

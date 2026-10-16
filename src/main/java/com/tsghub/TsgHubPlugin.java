@@ -228,12 +228,15 @@ public class TsgHubPlugin extends Plugin
 			@Override public void onSubscribed() { signals.resend(); }
 			@Override public void onReply(JsonObject message) { signalReply(message); }
 			@Override public void onXpRequest(String skills) { reportXp(skills); }
+			@Override public void onGroupHeartbeat(JsonObject message) { groups.beaten(message); }
+			@Override public void onGroupRejected(int status) { groups.beatRejected(status); }
 		});
 		signals = new TsgHubSignals(socket, this::api, this::signalReply);
 		reports = new TsgHubReports(socket::send, (path, body) -> api().request("POST", path, null, body));
 		executor.execute(this::loadCachedRules);
 		executor.scheduleAtFixedRate(this::socketTick, 2, 5, TimeUnit.SECONDS);
 		executor.scheduleAtFixedRate(unlessLive(this::autoRefreshBoard), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
+		executor.scheduleAtFixedRate(unlessLive(this::pollTeamNotifications), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
 		itemSearchExecutor = Executors.newFixedThreadPool(2, daemon("tsg-hub-item-search"));
 		organizer = new TsgHubOrganizer(this, client, clientThread, itemManager, executor, itemSearchExecutor, () -> panel);
 		announcements = new TsgHubAnnouncements(this, executor, this::api, () -> newsEditor, this::clanAnnouncement);
@@ -248,7 +251,7 @@ public class TsgHubPlugin extends Plugin
 			@Override public boolean displayPlayerWorlds() { return config.partyShowWorlds(); }
 		}, spriteManager, itemManager);
 		sidebar = new TsgHubSidebarPanel(this, groupMembers);
-		groups = new TsgHubGroups(this, client, partyService, executor, this::api, () -> sidebar);
+		groups = new TsgHubGroups(this, client, partyService, executor, this::api, () -> sidebar, socket);
 		groupTracker = new GroupTracker(client, clientThread, partyService, wsClient, itemManager, groups::isGroupParty, config::partyShowSelf, this::currentArea, groups);
 		groups.setTracker(groupTracker);
 		eventBus.register(groupTracker);
@@ -401,6 +404,8 @@ public class TsgHubPlugin extends Plugin
 
 	TsgHubSession session() { return session; }
 
+	boolean live() { return socket != null && socket.isLive(); }
+
 	String getDetectedClanName() { return detectedClanName; }
 	boolean sharingEnabled() { return config.dataSharingOptIn(); }
 	boolean locationSharingEnabled() { return config.dataSharingOptIn() && config.shareLocation(); }
@@ -480,12 +485,11 @@ public class TsgHubPlugin extends Plugin
 		String identity = key + "\n" + name + "\n" + hash;
 		if (identity.equals(checkedKeyIdentity) || key.equals(rejectedKey) || executor == null || executor.isShutdown()) return;
 		checkedKeyIdentity = identity;
-		executor.submit(() -> {
+		String query = "/v1/me?displayName=" + TsgHubApi.encode(name) + (hash.isEmpty() ? "" : "&accountHash=" + hash);
+		api().call("GET", query, key, null).whenCompleteAsync((response, error) -> {
 			try
 			{
-				String query = "/v1/me?displayName=" + TsgHubApi.encode(name);
-				if (!hash.isEmpty()) query += "&accountHash=" + hash;
-				JsonObject result = api().request("GET", query, key, null);
+				JsonObject result = TsgHubApi.result(response, error);
 				if (!identity.equals(checkedKeyIdentity)) return;
 				keyCheckAttempts = 0;
 				boolean admin = grantsAdmin(result);
@@ -504,7 +508,7 @@ public class TsgHubPlugin extends Plugin
 				else retryKeyCheck(identity);
 			}
 			catch (Exception e) { retryKeyCheck(identity); }
-		});
+		}, executor);
 	}
 
 	static boolean grantsAdmin(JsonObject me)
@@ -723,8 +727,11 @@ public class TsgHubPlugin extends Plugin
 			if (!isInHubClan()) { sidebar.showNotInClan(hubClanName, detectedClanName); return; }
 			if (!config.dataSharingOptIn()) { sidebar.showSharingOff(); return; }
 			sidebar.showHome();
-			loadClanEvents();
-			announcements.load();
+			if (!live())
+			{
+				loadClanEvents();
+				announcements.load();
+			}
 			String eventId = session.get(EVENT_ID);
 			if (!eventId.isEmpty() && !session.get(TOKEN).isEmpty() && TsgHubUi.samePlayer(session.memberName(eventId), detectedPlayerName))
 				activateEvent(eventId, false);
@@ -748,10 +755,10 @@ public class TsgHubPlugin extends Plugin
 		JsonObject payload = memberBody(client.getLocalPlayer().getName());
 		payload.addProperty("code", code.trim());
 		if (expectedEventId != null && !expectedEventId.trim().isEmpty()) payload.addProperty("eventId", expectedEventId.trim());
-		executor.submit(() -> {
+		api().call("POST", "/v1/join", adminKey(), payload).whenCompleteAsync((response, error) -> {
 			try
 			{
-				JsonObject result = api().request("POST", "/v1/join", adminKey(), payload);
+				JsonObject result = TsgHubApi.result(response, error);
 				String joinedEventId = result.getAsJsonObject("member").get("eventId").getAsString();
 				String memberToken = result.get("token").getAsString();
 				String memberName = result.getAsJsonObject("member").get("displayName").getAsString();
@@ -762,7 +769,7 @@ public class TsgHubPlugin extends Plugin
 				refreshBoard(true);
 			}
 			catch (Exception e) { joinFailed(TsgHubUi.friendlyError(e)); }
-		});
+		}, executor);
 	}
 
 	private void joinFailed(String message)
@@ -773,7 +780,7 @@ public class TsgHubPlugin extends Plugin
 	void leaveEvent(String eventId)
 	{
 		String revokeToken = session.memberToken(eventId);
-		if (!revokeToken.isEmpty()) executor.submit(() -> disconnect(eventId, revokeToken));
+		if (!revokeToken.isEmpty()) disconnect(eventId, revokeToken);
 		session.clear(MEMBER_TOKEN + eventId, MEMBER_NAME + eventId);
 		if (eventId.equals(session.get(EVENT_ID)))
 		{
@@ -811,13 +818,13 @@ public class TsgHubPlugin extends Plugin
 		String activeEventId = session.get(EVENT_ID);
 		String activeToken = session.get(TOKEN);
 		if (!activeEventId.isEmpty() && !activeToken.isEmpty()) sessions.putIfAbsent(activeEventId, activeToken);
-		if (!sessions.isEmpty()) executor.submit(() -> sessions.forEach(this::disconnect));
+		sessions.forEach(this::disconnect);
 	}
 
 	private void disconnect(String eventId, String token)
 	{
-		try { api().request("POST", "/v1/events/" + eventId + "/disconnect", token, new JsonObject()); }
-		catch (Exception ignored) { /* Local disconnect still succeeds while the service is unavailable. */ }
+		// Local disconnect still succeeds while the service is unavailable.
+		api().call("POST", "/v1/events/" + eventId + "/disconnect", token, new JsonObject());
 	}
 
 	void refreshBoard()
@@ -832,15 +839,15 @@ public class TsgHubPlugin extends Plugin
 		String token = session.get(TOKEN);
 		if (eventId.isEmpty() || token.isEmpty()) return;
 		sidebarBusy(true);
-		executor.submit(() -> {
+		api().call("GET", "/v1/events/" + eventId, token, null).whenCompleteAsync((response, error) -> {
 			try
 			{
-				JsonObject event = api().request("GET", "/v1/events/" + eventId, token, null).getAsJsonObject("event");
+				JsonObject event = TsgHubApi.result(response, error).getAsJsonObject("event");
 				applyBoard(eventId, token, event, open);
 			}
 			catch (Exception e) { eventLoadFailed(eventId, e, "Couldn't update the board. "); }
 			finally { sidebarBusy(false); }
-		});
+		}, executor);
 	}
 
 	private void applyBoard(String eventId, String token, JsonObject event, boolean open)
@@ -906,7 +913,6 @@ public class TsgHubPlugin extends Plugin
 		socket.sync(tokens, inClanChat);
 		socket.admin(adminKey());
 		socket.watch(watchedTopics(competitionId));
-		if (!socket.isLive()) pollTeamNotifications();
 		signals.flush(memberTokens);
 	}
 
@@ -1034,10 +1040,10 @@ public class TsgHubPlugin extends Plugin
 		if (!sharingInClan() || detectedPlayerName.isEmpty()) return;
 		JsonObject body = memberBody(detectedPlayerName);
 		sidebarBusy(true);
-		executor.submit(() -> {
+		api().call("POST", "/v1/events/" + eventId + "/participate", adminKey(), body).whenCompleteAsync((response, error) -> {
 			try
 			{
-				JsonObject result = api().request("POST", "/v1/events/" + eventId + "/participate", adminKey(), body);
+				JsonObject result = TsgHubApi.result(response, error);
 				session.set(MEMBER_TOKEN + eventId, result.get("token").getAsString());
 				session.set(MEMBER_NAME + eventId, result.getAsJsonObject("member").get("displayName").getAsString());
 				syncSocketNow();
@@ -1047,7 +1053,7 @@ public class TsgHubPlugin extends Plugin
 			}
 			catch (Exception e) { ui(s -> s.competitionJoinFailed(TsgHubUi.friendlyError(e))); }
 			finally { sidebarBusy(false); }
-		});
+		}, executor);
 	}
 
 	void openCompetition(String eventId)
@@ -1061,15 +1067,15 @@ public class TsgHubPlugin extends Plugin
 		if (token.isEmpty()) return;
 		String name = session.get(MEMBER_NAME + eventId);
 		sidebarBusy(true);
-		executor.submit(() -> {
+		api().call("GET", "/v1/events/" + eventId, token, null).whenCompleteAsync((response, error) -> {
 			try
 			{
-				JsonObject event = api().request("GET", "/v1/events/" + eventId, token, null).getAsJsonObject("event");
+				JsonObject event = TsgHubApi.result(response, error).getAsJsonObject("event");
 				ui(s -> s.showCompetition(event, name, open));
 			}
 			catch (Exception e) { eventLoadFailed(eventId, e, "Couldn't load the leaderboard. "); }
 			finally { sidebarBusy(false); }
-		});
+		}, executor);
 	}
 
 	void openSettings()
@@ -1087,16 +1093,16 @@ public class TsgHubPlugin extends Plugin
 		body.addProperty("displayName", detectedPlayerName);
 		body.addProperty("clanName", detectedClanName);
 		addAccountHash(body);
-		executor.submit(() -> {
+		api().call("POST", "/v1/discord/invite", null, body).whenCompleteAsync((response, error) -> {
 			try
 			{
-				String url = api().request("POST", "/v1/discord/invite", null, body).get("url").getAsString();
+				String url = TsgHubApi.result(response, error).get("url").getAsString();
 				SwingUtilities.invokeLater(() -> TsgHubUi.copyToClipboard(url));
 				memberStatus("Discord invite copied. Paste it in your browser to join.", Tone.SUCCESS);
 			}
 			catch (Exception e) { memberError("", e); }
 			finally { SwingUtilities.invokeLater(done); }
-		});
+		}, executor);
 	}
 
 	String accountHash()
@@ -1143,14 +1149,14 @@ public class TsgHubPlugin extends Plugin
 		body.addProperty("accountHash", hash);
 		body.add("memberTokens", memberTokens);
 		body.add("organizerTokens", organizerTokens);
-		executor.submit(() -> {
+		api().call("POST", "/v1/identity", null, body).whenCompleteAsync((response, error) -> {
 			try
 			{
-				JsonObject result = api().request("POST", "/v1/identity", null, body);
+				JsonObject result = TsgHubApi.result(response, error);
 				if (TsgHubUi.bool(result, "updated") && !session.get(EVENT_ID).isEmpty()) refreshBoard();
 			}
 			catch (Exception e) { syncedIdentity = ""; }
-		});
+		}, executor);
 	}
 
 	private void renameStored(String key, String name)
@@ -1170,14 +1176,14 @@ public class TsgHubPlugin extends Plugin
 		}
 		String encodedClan = TsgHubApi.encode(clanName);
 		sidebarBusy(true);
-		executor.submit(() -> {
+		api().call("GET", "/v1/events?clanName=" + encodedClan, adminKey(), null).whenCompleteAsync((response, error) -> {
 			try
 			{
-				applyClanEvents(api().request("GET", "/v1/events?clanName=" + encodedClan, adminKey(), null).getAsJsonArray("events"));
+				applyClanEvents(TsgHubApi.result(response, error).getAsJsonArray("events"));
 			}
 			catch (Exception e) { memberError("Couldn't load events. ", e); }
 			finally { sidebarBusy(false); }
-		});
+		}, executor);
 	}
 
 	private void applyClanEvents(JsonArray events)
@@ -1242,12 +1248,7 @@ public class TsgHubPlugin extends Plugin
 		body.addProperty("displayName", displayName);
 		body.addProperty("clanName", detectedClanName);
 		body.addProperty("clanRank", rank);
-		try
-		{
-			api().request("POST", "/v1/events/" + eventId + "/clan-rank", token, body);
-			syncedClanRanks.put(key, rank);
-		}
-		catch (Exception ignored) { /* Board refresh should still succeed if a rank sync is unavailable. */ }
+		api().call("POST", "/v1/events/" + eventId + "/clan-rank", token, body).thenRun(() -> syncedClanRanks.put(key, rank));
 	}
 
 	void forgetEvent(String eventId)
@@ -1278,8 +1279,7 @@ public class TsgHubPlugin extends Plugin
 	private void refreshRules(String version)
 	{
 		if (version.isEmpty() || version.equals(TsgHubRules.get().version)) return;
-		try { TsgHubRules.save(api().request("GET", "/v1/rules", null, null), rulesCache); }
-		catch (Exception ignored) { }
+		api().call("GET", "/v1/rules", null, null).thenAcceptAsync(rules -> TsgHubRules.save(rules, rulesCache), executor);
 	}
 
 	private void loadCachedRules()
@@ -1645,12 +1645,10 @@ public class TsgHubPlugin extends Plugin
 		String token = session.get(TOKEN);
 		String eventId = session.get(EVENT_ID);
 		if (token.isEmpty() || eventId.isEmpty()) return;
-		try
-		{
-			String path = "/v1/events/" + eventId + "/notifications?inClanChat=" + inClanChat + "&clanName=" + TsgHubApi.encode(detectedClanName);
-			if (showNotifications(api().request("GET", path, token, null).getAsJsonArray("notifications"))) refreshBoard();
-		}
-		catch (Exception ignored) { /* Notifications retry on the next scheduled poll. */ }
+		String path = "/v1/events/" + eventId + "/notifications?inClanChat=" + inClanChat + "&clanName=" + TsgHubApi.encode(detectedClanName);
+		api().call("GET", path, token, null).thenAcceptAsync(result -> {
+			if (showNotifications(result.getAsJsonArray("notifications"))) refreshBoard();
+		}, executor);
 	}
 
 	private boolean showNotifications(JsonArray notifications)

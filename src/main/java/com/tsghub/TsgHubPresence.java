@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Supplier;
@@ -121,8 +122,8 @@ final class TsgHubPresence
 	void leave()
 	{
 		JsonObject body = leaveBody();
-		if (body == null || socket.presence(null) || executor.isShutdown()) return;
-		executor.submit(() -> post("/v1/presence/leave", body));
+		if (body == null || socket.presence(null)) return;
+		api.get().call("POST", "/v1/presence/leave", null, body);
 	}
 
 	void shutDown()
@@ -137,16 +138,16 @@ final class TsgHubPresence
 		if (!plugin.canUseHub() || executor.isShutdown()) return;
 		String clan = TsgHubApi.encode(plugin.getDetectedClanName());
 		if (!quiet) plugin.ui(s -> s.setBusy(true));
-		executor.submit(() -> {
-			try
-			{
-				String token = key.get();
-				JsonArray members = TsgHubUi.array(api.get().request("GET", "/v1/presence?clanName=" + clan, token, null), "members");
-				apply(members, loadNotes(clan, token));
-			}
-			catch (Exception e) { if (!quiet) plugin.ui(s -> s.setStatus("Couldn't load members. " + TsgHubUi.friendlyError(e), Tone.ERROR)); }
-			finally { if (!quiet) plugin.ui(s -> s.setBusy(false)); }
-		});
+		String token = key.get();
+		CompletableFuture<JsonObject> notesCall = api.get().call("GET", "/v1/members?clanName=" + clan, token, null)
+			.exceptionally(error -> null);
+		api.get().call("GET", "/v1/presence?clanName=" + clan, token, null).thenCombineAsync(notesCall, (roster, loaded) -> {
+			apply(TsgHubUi.array(roster, "members"), loaded == null ? null : TsgHubUi.array(loaded, "members"));
+			return roster;
+		}, executor).whenCompleteAsync((response, error) -> {
+			if (error != null && !quiet) plugin.ui(s -> s.setStatus("Couldn't load members. " + TsgHubUi.friendlyError(error), Tone.ERROR));
+			if (!quiet) plugin.ui(s -> s.setBusy(false));
+		}, executor);
 	}
 
 	void apply(JsonArray members, JsonArray loaded)
@@ -162,12 +163,6 @@ final class TsgHubPresence
 			loadAccountIcons(roster[1]);
 			plugin.ui(s -> s.setMembers(roster[0], roster[1], known != null));
 		});
-	}
-
-	private JsonArray loadNotes(String clan, String token)
-	{
-		try { return TsgHubUi.array(api.get().request("GET", "/v1/members?clanName=" + clan, token, null), "members"); }
-		catch (Exception e) { return null; }
 	}
 
 	private Map<String, Integer> chatWorlds()
@@ -286,16 +281,16 @@ final class TsgHubPresence
 		String token = key.get();
 		if (token.isEmpty() || executor.isShutdown()) return;
 		plugin.ui(s -> s.setBusy(true));
-		executor.submit(() -> {
+		api.get().call(method, path, token, body).whenCompleteAsync((response, error) -> {
 			try
 			{
-				api.get().request(method, path, token, body);
+				TsgHubApi.result(response, error);
 				plugin.ui(s -> s.setStatus(success, Tone.SUCCESS));
 				loadMembers(true);
 			}
 			catch (Exception e) { plugin.ui(s -> s.setStatus("Couldn't save. " + TsgHubUi.friendlyError(e), Tone.ERROR)); }
 			finally { plugin.ui(s -> s.setBusy(false)); }
-		});
+		}, executor);
 	}
 
 	void autoRefresh()
@@ -459,7 +454,7 @@ final class TsgHubPresence
 	{
 		listed = payload;
 		sentAt = now;
-		if (!socket.presence(payload) && !executor.isShutdown()) executor.submit(() -> post("/v1/presence", payload));
+		if (!socket.presence(payload)) api.get().call("POST", "/v1/presence", null, payload);
 	}
 
 	private JsonObject leaveBody()
@@ -472,11 +467,5 @@ final class TsgHubPresence
 		body.add("clanName", current.get("clanName"));
 		body.add("accountHash", current.get("accountHash"));
 		return body;
-	}
-
-	private void post(String path, JsonObject body)
-	{
-		try { api.get().request("POST", path, null, body); }
-		catch (Exception ignored) { }
 	}
 }

@@ -74,10 +74,8 @@ final class TsgHubMemberMap
 	{
 		if (!open || !plugin.canUseHub() || executor.isShutdown()) return;
 		String clan = TsgHubApi.encode(plugin.getDetectedClanName());
-		executor.submit(() -> {
-			try { apply(TsgHubUi.array(api.get().request("GET", "/v1/presence/positions?clanName=" + clan, null, null), "members")); }
-			catch (Exception ignored) { }
-		});
+		api.get().call("GET", "/v1/presence/positions?clanName=" + clan, null, null)
+			.thenAcceptAsync(result -> apply(TsgHubUi.array(result, "members")), executor);
 	}
 
 	void apply(JsonArray members)

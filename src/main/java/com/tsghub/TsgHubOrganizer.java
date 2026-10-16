@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
@@ -58,15 +60,15 @@ final class TsgHubOrganizer
 		plugin.session().set(ORGANIZER_EVENT_ID, eventId.trim());
 		plugin.syncSocketNow();
 		status("Loading event...", Tone.INFO);
-		executor.submit(() -> {
+		event(eventId.trim()).whenCompleteAsync((response, error) -> {
 			try
 			{
-				JsonObject event = event(eventId.trim());
+				JsonObject event = TsgHubApi.result(response, error);
 				SwingUtilities.invokeLater(() -> panel.get().openOrganizerEvent(event));
 				status("", Tone.INFO);
 			}
 			catch (Exception e) { error("Couldn't open event. ", e); }
-		});
+		}, executor);
 	}
 
 	void loadManagedEvents()
@@ -74,16 +76,16 @@ final class TsgHubOrganizer
 		if (!plugin.isInHubClan()) return;
 		if (!plugin.sharingEnabled()) { status("Turn on sharing in the TSG Hub sidebar first.", Tone.ERROR); return; }
 		if (!plugin.canManageOrganizerUi()) return;
-		executor.submit(() -> {
+		String credential = listCredential();
+		if (credential.isEmpty()) { status("Couldn't load events. Join or create an event first.", Tone.ERROR); return; }
+		request("GET", "/v1/managed-events", credential, null).whenCompleteAsync((response, error) -> {
 			try
 			{
-				String credential = listCredential();
-				if (credential.isEmpty()) throw new IllegalStateException("Join or create an event first");
-				JsonObject response = request("GET", "/v1/managed-events", credential, null);
-				SwingUtilities.invokeLater(() -> panel.get().setManagedEvents(response.getAsJsonArray("events")));
+				JsonArray events = TsgHubApi.result(response, error).getAsJsonArray("events");
+				SwingUtilities.invokeLater(() -> panel.get().setManagedEvents(events));
 			}
 			catch (Exception e) { error("Couldn't load events. ", e); }
-		});
+		}, executor);
 	}
 
 	void createEvent(String name, Instant startsAt, Instant endsAt, boolean hideScores, boolean hidden, String type, JsonObject typeConfig, JsonArray prizes)
@@ -112,10 +114,10 @@ final class TsgHubOrganizer
 		body.add("config", typeConfig == null ? new JsonObject() : typeConfig);
 		body.add("prizes", prizes);
 		status("Creating event...", Tone.INFO);
-		executor.submit(() -> {
+		request("POST", "/v1/events", credential, body).whenCompleteAsync((created, error) -> {
 			try
 			{
-				JsonObject response = request("POST", "/v1/events", credential, body);
+				JsonObject response = TsgHubApi.result(created, error);
 				JsonObject result = response.getAsJsonObject("event");
 				String id = result.get("id").getAsString();
 				plugin.session().set(ORGANIZER_EVENT_ID, id);
@@ -123,11 +125,10 @@ final class TsgHubOrganizer
 				plugin.session().set(ORGANIZER_NAME + id, creatorName);
 				SwingUtilities.invokeLater(() -> panel.get().eventCreated(result));
 				status("Event created. Add teams next.", Tone.SUCCESS);
-				loadManagedEvents();
-				plugin.loadClanEvents();
+				refreshListsUnlessLive();
 			}
 			catch (Exception e) { failed(e, null, this::eventFormFailed); }
-		});
+		}, executor);
 	}
 
 	private static void addEventTimes(JsonObject body, Instant startsAt, Instant endsAt)
@@ -169,17 +170,23 @@ final class TsgHubOrganizer
 	{
 		String credential = credential(eventId);
 		status(pending, Tone.INFO);
-		executor.submit(() -> {
+		request(method, "/v1/events/" + eventId + suffix, credential, body).whenCompleteAsync((response, error) -> {
 			try
 			{
-				request(method, "/v1/events/" + eventId + suffix, credential, body);
+				TsgHubApi.result(response, error);
 				done.run();
 				status(success, Tone.SUCCESS);
-				loadManagedEvents();
-				plugin.loadClanEvents();
+				refreshListsUnlessLive();
 			}
 			catch (Exception e) { failed(e, failure, failure == null ? this::eventFormFailed : null); }
-		});
+		}, executor);
+	}
+
+	private void refreshListsUnlessLive()
+	{
+		if (plugin.live()) return;
+		loadManagedEvents();
+		plugin.loadClanEvents();
 	}
 
 	private void failed(Exception e, String failure, Consumer<String> onError)
@@ -342,17 +349,17 @@ final class TsgHubOrganizer
 	{
 		String eventId = plugin.getOrganizerEventId();
 		if (eventId.isEmpty() || executor == null || executor.isShutdown()) return;
-		executor.submit(() -> {
+		event(eventId).whenCompleteAsync((response, error) -> {
 			try
 			{
-				JsonObject event = event(eventId);
+				JsonObject event = TsgHubApi.result(response, error);
 				SwingUtilities.invokeLater(() -> {
 					if (open) panel.get().openOrganizerEvent(event);
 					else panel.get().showEvent(event);
 				});
 			}
 			catch (Exception e) { error("Couldn't refresh the event. ", e); }
-		});
+		}, executor);
 	}
 
 	void liveRefresh()
@@ -360,18 +367,11 @@ final class TsgHubOrganizer
 		refreshPending = false;
 		String eventId = plugin.getOrganizerEventId();
 		if (eventId.isEmpty() || executor == null || executor.isShutdown()) return;
-		executor.submit(() -> {
-			try
-			{
-				JsonObject event = event(eventId);
-				SwingUtilities.invokeLater(() -> {
-					if (!eventId.equals(plugin.getOrganizerEventId())) return;
-					if (panel.get().editingText()) refreshPending = true;
-					else panel.get().showEvent(event);
-				});
-			}
-			catch (Exception ignored) { }
-		});
+		event(eventId).thenAccept(event -> SwingUtilities.invokeLater(() -> {
+			if (!eventId.equals(plugin.getOrganizerEventId())) return;
+			if (panel.get().editingText()) refreshPending = true;
+			else panel.get().showEvent(event);
+		}));
 	}
 
 	void searchItems(String query, Consumer<List<ItemSuggestion>> callback)
@@ -430,28 +430,26 @@ final class TsgHubOrganizer
 		if (eventId.isEmpty()) { status("Open an event first.", Tone.ERROR); return; }
 		String credential = credential(eventId);
 		status("Saving...", Tone.INFO);
-		executor.submit(() -> {
+		request(method, "/v1/events/" + eventId + suffix, credential, payload).whenCompleteAsync((response, error) -> {
 			try
 			{
-				JsonObject result = request(method, "/v1/events/" + eventId + suffix, credential, payload);
+				JsonObject result = TsgHubApi.result(response, error);
 				status(success, Tone.SUCCESS);
 				callback.accept(result);
 			}
 			catch (Exception e) { failed(e, "", onError); }
+		}, executor);
+	}
+
+	private CompletableFuture<JsonObject> request(String method, String path, String credential, JsonObject payload)
+	{
+		return plugin.api().call(method, path, credential, payload).whenComplete((response, error) -> {
+			Throwable cause = error instanceof CompletionException ? error.getCause() : error;
+			if (cause instanceof TsgHubApi.HttpError && ((TsgHubApi.HttpError) cause).status == 401 && !credential.isEmpty() && credential.equals(plugin.adminKey())) plugin.keyRejected(credential);
 		});
 	}
 
-	private JsonObject request(String method, String path, String credential, JsonObject payload) throws Exception
-	{
-		try { return plugin.api().request(method, path, credential, payload); }
-		catch (TsgHubApi.HttpError e)
-		{
-			if (e.status == 401 && !credential.isEmpty() && credential.equals(plugin.adminKey())) plugin.keyRejected(credential);
-			throw e;
-		}
-	}
-
-	private JsonObject event(String eventId) throws Exception
+	private CompletableFuture<JsonObject> event(String eventId)
 	{
 		return request("GET", "/v1/events/" + eventId + "/organizer", credential(eventId), null);
 	}

@@ -47,6 +47,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.CompletionException;
 import java.util.function.LongFunction;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
@@ -723,6 +724,7 @@ final class TsgHubUi
 
 	static String friendlyError(Throwable error)
 	{
+		if (error instanceof CompletionException && error.getCause() != null) error = error.getCause();
 		log.warn("TSG Hub error", error);
 		Throwable root = error;
 		while (root.getCause() != null && root.getCause() != root) root = root.getCause();
