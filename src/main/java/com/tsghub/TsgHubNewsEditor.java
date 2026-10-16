@@ -575,13 +575,4 @@ final class TsgHubNewsEditor extends JPanel
 		bar.setMinimumSize(new Dimension(0, 6));
 		return fitHeight(bar);
 	}
-
-	private static JPanel field(String label, JComponent input)
-	{
-		JPanel row = panel(new BorderLayout(0, 3));
-		row.add(caption(label), BorderLayout.NORTH);
-		row.add(input, BorderLayout.CENTER);
-		row.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
-		return fitHeight(row);
-	}
 }

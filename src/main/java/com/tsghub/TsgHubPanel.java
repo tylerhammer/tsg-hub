@@ -1755,15 +1755,6 @@ final class TsgHubPanel extends JPanel
 		}
 	}
 
-	private static JPanel field(String label, Component input)
-	{
-		JPanel row = panel(new BorderLayout(0, 3));
-		row.add(caption(label), BorderLayout.NORTH);
-		row.add(input, BorderLayout.CENTER);
-		row.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
-		return fitHeight(row);
-	}
-
 	private static JPanel radioField(String label, JRadioButton... options)
 	{
 		ButtonGroup group = new ButtonGroup();

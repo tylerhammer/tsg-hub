@@ -8,17 +8,13 @@ import com.tsghub.TsgHubActivity.Member;
 import com.tsghub.TsgHubActivity.Snapshot;
 import com.tsghub.TsgHubActivity.Summary;
 import com.tsghub.TsgHubUi.Tone;
-import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dialog;
 import java.awt.FlowLayout;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
 import java.awt.GridLayout;
-import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
@@ -67,6 +63,7 @@ final class TsgHubActivityPanel extends JPanel
 	private static final int DEFAULT_WINDOW = 1;
 	private static final Color INACTIVE_ROW = ColorUtil.colorLerp(CARD, TsgHubTheme.ERROR, 0.12);
 	private static final int STATUS_W = 600;
+	private static final Icon CHECK = new TsgHubIcons.CheckIcon();
 	private static final Border CELL_BORDER = BorderFactory.createEmptyBorder(0, 6, 0, 6);
 
 	private final TsgHubActivity activity;
@@ -407,30 +404,4 @@ final class TsgHubActivityPanel extends JPanel
 		String version = member.version().isEmpty() ? "unknown" : member.version();
 		return version + (member.outdated() ? " (outdated)" : "");
 	}
-
-	private static final Icon CHECK = new Icon()
-	{
-		@Override
-		public void paintIcon(Component c, Graphics g, int x, int y)
-		{
-			Graphics2D g2 = (Graphics2D) g.create();
-			g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-			g2.setColor(TsgHubTheme.SUCCESS);
-			g2.setStroke(new BasicStroke(2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-			g2.drawPolyline(new int[]{x + 2, x + 5, x + 10}, new int[]{y + 6, y + 9, y + 3}, 3);
-			g2.dispose();
-		}
-
-		@Override
-		public int getIconWidth()
-		{
-			return 12;
-		}
-
-		@Override
-		public int getIconHeight()
-		{
-			return 12;
-		}
-	};
 }

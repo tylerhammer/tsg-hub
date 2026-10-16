@@ -37,7 +37,6 @@ import net.runelite.api.gameval.SpriteID;
 import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.api.gameval.VarbitID;
 import net.runelite.client.callback.ClientThread;
-import net.runelite.client.game.ChatIconManager;
 import net.runelite.client.game.SpriteManager;
 import net.runelite.client.util.Text;
 
@@ -52,9 +51,8 @@ final class TsgHubPresence
 	private final TsgHubPlugin plugin;
 	private final Client client;
 	private final ClientThread clientThread;
-	private final ChatIconManager chatIcons;
+	private final TsgHubRankIcons rankIcons;
 	private final SpriteManager sprites;
-	private final Map<Integer, BufferedImage> rankIcons = new ConcurrentHashMap<>();
 	private final Map<Integer, BufferedImage> accountIcons = new ConcurrentHashMap<>();
 	private final Map<String, BufferedImage> nameIcons = new ConcurrentHashMap<>();
 	private final ScheduledExecutorService executor;
@@ -69,7 +67,7 @@ final class TsgHubPresence
 	private volatile AreaNames.Area area;
 	private boolean slayerDirty = true;
 
-	TsgHubPresence(TsgHubPlugin plugin, Client client, ClientThread clientThread, ChatIconManager chatIcons, SpriteManager sprites, ScheduledExecutorService executor,
+	TsgHubPresence(TsgHubPlugin plugin, Client client, ClientThread clientThread, TsgHubRankIcons rankIcons, SpriteManager sprites, ScheduledExecutorService executor,
 		Supplier<TsgHubApi> api, Supplier<TsgHubSidebarPanel> sidebar, TsgHubSocket socket, Supplier<String> key)
 	{
 		this.key = key;
@@ -77,7 +75,7 @@ final class TsgHubPresence
 		this.plugin = plugin;
 		this.client = client;
 		this.clientThread = clientThread;
-		this.chatIcons = chatIcons;
+		this.rankIcons = rankIcons;
 		this.sprites = sprites;
 		this.executor = executor;
 		this.api = api;
@@ -312,8 +310,7 @@ final class TsgHubPresence
 			if (title == null) continue;
 			if (title.getName() != null) member.addProperty("rank", title.getName());
 			member.addProperty("rankId", title.getId());
-			BufferedImage icon = chatIcons.getRankImage(title);
-			if (icon != null) rankIcons.put(title.getId(), icon);
+			rankIcons.load(title);
 		}
 	}
 
@@ -330,7 +327,7 @@ final class TsgHubPresence
 
 	BufferedImage nameIcon(JsonObject member)
 	{
-		BufferedImage rank = member.has("rankId") ? rankIcons.get(TsgHubJson.integer(member, "rankId", 0)) : null;
+		BufferedImage rank = member.has("rankId") && rankIcons != null ? rankIcons.get(TsgHubJson.integer(member, "rankId", 0)) : null;
 		int type = accountType(member);
 		BufferedImage account = accountIcons.get(type);
 		if (account == null) return rank;

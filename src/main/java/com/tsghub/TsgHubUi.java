@@ -637,6 +637,15 @@ final class TsgHubUi
 		if (value < 10_000_000) return TEXT;
 		return COIN_HIGH;
 	}
+	static JPanel field(String label, Component input)
+	{
+		JPanel row = panel(new BorderLayout(0, 3));
+		row.add(caption(label), BorderLayout.NORTH);
+		row.add(input, BorderLayout.CENTER);
+		row.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+		return fitHeight(row);
+	}
+
 	static boolean confirm(Component parent, String title, String message, String action, boolean danger)
 	{
 		Object[] options = {action, "Cancel"};

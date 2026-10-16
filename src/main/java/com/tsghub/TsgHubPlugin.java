@@ -242,7 +242,8 @@ public class TsgHubPlugin extends Plugin
 		announcements = new TsgHubAnnouncements(this, executor, this::api, () -> newsEditor, this::clanAnnouncement);
 		panel = new TsgHubPanel(this);
 		newsEditor = new TsgHubNewsEditor(this);
-		activity = new TsgHubActivity(this, client, clientThread, chatIconManager, executor, this::api, () -> activityPanel);
+		TsgHubRankIcons rankIcons = new TsgHubRankIcons(chatIconManager);
+		activity = new TsgHubActivity(this, client, clientThread, rankIcons, executor, this::api, () -> activityPanel);
 		activityPanel = new TsgHubActivityPanel(activity, config::inactivityDays);
 		GroupMembersPanel groupMembers = new GroupMembersPanel(new GroupViewSettings()
 		{
@@ -259,7 +260,7 @@ public class TsgHubPlugin extends Plugin
 		executor.scheduleAtFixedRate(groups::heartbeat, 5, TsgHubGroups.HEARTBEAT_SECONDS, TimeUnit.SECONDS);
 		executor.scheduleAtFixedRate(groupTracker::keepAlive, GroupTracker.KEEPALIVE_SECONDS, GroupTracker.KEEPALIVE_SECONDS, TimeUnit.SECONDS);
 		executor.scheduleAtFixedRate(unlessLive(groups::autoRefresh), TsgHubGroups.REFRESH_SECONDS, TsgHubGroups.REFRESH_SECONDS, TimeUnit.SECONDS);
-		presence = new TsgHubPresence(this, client, clientThread, chatIconManager, spriteManager, executor, this::api, () -> sidebar, socket, this::adminKey);
+		presence = new TsgHubPresence(this, client, clientThread, rankIcons, spriteManager, executor, this::api, () -> sidebar, socket, this::adminKey);
 		executor.scheduleAtFixedRate(unlessLive(presence::autoRefresh), TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
 		memberMap = new TsgHubMemberMap(this, client, clientThread, worldMapPointManager, executor, this::api);
 		mapOverlay = new TsgHubMapOverlay(client, worldMapOverlay, memberMap);
