@@ -5,6 +5,8 @@
 	"dropKeywords": ["received a drop:", "received special loot from a raid:", "funny feeling", "sneaking into", "acquired something special", "new collection log item:"],
 	"dropContext": ["count is:"],
 	"dropDelayMs": 1200,
+	"dropContextTicks": 50,
+	"dropContextKeep": 16,
 	"skilling": {"minDrops": 3, "windowMillis": 120000},
 	"petMessages": ["you have a funny feeling like you're being followed", "you feel something weird sneaking into your backpack"],
 	"rewardInterfaces": [107, 153, 240, 243, 274, 442, 491],

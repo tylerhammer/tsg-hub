@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
@@ -46,7 +47,6 @@ final class TsgHubDrops
 		"Remnant of Ba-Ba", "Remnant of Kephri", "Remnant of Zebak", "Ancient remnant");
 	static final int REFRESH_SECONDS = 60;
 	private static final int INDEX_CHUNK = 2000;
-	private static final int CONTEXT_TICKS = 10;
 
 	private final TsgHubPlugin plugin;
 	private final Client client;
@@ -56,7 +56,7 @@ final class TsgHubDrops
 	private final Supplier<TsgHubSidebarPanel> sidebar;
 	private final Map<String, Integer> itemIds = new HashMap<>();
 	private int indexedItems;
-	private final Recent<String> lootSources = new Recent<>();
+	private final Recent<JsonObject> lootSources = new Recent<>();
 	private final Recent<String> countMessages = new Recent<>();
 
 	TsgHubDrops(TsgHubPlugin plugin, Client client, ClientThread clientThread, ScheduledExecutorService executor, Supplier<TsgHubApi> api, Supplier<TsgHubSidebarPanel> sidebar)
@@ -69,10 +69,15 @@ final class TsgHubDrops
 		this.sidebar = sidebar;
 	}
 
-	void onLoot(String source)
+	void onLoot(String source, List<String> items)
 	{
 		if (source == null || source.isEmpty() || !plugin.sharingEnabled()) return;
-		lootSources.add(client.getTickCount(), source);
+		JsonObject loot = new JsonObject();
+		loot.addProperty("source", source);
+		JsonArray names = new JsonArray();
+		items.forEach(names::add);
+		loot.add("items", names);
+		lootSources.add(client.getTickCount(), loot);
 	}
 
 	void onChatMessage(ChatMessage event)
@@ -89,18 +94,29 @@ final class TsgHubDrops
 		String message = broadcast(event.getMessage());
 		long hash = client.getAccountHash();
 		if (message == null || hash == -1 || executor.isShutdown()) return;
+		String self = plugin.getDetectedPlayerName();
 		JsonObject body = new JsonObject();
 		body.addProperty("clanName", plugin.getDetectedClanName());
 		body.addProperty("accountHash", Long.toString(hash));
 		body.addProperty("message", message);
-		body.addProperty("reporter", plugin.getDetectedPlayerName());
+		body.addProperty("reporter", self);
 		int tick = client.getTickCount();
 		body.addProperty("tick", tick);
 		executor.schedule(() -> {
 			if (!plugin.sharingEnabled()) return;
+			if (!fromSelf(message, self))
+			{
+				post(body);
+				return;
+			}
 			JsonObject context = new JsonObject();
-			context.add("loot", lootSources.since(tick - CONTEXT_TICKS, "source"));
-			context.add("chat", countMessages.since(tick - CONTEXT_TICKS, "text"));
+			int since = tick - TsgHubRules.get().dropContextTicks;
+			context.add("loot", lootSources.since(since, JsonObject::deepCopy));
+			context.add("chat", countMessages.since(since, text -> {
+				JsonObject row = new JsonObject();
+				row.addProperty("text", text);
+				return row;
+			}));
 			body.add("context", context);
 			post(body);
 		}, TsgHubRules.get().dropDelayMs, TimeUnit.MILLISECONDS);
@@ -110,6 +126,12 @@ final class TsgHubDrops
 	{
 		try { api.get().request("POST", "/v1/drops", null, body); }
 		catch (Exception ignored) { }
+	}
+
+	static boolean fromSelf(String message, String self)
+	{
+		if (self == null || self.isEmpty() || message.length() <= self.length() || message.charAt(self.length()) != ' ') return false;
+		return samePlayer(message.substring(0, self.length()), self);
 	}
 
 	static String broadcast(String raw)
@@ -306,25 +328,23 @@ final class TsgHubDrops
 
 	static final class Recent<T>
 	{
-		private static final int KEEP = 8;
 		private final ArrayDeque<Map.Entry<Integer, T>> seen = new ArrayDeque<>();
 
 		synchronized void add(int tick, T value)
 		{
 			seen.addLast(new AbstractMap.SimpleImmutableEntry<>(tick, value));
-			while (seen.size() > KEEP) seen.removeFirst();
+			while (seen.size() > TsgHubRules.get().dropContextKeep) seen.removeFirst();
 		}
 
-		synchronized JsonArray since(int tick, String key)
+		synchronized JsonArray since(int tick, Function<T, JsonObject> row)
 		{
 			JsonArray out = new JsonArray();
 			for (Map.Entry<Integer, T> entry : seen)
 			{
 				if (entry.getKey() < tick) continue;
-				JsonObject row = new JsonObject();
-				row.addProperty("tick", entry.getKey());
-				row.addProperty(key, String.valueOf(entry.getValue()));
-				out.add(row);
+				JsonObject value = row.apply(entry.getValue());
+				value.addProperty("tick", entry.getKey());
+				out.add(value);
 			}
 			return out;
 		}
