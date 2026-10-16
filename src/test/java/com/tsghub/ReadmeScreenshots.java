@@ -177,7 +177,7 @@ public class ReadmeScreenshots
 			JsonArray announcements = data.getAsJsonObject("announcementsList").getAsJsonArray("announcements");
 			TsgHubNewsEditor news = new TsgHubNewsEditor(plugin);
 			news.setAnnouncements(announcements);
-			TsgHubAdminWindow window = new TsgHubAdminWindow(organizer, () -> { }, news, () -> { });
+			TsgHubAdminWindow window = new TsgHubAdminWindow(organizer, () -> { }, news, () -> { }, new TsgHubActivityPanel(null, () -> 14), () -> { });
 			shoot(window, 860, 340, "admin-events");
 			selectTab(window, "Announcements");
 			news.showAnnouncement(TsgHubUi.str(announcements.get(0).getAsJsonObject(), "id"));

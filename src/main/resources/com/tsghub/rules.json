@@ -4,6 +4,7 @@
 	"players": ["completion time", "completed chambers of xeric"],
 	"dropKeywords": ["received a drop:", "received special loot from a raid:", "funny feeling", "sneaking into", "acquired something special", "new collection log item:"],
 	"dropContext": ["count is:"],
+	"groupContent": ["kill count is:", "your completed ", "your subdued ", "amount of rifts you have closed"],
 	"dropDelayMs": 1200,
 	"dropContextTicks": 50,
 	"dropContextKeep": 16,

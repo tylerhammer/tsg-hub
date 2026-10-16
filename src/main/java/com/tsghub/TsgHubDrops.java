@@ -124,8 +124,7 @@ final class TsgHubDrops
 
 	private void post(JsonObject body)
 	{
-		try { api.get().request("POST", "/v1/drops", null, body); }
-		catch (Exception ignored) { }
+		plugin.report("drop", "/v1/drops", body);
 	}
 
 	static boolean fromSelf(String message, String self)

@@ -40,6 +40,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -103,6 +104,7 @@ import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
 import okhttp3.OkHttpClient;
 
+@Slf4j
 @PluginDescriptor(name = "TSG Hub", internalName = "tsg-hub", description = "TypeShii Gaming clan events and progress tracking", tags = {"tsg", "clan", "bingo", "events"})
 public class TsgHubPlugin extends Plugin
 {
@@ -146,6 +148,8 @@ public class TsgHubPlugin extends Plugin
 	private int petCheckTicks;
 	private int recentPet;
 	private int recentPetTick;
+	private String lastGroupContent = "";
+	private int lastGroupContentTick = -1;
 	private Set<Integer> inventoryPets = Collections.emptySet();
 	private volatile String detectedClanName = "";
 	private volatile String detectedPlayerName = "";
@@ -166,6 +170,7 @@ public class TsgHubPlugin extends Plugin
 	private volatile TsgHubApi api;
 	private TsgHubSocket socket;
 	private TsgHubSignals signals;
+	private TsgHubReports reports;
 	private TsgHubOrganizer organizer;
 	private volatile Filepath rulesCache;
 	private TsgHubGroups groups;
@@ -177,6 +182,8 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubDrops drops;
 	private TsgHubAnnouncements announcements;
 	private TsgHubNewsEditor newsEditor;
+	private TsgHubActivity activity;
+	private TsgHubActivityPanel activityPanel;
 	private GroupTracker groupTracker;
 
 	@Override
@@ -196,6 +203,7 @@ public class TsgHubPlugin extends Plugin
 			{
 				refreshRules(rulesVersion);
 				signals.resend();
+				reports.resend();
 				resyncLiveViews();
 			}
 			@Override public void onChanged(String topic, String eventId) { liveChange(topic, eventId); }
@@ -204,12 +212,18 @@ public class TsgHubPlugin extends Plugin
 			@Override public void onUpdateAvailable(String version) { updateAvailable(version); }
 			@Override public void onSnapshot(JsonObject message) { snapshot(message); }
 			@Override public void onConnection(TsgHubSocket.State state) { ui(s -> s.setConnection(state)); }
-			@Override public void onAck(String id) { signals.acked(id); }
+			@Override public void onAck(String id)
+			{
+				signals.acked(id);
+				reports.acked(id);
+			}
+			@Override public void onRejected(String id, int status) { reports.failed(id, status); }
 			@Override public void onSubscribed() { signals.resend(); }
 			@Override public void onReply(JsonObject message) { signalReply(message); }
 			@Override public void onXpRequest(String skills) { reportXp(skills); }
 		});
 		signals = new TsgHubSignals(socket, this::api, this::signalReply);
+		reports = new TsgHubReports(socket::send, (path, body) -> api().request("POST", path, null, body));
 		executor.execute(this::loadCachedRules);
 		executor.scheduleAtFixedRate(this::socketTick, 2, 5, TimeUnit.SECONDS);
 		executor.scheduleAtFixedRate(unlessLive(this::autoRefreshBoard), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
@@ -218,6 +232,8 @@ public class TsgHubPlugin extends Plugin
 		announcements = new TsgHubAnnouncements(this, executor, this::api, () -> newsEditor, this::clanAnnouncement);
 		panel = new TsgHubPanel(this);
 		newsEditor = new TsgHubNewsEditor(this);
+		activity = new TsgHubActivity(this, client, clientThread, chatIconManager, executor, this::api, () -> activityPanel);
+		activityPanel = new TsgHubActivityPanel(activity, config::inactivityDays);
 		GroupMembersPanel groupMembers = new GroupMembersPanel(new GroupViewSettings()
 		{
 			@Override public boolean autoExpandMembers() { return config.partyExpandMembers(); }
@@ -294,7 +310,7 @@ public class TsgHubPlugin extends Plugin
 			{
 				hubWindow = new JFrame("TSG Hub · Admin");
 				hubWindow.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
-				hubWindow.setContentPane(new TsgHubAdminWindow(panel, organizer::loadManagedEvents, newsEditor, announcements::load));
+				hubWindow.setContentPane(new TsgHubAdminWindow(panel, organizer::loadManagedEvents, newsEditor, announcements::load, activityPanel, activity::load));
 				hubWindow.setMinimumSize(new Dimension(680, 480));
 				hubWindow.setSize(860, 640);
 				Window owner = SwingUtilities.getWindowAncestor(client.getCanvas());
@@ -548,6 +564,7 @@ public class TsgHubPlugin extends Plugin
 	public void onConfigChanged(ConfigChanged event)
 	{
 		if (!"tsghub".equals(event.getGroup())) return;
+		if ("dataSharingOptIn".equals(event.getKey()) && !config.dataSharingOptIn() && reports != null) reports.clear();
 		if ("partyShowSelf".equals(event.getKey()))
 		{
 			if (config.partyShowSelf()) groupTracker.refreshSelf();
@@ -817,6 +834,8 @@ public class TsgHubPlugin extends Plugin
 
 	private void socketTick()
 	{
+		if (!sharingEnabled()) reports.clear();
+		reports.flush();
 		if (!sharingInClan())
 		{
 			socket.disconnect();
@@ -1308,11 +1327,58 @@ public class TsgHubPlugin extends Plugin
 			else petCheckTicks = PET_CHECK_TICKS;
 			recentPet = 0;
 		}
+		if (TsgHubRules.get().groupContent.stream().anyMatch(message::contains)) reportGroupContent(Text.removeTags(event.getMessage()).trim(), message);
 		if (!signals.wantsChat(message)) return;
 		JsonObject chat = new JsonObject();
 		chat.addProperty("text", message);
 		if (signals.wantsPlayers(message)) addNearbyPlayers(chat);
 		signals.send("chat", chat);
+	}
+
+	private void reportGroupContent(String text, String key)
+	{
+		int tick = client.getTickCount();
+		if (tick == lastGroupContentTick && key.equals(lastGroupContent)) return;
+		lastGroupContentTick = tick;
+		lastGroupContent = key;
+		long hash = client.getAccountHash();
+		Player self = client.getLocalPlayer();
+		WorldView worldView = client.getTopLevelWorldView();
+		if (hash == -1 || self == null || worldView == null || worldView.players() == null || executor == null || executor.isShutdown()) return;
+		List<String> nearby = new ArrayList<>();
+		for (Player player : worldView.players())
+		{
+			if (player != null && player != self && player.getName() != null && player.isClanMember()) nearby.add(Text.toJagexName(player.getName()));
+		}
+		List<String> clanmates = clanmates(nearby, self.getName());
+		if (clanmates.isEmpty()) return;
+		JsonObject body = new JsonObject();
+		body.addProperty("clanName", detectedClanName);
+		body.addProperty("displayName", detectedPlayerName.isEmpty() ? Text.toJagexName(self.getName()) : detectedPlayerName);
+		body.addProperty("accountHash", Long.toString(hash));
+		body.addProperty("message", text);
+		JsonArray names = new JsonArray();
+		clanmates.forEach(names::add);
+		body.add("clanmates", names);
+		report("group", "/v1/group-content", body);
+	}
+
+	void report(String type, String path, JsonObject body)
+	{
+		if (reports == null || reports.send(type, path, body) || executor == null || executor.isShutdown()) return;
+		if (client.isClientThread()) executor.execute(reports::flush);
+		else reports.flush();
+	}
+
+	static List<String> clanmates(List<String> names, String self)
+	{
+		List<String> out = new ArrayList<>();
+		for (String name : names)
+		{
+			if (name == null || name.trim().isEmpty() || TsgHubUi.samePlayer(name, self)) continue;
+			if (out.stream().noneMatch(existing -> TsgHubUi.samePlayer(existing, name))) out.add(name);
+		}
+		return out;
 	}
 
 	private void addNearbyPlayers(JsonObject chat)

@@ -366,6 +366,21 @@ final class TsgHubUi
 		return label;
 	}
 
+	static JPanel statCard(JLabel title, JLabel value, JLabel detail)
+	{
+		JPanel card = stack();
+		card.setOpaque(true);
+		card.setBackground(CARD);
+		card.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(BORDER), BorderFactory.createEmptyBorder(8, 10, 8, 10)));
+		card.add(title);
+		card.add(Box.createVerticalStrut(GAP_XS));
+		card.add(value);
+		if (detail == null) return card;
+		card.add(Box.createVerticalStrut(GAP_XS));
+		card.add(detail);
+		return card;
+	}
+
 	static JLabel badge(String text, Color color)
 	{
 		JLabel label = label(text, color, smallFont());
