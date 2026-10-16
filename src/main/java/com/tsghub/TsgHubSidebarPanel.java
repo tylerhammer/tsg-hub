@@ -2183,7 +2183,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		String taskId = str(task, "id");
 		boolean completed = bool(progress, "completed");
-		boolean pending = bool(progress, "pending");
 		boolean individual = "individual".equals(str(task, "scope"));
 		boolean solo = "solo".equals(str(task, "scope"));
 
@@ -2232,7 +2231,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 			String amounts = contributorsHtml(progress, " · ", CARD_CONTRIBUTORS, boardDisplayName);
 			if (!amounts.isEmpty()) body.add(cardNoteHtml(amounts));
 		}
-		if (pending && !completed) body.add(label("Awaiting admin review", WARNING, smallFont()));
 		addLineSpacing(body);
 		addScopeIcon(body, solo, individual);
 		card.add(body, BorderLayout.CENTER);

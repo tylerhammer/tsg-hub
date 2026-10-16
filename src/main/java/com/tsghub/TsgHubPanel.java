@@ -33,8 +33,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.ButtonGroup;
@@ -42,7 +40,6 @@ import javax.swing.DefaultListModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.DefaultComboBoxModel;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -61,7 +58,6 @@ import net.runelite.api.clan.ClanRank;
 import net.runelite.client.ui.components.materialtabs.MaterialTab;
 import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
 import net.runelite.client.util.AsyncBufferedImage;
-import net.runelite.client.util.LinkBrowser;
 
 final class TsgHubPanel extends JPanel
 {
@@ -69,17 +65,16 @@ final class TsgHubPanel extends JPanel
 	private static final int DETAIL_TEXT_W = 500;
 	private static final int MAX_RECONCILE_LINES = 10;
 
-	// Order matches the index TsgHubPlugin#saveTask expects.
 	private enum TaskType
 	{
-		MANUAL("Manual (admin marks complete)"),
-		KILL("Boss kill count"),
-		DROP("Item drop"),
-		ITEM_SET("Complete a set"),
-		RAID("Raid completion");
+		KILL(1, "Boss kill count"),
+		DROP(2, "Item drop"),
+		ITEM_SET(3, "Complete a set"),
+		RAID(4, "Raid completion");
 
+		private final int code;
 		private final String label;
-		TaskType(String label) { this.label = label; }
+		TaskType(int code, String label) { this.code = code; this.label = label; }
 		@Override public String toString() { return label; }
 	}
 
@@ -102,11 +97,9 @@ final class TsgHubPanel extends JPanel
 	private final JLabel eventPrizePool = caption(" ");
 	private final WidthTrackingPanel teamsTab = new WidthTrackingPanel();
 	private final WidthTrackingPanel tasksTab = new WidthTrackingPanel();
-	private final WidthTrackingPanel claimsTab = new WidthTrackingPanel();
 	private MaterialTabGroup tabs;
 	private MaterialTab teamsTabButton;
 	private MaterialTab tasksTabButton;
-	private MaterialTab claimsTabButton;
 	private MaterialTab leaderboardTabButton;
 	private MaterialTab detailsTabButton;
 	private final WidthTrackingPanel leaderboardTab = new WidthTrackingPanel();
@@ -147,8 +140,7 @@ final class TsgHubPanel extends JPanel
 	private final JLabel taskEditorTitle = sectionTitle("New task");
 	private final JTextField taskTitle = new JTextField();
 	private final JTextField taskDescription = new JTextField();
-	private final DefaultComboBoxModel<TaskType> taskTypes = new DefaultComboBoxModel<>(new TaskType[]{TaskType.KILL, TaskType.DROP, TaskType.ITEM_SET, TaskType.RAID});
-	private final JComboBox<TaskType> taskType = new JComboBox<>(taskTypes);
+	private final JComboBox<TaskType> taskType = new JComboBox<>(TaskType.values());
 	private final JRadioButton scopeTeam = new JRadioButton("Team: pooled progress", true);
 	private final JRadioButton scopeIndividual = new JRadioButton("Everyone: each member completes it");
 	private final JRadioButton scopeSolo = new JRadioButton("Solo: one member, alone");
@@ -359,7 +351,6 @@ final class TsgHubPanel extends JPanel
 		tabs.setOpaque(false);
 		teamsTabButton = tab("Teams", teamsTab);
 		tasksTabButton = tab("Tasks", tasksTab);
-		claimsTabButton = tab("Claims", claimsTab);
 		leaderboardTabButton = tab("Leaderboard", leaderboardTab);
 		detailsTabButton = tab("Details", detailsTab);
 		tabs.select(teamsTabButton);
@@ -723,12 +714,10 @@ final class TsgHubPanel extends JPanel
 		endEvent.setVisible("drop-party".equals(type) && !"ended".equals(state));
 		teamsTabButton.setVisible(bingo);
 		tasksTabButton.setVisible(bingo);
-		claimsTabButton.setVisible(bingo);
 		leaderboardTabButton.setVisible(competition);
 		detailsTabButton.setVisible("drop-party".equals(type));
 		renderTeams();
 		renderTasks();
-		renderClaims();
 		renderLeaderboard();
 		renderDetails();
 	}
@@ -1219,64 +1208,6 @@ final class TsgHubPanel extends JPanel
 		}
 	}
 
-	private void renderClaims()
-	{
-		claimsTab.removeAll();
-		JsonArray claims = array(currentEvent, "claims");
-		JsonArray tasks = array(currentEvent, "tasks");
-		int pending = 0;
-		for (JsonObject claim : objects(claims))
-		{
-			if (!"pending".equals(str(claim, "status"))) continue;
-			pending++;
-			String taskTitle = "Task";
-			for (JsonObject task : objects(tasks))
-				if (str(task, "id").equals(str(claim, "taskId"))) taskTitle = str(task, "title");
-			JsonObject team = findTeam(str(claim, "teamId"));
-			JPanel card = card();
-			JPanel text = stack();
-			text.add(boldLabel(taskTitle));
-			text.add(caption(str(claim, "displayName") + (team == null ? "" : " · " + str(team, "name"))));
-			if ("raid".equals(str(claim, "source"))) text.add(caption("Clan-only raid, no players detected"));
-			JsonObject evidence = object(claim, "evidence");
-			String note = str(evidence, "note");
-			if (!note.isEmpty())
-			{
-				text.add(Box.createVerticalStrut(GAP_XS));
-				text.add(wrapped(note, TEXT, plainFont(), DETAIL_TEXT_W - 150));
-			}
-			card.add(text, BorderLayout.CENTER);
-			JPanel actions = panel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
-			Matcher link = Pattern.compile("https?://\\S+").matcher(note);
-			if (link.find())
-			{
-				String url = link.group();
-				JButton open = button("Open link");
-				open.setToolTipText(url);
-				open.addActionListener(e -> LinkBrowser.browse(url));
-				actions.add(open);
-			}
-			String claimId = str(claim, "id");
-			JButton reject = button("Reject");
-			reject.addActionListener(e -> {
-				if (JOptionPane.showConfirmDialog(this, "Reject this claim?", "Reject claim", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION)
-					plugin.organizer().reviewClaim(claimId, false);
-			});
-			JButton approve = primaryButton("Approve");
-			approve.addActionListener(e -> plugin.organizer().reviewClaim(claimId, true));
-			actions.add(reject);
-			actions.add(approve);
-			card.add(north(actions), BorderLayout.EAST);
-			claimsTab.add(fitHeight(card));
-			claimsTab.add(Box.createVerticalStrut(LIST_GAP));
-		}
-		if (pending == 0)
-		{
-			claimsTab.add(wrapped("Nothing to review. Clan-only raid completions with no players detected show up here.", MUTED, plainFont(), DETAIL_TEXT_W));
-		}
-		claimsTabButton.setText(pending == 0 ? "Claims" : "Claims (" + pending + ")");
-		refresh(claimsTab);
-	}
 
 	private void beginCreateEvent()
 	{
@@ -1449,7 +1380,6 @@ final class TsgHubPanel extends JPanel
 		taskSave.setText("Add task");
 		taskTitle.setText("");
 		taskDescription.setText("");
-		taskTypes.removeElement(TaskType.MANUAL);
 		taskType.setSelectedItem(TaskType.KILL);
 		scopeTeam.setSelected(true);
 		taskBoss.setText("");
@@ -1478,12 +1408,9 @@ final class TsgHubPanel extends JPanel
 		JsonObject config = object(task, "config");
 		targetCount.setText(String.valueOf(integer(config, "targetCount", 1)));
 		String type = str(task, "type");
-		TaskType selected = "kill".equals(type) ? TaskType.KILL
-			: "raid".equals(type) ? TaskType.RAID
+		TaskType selected = "raid".equals(type) ? TaskType.RAID
 			: "drop".equals(type) ? (bool(config, "requireAllItems") || array(config, "itemGroups").size() > 0 ? TaskType.ITEM_SET : TaskType.DROP)
-			: TaskType.MANUAL;
-		if (selected == TaskType.MANUAL && taskTypes.getIndexOf(TaskType.MANUAL) < 0) taskTypes.insertElementAt(TaskType.MANUAL, 0);
-		else if (selected != TaskType.MANUAL) taskTypes.removeElement(TaskType.MANUAL);
+			: TaskType.KILL;
 		taskType.setSelectedItem(selected);
 
 		taskBoss.setText(str(config, "npcName"));
@@ -1581,7 +1508,7 @@ final class TsgHubPanel extends JPanel
 		taskFormError.setVisible(false);
 		String targets = type == TaskType.KILL ? taskBoss.getText() : type == TaskType.RAID ? String.join("\n", selectedRaidModes()) : "";
 		int dropCategory = dropJar.isSelected() ? 1 : dropPet.isSelected() ? 2 : 0;
-		plugin.organizer().saveTask(editingTaskId, taskTitle.getText(), taskDescription.getText(), type.ordinal(),
+		plugin.organizer().saveTask(editingTaskId, taskTitle.getText(), taskDescription.getText(), type.code,
 			scopeIndividual.isSelected() ? 1 : scopeSolo.isSelected() ? 2 : 0, signalLoot.isSelected() ? 1 : 0, dropCategory,
 			targets, selectedItemsJson(type), type == TaskType.ITEM_SET ? 1 : 0,
 			targetCount.getText(), taskPoints.getText());

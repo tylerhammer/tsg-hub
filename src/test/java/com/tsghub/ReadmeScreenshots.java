@@ -170,8 +170,6 @@ public class ReadmeScreenshots
 		shoot(organizer, 860, 300, "admin-teams");
 		selectTab(organizer, "Tasks");
 		shoot(organizer, 860, 580, "admin-tasks");
-		selectTab(organizer, "Claims");
-		shoot(organizer, 860, 270, "admin-claims");
 		if (data.has("announcementsList"))
 		{
 			JsonArray announcements = data.getAsJsonObject("announcementsList").getAsJsonArray("announcements");

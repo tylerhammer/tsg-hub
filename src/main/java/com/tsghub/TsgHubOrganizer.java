@@ -216,72 +216,69 @@ final class TsgHubOrganizer
 	void saveTask(String taskId, String title, String description, int selectedType, int selectedScope, int selectedKillSignal, int dropCategory, String targetNamesText, JsonArray selectedItems, int dropRuleMode, String targetCount, String points)
 	{
 		JsonObject body = new JsonObject();
-		String type = selectedType == 1 ? "kill" : selectedType == 2 || selectedType == 3 ? "drop" : selectedType == 4 ? "raid" : "manual";
+		String type = selectedType == 4 ? "raid" : selectedType == 2 || selectedType == 3 ? "drop" : "kill";
 		body.addProperty("title", title.trim());
 		body.addProperty("description", description.trim());
 		body.addProperty("type", type);
 		body.addProperty("scope", selectedScope == 1 ? "individual" : selectedScope == 2 ? "solo" : "team");
 		try { body.addProperty("points", Integer.parseInt(points.trim())); }
 		catch (NumberFormatException e) { taskFormFailed("Points must be a whole number."); return; }
-		if (!"manual".equals(type))
+		JsonObject cfg = new JsonObject();
+		List<String> targetNames = new ArrayList<>();
+		if (selectedType == 2 || selectedType == 3)
 		{
-			JsonObject cfg = new JsonObject();
-			List<String> targetNames = new ArrayList<>();
-			if (selectedType == 2 || selectedType == 3)
-			{
-				for (JsonObject item : TsgHubUi.objects(selectedItems)) targetNames.add(item.get("name").getAsString());
-			}
-			else for (String name : targetNamesText.split("\\R")) if (!name.trim().isEmpty()) targetNames.add(name.trim());
-			if (targetNames.isEmpty() && !(selectedType == 2 && dropCategory > 0)) { taskFormFailed(selectedType == 2 || selectedType == 3 ? "Search for and add at least one item." : "Enter at least one target name or raid mode."); return; }
-			if (selectedType != 3)
-			{
-				try { cfg.addProperty("targetCount", Integer.parseInt(targetCount.trim())); }
-				catch (NumberFormatException e) { taskFormFailed("Target count must be a whole number."); return; }
-			}
-			if ("kill".equals(type))
-			{
-				if (targetNames.size() != 1) { taskFormFailed("A boss kill task takes one NPC name."); return; }
-				cfg.addProperty("npcName", targetNames.get(0));
-				cfg.addProperty("signal", selectedKillSignal == 0 ? "chat" : "loot");
-			}
-			else if ("raid".equals(type))
-			{
-				JsonArray modes = new JsonArray();
-				for (String mode : targetNames) modes.add(mode.toLowerCase(Locale.ROOT));
-				cfg.add("modes", modes);
-				cfg.addProperty("clanOnly", true);
-			}
-			else if (selectedType == 2 && dropCategory > 0)
-			{
-				cfg.addProperty("itemGroup", dropCategory == 1 ? "jar" : "pet");
-			}
-			else
-			{
-				JsonArray itemNames = new JsonArray();
-				targetNames.forEach(itemNames::add);
-				cfg.add("itemNames", itemNames);
-				JsonArray itemIds = new JsonArray();
-				for (JsonObject item : TsgHubUi.objects(selectedItems)) itemIds.add(item.get("id").getAsInt());
-				cfg.add("itemIds", itemIds);
-				// Completing any one set group finishes the task.
-				if (selectedType == 3 || dropRuleMode == 1)
-				{
-					Map<Integer, JsonArray> groupedItems = new TreeMap<>();
-					for (JsonObject selected : TsgHubUi.objects(selectedItems))
-					{
-						JsonArray groupItems = groupedItems.computeIfAbsent(Math.max(0, selected.get("group").getAsInt()), ignored -> new JsonArray());
-						JsonObject item = new JsonObject();
-						item.addProperty("name", selected.get("name").getAsString());
-						item.addProperty("id", selected.get("id").getAsInt());
-						groupItems.add(item);
-					}
-					JsonArray groups = new JsonArray();
-					groupedItems.values().forEach(groups::add);
-					cfg.add("itemGroups", groups);
-				}
-			}
-			body.add("config", cfg);
+			for (JsonObject item : TsgHubUi.objects(selectedItems)) targetNames.add(item.get("name").getAsString());
 		}
+		else for (String name : targetNamesText.split("\\R")) if (!name.trim().isEmpty()) targetNames.add(name.trim());
+		if (targetNames.isEmpty() && !(selectedType == 2 && dropCategory > 0)) { taskFormFailed(selectedType == 2 || selectedType == 3 ? "Search for and add at least one item." : "Enter at least one target name or raid mode."); return; }
+		if (selectedType != 3)
+		{
+			try { cfg.addProperty("targetCount", Integer.parseInt(targetCount.trim())); }
+			catch (NumberFormatException e) { taskFormFailed("Target count must be a whole number."); return; }
+		}
+		if ("kill".equals(type))
+		{
+			if (targetNames.size() != 1) { taskFormFailed("A boss kill task takes one NPC name."); return; }
+			cfg.addProperty("npcName", targetNames.get(0));
+			cfg.addProperty("signal", selectedKillSignal == 0 ? "chat" : "loot");
+		}
+		else if ("raid".equals(type))
+		{
+			JsonArray modes = new JsonArray();
+			for (String mode : targetNames) modes.add(mode.toLowerCase(Locale.ROOT));
+			cfg.add("modes", modes);
+			cfg.addProperty("clanOnly", true);
+		}
+		else if (selectedType == 2 && dropCategory > 0)
+		{
+			cfg.addProperty("itemGroup", dropCategory == 1 ? "jar" : "pet");
+		}
+		else
+		{
+			JsonArray itemNames = new JsonArray();
+			targetNames.forEach(itemNames::add);
+			cfg.add("itemNames", itemNames);
+			JsonArray itemIds = new JsonArray();
+			for (JsonObject item : TsgHubUi.objects(selectedItems)) itemIds.add(item.get("id").getAsInt());
+			cfg.add("itemIds", itemIds);
+			// Completing any one set group finishes the task.
+			if (selectedType == 3 || dropRuleMode == 1)
+			{
+				Map<Integer, JsonArray> groupedItems = new TreeMap<>();
+				for (JsonObject selected : TsgHubUi.objects(selectedItems))
+				{
+					JsonArray groupItems = groupedItems.computeIfAbsent(Math.max(0, selected.get("group").getAsInt()), ignored -> new JsonArray());
+					JsonObject item = new JsonObject();
+					item.addProperty("name", selected.get("name").getAsString());
+					item.addProperty("id", selected.get("id").getAsInt());
+					groupItems.add(item);
+				}
+				JsonArray groups = new JsonArray();
+				groupedItems.values().forEach(groups::add);
+				cfg.add("itemGroups", groups);
+			}
+		}
+		body.add("config", cfg);
 		Consumer<JsonObject> done = result -> {
 			SwingUtilities.invokeLater(() -> panel.get().finishTaskEdit());
 			refreshEvent(false);
@@ -339,13 +336,6 @@ final class TsgHubOrganizer
 			status("Credited " + count + (count == 1 ? " match" : " matches") + " from the loot log.", Tone.SUCCESS);
 			refreshEvent(false);
 		}, null);
-	}
-
-	void reviewClaim(String claimId, boolean approve)
-	{
-		JsonObject body = new JsonObject();
-		body.addProperty("status", approve ? "approved" : "rejected");
-		eventRequest("POST", "/claims/" + claimId + "/review", body, approve ? "Claim approved." : "Claim rejected.", result -> refreshEvent(false), null);
 	}
 
 	private void refreshEvent(boolean open)

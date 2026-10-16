@@ -1128,7 +1128,6 @@ final class TsgHubUi
 		{
 			case "kill": return "Boss KC";
 			case "raid": return "Raid";
-			case "manual": return "Manual";
 			case "xp": return "XP";
 			case "drop":
 				if (bool(config, "requireAllItems") || array(config, "itemGroups").size() > 0) return "Item set";
