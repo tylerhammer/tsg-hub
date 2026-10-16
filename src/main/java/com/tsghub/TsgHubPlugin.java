@@ -1349,9 +1349,16 @@ public class TsgHubPlugin extends Plugin
 		JsonArray names = new JsonArray();
 		clanmates.forEach(names::add);
 		body.add("clanmates", names);
+		report("group", "/v1/group-content", body);
+	}
+
+	void report(String type, String path, JsonObject body)
+	{
+		if (socket != null && socket.send(type, body)) return;
+		if (executor == null || executor.isShutdown()) return;
 		executor.submit(() -> {
-			try { api().request("POST", "/v1/group-content", null, body); }
-			catch (Exception e) { log.debug("TSG Hub group content not sent", e); }
+			try { api().request("POST", path, null, body); }
+			catch (Exception e) { log.debug("TSG Hub {} not sent", type, e); }
 		});
 	}
 

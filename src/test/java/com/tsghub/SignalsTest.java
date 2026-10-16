@@ -86,6 +86,16 @@ public class SignalsTest
 	}
 
 	@Test
+	public void socketSendFallsBackWhenNotReady()
+	{
+		TsgHubSocket socket = new TsgHubSocket(new OkHttpClient(), "https://hub.test", executor, null);
+		JsonObject body = new JsonObject();
+		body.addProperty("message", "Bob received a drop: Abyssal whip");
+		assertFalse(socket.send("drop", body));
+		assertFalse(body.has("type"));
+	}
+
+	@Test
 	public void cachedRulesSurviveRestart() throws Exception
 	{
 		Filepath cache = Filepath.Unchecked.getRooted(Files.createTempDirectory("tsghub")).join("rules.json");

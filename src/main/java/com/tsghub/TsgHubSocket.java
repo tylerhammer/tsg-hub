@@ -172,6 +172,14 @@ final class TsgHubSocket
 		return live;
 	}
 
+	synchronized boolean send(String type, JsonObject body)
+	{
+		if (!ready || socket == null) return false;
+		JsonObject message = body.deepCopy();
+		message.addProperty("type", type);
+		return socket.send(message.toString());
+	}
+
 	synchronized boolean signaling()
 	{
 		return ready && socket != null && !confirmed.isEmpty();
