@@ -60,6 +60,13 @@ final class TsgHubJson
 		catch (DateTimeException e) { return null; }
 	}
 
+	static long longValue(JsonObject object, String key, long fallback)
+	{
+		if (object == null || !object.has(key) || object.get(key).isJsonNull()) return fallback;
+		try { return object.get(key).getAsLong(); }
+		catch (RuntimeException ignored) { return fallback; }
+	}
+
 	static JsonObject object(JsonObject object, String key)
 	{
 		return object != null && object.has(key) && object.get(key).isJsonObject() ? object.getAsJsonObject(key) : new JsonObject();

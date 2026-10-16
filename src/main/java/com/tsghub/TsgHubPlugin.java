@@ -148,8 +148,6 @@ public class TsgHubPlugin extends Plugin
 	private static final int PET_CHECK_TICKS = 5;
 	private static final int MAX_LOOT_LOG_ITEMS = 50;
 	private static final int CLAN_CHECK_TICKS = 50;
-	private static final long KEY_CHECK_RETRY_SECONDS = 15;
-	private static final long KEY_CHECK_MAX_RETRY_SECONDS = 300;
 	private volatile int clanCheckTicks;
 	private int petCheckTicks;
 	private int recentPet;
@@ -171,7 +169,7 @@ public class TsgHubPlugin extends Plugin
 	private volatile boolean adminVerified;
 	private volatile String checkedKeyIdentity = "";
 	private volatile String rejectedKey = "";
-	private volatile int keyCheckAttempts;
+	private final TsgHubBackoff keyCheckBackoff = new TsgHubBackoff(30_000, 300_000);
 	private volatile boolean announceKey;
 	private volatile TsgHubApi api;
 	private TsgHubSocket socket;
@@ -339,7 +337,7 @@ public class TsgHubPlugin extends Plugin
 		adminVerified = false;
 		checkedKeyIdentity = "";
 		rejectedKey = "";
-		keyCheckAttempts = 0;
+		keyCheckBackoff.reset();
 		announceKey = false;
 		worldMapOpen = false;
 		mapNoticeChecked = false;
@@ -492,7 +490,7 @@ public class TsgHubPlugin extends Plugin
 			{
 				JsonObject result = TsgHubApi.result(response, error);
 				if (!identity.equals(checkedKeyIdentity)) return;
-				keyCheckAttempts = 0;
+				keyCheckBackoff.reset();
 				boolean admin = grantsAdmin(result);
 				if (admin != adminVerified) setAdminVerified(admin);
 				if (admin) loadClanEvents();
@@ -522,8 +520,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		if (!identity.equals(checkedKeyIdentity)) return;
 		checkedKeyIdentity = "";
-		long delay = Math.min(KEY_CHECK_MAX_RETRY_SECONDS, KEY_CHECK_RETRY_SECONDS << Math.min(keyCheckAttempts++, 5));
-		if (executor != null && !executor.isShutdown()) executor.schedule(this::checkHubKey, delay, TimeUnit.SECONDS);
+		if (executor != null && !executor.isShutdown()) executor.schedule(this::checkHubKey, keyCheckBackoff.next(), TimeUnit.MILLISECONDS);
 	}
 
 	private void recheckHubKey(String key)
@@ -640,7 +637,7 @@ public class TsgHubPlugin extends Plugin
 		{
 			checkedKeyIdentity = "";
 			rejectedKey = "";
-			keyCheckAttempts = 0;
+			keyCheckBackoff.reset();
 			announceKey = !configuredKey().isEmpty();
 			if (adminVerified) setAdminVerified(false);
 			checkHubKey();

@@ -162,7 +162,7 @@ public class ReportsTest
 		status = 500;
 		TsgHubReports reports = reports();
 		reports.send("drop", "/v1/drops", drop());
-		now += TsgHubReports.MAX_AGE_MILLIS + 1;
+		now += TsgHubOutbox.MAX_AGE_MILLIS + 1;
 		reports.flush();
 		assertEquals(0, reports.size());
 		assertTrue(posted.isEmpty());
@@ -172,11 +172,11 @@ public class ReportsTest
 	public void capsPending()
 	{
 		TsgHubReports reports = reports();
-		for (int i = 0; i < TsgHubReports.MAX_PENDING + 5; i++) reports.send("drop", "/v1/drops", drop());
-		assertEquals(TsgHubReports.MAX_PENDING, reports.size());
+		for (int i = 0; i < TsgHubOutbox.MAX_PENDING + 5; i++) reports.send("drop", "/v1/drops", drop());
+		assertEquals(TsgHubOutbox.MAX_PENDING, reports.size());
 		reports.acked(socketSent.get(0).get("id").getAsString());
-		assertEquals(TsgHubReports.MAX_PENDING, reports.size());
+		assertEquals(TsgHubOutbox.MAX_PENDING, reports.size());
 		reports.acked(socketSent.get(socketSent.size() - 1).get("id").getAsString());
-		assertEquals(TsgHubReports.MAX_PENDING - 1, reports.size());
+		assertEquals(TsgHubOutbox.MAX_PENDING - 1, reports.size());
 	}
 }

@@ -60,8 +60,6 @@ final class TsgHubSocket
 	private static final int CLOSE_NORMAL = 1000;
 	private static final int CLOSE_GOING_AWAY = 1001;
 	private static final long PING_SECONDS = 30;
-	private static final long MIN_BACKOFF_MILLIS = 1_000;
-	private static final long MAX_BACKOFF_MILLIS = 60_000;
 	private static final long RESTART_MIN_MILLIS = 2_000;
 	private static final long RESTART_SPREAD_MILLIS = 8_000;
 
@@ -107,7 +105,7 @@ final class TsgHubSocket
 	private String clanName = "";
 	private String rejectedClan = "";
 	private boolean ready;
-	private int attempts;
+	private final TsgHubBackoff backoff = new TsgHubBackoff(1_000, 60_000);
 	private State state = State.DISCONNECTED;
 
 	TsgHubSocket(OkHttpClient http, Gson gson, String baseUrl, ScheduledExecutorService executor, Listener listener)
@@ -130,7 +128,7 @@ final class TsgHubSocket
 		if (clan.equals(clanName) && (socket != null || retry != null)) return;
 		close();
 		clanName = clan;
-		attempts = 0;
+		backoff.reset();
 		open();
 	}
 
@@ -299,7 +297,7 @@ final class TsgHubSocket
 	{
 		if (ws != socket) return;
 		ready = true;
-		attempts = 0;
+		backoff.reset();
 		for (Map.Entry<String, Subscription> entry : subscriptions.entrySet())
 		{
 			send("subscribe", entry.getKey(), entry.getValue().token, entry.getValue().inClanChat);
@@ -348,7 +346,7 @@ final class TsgHubSocket
 		}
 		if (!clanName.isEmpty() && !executor.isShutdown())
 		{
-			long delay = code == CLOSE_GOING_AWAY ? restartDelay() : backoff(attempts++);
+			long delay = code == CLOSE_GOING_AWAY ? restartDelay() : backoff.next();
 			retry = executor.schedule(this::reopen, delay, TimeUnit.MILLISECONDS);
 		}
 		changed();
@@ -366,12 +364,6 @@ final class TsgHubSocket
 	{
 		if (retry == null || clanName.isEmpty()) return;
 		open();
-	}
-
-	private static long backoff(int attempt)
-	{
-		long ceiling = Math.min(MAX_BACKOFF_MILLIS, MIN_BACKOFF_MILLIS << Math.min(attempt, 6));
-		return ceiling / 2 + ThreadLocalRandom.current().nextLong(ceiling / 2 + 1);
 	}
 
 	private static long restartDelay()
