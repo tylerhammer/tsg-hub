@@ -82,7 +82,7 @@ final class TsgHubOrganizer
 			try
 			{
 				JsonArray events = TsgHubApi.result(response, error).getAsJsonArray("events");
-				SwingUtilities.invokeLater(() -> panel.get().setManagedEvents(events));
+				SwingUtilities.invokeLater(() -> panel.get().eventListView.setManagedEvents(events));
 			}
 			catch (Exception e) { error("Couldn't load events. ", e); }
 		}, executor);
@@ -201,14 +201,14 @@ final class TsgHubOrganizer
 
 	private void eventFormFailed(String message)
 	{
-		SwingUtilities.invokeLater(() -> panel.get().eventFormFailed(message));
+		SwingUtilities.invokeLater(() -> panel.get().eventForm.eventFormFailed(message));
 	}
 
 	void createTeam(String name)
 	{
 		JsonObject body = new JsonObject(); body.addProperty("name", name.trim());
 		eventRequest("POST", "/teams", body, "Team added. Copy its code and share it with the team.", result -> {
-			SwingUtilities.invokeLater(() -> panel.get().teamCreated());
+			SwingUtilities.invokeLater(() -> panel.get().teamsView.teamCreated());
 			refreshEvent(false);
 		}, null);
 	}
@@ -287,7 +287,7 @@ final class TsgHubOrganizer
 		}
 		body.add("config", cfg);
 		Consumer<JsonObject> done = result -> {
-			SwingUtilities.invokeLater(() -> panel.get().finishTaskEdit());
+			SwingUtilities.invokeLater(() -> panel.get().taskEditor.finishTaskEdit());
 			refreshEvent(false);
 		};
 		if (taskId == null || taskId.isEmpty())
@@ -298,13 +298,13 @@ final class TsgHubOrganizer
 
 	private void taskFormFailed(String message)
 	{
-		SwingUtilities.invokeLater(() -> panel.get().taskFormFailed(message));
+		SwingUtilities.invokeLater(() -> panel.get().taskEditor.taskFormFailed(message));
 	}
 
 	void deleteTask(String taskId)
 	{
 		eventRequest("DELETE", "/tasks/" + taskId, null, "Task deleted.", result -> {
-			SwingUtilities.invokeLater(() -> panel.get().taskDeleted(taskId));
+			SwingUtilities.invokeLater(() -> panel.get().tasksView.taskDeleted(taskId));
 			refreshEvent(false);
 		}, null);
 	}
@@ -336,7 +336,7 @@ final class TsgHubOrganizer
 		eventRequest("POST", "/tasks/" + taskId + "/reconcile", body, "", result -> {
 			if (dryRun)
 			{
-				SwingUtilities.invokeLater(() -> panel.get().confirmReconcile(taskId, result));
+				SwingUtilities.invokeLater(() -> panel.get().tasksView.confirmReconcile(taskId, result));
 				return;
 			}
 			int count = TsgHubJson.integer(result, "count", 0);
