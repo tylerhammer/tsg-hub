@@ -18,14 +18,14 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Supplier;
-import net.runelite.api.Client;
 import net.runelite.api.Actor;
+import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.IconID;
 import net.runelite.api.NPC;
 import net.runelite.api.Player;
-import net.runelite.api.WorldView;
 import net.runelite.api.Skill;
+import net.runelite.api.WorldView;
 import net.runelite.api.clan.ClanChannel;
 import net.runelite.api.clan.ClanChannelMember;
 import net.runelite.api.clan.ClanMember;
@@ -161,7 +161,7 @@ final class TsgHubPresence
 			addRanks(roster[1]);
 			loadAccountIcons(roster[0]);
 			loadAccountIcons(roster[1]);
-			plugin.ui(s -> s.setMembers(roster[0], roster[1], known != null));
+			plugin.ui(s -> s.membersView.setMembers(roster[0], roster[1], known != null));
 		});
 	}
 

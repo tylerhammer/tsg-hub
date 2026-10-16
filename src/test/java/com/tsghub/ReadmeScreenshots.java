@@ -117,56 +117,56 @@ public class ReadmeScreenshots
 			String id = TsgHubJson.str(event, "id");
 			event.addProperty("joined", id.equals(str("bingo")) || id.equals(str("skill")));
 		}
-		sidebar.setEvents(events);
-		sidebar.setGroups(data.getAsJsonObject("groupsList").getAsJsonArray("groups"));
-		sidebar.setMembers(data.getAsJsonObject("membersList").getAsJsonArray("members"), TsgHubJson.array(data.getAsJsonObject("membersList"), "offline"), true);
+		sidebar.eventsView.setEvents(events);
+		sidebar.partiesView.setGroups(data.getAsJsonObject("groupsList").getAsJsonArray("groups"));
+		sidebar.membersView.setMembers(data.getAsJsonObject("membersList").getAsJsonArray("members"), TsgHubJson.array(data.getAsJsonObject("membersList"), "offline"), true);
 		JsonArray drops = data.getAsJsonObject("dropsList").getAsJsonArray("drops");
 		for (int i = 0; i < drops.size(); i++)
 		{
 			JsonObject drop = drops.get(i).getAsJsonObject();
 			drop.addProperty("receivedAt", now.minusSeconds(drop.remove("minutesAgo").getAsLong() * 60).toString());
 		}
-		sidebar.setDrops(drops);
-		sidebar.showHome();
+		sidebar.dropsView.setDrops(drops);
+		sidebar.homeView.showHome();
 		shoot(sidebar, SIDEBAR_W, 300, "home");
-		sidebar.showEventList();
+		sidebar.eventsView.showEventList();
 		BufferedImage eventList = shoot(sidebar, SIDEBAR_W, 480, "events");
 
-		sidebar.showBoard(data.getAsJsonObject("board").getAsJsonObject("event"), "Crab Legs", true);
+		sidebar.boardView.showBoard(data.getAsJsonObject("board").getAsJsonObject("event"), "Crab Legs", true);
 		BufferedImage board = shoot(sidebar, SIDEBAR_W, 652, "board-tasks");
 		selectTab(sidebar, "Scores");
 		shoot(sidebar, SIDEBAR_W, 330, "board-scores");
 		selectTab(sidebar, "Team");
 		shoot(sidebar, SIDEBAR_W, 400, "board-team");
 
-		sidebar.showCompetition(data.getAsJsonObject("skillBoard").getAsJsonObject("event"), "Crab Legs", true);
+		sidebar.competitionView.showCompetition(data.getAsJsonObject("skillBoard").getAsJsonObject("event"), "Crab Legs", true);
 		shoot(sidebar, SIDEBAR_W, 400, "competition");
 
-		sidebar.showParties();
+		sidebar.partiesView.showParties();
 		BufferedImage parties = shoot(sidebar, SIDEBAR_W, 480, "parties");
 
 		sharing = true;
-		sidebar.showMembers();
+		sidebar.membersView.showMembers();
 		shoot(sidebar, SIDEBAR_W, 400, "members");
-		sidebar.showDrops();
+		sidebar.dropsView.showDrops();
 		shoot(sidebar, SIDEBAR_W, 360, "drops");
 		if (data.has("announcementsList"))
 		{
 			JsonArray announcements = data.getAsJsonObject("announcementsList").getAsJsonArray("announcements");
 			plugin.announcements().apply(announcements);
-			sidebar.setAnnouncements(TsgHubAnnouncements.published(announcements));
+			sidebar.newsView.setAnnouncements(TsgHubAnnouncements.published(announcements));
 			sharing = false;
-			sidebar.showHome();
+			sidebar.homeView.showHome();
 			shoot(sidebar, SIDEBAR_W, 420, "news-home");
-			sidebar.showNews();
+			sidebar.newsView.showNews();
 			shoot(sidebar, SIDEBAR_W, 480, "news");
 			sharing = true;
 		}
 
-		sidebar.showMembers();
+		sidebar.membersView.showMembers();
 		sharing = false;
 		sidebar.pinCurrent();
-		sidebar.showBoard(data.getAsJsonObject("board").getAsJsonObject("event"), "Crab Legs", true);
+		sidebar.boardView.showBoard(data.getAsJsonObject("board").getAsJsonObject("event"), "Crab Legs", true);
 		selectTab(sidebar, "Tasks");
 		shoot(sidebar, SIDEBAR_W, 680, "dock");
 
