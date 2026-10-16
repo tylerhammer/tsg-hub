@@ -1337,7 +1337,7 @@ public class TsgHubPlugin extends Plugin
 		List<String> nearby = new ArrayList<>();
 		for (Player player : worldView.players())
 		{
-			if (player != null && player != self && player.getName() != null && player.isClanMember()) nearby.add(player.getName());
+			if (player != null && player != self && player.getName() != null && player.isClanMember()) nearby.add(Text.toJagexName(player.getName()));
 		}
 		List<String> clanmates = clanmates(nearby, self.getName());
 		if (clanmates.isEmpty()) return;

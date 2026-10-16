@@ -9,8 +9,10 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -30,6 +32,7 @@ final class TsgHubActivity
 {
 	static final int DETAIL_DAYS = 90;
 	static final int NO_RANK = Integer.MIN_VALUE;
+	private static final String NO_CLAN = "No clan detected. Log in to a clan member character.";
 
 	static final class Member
 	{
@@ -167,6 +170,11 @@ final class TsgHubActivity
 			ui(p -> p.failed("Clan activity needs a hub key with admin access."));
 			return;
 		}
+		if (plugin.getDetectedClanName().isEmpty())
+		{
+			ui(p -> p.failed(NO_CLAN));
+			return;
+		}
 		int request = requests.incrementAndGet();
 		String query = "/v1/admin/activity?clanName=" + TsgHubApi.encode(plugin.getDetectedClanName()) + "&days=" + days;
 		ui(p -> p.setStatus("Loading clan activity...", Tone.INFO));
@@ -195,6 +203,11 @@ final class TsgHubActivity
 		if (token.isEmpty() || executor.isShutdown())
 		{
 			SwingUtilities.invokeLater(() -> failed.accept("Member activity needs a hub key with admin access."));
+			return;
+		}
+		if (plugin.getDetectedClanName().isEmpty())
+		{
+			SwingUtilities.invokeLater(() -> failed.accept(NO_CLAN));
 			return;
 		}
 		String query = "/v1/admin/activity/member?clanName=" + TsgHubApi.encode(plugin.getDetectedClanName())
@@ -262,21 +275,24 @@ final class TsgHubActivity
 			for (JsonObject stats : records) out.add(new Member(TsgHubUi.str(stats, "displayName"), "", NO_RANK, -1, null, stats));
 			return out;
 		}
+		Set<String> clanNames = new HashSet<>();
+		for (Member member : clan) clanNames.add(PlayerNames.canonical(member.name));
 		Map<String, JsonObject> current = new HashMap<>();
 		Map<String, JsonObject> previous = new HashMap<>();
 		for (JsonObject stats : records)
 		{
-			String key = PlayerNames.normalize(TsgHubUi.str(stats, "displayName"));
+			String key = PlayerNames.canonical(TsgHubUi.str(stats, "displayName"));
 			if (!key.isEmpty()) current.putIfAbsent(key, stats);
+			if (clanNames.contains(key)) continue;
 			for (String old : TsgHubUi.strings(TsgHubUi.array(stats, "previousNames")))
 			{
-				String oldKey = PlayerNames.normalize(old);
+				String oldKey = PlayerNames.canonical(old);
 				if (!oldKey.isEmpty()) previous.putIfAbsent(oldKey, stats);
 			}
 		}
 		for (Member member : clan)
 		{
-			String key = PlayerNames.normalize(member.name);
+			String key = PlayerNames.canonical(member.name);
 			JsonObject stats = current.get(key);
 			out.add(member.withStats(stats != null ? stats : previous.get(key)));
 		}

@@ -55,6 +55,24 @@ public class ActivityTest
 	}
 
 	@Test
+	public void previousNameIgnoredWhenOwnerIsStillInClan()
+	{
+		JsonArray server = list("[{\"displayName\":\"Zed2\",\"previousNames\":[\"Zed\"],\"drops\":3}]");
+		List<Member> merged = TsgHubActivity.merge(Arrays.asList(clan("Zed2"), clan("Zed")), server);
+		assertEquals(3, merged.get(0).stat("drops"));
+		assertFalse(merged.get(1).onHub());
+	}
+
+	@Test
+	public void mergeKeepsDistinctSpacedNames()
+	{
+		JsonArray server = list("[{\"displayName\":\"Bob 1\",\"drops\":1},{\"displayName\":\"Bob1\",\"drops\":2}]");
+		List<Member> merged = TsgHubActivity.merge(Arrays.asList(clan("Bob 1"), clan("Bob1")), server);
+		assertEquals(1, merged.get(0).stat("drops"));
+		assertEquals(2, merged.get(1).stat("drops"));
+	}
+
+	@Test
 	public void mergeWithoutClanSettingsKeepsServerMembers()
 	{
 		List<Member> merged = TsgHubActivity.merge(null, list("[{\"displayName\":\"Solo\"}]"));
@@ -109,7 +127,7 @@ public class ActivityTest
 	@Test
 	public void bundledRulesIncludeGroupContent()
 	{
-		assertTrue(TsgHubRules.get().groupContent.contains("count is:"));
+		assertTrue(TsgHubRules.get().groupContent.contains("kill count is:"));
 		assertTrue(TsgHubRules.get().groupContent.contains("amount of rifts you have closed"));
 	}
 }

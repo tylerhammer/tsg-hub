@@ -125,6 +125,15 @@ final class TsgHubActivityPanel extends JPanel
 
 	void failed(String message)
 	{
+		if (snapshot != null && snapshot.days != days)
+		{
+			for (int i = 0; i < WINDOW_DAYS.length; i++)
+			{
+				if (WINDOW_DAYS[i] != snapshot.days) continue;
+				days = snapshot.days;
+				window.setSelectedIndex(i);
+			}
+		}
 		setStatus(message, Tone.ERROR);
 	}
 

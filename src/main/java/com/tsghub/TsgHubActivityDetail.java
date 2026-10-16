@@ -242,7 +242,7 @@ final class TsgHubActivityDetail extends JPanel
 			int width = getWidth(), plot = getHeight() - AXIS;
 			g.setColor(CARD);
 			g.fillRect(0, 0, width, plot);
-			int max = 60;
+			int max = 1;
 			for (int value : minutes.values()) max = Math.max(max, value);
 			double slot = width / (double) TsgHubActivity.DETAIL_DAYS;
 			int gap = slot >= 4 ? 1 : 0;
@@ -270,7 +270,7 @@ final class TsgHubActivityDetail extends JPanel
 			g.drawString(today, width - metrics.stringWidth(today), baseline);
 			if (!minutes.isEmpty())
 			{
-				String peak = span(Duration.ofMinutes(max)) + " max";
+				String peak = (max >= 60 ? span(Duration.ofMinutes(max)) : max + " min") + " max";
 				g.drawString(peak, width - metrics.stringWidth(peak), metrics.getAscent());
 			}
 			g.dispose();
