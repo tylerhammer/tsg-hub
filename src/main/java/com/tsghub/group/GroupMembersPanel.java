@@ -15,8 +15,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
@@ -38,6 +42,9 @@ public final class GroupMembersPanel extends JPanel
 	private long selfId = -1;
 	private List<String> order = Collections.emptyList();
 	private List<String> preferred = Collections.emptyList();
+	private final Set<Long> offline = new HashSet<>();
+	private BooleanSupplier canKick = () -> false;
+	private Consumer<String> kick = name -> { };
 
 	public GroupMembersPanel(GroupViewSettings settings, SpriteManager spriteManager, ItemManager itemManager)
 	{
@@ -49,6 +56,12 @@ public final class GroupMembersPanel extends JPanel
 		empty.setForeground(TsgHubTheme.MUTED);
 		empty.setFont(TsgHubTheme.smallFont());
 		add(empty);
+	}
+
+	public void setKickHandler(BooleanSupplier canKick, Consumer<String> kick)
+	{
+		this.canKick = canKick;
+		this.kick = kick;
 	}
 
 	public void setOrder(List<String> names)
@@ -70,11 +83,13 @@ public final class GroupMembersPanel extends JPanel
 			selfId = id;
 		}
 		players.put(id, player);
+		final boolean moved = isOffline(player) ? offline.add(id) : offline.remove(id);
 		final PlayerPanel existing = panels.get(id);
 		if (existing != null)
 		{
 			existing.setSelf(id == selfId);
 			existing.updatePlayerData(player);
+			if (moved) rebuild();
 			return;
 		}
 		final PlayerPanel panel = new PlayerPanel(player, settings, spriteManager, itemManager);
@@ -89,6 +104,7 @@ public final class GroupMembersPanel extends JPanel
 	{
 		final long id = player.getMember().getMemberId();
 		players.remove(id);
+		offline.remove(id);
 		if (panels.remove(id) != null) rebuild();
 	}
 
@@ -112,6 +128,7 @@ public final class GroupMembersPanel extends JPanel
 	public void removeSelf()
 	{
 		players.remove(selfId);
+		offline.remove(selfId);
 		if (panels.remove(selfId) != null) rebuild();
 		selfId = -1;
 	}
@@ -120,6 +137,7 @@ public final class GroupMembersPanel extends JPanel
 	{
 		players.clear();
 		panels.clear();
+		offline.clear();
 		selfId = -1;
 		order = Collections.emptyList();
 		preferred = Collections.emptyList();
@@ -140,17 +158,32 @@ public final class GroupMembersPanel extends JPanel
 			? Comparator.comparing((PartyPlayer p) -> p.getMember().getMemberId() != selfId)
 			: Comparator.comparingInt(this::position);
 		final List<Long> ids = players.values().stream()
-			.sorted(sort.thenComparing(p -> name(p).toLowerCase()))
+			.filter(this::inRoster)
+			.sorted(Comparator.comparing(GroupMembersPanel::isOffline).thenComparing(sort).thenComparing(p -> name(p).toLowerCase()))
 			.map(p -> p.getMember().getMemberId())
 			.collect(Collectors.toList());
+		int others = 0;
 		for (Long id : ids)
 		{
 			final PlayerPanel panel = panels.get(id);
-			if (panel != null) add(panel);
+			if (panel == null) continue;
+			add(panel);
+			if (id != selfId) others++;
 		}
-		if (panels.size() - (panels.containsKey(selfId) ? 1 : 0) == 0) add(empty);
+		if (others == 0) add(empty);
 		revalidate();
 		repaint();
+	}
+
+	private boolean inRoster(PartyPlayer player)
+	{
+		if (player.getMember().getMemberId() == selfId || order.isEmpty() || Strings.isNullOrEmpty(player.getUsername())) return true;
+		return order.contains(PlayerNames.normalize(player.getUsername()));
+	}
+
+	private static boolean isOffline(PartyPlayer player)
+	{
+		return Strings.isNullOrEmpty(player.getUsername()) || player.getWorld() <= 0;
 	}
 
 	private int position(PartyPlayer player)
@@ -182,17 +215,28 @@ public final class GroupMembersPanel extends JPanel
 	{
 		PartyPlayer player = players.get(id);
 		if (player == null) return;
-		int index = Strings.isNullOrEmpty(player.getUsername()) ? -1 : order.indexOf(PlayerNames.normalize(player.getUsername()));
-		if (index < 0 || order.size() < 2) return;
+		String username = player.getUsername();
+		int index = Strings.isNullOrEmpty(username) ? -1 : order.indexOf(PlayerNames.normalize(username));
 		JPopupMenu menu = new JPopupMenu();
-		JMenuItem up = new JMenuItem("Move up");
-		up.setEnabled(index > 0);
-		up.addActionListener(a -> moveMember(index, index - 1));
-		JMenuItem down = new JMenuItem("Move down");
-		down.setEnabled(index < order.size() - 1);
-		down.addActionListener(a -> moveMember(index, index + 1));
-		menu.add(up);
-		menu.add(down);
+		if (index >= 0 && order.size() >= 2)
+		{
+			JMenuItem up = new JMenuItem("Move up");
+			up.setEnabled(index > 0);
+			up.addActionListener(a -> moveMember(index, index - 1));
+			JMenuItem down = new JMenuItem("Move down");
+			down.setEnabled(index < order.size() - 1);
+			down.addActionListener(a -> moveMember(index, index + 1));
+			menu.add(up);
+			menu.add(down);
+		}
+		if (index >= 0 && id != selfId && canKick.getAsBoolean())
+		{
+			JMenuItem remove = new JMenuItem("Remove from party");
+			remove.addActionListener(a -> kick.accept(username));
+			if (menu.getComponentCount() > 0) menu.addSeparator();
+			menu.add(remove);
+		}
+		if (menu.getComponentCount() == 0) return;
 		menu.show(e.getComponent(), e.getX(), e.getY());
 	}
 

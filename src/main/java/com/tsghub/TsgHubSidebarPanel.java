@@ -190,6 +190,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		super(false);
 		this.plugin = plugin;
 		this.groupMembers = groupMembers;
+		groupMembers.setKickHandler(() -> plugin.groups().isLeader(), this::confirmKick);
 		sections = Arrays.asList(
 			new Section("Events", new CalendarIcon(), this::openEvents, this::eventsSummary, () -> liveEvents() > 0),
 			new Section("Parties", new PartyIcon(), this::showParties, this::partiesSummary, () -> plugin.groups().inGroup()),
@@ -1520,6 +1521,14 @@ final class TsgHubSidebarPanel extends PluginPanel
 	void groupMembersCleared()
 	{
 		groupMembers.clear();
+	}
+
+	private void confirmKick(String name)
+	{
+		if (JOptionPane.showConfirmDialog(this,
+			"Remove " + name + " from the party?\nThey won't be able to rejoin it.",
+			"Remove member", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.OK_OPTION) return;
+		plugin.groups().kick(name);
 	}
 
 	private void applyMemberOrder(JsonObject group)
