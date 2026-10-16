@@ -100,10 +100,16 @@ public class Prayers
 			changed = data.isAvailable() != available || data.isEnabled() != enabled || data.isUnlocked() != unlocked;
 			data.setAvailable(available);
 			data.setEnabled(enabled);
+			data.setUnlocked(unlocked);
 		}
 
 		prayerData.put(data.getPrayer(), data);
 		return changed;
+	}
+
+	public void resetPrayerIds()
+	{
+		prayerIds = new int[0];
 	}
 
 	private void setCurrentPrayerIds(Client client)

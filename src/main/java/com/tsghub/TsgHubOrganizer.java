@@ -55,7 +55,7 @@ final class TsgHubOrganizer
 	void selectEvent(String eventId)
 	{
 		if (eventId.trim().isEmpty()) return;
-		TsgHubSession.set(ORGANIZER_EVENT_ID, eventId.trim());
+		plugin.session().set(ORGANIZER_EVENT_ID, eventId.trim());
 		plugin.syncSocketNow();
 		status("Loading event...", Tone.INFO);
 		executor.submit(() -> {
@@ -118,9 +118,9 @@ final class TsgHubOrganizer
 				JsonObject response = request("POST", "/v1/events", credential, body);
 				JsonObject result = response.getAsJsonObject("event");
 				String id = result.get("id").getAsString();
-				TsgHubSession.set(ORGANIZER_EVENT_ID, id);
-				TsgHubSession.set(ORGANIZER_TOKEN + id, response.get("organizerToken").getAsString());
-				TsgHubSession.set(ORGANIZER_NAME + id, creatorName);
+				plugin.session().set(ORGANIZER_EVENT_ID, id);
+				plugin.session().set(ORGANIZER_TOKEN + id, response.get("organizerToken").getAsString());
+				plugin.session().set(ORGANIZER_NAME + id, creatorName);
 				SwingUtilities.invokeLater(() -> panel.get().eventCreated(result));
 				status("Event created. Add teams next.", Tone.SUCCESS);
 				loadManagedEvents();
@@ -468,12 +468,12 @@ final class TsgHubOrganizer
 
 	String credential(String eventId)
 	{
-		String ownerToken = TsgHubSession.get(ORGANIZER_TOKEN + eventId);
-		String creatorName = TsgHubSession.get(ORGANIZER_NAME + eventId);
+		String ownerToken = plugin.session().get(ORGANIZER_TOKEN + eventId);
+		String creatorName = plugin.session().get(ORGANIZER_NAME + eventId);
 		if (!ownerToken.isEmpty() && !creatorName.isEmpty() && TsgHubUi.samePlayer(creatorName, plugin.getDetectedPlayerName())) return ownerToken;
 		String adminToken = plugin.adminKey();
 		if (!adminToken.isEmpty()) return adminToken;
-		return TsgHubSession.get(TOKEN);
+		return plugin.session().get(TOKEN);
 	}
 
 	private String listCredential()
@@ -486,13 +486,13 @@ final class TsgHubOrganizer
 			String credential = credential(eventId);
 			if (!credential.isEmpty()) return credential;
 		}
-		String memberToken = TsgHubSession.get(TOKEN);
+		String memberToken = plugin.session().get(TOKEN);
 		if (!memberToken.isEmpty()) return memberToken;
-		for (String key : TsgHubSession.keysWithPrefix(ORGANIZER_TOKEN))
+		for (String key : plugin.session().keysWithPrefix(ORGANIZER_TOKEN))
 		{
 			String candidateId = key.substring(ORGANIZER_TOKEN.length());
-			String creator = TsgHubSession.get(ORGANIZER_NAME + candidateId);
-			if (!creator.isEmpty() && TsgHubUi.samePlayer(creator, plugin.getDetectedPlayerName())) return TsgHubSession.get(key);
+			String creator = plugin.session().get(ORGANIZER_NAME + candidateId);
+			if (!creator.isEmpty() && TsgHubUi.samePlayer(creator, plugin.getDetectedPlayerName())) return plugin.session().get(key);
 		}
 		return "";
 	}

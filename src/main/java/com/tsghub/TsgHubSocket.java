@@ -3,7 +3,7 @@ package com.tsghub;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.Gson;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -88,6 +88,7 @@ final class TsgHubSocket
 	}
 
 	private final OkHttpClient http;
+	private final Gson gson;
 	private final HttpUrl url;
 	private final ScheduledExecutorService executor;
 	private final Listener listener;
@@ -105,8 +106,9 @@ final class TsgHubSocket
 	private int attempts;
 	private State state = State.DISCONNECTED;
 
-	TsgHubSocket(OkHttpClient http, String baseUrl, ScheduledExecutorService executor, Listener listener)
+	TsgHubSocket(OkHttpClient http, Gson gson, String baseUrl, ScheduledExecutorService executor, Listener listener)
 	{
+		this.gson = gson;
 		this.http = http.newBuilder().pingInterval(PING_SECONDS, TimeUnit.SECONDS).build();
 		this.url = HttpUrl.get(baseUrl.replaceAll("/+$", "") + "/v1/ws");
 		this.executor = executor;
@@ -378,8 +380,8 @@ final class TsgHubSocket
 			JsonObject message;
 			try
 			{
-				JsonElement element = new JsonParser().parse(text);
-				if (!element.isJsonObject()) return;
+				JsonElement element = gson.fromJson(text, JsonElement.class);
+				if (element == null || !element.isJsonObject()) return;
 				message = element.getAsJsonObject();
 			}
 			catch (RuntimeException e) { return; }

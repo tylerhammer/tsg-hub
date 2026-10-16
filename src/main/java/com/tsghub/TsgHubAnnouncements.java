@@ -94,7 +94,7 @@ final class TsgHubAnnouncements
 			String id = TsgHubUi.str(announcement, "id");
 			if (skip.contains(id) || fresh.contains(announcement)) alerted.add(id);
 		}
-		TsgHubSession.set(TsgHubSession.ANNOUNCEMENTS_ALERTED, String.join(",", alerted));
+		plugin.session().set(TsgHubSession.ANNOUNCEMENTS_ALERTED, String.join(",", alerted));
 		for (String line : chatLines(fresh)) chat.accept(line);
 	}
 
@@ -120,17 +120,17 @@ final class TsgHubAnnouncements
 		if (current == null) return;
 		Set<String> ids = new LinkedHashSet<>();
 		for (JsonObject announcement : TsgHubUi.objects(current)) ids.add(TsgHubUi.str(announcement, "id"));
-		TsgHubSession.set(TsgHubSession.ANNOUNCEMENTS_READ, String.join(",", ids));
+		plugin.session().set(TsgHubSession.ANNOUNCEMENTS_READ, String.join(",", ids));
 	}
 
-	private static Set<String> readIds()
+	private Set<String> readIds()
 	{
 		return ids(TsgHubSession.ANNOUNCEMENTS_READ);
 	}
 
-	private static Set<String> ids(String key)
+	private Set<String> ids(String key)
 	{
-		String stored = TsgHubSession.get(key);
+		String stored = plugin.session().get(key);
 		return stored.isEmpty() ? new LinkedHashSet<>() : new LinkedHashSet<>(Arrays.asList(stored.split(",")));
 	}
 

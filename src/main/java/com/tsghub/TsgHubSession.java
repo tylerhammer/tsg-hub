@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import net.runelite.client.config.ConfigManager;
 
-final class TsgHubSession
+class TsgHubSession
 {
 	static final String EVENT_ID = "eventId";
 	static final String TOKEN = "token";
@@ -29,16 +29,12 @@ final class TsgHubSession
 
 	private static final String GROUP = "tsghubsession";
 	private static final String PROFILE_PREFIX = GROUP + "." + ConfigManager.RSPROFILE_GROUP + ".";
-	private static volatile ConfigManager configManager;
+	private final ConfigManager configManager;
 
-	private TsgHubSession()
+	TsgHubSession(ConfigManager configManager)
 	{
-	}
-
-	static void init(ConfigManager manager)
-	{
-		configManager = manager;
-		clearLegacyKeys(manager);
+		this.configManager = configManager;
+		if (configManager != null) clearLegacyKeys(configManager);
 	}
 
 	private static void clearLegacyKeys(ConfigManager manager)
@@ -70,7 +66,7 @@ final class TsgHubSession
 		return key.replace('_', ':');
 	}
 
-	static String get(String key)
+	String get(String key)
 	{
 		ConfigManager manager = configManager;
 		if (manager == null) return "";
@@ -78,7 +74,7 @@ final class TsgHubSession
 		return value == null ? "" : value;
 	}
 
-	static void set(String key, String value)
+	void set(String key, String value)
 	{
 		ConfigManager manager = configManager;
 		if (manager == null) return;
@@ -86,7 +82,7 @@ final class TsgHubSession
 		else manager.setRSProfileConfiguration(GROUP, encode(key), value);
 	}
 
-	static List<String> keysWithPrefix(String prefix)
+	List<String> keysWithPrefix(String prefix)
 	{
 		ConfigManager manager = configManager;
 		List<String> keys = new ArrayList<>();
@@ -97,28 +93,28 @@ final class TsgHubSession
 		return keys;
 	}
 
-	static String memberToken(String eventId)
+	String memberToken(String eventId)
 	{
 		return eventValue(MEMBER_TOKEN, eventId, TOKEN);
 	}
 
-	static String memberName(String eventId)
+	String memberName(String eventId)
 	{
 		return eventValue(MEMBER_NAME, eventId, DISPLAY_NAME);
 	}
 
-	private static String eventValue(String prefix, String eventId, String activeKey)
+	private String eventValue(String prefix, String eventId, String activeKey)
 	{
 		String value = get(prefix + eventId);
 		return value.isEmpty() && eventId.equals(get(EVENT_ID)) ? get(activeKey) : value;
 	}
 
-	static void clear(String... keys)
+	void clear(String... keys)
 	{
 		for (String key : keys) set(key, "");
 	}
 
-	static void removePrefix(String prefix)
+	void removePrefix(String prefix)
 	{
 		for (String key : keysWithPrefix(prefix)) set(key, "");
 	}

@@ -240,7 +240,7 @@ final class TsgHubActivityPanel extends JPanel
 
 	private void applyFilter()
 	{
-		String needle = PlayerNames.normalize(search.getText());
+		String needle = PlayerNames.searchKey(search.getText());
 		boolean inactive = inactiveOnly.isSelected(), notOnHub = notOnHubOnly.isSelected(), outdated = outdatedOnly.isSelected();
 		int limit = threshold.getAsInt();
 		sorter.setRowFilter(new RowFilter<Model, Integer>()
@@ -257,8 +257,8 @@ final class TsgHubActivityPanel extends JPanel
 
 	private static boolean matches(Member member, String needle)
 	{
-		if (PlayerNames.normalize(member.name).contains(needle)) return true;
-		for (String old : member.previousNames()) if (PlayerNames.normalize(old).contains(needle)) return true;
+		if (PlayerNames.searchKey(member.name).contains(needle)) return true;
+		for (String old : member.previousNames()) if (PlayerNames.searchKey(old).contains(needle)) return true;
 		return false;
 	}
 

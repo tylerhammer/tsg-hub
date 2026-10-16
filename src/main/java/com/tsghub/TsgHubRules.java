@@ -1,8 +1,8 @@
 package com.tsghub;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -38,7 +38,8 @@ final class TsgHubRules
 	final Map<String, String> bosses;
 	final Map<Integer, AreaNames.Area> areas;
 
-	private static volatile TsgHubRules current = bundled();
+	private static final TsgHubRules EMPTY = new TsgHubRules(new JsonObject());
+	private static volatile TsgHubRules current = EMPTY;
 
 	private TsgHubRules(JsonObject json)
 	{
@@ -95,12 +96,17 @@ final class TsgHubRules
 		}
 	}
 
-	static void loadCached(Filepath cache)
+	static void reset()
+	{
+		current = EMPTY;
+	}
+
+	static void loadCached(Filepath cache, Gson gson)
 	{
 		if (cache == null || !cache.exists()) return;
 		try (Reader reader = cache.openReader())
 		{
-			JsonObject saved = new JsonParser().parse(reader).getAsJsonObject();
+			JsonObject saved = gson.fromJson(reader, JsonObject.class);
 			if (TsgHubVersion.VERSION.equals(TsgHubUi.str(saved, "plugin")) && saved.has("rules") && saved.get("rules").isJsonObject()) apply(saved.getAsJsonObject("rules"));
 		}
 		catch (Exception e) { log.debug("TSG Hub cached rules unreadable", e); }
@@ -120,19 +126,15 @@ final class TsgHubRules
 		catch (Exception e) { log.debug("TSG Hub rules cache not written", e); }
 	}
 
-	private static TsgHubRules bundled()
+	static void loadBundled(Gson gson)
 	{
 		InputStream in = TsgHubRules.class.getResourceAsStream("rules.json");
-		if (in == null) return new TsgHubRules(new JsonObject());
+		if (in == null) return;
 		try (InputStreamReader reader = new InputStreamReader(in, StandardCharsets.UTF_8))
 		{
-			return new TsgHubRules(new JsonParser().parse(reader).getAsJsonObject());
+			apply(gson.fromJson(reader, JsonObject.class));
 		}
-		catch (Exception e)
-		{
-			log.debug("TSG Hub bundled rules unreadable", e);
-			return new TsgHubRules(new JsonObject());
-		}
+		catch (Exception e) { log.debug("TSG Hub bundled rules unreadable", e); }
 	}
 
 	private static List<String> strings(JsonObject json, String key)

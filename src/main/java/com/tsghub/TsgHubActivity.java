@@ -275,23 +275,23 @@ final class TsgHubActivity
 			return out;
 		}
 		Set<String> clanNames = new HashSet<>();
-		for (Member member : clan) clanNames.add(PlayerNames.canonical(member.name));
+		for (Member member : clan) clanNames.add(PlayerNames.key(member.name));
 		Map<String, JsonObject> current = new HashMap<>();
 		Map<String, JsonObject> previous = new HashMap<>();
 		for (JsonObject stats : records)
 		{
-			String key = PlayerNames.canonical(TsgHubUi.str(stats, "displayName"));
+			String key = PlayerNames.key(TsgHubUi.str(stats, "displayName"));
 			if (!key.isEmpty()) current.putIfAbsent(key, stats);
 			if (clanNames.contains(key)) continue;
 			for (String old : TsgHubUi.strings(TsgHubUi.array(stats, "previousNames")))
 			{
-				String oldKey = PlayerNames.canonical(old);
+				String oldKey = PlayerNames.key(old);
 				if (!oldKey.isEmpty()) previous.putIfAbsent(oldKey, stats);
 			}
 		}
 		for (Member member : clan)
 		{
-			String key = PlayerNames.canonical(member.name);
+			String key = PlayerNames.key(member.name);
 			JsonObject stats = current.get(key);
 			out.add(member.withStats(stats != null ? stats : previous.get(key)));
 		}

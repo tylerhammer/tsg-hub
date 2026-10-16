@@ -79,6 +79,7 @@ final class TsgHubNewsEditor extends JPanel
 	private JsonObject selected;
 	private String selectedId = "";
 	private JsonObject editing;
+	private boolean formOpen;
 
 	TsgHubNewsEditor(TsgHubPlugin plugin)
 	{
@@ -225,6 +226,7 @@ final class TsgHubNewsEditor extends JPanel
 	private void openForm(JsonObject announcement)
 	{
 		editing = announcement;
+		formOpen = true;
 		boolean isDraft = announcement != null && bool(announcement, "draft");
 		boolean live = announcement != null && !isDraft;
 		formTitle.setText(announcement == null ? "New announcement" : isDraft ? "Edit draft" : "Edit announcement");
@@ -362,6 +364,7 @@ final class TsgHubNewsEditor extends JPanel
 		draft.setEnabled(true);
 		post.setEnabled(true);
 		selectedId = id;
+		formOpen = false;
 		select();
 	}
 
@@ -374,22 +377,39 @@ final class TsgHubNewsEditor extends JPanel
 	void setAnnouncements(JsonArray announcements)
 	{
 		this.announcements = announcements;
-		renderList();
+		if (formOpen)
+		{
+			JsonObject match = find(selectedId);
+			if (match != null)
+			{
+				selected = match;
+				if (editing != null) editing = match;
+			}
+			renderList();
+			return;
+		}
 		select();
+	}
+
+	private JsonObject find(String id)
+	{
+		if (announcements != null)
+			for (JsonObject announcement : objects(announcements))
+				if (str(announcement, "id").equals(id)) return announcement;
+		return null;
 	}
 
 	private void select()
 	{
-		JsonObject match = null;
-		if (announcements != null)
-			for (JsonObject announcement : objects(announcements))
-				if (str(announcement, "id").equals(selectedId)) match = announcement;
+		JsonObject match = find(selectedId);
 		if (match != null) show(match);
 		else if (!selectedId.isEmpty() && announcements != null) show(null);
+		else renderList();
 	}
 
 	private void show(JsonObject announcement)
 	{
+		formOpen = false;
 		selected = announcement;
 		selectedId = announcement == null ? "" : str(announcement, "id");
 		renderList();

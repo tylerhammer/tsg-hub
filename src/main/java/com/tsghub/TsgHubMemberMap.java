@@ -83,13 +83,13 @@ final class TsgHubMemberMap
 	void apply(JsonArray members)
 	{
 		if (!open) return;
-		String self = PlayerNames.normalize(plugin.getDetectedPlayerName());
+		String self = PlayerNames.key(plugin.getDetectedPlayerName());
 		List<Member> next = new ArrayList<>();
 		Set<String> seen = new HashSet<>();
 		for (JsonObject member : TsgHubUi.objects(members))
 		{
 			String name = TsgHubUi.str(member, "displayName");
-			String key = PlayerNames.normalize(name);
+			String key = PlayerNames.key(name);
 			if (key.isEmpty() || key.equals(self) || !seen.add(key)) continue;
 			WorldPoint at = new WorldPoint(TsgHubUi.integer(member, "x", 0), TsgHubUi.integer(member, "y", 0), TsgHubUi.integer(member, "plane", 0));
 			next.add(new Member(name, key, TsgHubUi.integer(member, "world", 0), at));

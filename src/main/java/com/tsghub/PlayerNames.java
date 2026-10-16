@@ -10,24 +10,24 @@ public final class PlayerNames
 	{
 	}
 
-	public static String normalize(String name)
+	static String searchKey(String name)
 	{
 		return name == null ? "" : name.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
 	}
 
-	static String canonical(String name)
+	public static String key(String name)
 	{
 		return name == null ? "" : name.replace('\u00A0', ' ').replace('_', ' ').trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
 	}
 
 	static List<String> matchNames(List<String> names, String query, int limit)
 	{
-		String needle = PlayerNames.normalize(query);
+		String needle = searchKey(query);
 		List<String> prefix = new ArrayList<>();
 		List<String> contains = new ArrayList<>();
 		for (String name : names)
 		{
-			String key = PlayerNames.normalize(name);
+			String key = searchKey(name);
 			if (key.startsWith(needle)) prefix.add(name);
 			else if (key.contains(needle)) contains.add(name);
 		}

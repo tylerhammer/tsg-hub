@@ -99,7 +99,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final JPanel dropsView = new JPanel(new BorderLayout(0, GAP_M));
 	private final JComboBox<String> dropType = new JComboBox<>(new String[] {"All types", "Mine", "Raids", "Pets", "Log"});
 	private final JComboBox<String> dropValue = new JComboBox<>(new String[] {"Any value", "100k+", "1m+", "10m+"});
-	private final TsgHubDock dock = new TsgHubDock(center, this::unpin);
+	private final TsgHubDock dock;
 	private View pinned;
 
 	private final JPanel boardSummary = stack();
@@ -190,6 +190,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		super(false);
 		this.plugin = plugin;
 		this.groupMembers = groupMembers;
+		dock = new TsgHubDock(center, this::unpin, plugin.session());
 		groupMembers.setKickHandler(() -> plugin.groups().isLeader(), this::confirmKick);
 		sections = Arrays.asList(
 			new Section("Events", new CalendarIcon(), this::openEvents, this::eventsSummary, () -> liveEvents() > 0),
@@ -221,16 +222,16 @@ final class TsgHubSidebarPanel extends PluginPanel
 		groupError.setVisible(false);
 
 		plain(showOffline, MUTED).setFont(smallFont());
-		showOffline.setSelected("true".equals(TsgHubSession.get(SHOW_OFFLINE)));
+		showOffline.setSelected("true".equals(plugin.session().get(SHOW_OFFLINE)));
 		showOffline.addActionListener(e -> {
-			TsgHubSession.set(SHOW_OFFLINE, showOffline.isSelected() ? "true" : "");
+			plugin.session().set(SHOW_OFFLINE, showOffline.isSelected() ? "true" : "");
 			renderMembers();
 		});
 
 		plain(hideCompleted, MUTED).setFont(smallFont());
-		hideCompleted.setSelected("true".equals(TsgHubSession.get(HIDE_COMPLETED)));
+		hideCompleted.setSelected("true".equals(plugin.session().get(HIDE_COMPLETED)));
 		hideCompleted.addActionListener(e -> {
-			TsgHubSession.set(HIDE_COMPLETED, hideCompleted.isSelected() ? "true" : "");
+			plugin.session().set(HIDE_COMPLETED, hideCompleted.isSelected() ? "true" : "");
 			renderTasks();
 		});
 
@@ -981,11 +982,11 @@ final class TsgHubSidebarPanel extends PluginPanel
 		return dropsView;
 	}
 
-	private static int sessionIndex(String key, int size)
+	private int sessionIndex(String key, int size)
 	{
 		try
 		{
-			int index = Integer.parseInt(TsgHubSession.get(key));
+			int index = Integer.parseInt(plugin.session().get(key));
 			return index >= 0 && index < size ? index : 0;
 		}
 		catch (NumberFormatException e)
@@ -999,8 +1000,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (dropTypeIndex == dropType.getSelectedIndex() && dropValueIndex == dropValue.getSelectedIndex()) return;
 		dropTypeIndex = Math.max(0, dropType.getSelectedIndex());
 		dropValueIndex = Math.max(0, dropValue.getSelectedIndex());
-		TsgHubSession.set(DROP_TYPE, dropTypeIndex == 0 ? "" : String.valueOf(dropTypeIndex));
-		TsgHubSession.set(DROP_VALUE, dropValueIndex == 0 ? "" : String.valueOf(dropValueIndex));
+		plugin.session().set(DROP_TYPE, dropTypeIndex == 0 ? "" : String.valueOf(dropTypeIndex));
+		plugin.session().set(DROP_VALUE, dropValueIndex == 0 ? "" : String.valueOf(dropValueIndex));
 		if (shows(View.DROPS)) renderDrops();
 		plugin.drops().load(false);
 	}
@@ -1870,7 +1871,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private void pin(View next)
 	{
 		pinned = next;
-		TsgHubSession.set(DOCK_VIEW, next.name());
+		plugin.session().set(DOCK_VIEW, next.name());
 		dock.pin(pinIcon(next), pane(next));
 		dock.expand();
 		renderPinned();
@@ -1881,7 +1882,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (pinned == null) return;
 		View was = pinned;
 		pinned = null;
-		TsgHubSession.set(DOCK_VIEW, "");
+		plugin.session().set(DOCK_VIEW, "");
 		dock.unpin();
 		center.add(pane(was), cardName(was));
 		setView(view);
@@ -1889,7 +1890,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	private void restorePin()
 	{
-		String saved = TsgHubSession.get(DOCK_VIEW);
+		String saved = plugin.session().get(DOCK_VIEW);
 		for (View candidate : View.values())
 			if (pinnable(candidate) && candidate.name().equals(saved))
 			{
@@ -2004,7 +2005,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		clickable(card, () -> {
 			String id = str(event, "id");
 			if (dropParty) showDropParty(event);
-			else if (competition && joined && !TsgHubSession.get(MEMBER_TOKEN + id).isEmpty()) plugin.openCompetition(id, true);
+			else if (competition && joined && !plugin.session().get(MEMBER_TOKEN + id).isEmpty()) plugin.openCompetition(id, true);
 			else if (competition) showCompetitionPreview(event);
 			else if (joined) plugin.activateEvent(id);
 			else showPreview(event);

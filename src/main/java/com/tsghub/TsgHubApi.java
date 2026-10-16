@@ -1,12 +1,16 @@
 package com.tsghub;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import com.google.gson.JsonParser;
+import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import okhttp3.Call;
+import okhttp3.Callback;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -30,9 +34,11 @@ final class TsgHubApi
 	private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
 	private final String baseUrl;
 	private final OkHttpClient http;
+	private final Gson gson;
 
-	TsgHubApi(OkHttpClient http, String baseUrl)
+	TsgHubApi(OkHttpClient http, Gson gson, String baseUrl)
 	{
+		this.gson = gson;
 		this.baseUrl = baseUrl.replaceAll("/+$", "");
 		this.http = http.newBuilder()
 			.connectTimeout(5, TimeUnit.SECONDS)
@@ -42,6 +48,38 @@ final class TsgHubApi
 
 	JsonObject request(String method, String path, String token, JsonObject payload) throws Exception
 	{
+		try (Response response = http.newCall(build(method, path, token, payload)).execute())
+		{
+			return read(response);
+		}
+	}
+
+	CompletableFuture<JsonObject> call(String method, String path, String token, JsonObject payload)
+	{
+		CompletableFuture<JsonObject> future = new CompletableFuture<>();
+		http.newCall(build(method, path, token, payload)).enqueue(new Callback()
+		{
+			@Override
+			public void onFailure(Call call, IOException e)
+			{
+				future.completeExceptionally(e);
+			}
+
+			@Override
+			public void onResponse(Call call, Response response)
+			{
+				try (response)
+				{
+					future.complete(read(response));
+				}
+				catch (Exception e) { future.completeExceptionally(e); }
+			}
+		});
+		return future;
+	}
+
+	private Request build(String method, String path, String token, JsonObject payload)
+	{
 		Request.Builder builder = new Request.Builder()
 			.url(baseUrl + path)
 			.header("Accept", "application/json")
@@ -50,23 +88,23 @@ final class TsgHubApi
 		RequestBody body = payload == null ? null : RequestBody.create(JSON, payload.toString());
 		// OkHttp requires a body for POST/PATCH/PUT.
 		if (body == null && !"GET".equals(method) && !"DELETE".equals(method)) body = RequestBody.create(JSON, "{}");
-		builder.method(method, body);
+		return builder.method(method, body).build();
+	}
 
-		try (Response response = http.newCall(builder.build()).execute())
+	private JsonObject read(Response response) throws IOException
+	{
+		ResponseBody responseBody = response.body();
+		String text = responseBody == null ? "" : responseBody.string();
+		JsonObject json = parseObject(text);
+		if (!response.isSuccessful())
 		{
-			ResponseBody responseBody = response.body();
-			String text = responseBody == null ? "" : responseBody.string();
-			JsonObject json = parseObject(text);
-			if (!response.isSuccessful())
-			{
-				String message = json != null && json.has("error") && json.get("error").isJsonPrimitive()
-					? json.get("error").getAsString()
-					: "Service returned HTTP " + response.code();
-				throw new HttpError(response.code(), message);
-			}
-			if (json == null) throw new IllegalStateException("Service returned an unexpected response");
-			return json;
+			String message = json != null && json.has("error") && json.get("error").isJsonPrimitive()
+				? json.get("error").getAsString()
+				: "Service returned HTTP " + response.code();
+			throw new HttpError(response.code(), message);
 		}
+		if (json == null) throw new IllegalStateException("Service returned an unexpected response");
+		return json;
 	}
 
 	static String encode(String value)
@@ -74,13 +112,13 @@ final class TsgHubApi
 		return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8);
 	}
 
-	private static JsonObject parseObject(String text)
+	private JsonObject parseObject(String text)
 	{
 		if (text.isEmpty()) return new JsonObject();
 		try
 		{
-			JsonElement element = new JsonParser().parse(text);
-			return element.isJsonObject() ? element.getAsJsonObject() : null;
+			JsonElement element = gson.fromJson(text, JsonElement.class);
+			return element != null && element.isJsonObject() ? element.getAsJsonObject() : null;
 		}
 		catch (JsonParseException e) { return null; }
 	}
