@@ -44,6 +44,8 @@ final class TsgHubSocket
 
 		void onAck(String id);
 
+		void onRejected(String id, int status);
+
 		void onSubscribed();
 
 		void onReply(JsonObject message);
@@ -423,8 +425,11 @@ final class TsgHubSocket
 					if (!version.isEmpty()) dispatch(ws, () -> listener.onUpdateAvailable(version));
 					break;
 				case "error":
+					String failed = TsgHubUi.str(message, "id");
+					int status = TsgHubUi.integer(message, "status", 0);
+					if (!failed.isEmpty()) dispatch(ws, () -> listener.onRejected(failed, status));
 					if (!eventId.isEmpty()) rejected(ws, eventId);
-					else if ("admin".equals(TsgHubUi.str(message, "topic")) && "401".equals(TsgHubUi.str(message, "status"))) adminRevoked(ws);
+					else if ("admin".equals(TsgHubUi.str(message, "topic")) && status == 401) adminRevoked(ws);
 					log.debug("TSG Hub socket error: {}", TsgHubUi.str(message, "message"));
 					break;
 				default:

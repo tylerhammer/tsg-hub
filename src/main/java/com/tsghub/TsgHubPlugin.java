@@ -170,6 +170,7 @@ public class TsgHubPlugin extends Plugin
 	private volatile TsgHubApi api;
 	private TsgHubSocket socket;
 	private TsgHubSignals signals;
+	private TsgHubReports reports;
 	private TsgHubOrganizer organizer;
 	private volatile Filepath rulesCache;
 	private TsgHubGroups groups;
@@ -202,6 +203,7 @@ public class TsgHubPlugin extends Plugin
 			{
 				refreshRules(rulesVersion);
 				signals.resend();
+				reports.resend();
 				resyncLiveViews();
 			}
 			@Override public void onChanged(String topic, String eventId) { liveChange(topic, eventId); }
@@ -210,12 +212,18 @@ public class TsgHubPlugin extends Plugin
 			@Override public void onUpdateAvailable(String version) { updateAvailable(version); }
 			@Override public void onSnapshot(JsonObject message) { snapshot(message); }
 			@Override public void onConnection(TsgHubSocket.State state) { ui(s -> s.setConnection(state)); }
-			@Override public void onAck(String id) { signals.acked(id); }
+			@Override public void onAck(String id)
+			{
+				signals.acked(id);
+				reports.acked(id);
+			}
+			@Override public void onRejected(String id, int status) { reports.failed(id, status); }
 			@Override public void onSubscribed() { signals.resend(); }
 			@Override public void onReply(JsonObject message) { signalReply(message); }
 			@Override public void onXpRequest(String skills) { reportXp(skills); }
 		});
 		signals = new TsgHubSignals(socket, this::api, this::signalReply);
+		reports = new TsgHubReports(socket::send, (path, body) -> api().request("POST", path, null, body));
 		executor.execute(this::loadCachedRules);
 		executor.scheduleAtFixedRate(this::socketTick, 2, 5, TimeUnit.SECONDS);
 		executor.scheduleAtFixedRate(unlessLive(this::autoRefreshBoard), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
@@ -825,6 +833,7 @@ public class TsgHubPlugin extends Plugin
 
 	private void socketTick()
 	{
+		reports.flush();
 		if (!sharingInClan())
 		{
 			socket.disconnect();
@@ -1354,12 +1363,9 @@ public class TsgHubPlugin extends Plugin
 
 	void report(String type, String path, JsonObject body)
 	{
-		if (socket != null && socket.send(type, body)) return;
-		if (executor == null || executor.isShutdown()) return;
-		executor.submit(() -> {
-			try { api().request("POST", path, null, body); }
-			catch (Exception e) { log.debug("TSG Hub {} not sent", type, e); }
-		});
+		if (reports == null || reports.send(type, path, body) || executor == null || executor.isShutdown()) return;
+		if (client.isClientThread()) executor.execute(reports::flush);
+		else reports.flush();
 	}
 
 	static List<String> clanmates(List<String> names, String self)
