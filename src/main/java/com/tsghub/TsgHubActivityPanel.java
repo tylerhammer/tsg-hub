@@ -280,7 +280,7 @@ final class TsgHubActivityPanel extends JPanel
 		turnoutValue.setText(summary.turnoutPercent < 0 ? "-" : summary.turnoutPercent + "%");
 		turnoutCaption.setText(current.eventsInWindow == 0 ? "no events in the last " + plural(current.days, "day")
 			: "avg attendance across " + plural(current.eventsInWindow, "event"));
-		footnote.setText(current.latestVersion.isEmpty() ? " " : "Latest plugin version " + current.latestVersion + ". Click a member for their daily activity, events and parties.");
+		footnote.setText("Click a member for their daily activity, events and parties.");
 		applyFilter();
 	}
 
@@ -385,6 +385,7 @@ final class TsgHubActivityPanel extends JPanel
 			}
 			if (column == SEEN && member.lastSeen() != null) return localDate(member.lastSeen(), ZoneId.systemDefault());
 			if (column == VERSION && member.outdated()) return "Running an older plugin than " + (snapshot == null ? "the latest" : snapshot.latestVersion);
+			if (column == PARTIES && member.stat("soloParties") > 0) return "Parties with other members. Plus " + member.stat("soloParties") + (member.stat("soloParties") == 1 ? " solo party." : " solo parties.");
 			if (column == DISCORD && member.discordLinked()) return "Linked to Discord";
 			return null;
 		}

@@ -2,6 +2,7 @@ package com.tsghub;
 
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.tsghub.TsgHubActivity.Member;
 import java.awt.BorderLayout;
@@ -163,7 +164,14 @@ final class TsgHubActivityDetail extends JPanel
 		Instant left = instant(str(party, "leftAt"));
 		String when = joined == null ? "" : format(joined, WHEN);
 		String length = joined == null ? "" : left == null ? "still in party" : span(Duration.between(joined, left));
-		return listCard(row(shrinkable(label(area, TEXT, plainFont())), caption(when + (length.isEmpty() ? "" : " · " + length))));
+		List<String> with = new ArrayList<>();
+		for (JsonElement name : array(party, "with"))
+		{
+			if (name.isJsonPrimitive()) with.add(name.getAsString());
+		}
+		JPanel top = row(shrinkable(label(area, with.isEmpty() ? MUTED : TEXT, plainFont())), caption(when + (length.isEmpty() ? "" : " · " + length)));
+		JLabel detail = label(with.isEmpty() ? "solo, no other members" : "with " + String.join(", ", with), with.isEmpty() ? DIM : MUTED, smallFont());
+		return listCard(twoLines(top, detail));
 	}
 
 	private static JComponent listCard(JComponent content)
