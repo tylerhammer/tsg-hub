@@ -1279,7 +1279,7 @@ public class TsgHubPlugin extends Plugin
 		if (!isInHubClan()) return;
 		if (event.getComposition() == null) return;
 		String name = Text.removeTags(event.getComposition().getName());
-		if (drops != null) drops.onLoot(name);
+		if (drops != null) drops.onLoot(name, itemNames(event.getItems()));
 		processLoot("NPC", name, event.getItems(), 1);
 	}
 
@@ -1288,7 +1288,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		if (!isInHubClan()) return;
 		if (event.getType() == null || "PLAYER".equals(event.getType().name()) || "NPC".equals(event.getType().name())) return;
-		if (drops != null) drops.onLoot(event.getName());
+		if (drops != null) drops.onLoot(event.getName(), itemNames(event.getItems()));
 		processLoot(event.getType().name(), event.getName(), event.getItems(), event.getAmount());
 	}
 
@@ -1429,6 +1429,18 @@ public class TsgHubPlugin extends Plugin
 		if (name == null) return null;
 		String normalized = Text.removeTags(name).trim().toLowerCase(Locale.ROOT);
 		return normalized.startsWith("pet ") ? normalized.substring(4) : normalized;
+	}
+
+	private List<String> itemNames(Collection<ItemStack> items)
+	{
+		List<String> names = new ArrayList<>();
+		if (items == null) return names;
+		for (ItemStack item : items)
+		{
+			String name = client.getItemDefinition(itemManager.canonicalize(item.getId())).getName();
+			if (name != null) names.add(name);
+		}
+		return names;
 	}
 
 	private void processLoot(String sourceType, String sourceName, Collection<ItemStack> items, int amount)

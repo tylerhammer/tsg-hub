@@ -106,12 +106,26 @@ public class DropsPanelTest
 	}
 
 	@Test
+	public void broadcastFromSelf()
+	{
+		assertTrue(TsgHubDrops.fromSelf("Iron Alice received a new collection log item: Hydra's fang (1/1717)", "Iron\u00a0Alice"));
+		assertTrue(TsgHubDrops.fromSelf("HammerKR received a drop: Hydra's fang (1,000,000 coins).", "hammerkr"));
+		assertFalse(TsgHubDrops.fromSelf("HammerKR2 received a drop: Hydra's fang (1,000,000 coins).", "HammerKR"));
+		assertFalse(TsgHubDrops.fromSelf("Bob received a drop: Hydra's fang (1,000,000 coins).", "HammerKR"));
+		assertFalse(TsgHubDrops.fromSelf("HammerKR received a drop: Hydra's fang (1,000,000 coins).", ""));
+	}
+
+	@Test
 	public void recentContextSinceTick()
 	{
 		TsgHubDrops.Recent<String> recent = new TsgHubDrops.Recent<>();
 		recent.add(80, "Kraken");
 		recent.add(99, "Abyssal demon");
-		JsonArray rows = recent.since(90, "source");
+		JsonArray rows = recent.since(90, source -> {
+			JsonObject row = new JsonObject();
+			row.addProperty("source", source);
+			return row;
+		});
 		assertEquals(1, rows.size());
 		assertEquals(99, rows.get(0).getAsJsonObject().get("tick").getAsInt());
 		assertEquals("Abyssal demon", rows.get(0).getAsJsonObject().get("source").getAsString());

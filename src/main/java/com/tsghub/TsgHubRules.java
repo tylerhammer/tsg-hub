@@ -28,6 +28,8 @@ final class TsgHubRules
 	final List<String> petMessages;
 	final List<String> dropContext;
 	final int dropDelayMs;
+	final int dropContextTicks;
+	final int dropContextKeep;
 	final int skillingDrops;
 	final long skillingWindowMillis;
 	final Set<Integer> pets;
@@ -46,6 +48,8 @@ final class TsgHubRules
 		petMessages = strings(json, "petMessages");
 		dropContext = strings(json, "dropContext");
 		dropDelayMs = json.has("dropDelayMs") && json.get("dropDelayMs").isJsonPrimitive() ? json.get("dropDelayMs").getAsInt() : 1200;
+		dropContextTicks = json.has("dropContextTicks") && json.get("dropContextTicks").isJsonPrimitive() ? json.get("dropContextTicks").getAsInt() : 50;
+		dropContextKeep = json.has("dropContextKeep") && json.get("dropContextKeep").isJsonPrimitive() ? json.get("dropContextKeep").getAsInt() : 16;
 		JsonObject skilling = json.has("skilling") && json.get("skilling").isJsonObject() ? json.getAsJsonObject("skilling") : new JsonObject();
 		skillingDrops = skilling.has("minDrops") && skilling.get("minDrops").isJsonPrimitive() ? skilling.get("minDrops").getAsInt() : 3;
 		skillingWindowMillis = skilling.has("windowMillis") && skilling.get("windowMillis").isJsonPrimitive() ? skilling.get("windowMillis").getAsLong() : 120_000;
