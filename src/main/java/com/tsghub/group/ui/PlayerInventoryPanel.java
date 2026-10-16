@@ -47,6 +47,7 @@ public class PlayerInventoryPanel extends JPanel
 	private final ItemManager itemManager;
 	private final JLabel[] slots = new JLabel[SLOTS];
 	private final AsyncBufferedImage[] images = new AsyncBufferedImage[SLOTS];
+	private final long[] shown = new long[SLOTS];
 
 	public PlayerInventoryPanel(final GameItem[] items, final GameItem[] runePouchContents, final ItemManager itemManager)
 	{
@@ -84,6 +85,9 @@ public class PlayerInventoryPanel extends JPanel
 				? getRunePouchHoverText(item, runePouchContents)
 				: item.getDisplayName());
 			if (itemManager == null) continue;
+			long key = ((long) item.getId() << 32) | (item.getQty() & 0xffffffffL);
+			if (images[i] != null && shown[i] == key) continue;
+			shown[i] = key;
 			AsyncBufferedImage image = itemManager.getImage(item.getId(), item.getQty(), item.isStackable());
 			int slot = i;
 			images[slot] = image;

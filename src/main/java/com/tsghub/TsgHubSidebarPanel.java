@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import javax.swing.BorderFactory;
@@ -64,6 +65,7 @@ import net.runelite.client.util.AsyncBufferedImage;
 final class TsgHubSidebarPanel extends PluginPanel
 {
 	private static final int TEXT_W = 215;
+	private static final String MEMBER_KEY = "tsgHub.member";
 	private static final int CARD_TEXT_W = 185;
 	private static final int MAX_WARNING_LENGTH = 300;
 	private static final int[] EXPIRY_DAYS = {30, 90, 0};
@@ -101,6 +103,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final JComboBox<String> dropValue = new JComboBox<>(new String[] {"Any value", "100k+", "1m+", "10m+"});
 	private final TsgHubDock dock;
 	private View pinned;
+	private boolean homeBuilt;
+	private final javax.swing.JPopupMenu memberMenu = new javax.swing.JPopupMenu();
 
 	private final JPanel boardSummary = stack();
 	private final WidthTrackingPanel tasksTab = new WidthTrackingPanel();
@@ -174,6 +178,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 		private final Runnable open;
 		private final Supplier<String> summary;
 		private final BooleanSupplier live;
+		private JLabel summaryLabel;
+		private boolean half;
 
 		Section(String name, Icon icon, Runnable open, Supplier<String> summary, BooleanSupplier live)
 		{
@@ -191,6 +197,12 @@ final class TsgHubSidebarPanel extends PluginPanel
 		this.plugin = plugin;
 		this.groupMembers = groupMembers;
 		dock = new TsgHubDock(center, this::unpin, plugin.session());
+		memberMenu.addPopupMenuListener(new javax.swing.event.PopupMenuListener()
+		{
+			@Override public void popupMenuWillBecomeVisible(javax.swing.event.PopupMenuEvent e) { fillMemberMenu(); }
+			@Override public void popupMenuWillBecomeInvisible(javax.swing.event.PopupMenuEvent e) { }
+			@Override public void popupMenuCanceled(javax.swing.event.PopupMenuEvent e) { }
+		});
 		groupMembers.setKickHandler(() -> plugin.groups().isLeader(), this::confirmKick);
 		sections = Arrays.asList(
 			new Section("Events", new CalendarIcon(), this::openEvents, this::eventsSummary, () -> liveEvents() > 0),
@@ -435,6 +447,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	void setEvents(JsonArray events)
 	{
+		if (Objects.equals(this.events, events)) return;
 		this.events = events;
 		if (view == View.EVENTS) renderEvents();
 		else if (view == View.HOME) renderHome();
@@ -450,6 +463,11 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	private void renderHome()
 	{
+		if (homeBuilt)
+		{
+			for (Section section : sections) summarize(section);
+			return;
+		}
 		setHeader("TSG Hub", plugin.getDetectedPlayerName(), false, true);
 		page.removeAll();
 		for (int i = 0; i < sections.size(); i += 2)
@@ -470,6 +488,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			page.add(fitHeight(notice));
 		}
 		refreshPage();
+		homeBuilt = true;
 	}
 
 	void setConnection(TsgHubSocket.State state)
@@ -484,6 +503,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	void setUpdate(String version)
 	{
 		update = version;
+		homeBuilt = false;
 		if (view == View.HOME) renderHome();
 	}
 
@@ -495,8 +515,10 @@ final class TsgHubSidebarPanel extends PluginPanel
 		tile.setBorder(BorderFactory.createEmptyBorder(12, 6, 12, 6));
 		JLabel icon = new JLabel(section.icon);
 		JLabel name = boldLabel(section.name);
-		JLabel summary = label(html("<div style='text-align:center'>" + escape(section.summary.get()) + "</div>", half ? 80 : 180),
-			section.live.getAsBoolean() ? SUCCESS : MUTED, smallFont());
+		JLabel summary = label("", MUTED, smallFont());
+		section.summaryLabel = summary;
+		section.half = half;
+		summarize(section);
 		tile.add(icon);
 		tile.add(Box.createVerticalStrut(GAP_M));
 		tile.add(name);
@@ -509,6 +531,13 @@ final class TsgHubSidebarPanel extends PluginPanel
 		}
 		clickable(tile, section.open);
 		return tile;
+	}
+
+	private void summarize(Section section)
+	{
+		String text = html("<div style='text-align:center'>" + escape(section.summary.get()) + "</div>", section.half ? 80 : 180);
+		if (!text.equals(section.summaryLabel.getText())) section.summaryLabel.setText(text);
+		section.summaryLabel.setForeground(section.live.getAsBoolean() ? SUCCESS : MUTED);
 	}
 
 	private int liveEvents()
@@ -565,6 +594,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	void setMembers(JsonArray members, JsonArray offline, boolean notesLoaded)
 	{
+		if (Objects.equals(this.members, members) && Objects.equals(offlineMembers, offline) && this.notesLoaded == notesLoaded) return;
 		this.members = members;
 		this.offlineMembers = offline;
 		this.notesLoaded = notesLoaded;
@@ -737,14 +767,23 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	private void addMemberMenu(JComponent card, JsonObject member)
 	{
+		card.putClientProperty(MEMBER_KEY, member);
+		card.setComponentPopupMenu(memberMenu);
+		inheritMenu(card);
+	}
+
+	private void fillMemberMenu()
+	{
+		memberMenu.removeAll();
+		Component invoker = memberMenu.getInvoker();
+		while (invoker != null && !(invoker instanceof JComponent && ((JComponent) invoker).getClientProperty(MEMBER_KEY) != null)) invoker = invoker.getParent();
+		if (invoker == null) return;
+		JsonObject member = (JsonObject) ((JComponent) invoker).getClientProperty(MEMBER_KEY);
 		String name = str(member, "displayName");
-		javax.swing.JPopupMenu menu = new javax.swing.JPopupMenu();
 		javax.swing.JMenuItem lookup = new javax.swing.JMenuItem("Lookup");
 		lookup.addActionListener(e -> showLookup(name, TsgHubPresence.accountType(member)));
-		menu.add(lookup);
-		if (plugin.canManageOrganizerUi() && notesLoaded) addNoteItems(menu, member);
-		card.setComponentPopupMenu(menu);
-		inheritMenu(card);
+		memberMenu.add(lookup);
+		if (plugin.canManageOrganizerUi() && notesLoaded) addNoteItems(memberMenu, member);
 	}
 
 	private void showLookup(String name, int accountType)
@@ -959,6 +998,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	void setDrops(JsonArray drops)
 	{
+		if (Objects.equals(this.drops, drops)) return;
 		this.drops = drops;
 		if (shows(View.DROPS)) renderDrops();
 	}
@@ -1219,10 +1259,12 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		// Background refreshes must not pull the user off another screen.
 		if (!open && view != View.BOARD) return;
-		boardEvent = event;
-		boardDisplayName = displayName == null ? "" : displayName;
-		setView(View.BOARD);
+		String name = displayName == null ? "" : displayName;
 		refresh.setToolTipText("Refresh (updated " + LocalTime.now().format(TIME) + ")");
+		if (!open && event.equals(boardEvent) && name.equals(boardDisplayName)) return;
+		boardEvent = event;
+		boardDisplayName = name;
+		setView(View.BOARD);
 		renderBoard();
 	}
 
@@ -1278,6 +1320,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	void showCompetition(JsonObject event, String displayName, boolean open)
 	{
 		if (!open && view != View.COMPETITION) return;
+		if (!open && event.equals(competitionEvent) && Objects.equals(displayName == null ? "" : displayName, competitionName)) return;
 		competitionEvent = event;
 		competitionName = displayName == null ? "" : displayName;
 		setView(View.COMPETITION);
@@ -1458,6 +1501,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	void setGroups(JsonArray groups)
 	{
+		if (Objects.equals(groupList, groups)) return;
 		groupList = groups;
 		applyMemberOrder(plugin.groups().currentGroup());
 		if (shows(View.GROUPS)) renderGroups();
@@ -1768,6 +1812,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private void setView(View next)
 	{
 		view = next;
+		homeBuilt = false;
 		boardShowing = next == View.BOARD;
 		boolean docked = pinned != null && !gated(next);
 		membersWanted = next == View.MEMBERS || next == View.HOME || docked && pinned == View.MEMBERS;

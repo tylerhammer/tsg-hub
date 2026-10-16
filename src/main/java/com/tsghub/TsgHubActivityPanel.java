@@ -26,8 +26,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.function.IntSupplier;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -47,6 +49,7 @@ import javax.swing.RowFilter;
 import javax.swing.RowSorter;
 import javax.swing.SortOrder;
 import javax.swing.SwingUtilities;
+import javax.swing.border.Border;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.JTableHeader;
@@ -64,6 +67,7 @@ final class TsgHubActivityPanel extends JPanel
 	private static final Color INACTIVE_ROW = ColorUtil.colorLerp(CARD, TsgHubTheme.ERROR, 0.12);
 	private static final DateTimeFormatter JOINED_DATE = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.US);
 	private static final int STATUS_W = 600;
+	private static final Border CELL_BORDER = BorderFactory.createEmptyBorder(0, 6, 0, 6);
 
 	private final TsgHubActivity activity;
 	private final IntSupplier threshold;
@@ -92,6 +96,8 @@ final class TsgHubActivityPanel extends JPanel
 	private volatile int days = WINDOW_DAYS[DEFAULT_WINDOW];
 	private Snapshot snapshot;
 	private Instant now = Instant.now();
+	private int limit;
+	private final Map<Integer, ImageIcon> rankIcons = new HashMap<>();
 	private JDialog detailDialog;
 	private TsgHubActivityDetail detail;
 
@@ -141,6 +147,7 @@ final class TsgHubActivityPanel extends JPanel
 	{
 		snapshot = loaded;
 		now = Instant.now();
+		limit = threshold.getAsInt();
 		model.setMembers(loaded.members);
 		updateSummary();
 		setStatus(loaded.fromClan ? "" : "Clan settings aren't loaded, so this shows TSG Hub records only. Log in to see every clan member.", loaded.fromClan ? Tone.INFO : Tone.ERROR);
@@ -242,7 +249,7 @@ final class TsgHubActivityPanel extends JPanel
 	{
 		String needle = PlayerNames.searchKey(search.getText());
 		boolean inactive = inactiveOnly.isSelected(), notOnHub = notOnHubOnly.isSelected(), outdated = outdatedOnly.isSelected();
-		int limit = threshold.getAsInt();
+		limit = threshold.getAsInt();
 		sorter.setRowFilter(new RowFilter<Model, Integer>()
 		{
 			@Override public boolean include(Entry<? extends Model, ? extends Integer> entry)
@@ -266,7 +273,7 @@ final class TsgHubActivityPanel extends JPanel
 	{
 		Snapshot current = snapshot;
 		if (current == null) return;
-		int limit = threshold.getAsInt();
+		limit = threshold.getAsInt();
 		Summary summary = TsgHubActivity.summarize(current.members, current.eventsInWindow, now, limit);
 		activeValue.setText(summary.active + " / " + summary.total);
 		activeCaption.setText("seen in the last " + plural(limit, "day"));
@@ -329,10 +336,10 @@ final class TsgHubActivityPanel extends JPanel
 			Member member = (Member) value;
 			super.getTableCellRendererComponent(table, text(member, column), selected, false, row, column);
 			setFont(column == MEMBER ? boldFont() : plainFont());
-			setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 6));
+			setBorder(CELL_BORDER);
 			setIcon(null);
 			setToolTipText(tooltip(member, column));
-			boolean inactive = member.inactive(now, threshold.getAsInt());
+			boolean inactive = member.inactive(now, limit);
 			setBackground(selected ? CARD_HOVER : inactive ? INACTIVE_ROW : CARD);
 			Color color = !member.onHub() ? DIM : column == SEEN && inactive ? TsgHubTheme.ERROR : TEXT;
 			if (column == VERSION && member.outdated()) color = WARNING;
@@ -340,8 +347,10 @@ final class TsgHubActivityPanel extends JPanel
 			setForeground(color);
 			if (column == RANK)
 			{
-				BufferedImage icon = activity.rankIcon(member.rankId);
-				if (icon != null) setIcon(new ImageIcon(icon));
+				setIcon(rankIcons.computeIfAbsent(member.rankId, id -> {
+					BufferedImage icon = activity.rankIcon(id);
+					return icon == null ? null : new ImageIcon(icon);
+				}));
 			}
 			if (column == DISCORD && member.discordLinked())
 			{

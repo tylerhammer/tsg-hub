@@ -18,6 +18,7 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
+import javax.swing.Timer;
 import javax.swing.plaf.basic.BasicSplitPaneDivider;
 import javax.swing.plaf.basic.BasicSplitPaneUI;
 
@@ -53,6 +54,7 @@ final class TsgHubDock extends JPanel
 	private final JButton close = iconButton(new CloseIcon(), "Unpin");
 	private JComponent content;
 	private final TsgHubSession session;
+	private final Timer saveTimer = new Timer(500, e -> saveSplit());
 	private boolean collapsed;
 	private boolean shown = true;
 	private boolean applySplit;
@@ -62,6 +64,7 @@ final class TsgHubDock extends JPanel
 		super(new BorderLayout());
 		this.main = main;
 		this.session = session;
+		saveTimer.setRepeats(false);
 		collapsed = "true".equals(session.get(DOCK_COLLAPSED));
 		setOpaque(false);
 
@@ -94,7 +97,7 @@ final class TsgHubDock extends JPanel
 				return new Grip(this);
 			}
 		});
-		split.addPropertyChangeListener(JSplitPane.DIVIDER_LOCATION_PROPERTY, e -> saveSplit());
+		split.addPropertyChangeListener(JSplitPane.DIVIDER_LOCATION_PROPERTY, e -> saveTimer.restart());
 		rebuild();
 	}
 

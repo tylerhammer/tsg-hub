@@ -465,31 +465,55 @@ final class TsgHubUi
 
 	static JPanel card()
 	{
-		JPanel panel = new JPanel(new BorderLayout(6, 4))
-		{
-			@Override
-			@SuppressWarnings("unchecked")
-			public String getToolTipText(MouseEvent event)
-			{
-				Object tip = getClientProperty(LAZY_TOOLTIP);
-				return tip instanceof Supplier ? ((Supplier<String>) tip).get() : super.getToolTipText(event);
-			}
-
-			// Anchor tooltips beside the card so they don't follow the mouse.
-			@Override
-			public Point getToolTipLocation(MouseEvent event)
-			{
-				String text = getToolTipText(event);
-				if (text == null) return null;
-				JToolTip tip = createToolTip();
-				tip.setTipText(text);
-				return new Point(-tip.getPreferredSize().width - 6, 0);
-			}
-		};
+		JPanel panel = new Card();
 		panel.setBackground(CARD);
 		panel.setBorder(cardBorder());
 		panel.setAlignmentX(Component.LEFT_ALIGNMENT);
 		return panel;
+	}
+
+	private static final class Card extends JPanel
+	{
+		private int tipFor = -1;
+		private String tipText;
+		private String measured;
+		private int measuredWidth;
+
+		Card()
+		{
+			super(new BorderLayout(6, 4));
+			addPropertyChangeListener(LAZY_TOOLTIP, e -> tipFor = -1);
+		}
+
+		@Override
+		@SuppressWarnings("unchecked")
+		public String getToolTipText(MouseEvent event)
+		{
+			Object tip = getClientProperty(LAZY_TOOLTIP);
+			if (!(tip instanceof Supplier)) return super.getToolTipText(event);
+			if (tipFor != getWidth())
+			{
+				tipFor = getWidth();
+				tipText = ((Supplier<String>) tip).get();
+			}
+			return tipText;
+		}
+
+		// Anchor tooltips beside the card so they don't follow the mouse.
+		@Override
+		public Point getToolTipLocation(MouseEvent event)
+		{
+			String text = getToolTipText(event);
+			if (text == null) return null;
+			if (!text.equals(measured))
+			{
+				JToolTip tip = createToolTip();
+				tip.setTipText(text);
+				measured = text;
+				measuredWidth = tip.getPreferredSize().width;
+			}
+			return new Point(-measuredWidth - 6, 0);
+		}
 	}
 
 	static void lazyTooltip(JComponent component, Supplier<String> tip)
@@ -966,9 +990,12 @@ final class TsgHubUi
 		AsyncBufferedImage image = coins.apply(total);
 		if (image != null)
 		{
-			Runnable apply = () -> label.setIcon(new ImageIcon(ImageUtil.resizeImage(image, COIN_ICON_W, COIN_ICON_H)));
-			apply.run();
-			image.onLoaded(apply);
+			ImageIcon icon = new ImageIcon(ImageUtil.resizeImage(image, COIN_ICON_W, COIN_ICON_H));
+			label.setIcon(icon);
+			image.onLoaded(() -> SwingUtilities.invokeLater(() -> {
+				icon.setImage(ImageUtil.resizeImage(image, COIN_ICON_W, COIN_ICON_H));
+				label.repaint();
+			}));
 		}
 		return label;
 	}

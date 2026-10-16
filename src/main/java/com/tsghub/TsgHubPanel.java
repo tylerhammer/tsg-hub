@@ -8,13 +8,13 @@ import com.google.gson.JsonObject;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Component;
-import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.GridLayout;
 import java.awt.Image;
+import java.awt.KeyboardFocusManager;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.time.Instant;
@@ -677,21 +677,13 @@ final class TsgHubPanel extends JPanel
 
 	boolean editingText()
 	{
-		return hasFocusedTextComponent(this);
-	}
-
-	private boolean hasFocusedTextComponent(Component component)
-	{
-		if (component instanceof JTextComponent && component.isFocusOwner()) return true;
-		if (component instanceof Container)
-		{
-			for (Component child : ((Container) component).getComponents()) if (hasFocusedTextComponent(child)) return true;
-		}
-		return false;
+		Component focused = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+		return focused instanceof JTextComponent && SwingUtilities.isDescendingFrom(focused, this);
 	}
 
 	void showEvent(JsonObject event)
 	{
+		if (event.equals(currentEvent)) return;
 		currentEvent = event.deepCopy();
 		eventTitle.setText(TsgHubUi.eventName(event));
 		String state = str(event, "status");
@@ -1742,9 +1734,8 @@ final class TsgHubPanel extends JPanel
 		ImageIcon icon = new ImageIcon(image.getScaledInstance(18, 16, Image.SCALE_SMOOTH));
 		itemIcons.put(itemId, icon);
 		image.onLoaded(() -> SwingUtilities.invokeLater(() -> {
-			itemIcons.put(itemId, new ImageIcon(image.getScaledInstance(18, 16, Image.SCALE_SMOOTH)));
-			itemResultList.repaint();
-			renderSelectedItems();
+			icon.setImage(image.getScaledInstance(18, 16, Image.SCALE_SMOOTH));
+			repaintTarget.repaint();
 		}));
 		return icon;
 	}
