@@ -106,8 +106,13 @@ final class TsgHubGroups implements GroupTracker.Listener
 		if (groups == null) return;
 		JsonObject current = group;
 		if (current != null && inGroup())
+		{
+			JsonObject next = null;
 			for (int i = 0; i < groups.size(); i++)
-				if (TsgHubUi.str(groups.get(i).getAsJsonObject(), "id").equals(TsgHubUi.str(current, "id"))) group = groups.get(i).getAsJsonObject();
+				if (TsgHubUi.str(groups.get(i).getAsJsonObject(), "id").equals(TsgHubUi.str(current, "id"))) next = groups.get(i).getAsJsonObject();
+			if (next != null) group = next;
+			if ((next == null || !memberNames(next).equals(memberNames(current))) && !executor.isShutdown()) executor.submit(this::heartbeat);
+		}
 		plugin.ui(s -> s.setGroups(groups));
 	}
 
@@ -128,6 +133,14 @@ final class TsgHubGroups implements GroupTracker.Listener
 		JsonObject payload = new JsonObject();
 		payload.addProperty("activity", title.trim());
 		update("/v1/groups/title", payload);
+	}
+
+	void kick(String name)
+	{
+		JsonObject payload = new JsonObject();
+		payload.addProperty("displayName", name);
+		update("/v1/groups/kick", payload);
+		if (!executor.isShutdown()) executor.submit(this::heartbeat);
 	}
 
 	void setLocked(boolean locked)
@@ -217,8 +230,11 @@ final class TsgHubGroups implements GroupTracker.Listener
 		payload.addProperty("area", plugin.currentArea());
 		try
 		{
-			JsonObject joined = api.get().request("POST", "/v1/groups/heartbeat", token, payload).getAsJsonObject("group");
+			JsonObject result = api.get().request("POST", "/v1/groups/heartbeat", token, payload);
+			JsonObject joined = result.getAsJsonObject("group");
 			group = joined;
+			String rotated = str(result, "passphrase");
+			if (!rotated.isEmpty()) TsgHubSession.set(GROUP_PASSPHRASE, rotated);
 			// Still listed after a client restart but not connected.
 			String passphrase = TsgHubSession.get(GROUP_PASSPHRASE);
 			if (!passphrase.equals(partyService.getPartyPassphrase())) partyService.changeParty(passphrase);
@@ -232,6 +248,13 @@ final class TsgHubGroups implements GroupTracker.Listener
 			leave();
 		}
 		catch (Exception ignored) { /* Try again next beat. */ }
+	}
+
+	private static List<String> memberNames(JsonObject group)
+	{
+		List<String> names = new ArrayList<>();
+		for (JsonObject member : objects(array(group, "members"))) names.add(PlayerNames.normalize(str(member, "displayName")));
+		return names;
 	}
 
 	private void when404(TsgHubApi.HttpError e)
