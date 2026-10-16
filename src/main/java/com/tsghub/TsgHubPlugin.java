@@ -40,6 +40,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -103,6 +104,7 @@ import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
 import okhttp3.OkHttpClient;
 
+@Slf4j
 @PluginDescriptor(name = "TSG Hub", internalName = "tsg-hub", description = "TypeShii Gaming clan events and progress tracking", tags = {"tsg", "clan", "bingo", "events"})
 public class TsgHubPlugin extends Plugin
 {
@@ -146,6 +148,8 @@ public class TsgHubPlugin extends Plugin
 	private int petCheckTicks;
 	private int recentPet;
 	private int recentPetTick;
+	private String lastGroupContent = "";
+	private int lastGroupContentTick = -1;
 	private Set<Integer> inventoryPets = Collections.emptySet();
 	private volatile String detectedClanName = "";
 	private volatile String detectedPlayerName = "";
@@ -1312,11 +1316,54 @@ public class TsgHubPlugin extends Plugin
 			else petCheckTicks = PET_CHECK_TICKS;
 			recentPet = 0;
 		}
+		if (TsgHubRules.get().groupContent.stream().anyMatch(message::contains)) reportGroupContent(Text.removeTags(event.getMessage()).trim(), message);
 		if (!signals.wantsChat(message)) return;
 		JsonObject chat = new JsonObject();
 		chat.addProperty("text", message);
 		if (signals.wantsPlayers(message)) addNearbyPlayers(chat);
 		signals.send("chat", chat);
+	}
+
+	private void reportGroupContent(String text, String key)
+	{
+		int tick = client.getTickCount();
+		if (tick == lastGroupContentTick && key.equals(lastGroupContent)) return;
+		lastGroupContentTick = tick;
+		lastGroupContent = key;
+		long hash = client.getAccountHash();
+		Player self = client.getLocalPlayer();
+		WorldView worldView = client.getTopLevelWorldView();
+		if (hash == -1 || self == null || worldView == null || worldView.players() == null || executor == null || executor.isShutdown()) return;
+		List<String> nearby = new ArrayList<>();
+		for (Player player : worldView.players())
+		{
+			if (player != null && player != self && player.getName() != null && player.isClanMember()) nearby.add(player.getName());
+		}
+		List<String> clanmates = clanmates(nearby, self.getName());
+		if (clanmates.isEmpty()) return;
+		JsonObject body = new JsonObject();
+		body.addProperty("clanName", detectedClanName);
+		body.addProperty("displayName", detectedPlayerName.isEmpty() ? Text.toJagexName(self.getName()) : detectedPlayerName);
+		body.addProperty("accountHash", Long.toString(hash));
+		body.addProperty("message", text);
+		JsonArray names = new JsonArray();
+		clanmates.forEach(names::add);
+		body.add("clanmates", names);
+		executor.submit(() -> {
+			try { api().request("POST", "/v1/group-content", null, body); }
+			catch (Exception e) { log.debug("TSG Hub group content not sent", e); }
+		});
+	}
+
+	static List<String> clanmates(List<String> names, String self)
+	{
+		List<String> out = new ArrayList<>();
+		for (String name : names)
+		{
+			if (name == null || name.trim().isEmpty() || TsgHubUi.samePlayer(name, self)) continue;
+			if (out.stream().noneMatch(existing -> TsgHubUi.samePlayer(existing, name))) out.add(name);
+		}
+		return out;
 	}
 
 	private void addNearbyPlayers(JsonObject chat)

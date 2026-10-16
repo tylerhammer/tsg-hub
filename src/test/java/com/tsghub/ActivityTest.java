@@ -97,4 +97,19 @@ public class ActivityTest
 		assertTrue(TsgHubActivity.compareVersions("", "1.0.0") < 0);
 		assertEquals(0, TsgHubActivity.compareVersions("1.9.1", "1.9.1"));
 	}
+
+	@Test
+	public void clanmatesDedupesAndSkipsSelf()
+	{
+		List<String> names = TsgHubPlugin.clanmates(Arrays.asList("Iron Bob", "iron_bob", "Me", null, " ", "Carol"), "me");
+		assertEquals(Arrays.asList("Iron Bob", "Carol"), names);
+		assertTrue(TsgHubPlugin.clanmates(Arrays.asList("Me"), "Me").isEmpty());
+	}
+
+	@Test
+	public void bundledRulesIncludeGroupContent()
+	{
+		assertTrue(TsgHubRules.get().groupContent.contains("count is:"));
+		assertTrue(TsgHubRules.get().groupContent.contains("amount of rifts you have closed"));
+	}
 }

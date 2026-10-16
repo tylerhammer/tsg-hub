@@ -36,9 +36,8 @@ import net.runelite.client.util.QuantityFormatter;
 final class TsgHubActivityDetail extends JPanel
 {
 	static final int DETAIL_W = 520;
-	private static final int MAX_PARTIES = 20;
+	private static final int MAX_GROUP_CONTENT = 20;
 	private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.US);
-	private static final DateTimeFormatter WHEN = DateTimeFormatter.ofPattern("EEE d MMM, h:mm a", Locale.US);
 
 	private final JLabel name = label(" ", TEXT, titleFont());
 	private final JLabel meta = caption(" ");
@@ -46,7 +45,7 @@ final class TsgHubActivityDetail extends JPanel
 	private final MinutesChart chart = new MinutesChart();
 	private final JLabel chartCaption = caption(" ");
 	private final JPanel events = stack();
-	private final JPanel parties = stack();
+	private final JPanel groupContent = stack();
 	private final JPanel body = stack();
 	private String showing = "";
 
@@ -68,8 +67,8 @@ final class TsgHubActivityDetail extends JPanel
 		body.add(chartCaption);
 		body.add(sectionTitle("Events"));
 		body.add(events);
-		body.add(sectionTitle("Recent parties"));
-		body.add(parties);
+		body.add(sectionTitle("Group content"));
+		body.add(groupContent);
 		content.add(body);
 		add(scroll(content), BorderLayout.CENTER);
 	}
@@ -123,10 +122,10 @@ final class TsgHubActivityDetail extends JPanel
 		if (eventRows.isEmpty()) events.add(caption("No events in this window."));
 		for (JsonObject event : eventRows) events.add(eventRow(event));
 
-		parties.removeAll();
-		List<JsonObject> partyRows = objects(array(detail, "parties"));
-		if (partyRows.isEmpty()) parties.add(caption("No parties in this window."));
-		for (int i = 0; i < partyRows.size() && i < MAX_PARTIES; i++) parties.add(partyRow(partyRows.get(i)));
+		groupContent.removeAll();
+		List<JsonObject> groupRows = objects(array(detail, "groupContent"));
+		if (groupRows.isEmpty()) groupContent.add(caption("No group content with clanmates yet."));
+		for (int i = 0; i < groupRows.size() && i < MAX_GROUP_CONTENT; i++) groupContent.add(groupRow(groupRows.get(i)));
 
 		message.setVisible(false);
 		body.setVisible(true);
@@ -157,20 +156,18 @@ final class TsgHubActivityDetail extends JPanel
 		return listCard(twoLines(top, detail));
 	}
 
-	private static JComponent partyRow(JsonObject party)
+	private static JComponent groupRow(JsonObject group)
 	{
-		String area = str(party, "area").isEmpty() ? "Unknown area" : str(party, "area");
-		Instant joined = instant(str(party, "joinedAt"));
-		Instant left = instant(str(party, "leftAt"));
-		String when = joined == null ? "" : format(joined, WHEN);
-		String length = joined == null ? "" : left == null ? "still in party" : span(Duration.between(joined, left));
+		String content = str(group, "content").isEmpty() ? "Unknown content" : str(group, "content");
+		Instant last = instant(str(group, "lastAt"));
 		List<String> with = new ArrayList<>();
-		for (JsonElement name : array(party, "with"))
+		for (JsonElement name : array(group, "with"))
 		{
 			if (name.isJsonPrimitive()) with.add(name.getAsString());
 		}
-		JPanel top = row(shrinkable(label(area, with.isEmpty() ? MUTED : TEXT, plainFont())), caption(when + (length.isEmpty() ? "" : " · " + length)));
-		JLabel detail = label(with.isEmpty() ? "solo, no other members" : "with " + String.join(", ", with), with.isEmpty() ? DIM : MUTED, smallFont());
+		JPanel top = row(shrinkable(label(content + " · " + plural(integer(group, "completions", 0), "completion"), TEXT, plainFont())),
+			caption(last == null ? "" : format(last, DATE)));
+		JLabel detail = label(with.isEmpty() ? "" : "with " + String.join(", ", with), MUTED, smallFont());
 		return listCard(twoLines(top, detail));
 	}
 

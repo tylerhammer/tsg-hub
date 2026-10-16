@@ -27,6 +27,7 @@ final class TsgHubRules
 	final List<String> dropKeywords;
 	final List<String> petMessages;
 	final List<String> dropContext;
+	final List<String> groupContent;
 	final int dropDelayMs;
 	final int dropContextTicks;
 	final int dropContextKeep;
@@ -47,6 +48,7 @@ final class TsgHubRules
 		dropKeywords = strings(json, "dropKeywords");
 		petMessages = strings(json, "petMessages");
 		dropContext = strings(json, "dropContext");
+		groupContent = strings(json, "groupContent");
 		dropDelayMs = json.has("dropDelayMs") && json.get("dropDelayMs").isJsonPrimitive() ? json.get("dropDelayMs").getAsInt() : 1200;
 		dropContextTicks = json.has("dropContextTicks") && json.get("dropContextTicks").isJsonPrimitive() ? json.get("dropContextTicks").getAsInt() : 50;
 		dropContextKeep = json.has("dropContextKeep") && json.get("dropContextKeep").isJsonPrimitive() ? json.get("dropContextKeep").getAsInt() : 16;

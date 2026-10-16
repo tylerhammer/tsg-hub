@@ -55,9 +55,9 @@ import net.runelite.client.util.ColorUtil;
 
 final class TsgHubActivityPanel extends JPanel
 {
-	private static final String[] COLUMNS = {"Member", "Rank", "Joined clan", "Last seen", "Active days", "Hours", "Events", "Parties", "Drops", "Version", "Discord"};
+	private static final String[] COLUMNS = {"Member", "Rank", "Joined clan", "Last seen", "Active days", "Hours", "Events", "Group", "Drops", "Version", "Discord"};
 	private static final int[] WIDTHS = {150, 110, 90, 80, 70, 60, 60, 60, 50, 120, 60};
-	private static final int MEMBER = 0, RANK = 1, JOINED = 2, SEEN = 3, ACTIVE = 4, HOURS = 5, EVENTS = 6, PARTIES = 7, DROPS = 8, VERSION = 9, DISCORD = 10;
+	private static final int MEMBER = 0, RANK = 1, JOINED = 2, SEEN = 3, ACTIVE = 4, HOURS = 5, EVENTS = 6, GROUP = 7, DROPS = 8, VERSION = 9, DISCORD = 10;
 	private static final String[] WINDOW_LABELS = {"Last 7 days", "Last 30 days", "Last 90 days"};
 	private static final int[] WINDOW_DAYS = {7, 30, 90};
 	private static final int DEFAULT_WINDOW = 1;
@@ -202,7 +202,7 @@ final class TsgHubActivityPanel extends JPanel
 		sorter.setComparator(ACTIVE, Comparator.comparingInt((Member m) -> m.stat("activeDays")));
 		sorter.setComparator(HOURS, Comparator.comparingInt((Member m) -> m.stat("minutesOnline")));
 		sorter.setComparator(EVENTS, Comparator.comparingInt((Member m) -> m.stat("eventsAttended")).thenComparingInt(m -> m.stat("eventsJoined")));
-		sorter.setComparator(PARTIES, Comparator.comparingInt((Member m) -> m.stat("parties")));
+		sorter.setComparator(GROUP, Comparator.comparingInt((Member m) -> m.stat("groupContent")).thenComparingInt(m -> m.stat("groupPartners")));
 		sorter.setComparator(DROPS, Comparator.comparingInt((Member m) -> m.stat("drops")));
 		sorter.setComparator(DISCORD, Comparator.comparing((Member m) -> m.onHub()).thenComparing(Member::discordLinked));
 		sorter.setComparator(VERSION, Comparator.comparing((Member m) -> m.onHub()).thenComparing(m -> !m.outdated()).thenComparing(Member::version, TsgHubActivity::compareVersions));
@@ -280,7 +280,7 @@ final class TsgHubActivityPanel extends JPanel
 		turnoutValue.setText(summary.turnoutPercent < 0 ? "-" : summary.turnoutPercent + "%");
 		turnoutCaption.setText(current.eventsInWindow == 0 ? "no events in the last " + plural(current.days, "day")
 			: "avg attendance across " + plural(current.eventsInWindow, "event"));
-		footnote.setText("Click a member for their daily activity, events and parties.");
+		footnote.setText("Click a member for their daily activity, events and group content.");
 		applyFilter();
 	}
 
@@ -367,7 +367,7 @@ final class TsgHubActivityPanel extends JPanel
 				case ACTIVE: return count(member, "activeDays");
 				case HOURS: return member.onHub() ? String.format(Locale.US, "%.1f", member.stat("minutesOnline") / 60f) : "-";
 				case EVENTS: return member.onHub() ? member.stat("eventsAttended") + "/" + (snapshot == null ? 0 : snapshot.eventsInWindow) : "-";
-				case PARTIES: return count(member, "parties");
+				case GROUP: return count(member, "groupContent");
 				case DROPS: return count(member, "drops");
 				case VERSION: return versionText(member);
 				case DISCORD: return "-";
@@ -385,7 +385,7 @@ final class TsgHubActivityPanel extends JPanel
 			}
 			if (column == SEEN && member.lastSeen() != null) return localDate(member.lastSeen(), ZoneId.systemDefault());
 			if (column == VERSION && member.outdated()) return "Running an older plugin than " + (snapshot == null ? "the latest" : snapshot.latestVersion);
-			if (column == PARTIES && member.stat("soloParties") > 0) return "Parties with other members. Plus " + member.stat("soloParties") + (member.stat("soloParties") == 1 ? " solo party." : " solo parties.");
+			if (column == GROUP && member.stat("groupContent") > 0) return plural(member.stat("groupContent"), "completion") + " with " + plural(member.stat("groupPartners"), "clanmate");
 			if (column == DISCORD && member.discordLinked()) return "Linked to Discord";
 			return null;
 		}
