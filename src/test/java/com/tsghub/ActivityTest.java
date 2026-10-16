@@ -171,9 +171,15 @@ public class ActivityTest
 		java.util.Map<LocalDate, Integer> minutes = new java.util.HashMap<>();
 		minutes.put(end, 25);
 		LocalDate windowStart = end.minusDays(90);
-		assertEquals("Avg 25 min a day · active 1 of 1 tracked day.", TsgHubActivityDetail.chartCaption(minutes, 25, end, windowStart, end, 7));
+		TsgHubActivityDetail.ChartStats fresh = TsgHubActivityDetail.chartStats(minutes, 25, end, windowStart, end, 7);
+		assertFalse(fresh.weekly);
+		assertEquals("25 min", fresh.average);
+		assertEquals("1 of 1 day", fresh.active);
 		minutes.put(end.minusDays(13), 95);
-		assertEquals("Avg 1.0h a week · active 2 of 14 tracked days.", TsgHubActivityDetail.chartCaption(minutes, 120, end, windowStart, end.minusDays(13), 7));
-		assertEquals("No time online recorded.", TsgHubActivityDetail.chartCaption(new java.util.HashMap<>(), 0, end, windowStart, null, 1));
+		TsgHubActivityDetail.ChartStats weekly = TsgHubActivityDetail.chartStats(minutes, 120, end, windowStart, end.minusDays(13), 7);
+		assertTrue(weekly.weekly);
+		assertEquals("1.0h", weekly.average);
+		assertEquals("2 of 14 days", weekly.active);
+		assertEquals("-", TsgHubActivityDetail.chartStats(new java.util.HashMap<>(), 0, end, windowStart, null, 1).average);
 	}
 }

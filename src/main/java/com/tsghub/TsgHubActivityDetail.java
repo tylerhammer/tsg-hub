@@ -10,6 +10,9 @@ import java.awt.Dimension;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.RenderingHints;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
@@ -42,11 +45,16 @@ final class TsgHubActivityDetail extends JPanel
 	private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.US);
 
 	private final JLabel name = label(" ", TEXT, titleFont());
-	private final JLabel meta = caption(" ");
+	private final JLabel rankBadge = badge(" ", MUTED);
+	private final JLabel previously = caption(" ");
+	private final JLabel joinedValue = label("-", TEXT, headingFont());
+	private final JLabel seenValue = label("-", TEXT, headingFont());
+	private final JLabel avgTitle = caption("AVG A DAY");
+	private final JLabel avgValue = label("-", TEXT, headingFont());
+	private final JLabel activeValue = label("-", TEXT, headingFont());
 	private final JLabel message = caption(" ");
 	private final ActivityChart chart = new ActivityChart();
 	private final JLabel chartTitle = sectionTitle(" ");
-	private final JLabel chartCaption = caption(" ");
 	private final JPanel events = stack();
 	private final JPanel groupContent = stack();
 	private final JPanel body = stack();
@@ -58,16 +66,29 @@ final class TsgHubActivityDetail extends JPanel
 		setBackground(BACKGROUND);
 		WidthTrackingPanel content = new WidthTrackingPanel();
 		content.setBorder(BorderFactory.createEmptyBorder(14, 16, 14, 16));
-		content.add(name);
+		JPanel badgeWrap = panel(new GridBagLayout());
+		GridBagConstraints anchor = new GridBagConstraints();
+		anchor.anchor = GridBagConstraints.WEST;
+		anchor.weightx = 1;
+		badgeWrap.add(rankBadge, anchor);
+		JPanel header = panel(new BorderLayout(GAP_S, 0));
+		header.add(name, BorderLayout.WEST);
+		header.add(badgeWrap, BorderLayout.CENTER);
+		content.add(fitHeight(header));
 		content.add(Box.createVerticalStrut(GAP_XS));
-		content.add(meta);
+		content.add(previously);
+		content.add(Box.createVerticalStrut(GAP_M));
+		JPanel tiles = panel(new GridLayout(1, 4, GAP_S, 0));
+		tiles.add(statCard(caption("JOINED CLAN"), joinedValue, null));
+		tiles.add(statCard(caption("LAST SEEN"), seenValue, null));
+		tiles.add(statCard(avgTitle, avgValue, null));
+		tiles.add(statCard(caption("ACTIVE"), activeValue, null));
+		content.add(fitHeight(tiles));
 		content.add(Box.createVerticalStrut(GAP_M));
 		content.add(message);
 
 		body.add(chartTitle);
 		body.add(chart);
-		body.add(Box.createVerticalStrut(GAP_XS));
-		body.add(chartCaption);
 		body.add(sectionTitle("Events"));
 		body.add(events);
 		body.add(sectionTitle("Group content"));
@@ -81,12 +102,15 @@ final class TsgHubActivityDetail extends JPanel
 		showing = member.name;
 		name.setText(member.name);
 		name.setIcon(rankIcon == null ? null : new ImageIcon(rankIcon));
-		List<String> parts = new ArrayList<>();
-		if (!member.rank.isEmpty()) parts.add(member.rank);
-		if (member.joined != null) parts.add("joined clan " + member.joined.format(DATE));
-		if (member.onHub()) parts.add("last seen " + TsgHubActivity.ago(member.lastSeen(), now));
-		if (!member.previousNames().isEmpty()) parts.add("previously " + String.join(", ", member.previousNames()));
-		meta.setText(html(escape(String.join(" · ", parts)), DETAIL_W));
+		rankBadge.setText(member.rank);
+		rankBadge.setVisible(!member.rank.isEmpty());
+		previously.setText(member.previousNames().isEmpty() ? "" : "previously " + String.join(", ", member.previousNames()));
+		previously.setVisible(!member.previousNames().isEmpty());
+		joinedValue.setText(member.joined == null ? "-" : member.joined.format(DATE));
+		seenValue.setText(member.onHub() ? TsgHubActivity.ago(member.lastSeen(), now) : "-");
+		avgTitle.setText("AVG A DAY");
+		avgValue.setText("-");
+		activeValue.setText("-");
 		body.setVisible(false);
 		message.setForeground(MUTED);
 		message.setText(member.onHub() ? "Loading activity..." : html(escape(member.name + " isn't on TSG Hub yet, so there's no activity to show."), DETAIL_W));
@@ -123,7 +147,11 @@ final class TsgHubActivityDetail extends JPanel
 		LocalDate tracked = trackedFrom(member, minutes);
 		chart.setData(minutes, last, days, tracked);
 		chartTitle.setText("Time online per " + (size == 1 ? "day" : "week") + ", last " + days + " days");
-		chartCaption.setText(chartCaption(minutes, total, last, windowStart, tracked, size));
+		ChartStats stats = chartStats(minutes, total, last, windowStart, tracked, size);
+		avgTitle.setText(stats.weekly ? "AVG A WEEK" : "AVG A DAY");
+		avgValue.setText(stats.average);
+		activeValue.setText(stats.active);
+		activeValue.setToolTipText(stats.activeTip);
 
 		events.removeAll();
 		List<JsonObject> eventRows = objects(array(detail, "events"));
@@ -153,9 +181,25 @@ final class TsgHubActivityDetail extends JPanel
 		return tracked;
 	}
 
-	static String chartCaption(Map<LocalDate, Integer> minutes, int total, LocalDate last, LocalDate windowStart, LocalDate tracked, int size)
+	static final class ChartStats
 	{
-		if (minutes.isEmpty() || tracked == null) return "No time online recorded.";
+		final boolean weekly;
+		final String average;
+		final String active;
+		final String activeTip;
+
+		ChartStats(boolean weekly, String average, String active, String activeTip)
+		{
+			this.weekly = weekly;
+			this.average = average;
+			this.active = active;
+			this.activeTip = activeTip;
+		}
+	}
+
+	static ChartStats chartStats(Map<LocalDate, Integer> minutes, int total, LocalDate last, LocalDate windowStart, LocalDate tracked, int size)
+	{
+		if (minutes.isEmpty() || tracked == null) return new ChartStats(false, "-", "-", "No time online recorded");
 		LocalDate from = tracked.isAfter(windowStart) ? tracked : windowStart;
 		int days = (int) ChronoUnit.DAYS.between(from, last) + 1;
 		int active = 0;
@@ -163,8 +207,8 @@ final class TsgHubActivityDetail extends JPanel
 		boolean weekly = size == 7 && days >= 7;
 		float average = weekly ? total * 7f / days : total / (float) days;
 		String avg = average >= 60 ? String.format(Locale.US, "%.1fh", average / 60f) : Math.round(average) + " min";
-		String of = from.equals(windowStart) ? plural(days, "day") : plural(days, "tracked day");
-		return "Avg " + avg + (weekly ? " a week" : " a day") + " · active " + active + " of " + of + ".";
+		String tip = from.equals(windowStart) ? null : "Tracking started " + from.format(DATE);
+		return new ChartStats(weekly, avg, active + " of " + plural(days, "day"), tip);
 	}
 
 	private static JComponent eventRow(JsonObject event)

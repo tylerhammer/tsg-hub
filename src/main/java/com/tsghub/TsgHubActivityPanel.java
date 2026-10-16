@@ -149,28 +149,14 @@ final class TsgHubActivityPanel extends JPanel
 	private JPanel buildSummary()
 	{
 		JPanel strip = panel(new GridLayout(1, 3, GAP_M, 0));
-		strip.add(statCard("Active members", activeValue, activeCaption));
-		strip.add(statCard("Hub adoption", adoptionValue, adoptionCaption));
-		strip.add(statCard("Event turnout", turnoutValue, turnoutCaption));
+		strip.add(statCard(caption("ACTIVE MEMBERS"), activeValue, activeCaption));
+		strip.add(statCard(caption("HUB ADOPTION"), adoptionValue, adoptionCaption));
+		strip.add(statCard(caption("EVENT TURNOUT"), turnoutValue, turnoutCaption));
 		JPanel wrap = stack();
 		wrap.add(fitHeight(strip));
 		wrap.add(Box.createVerticalStrut(GAP_S));
 		wrap.add(footnote);
 		return wrap;
-	}
-
-	private static JPanel statCard(String title, JLabel value, JLabel detail)
-	{
-		JPanel card = stack();
-		card.setOpaque(true);
-		card.setBackground(CARD);
-		card.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(BORDER), BorderFactory.createEmptyBorder(8, 10, 8, 10)));
-		card.add(caption(title.toUpperCase()));
-		card.add(Box.createVerticalStrut(GAP_XS));
-		card.add(value);
-		card.add(Box.createVerticalStrut(GAP_XS));
-		card.add(detail);
-		return card;
 	}
 
 	private JPanel buildToolbar()
