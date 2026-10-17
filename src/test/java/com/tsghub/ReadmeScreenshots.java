@@ -171,7 +171,7 @@ public class ReadmeScreenshots
 		shoot(sidebar, SIDEBAR_W, 680, "dock");
 
 		TsgHubPanel organizer = new TsgHubPanel(plugin);
-		organizer.setManagedEvents(data.getAsJsonObject("managed").getAsJsonArray("events"));
+		organizer.eventListView.setManagedEvents(data.getAsJsonObject("managed").getAsJsonArray("events"));
 		organizer.openOrganizerEvent(data.getAsJsonObject("organizer"));
 		shoot(organizer, 860, 300, "admin-teams");
 		selectTab(organizer, "Tasks");
