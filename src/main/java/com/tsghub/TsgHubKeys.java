@@ -3,6 +3,7 @@ package com.tsghub;
 import com.google.gson.JsonObject;
 import com.tsghub.TsgHubUi.Tone;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import net.runelite.client.config.ConfigManager;
 
@@ -17,6 +18,7 @@ final class TsgHubKeys
 	private volatile String checkedIdentity = "";
 	private volatile String rejected = "";
 	private volatile boolean announce;
+	private ScheduledFuture<?> retry;
 
 	TsgHubKeys(TsgHubPlugin plugin, TsgHubConfig config, ConfigManager configManager, ScheduledExecutorService executor)
 	{
@@ -102,7 +104,7 @@ final class TsgHubKeys
 	{
 		if (!identity.equals(checkedIdentity)) return;
 		checkedIdentity = "";
-		if (!executor.isShutdown()) executor.schedule(this::check, backoff.next(), TimeUnit.MILLISECONDS);
+		if (!executor.isShutdown()) retry = executor.schedule(this::check, backoff.next(), TimeUnit.MILLISECONDS);
 	}
 
 	void recheck(String key)
@@ -136,6 +138,13 @@ final class TsgHubKeys
 	{
 		checkedIdentity = "";
 		if (verified) setVerified(false);
+	}
+
+	void cancelRetry()
+	{
+		ScheduledFuture<?> pending = retry;
+		if (pending != null) pending.cancel(false);
+		retry = null;
 	}
 
 	void loggedOut()

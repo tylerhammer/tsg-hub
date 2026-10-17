@@ -22,7 +22,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -54,6 +57,7 @@ final class TsgHubDrops
 	private final Client client;
 	private final ClientThread clientThread;
 	private final ScheduledExecutorService executor;
+	private final Set<ScheduledFuture<?>> pending = ConcurrentHashMap.newKeySet();
 	private final Supplier<TsgHubApi> api;
 	private final Supplier<TsgHubSidebarPanel> sidebar;
 	private final Map<String, Integer> itemIds = new HashMap<>();
@@ -104,7 +108,8 @@ final class TsgHubDrops
 		body.addProperty("reporter", self);
 		int tick = client.getTickCount();
 		body.addProperty("tick", tick);
-		executor.schedule(() -> {
+		pending.removeIf(Future::isDone);
+		pending.add(executor.schedule(() -> {
 			if (!plugin.sharingEnabled()) return;
 			if (!fromSelf(message, self))
 			{
@@ -121,7 +126,13 @@ final class TsgHubDrops
 			}));
 			body.add("context", context);
 			post(body);
-		}, TsgHubRules.get().dropDelayMs, TimeUnit.MILLISECONDS);
+		}, TsgHubRules.get().dropDelayMs, TimeUnit.MILLISECONDS));
+	}
+
+	void shutDown()
+	{
+		pending.forEach(task -> task.cancel(false));
+		pending.clear();
 	}
 
 	private void post(JsonObject body)
