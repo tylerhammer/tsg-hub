@@ -160,19 +160,19 @@ final class TsgHubActivity
 
 	void load(int days)
 	{
-		String token = plugin.adminKey();
+		String token = plugin.keys().adminKey();
 		if (token.isEmpty() || executor.isShutdown())
 		{
 			ui(p -> p.failed("Clan activity needs a hub key with admin access."));
 			return;
 		}
-		if (plugin.getDetectedClanName().isEmpty())
+		if (plugin.clan().name().isEmpty())
 		{
 			ui(p -> p.failed(NO_CLAN));
 			return;
 		}
 		int request = requests.incrementAndGet();
-		String query = "/v1/admin/activity?clanName=" + TsgHubApi.encode(plugin.getDetectedClanName()) + "&days=" + days;
+		String query = "/v1/admin/activity?clanName=" + TsgHubApi.encode(plugin.clan().name()) + "&days=" + days;
 		ui(p -> p.setStatus("Loading clan activity...", Tone.INFO));
 		api.get().call("GET", query, token, null).whenCompleteAsync((response, error) -> {
 			try
@@ -195,18 +195,18 @@ final class TsgHubActivity
 
 	void loadMember(String name, int days, Consumer<JsonObject> loaded, Consumer<String> failed)
 	{
-		String token = plugin.adminKey();
+		String token = plugin.keys().adminKey();
 		if (token.isEmpty() || executor.isShutdown())
 		{
 			SwingUtilities.invokeLater(() -> failed.accept("Member activity needs a hub key with admin access."));
 			return;
 		}
-		if (plugin.getDetectedClanName().isEmpty())
+		if (plugin.clan().name().isEmpty())
 		{
 			SwingUtilities.invokeLater(() -> failed.accept(NO_CLAN));
 			return;
 		}
-		String query = "/v1/admin/activity/member?clanName=" + TsgHubApi.encode(plugin.getDetectedClanName())
+		String query = "/v1/admin/activity/member?clanName=" + TsgHubApi.encode(plugin.clan().name())
 			+ "&name=" + TsgHubApi.encode(name) + "&days=" + TsgHubActivityDetail.ActivityChart.requestDays(days);
 		api.get().call("GET", query, token, null).whenCompleteAsync((response, error) -> {
 			try

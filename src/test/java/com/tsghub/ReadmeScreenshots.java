@@ -65,12 +65,6 @@ public class ReadmeScreenshots
 		TsgHubPlugin plugin = new TsgHubPlugin()
 		{
 			@Override
-			String accountHash()
-			{
-				return "1";
-			}
-
-			@Override
 			AsyncBufferedImage getItemImage(int itemId)
 			{
 				return itemIcon(itemId);
@@ -94,9 +88,20 @@ public class ReadmeScreenshots
 			}
 		};
 		set(plugin, "config", stub(TsgHubConfig.class));
-		set(plugin, "detectedClanName", "TSGaming");
-		set(plugin, "detectedClanRank", 100);
-		set(plugin, "detectedPlayerName", "Crab Legs");
+		TsgHubClan clan = new TsgHubClan(null, "TSGaming")
+		{
+			@Override
+			String accountHash()
+			{
+				return "1";
+			}
+		};
+		set(clan, "clanName", "TSGaming");
+		set(clan, "rank", 100);
+		set(clan, "playerName", "Crab Legs");
+		set(plugin, "clan", clan);
+		set(plugin, "keys", new TsgHubKeys(plugin, stub(TsgHubConfig.class), null, stopped()));
+		set(plugin, "sessions", new TsgHubSessions(plugin, stopped()));
 		set(plugin, "session", new TsgHubSession(null));
 		set(plugin, "groups", new TsgHubGroups(plugin, null, (PartyService) unsafe().allocateInstance(PartyService.class), null, null, null, null));
 		set(plugin, "presence", new TsgHubPresence(plugin, null, null, null, null, stopped(), null, null, null, () -> ""));

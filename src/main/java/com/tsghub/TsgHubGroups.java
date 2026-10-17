@@ -93,7 +93,7 @@ final class TsgHubGroups implements GroupTracker.Listener
 	private void loadGroups(boolean quiet)
 	{
 		if (!plugin.canUseHub() || executor.isShutdown()) return;
-		String clan = TsgHubApi.encode(plugin.getDetectedClanName());
+		String clan = TsgHubApi.encode(plugin.clan().name());
 		if (!quiet) busy(true);
 		api.get().call("GET", "/v1/groups?clanName=" + clan, null, null).whenCompleteAsync((response, error) -> {
 			try
@@ -126,7 +126,7 @@ final class TsgHubGroups implements GroupTracker.Listener
 
 	void create()
 	{
-		if (!plugin.canUseHub()) { plugin.ui(s -> s.groupActionFailed("Log in to a " + plugin.getHubClanName() + " character first.")); return; }
+		if (!plugin.canUseHub()) { plugin.ui(s -> s.groupActionFailed("Log in to a " + plugin.clan().hubName() + " character first.")); return; }
 		enter("POST", "/v1/groups", identity(), true);
 	}
 
@@ -171,7 +171,7 @@ final class TsgHubGroups implements GroupTracker.Listener
 
 	void join(String groupId)
 	{
-		if (!plugin.canUseHub()) { plugin.ui(s -> s.groupActionFailed("Log in to a " + plugin.getHubClanName() + " character first.")); return; }
+		if (!plugin.canUseHub()) { plugin.ui(s -> s.groupActionFailed("Log in to a " + plugin.clan().hubName() + " character first.")); return; }
 		enter("POST", "/v1/groups/" + groupId + "/join", identity(), false);
 	}
 
@@ -189,7 +189,7 @@ final class TsgHubGroups implements GroupTracker.Listener
 				// Save before switching so the tracker recognises the new party.
 				plugin.session().set(GROUP_TOKEN, result.get("token").getAsString());
 				plugin.session().set(GROUP_PASSPHRASE, passphrase);
-				plugin.session().set(GROUP_PLAYER, plugin.getDetectedPlayerName());
+				plugin.session().set(GROUP_PLAYER, plugin.clan().playerName());
 				group = joined;
 				partyService.changeParty(passphrase);
 				status(created ? "Started a party." : "Joined " + partyTitle(joined) + ".", Tone.SUCCESS);
@@ -222,7 +222,7 @@ final class TsgHubGroups implements GroupTracker.Listener
 		if (!plugin.sharingEnabled()) { leave(); return; }
 		GroupTracker t = tracker;
 		if (t != null && t.idleTooLong()) { status("Left your party after 30 minutes logged out.", Tone.INFO); leave(); return; }
-		String name = plugin.getDetectedPlayerName();
+		String name = plugin.clan().playerName();
 		if (!name.isEmpty() && !PlayerNames.samePlayer(name, plugin.session().get(GROUP_PLAYER))) { leave(); return; }
 		JsonObject payload = new JsonObject();
 		if (client.getGameState() == GameState.LOGGED_IN) payload.addProperty("world", client.getWorld());
@@ -343,8 +343,8 @@ final class TsgHubGroups implements GroupTracker.Listener
 	private JsonObject identity()
 	{
 		JsonObject payload = new JsonObject();
-		payload.addProperty("displayName", plugin.getDetectedPlayerName());
-		payload.addProperty("clanName", plugin.getDetectedClanName());
+		payload.addProperty("displayName", plugin.clan().playerName());
+		payload.addProperty("clanName", plugin.clan().name());
 		payload.addProperty("world", client.getWorld());
 		payload.addProperty("area", plugin.currentArea());
 		return payload;

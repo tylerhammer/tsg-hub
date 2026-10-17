@@ -58,7 +58,7 @@ final class TsgHubOrganizer
 	{
 		if (eventId.trim().isEmpty()) return;
 		plugin.session().set(ORGANIZER_EVENT_ID, eventId.trim());
-		plugin.syncSocketNow();
+		plugin.liveSync().syncNow();
 		status("Loading event...", Tone.INFO);
 		event(eventId.trim()).whenCompleteAsync((response, error) -> {
 			try
@@ -73,7 +73,7 @@ final class TsgHubOrganizer
 
 	void loadManagedEvents()
 	{
-		if (!plugin.isInHubClan()) return;
+		if (!plugin.clan().isHubClan()) return;
 		if (!plugin.sharingEnabled()) { status("Turn on sharing in the TSG Hub sidebar first.", Tone.ERROR); return; }
 		if (!plugin.canManageOrganizerUi()) return;
 		String credential = listCredential();
@@ -90,27 +90,27 @@ final class TsgHubOrganizer
 
 	void createEvent(String name, Instant startsAt, Instant endsAt, boolean hideScores, boolean hidden, String type, JsonObject typeConfig, JsonArray prizes)
 	{
-		if (!plugin.isInHubClan()) { eventFormFailed("TSG Hub is only for members of the " + plugin.getHubClanName() + " clan."); return; }
+		if (!plugin.clan().isHubClan()) { eventFormFailed("TSG Hub is only for members of the " + plugin.clan().hubName() + " clan."); return; }
 		if (!plugin.sharingEnabled()) { eventFormFailed("Turn on sharing in the TSG Hub sidebar first."); return; }
-		String credential = plugin.adminKey();
+		String credential = plugin.keys().adminKey();
 		if (credential.isEmpty())
 		{
 			eventFormFailed("Creating events needs a hub key with admin access from /hub key in the clan Discord.");
 			return;
 		}
-		if (plugin.getDetectedClanName().isEmpty()) { eventFormFailed("No clan detected. Log in to a character in your clan first."); return; }
+		if (plugin.clan().name().isEmpty()) { eventFormFailed("No clan detected. Log in to a character in your clan first."); return; }
 		if (client.getLocalPlayer() == null || client.getLocalPlayer().getName() == null) { eventFormFailed("Log in first so you're recorded as the admin."); return; }
 		JsonObject body = new JsonObject();
 		String creatorName = client.getLocalPlayer().getName();
 		body.addProperty("name", name.trim());
-		body.addProperty("clanName", plugin.getDetectedClanName());
+		body.addProperty("clanName", plugin.clan().name());
 		body.addProperty("createdByName", creatorName);
-		body.addProperty("clanRank", plugin.getDetectedClanRank());
+		body.addProperty("clanRank", plugin.clan().rank());
 		addEventTimes(body, startsAt, endsAt);
 		body.addProperty("hideScores", hideScores);
 		body.addProperty("hidden", hidden);
 		body.addProperty("type", type);
-		plugin.addAccountHash(body);
+		plugin.clan().addAccountHash(body);
 		body.add("config", typeConfig == null ? new JsonObject() : typeConfig);
 		body.add("prizes", prizes);
 		status("Creating event...", Tone.INFO);
@@ -186,7 +186,7 @@ final class TsgHubOrganizer
 	{
 		if (plugin.live()) return;
 		loadManagedEvents();
-		plugin.loadClanEvents();
+		plugin.sessions().loadClanEvents();
 	}
 
 	private void failed(Exception e, String failure, Consumer<String> onError)
@@ -317,7 +317,7 @@ final class TsgHubOrganizer
 	void deleteEvent(String eventId)
 	{
 		eventAction(eventId, "DELETE", "", null, "Deleting event...", "Event deleted.", "Couldn't delete the event. ", () -> {
-			plugin.forgetEvent(eventId);
+			plugin.sessions().forgetEvent(eventId);
 			SwingUtilities.invokeLater(() -> panel.get().eventDeleted(eventId));
 		});
 	}
@@ -347,7 +347,7 @@ final class TsgHubOrganizer
 
 	private void refreshEvent(boolean open)
 	{
-		String eventId = plugin.getOrganizerEventId();
+		String eventId = plugin.sessions().organizerEventId();
 		if (eventId.isEmpty() || executor == null || executor.isShutdown()) return;
 		event(eventId).whenCompleteAsync((response, error) -> {
 			try
@@ -365,10 +365,10 @@ final class TsgHubOrganizer
 	void liveRefresh()
 	{
 		refreshPending = false;
-		String eventId = plugin.getOrganizerEventId();
+		String eventId = plugin.sessions().organizerEventId();
 		if (eventId.isEmpty() || executor == null || executor.isShutdown()) return;
 		event(eventId).thenAccept(event -> SwingUtilities.invokeLater(() -> {
-			if (!eventId.equals(plugin.getOrganizerEventId())) return;
+			if (!eventId.equals(plugin.sessions().organizerEventId())) return;
 			if (panel.get().editingText()) refreshPending = true;
 			else panel.get().showEvent(event);
 		}));
@@ -426,7 +426,7 @@ final class TsgHubOrganizer
 
 	private void eventRequest(String method, String suffix, JsonObject payload, String success, Consumer<JsonObject> callback, Consumer<String> onError)
 	{
-		String eventId = plugin.getOrganizerEventId();
+		String eventId = plugin.sessions().organizerEventId();
 		if (eventId.isEmpty()) { status("Open an event first.", Tone.ERROR); return; }
 		String credential = credential(eventId);
 		status("Saving...", Tone.INFO);
@@ -445,7 +445,7 @@ final class TsgHubOrganizer
 	{
 		return plugin.api().call(method, path, credential, payload).whenComplete((response, error) -> {
 			Throwable cause = error instanceof CompletionException ? error.getCause() : error;
-			if (cause instanceof TsgHubApi.HttpError && ((TsgHubApi.HttpError) cause).status == 401 && !credential.isEmpty() && credential.equals(plugin.adminKey())) plugin.keyRejected(credential);
+			if (cause instanceof TsgHubApi.HttpError && ((TsgHubApi.HttpError) cause).status == 401 && !credential.isEmpty() && credential.equals(plugin.keys().adminKey())) plugin.keys().rejected(credential);
 		});
 	}
 
@@ -458,17 +458,17 @@ final class TsgHubOrganizer
 	{
 		String ownerToken = plugin.session().get(ORGANIZER_TOKEN + eventId);
 		String creatorName = plugin.session().get(ORGANIZER_NAME + eventId);
-		if (!ownerToken.isEmpty() && !creatorName.isEmpty() && PlayerNames.samePlayer(creatorName, plugin.getDetectedPlayerName())) return ownerToken;
-		String adminToken = plugin.adminKey();
+		if (!ownerToken.isEmpty() && !creatorName.isEmpty() && PlayerNames.samePlayer(creatorName, plugin.clan().playerName())) return ownerToken;
+		String adminToken = plugin.keys().adminKey();
 		if (!adminToken.isEmpty()) return adminToken;
 		return plugin.session().get(TOKEN);
 	}
 
 	private String listCredential()
 	{
-		String adminToken = plugin.adminKey();
+		String adminToken = plugin.keys().adminKey();
 		if (!adminToken.isEmpty()) return adminToken;
-		String eventId = plugin.getOrganizerEventId();
+		String eventId = plugin.sessions().organizerEventId();
 		if (!eventId.isEmpty())
 		{
 			String credential = credential(eventId);
@@ -480,7 +480,7 @@ final class TsgHubOrganizer
 		{
 			String candidateId = key.substring(ORGANIZER_TOKEN.length());
 			String creator = plugin.session().get(ORGANIZER_NAME + candidateId);
-			if (!creator.isEmpty() && PlayerNames.samePlayer(creator, plugin.getDetectedPlayerName())) return plugin.session().get(key);
+			if (!creator.isEmpty() && PlayerNames.samePlayer(creator, plugin.clan().playerName())) return plugin.session().get(key);
 		}
 		return "";
 	}

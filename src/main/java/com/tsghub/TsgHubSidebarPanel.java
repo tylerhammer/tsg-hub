@@ -280,7 +280,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 				return;
 			}
 			showEventList();
-			if (!plugin.live()) plugin.loadClanEvents();
+			if (!plugin.live()) plugin.sessions().loadClanEvents();
 		});
 		titleRow.add(back, BorderLayout.WEST);
 
@@ -295,7 +295,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		refresh.addActionListener(e -> {
 			if (view == View.HOME)
 			{
-				plugin.loadClanEvents();
+				plugin.sessions().loadClanEvents();
 				plugin.groups().refresh();
 				plugin.presence().loadMembers(false);
 				plugin.announcements().load();
@@ -305,9 +305,9 @@ final class TsgHubSidebarPanel extends PluginPanel
 			else if (view == View.MEMBERS) plugin.presence().loadMembers(false);
 			else if (view == View.LOOKUP) loadLookup();
 			else if (view == View.DROPS) plugin.drops().load(false);
-			else if (view == View.BOARD) plugin.refreshBoard();
-			else if (view == View.COMPETITION && competitionEvent != null) plugin.openCompetition(str(competitionEvent, "id"));
-			else plugin.loadClanEvents();
+			else if (view == View.BOARD) plugin.sessions().refreshBoard();
+			else if (view == View.COMPETITION && competitionEvent != null) plugin.sessions().openCompetition(str(competitionEvent, "id"));
+			else plugin.sessions().loadClanEvents();
 		});
 		JPanel refreshSlot = panel(new BorderLayout());
 		refreshSlot.setPreferredSize(refresh.getPreferredSize());
@@ -475,7 +475,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			for (Section section : sections) summarize(section);
 			return;
 		}
-		setHeader("TSG Hub", plugin.getDetectedPlayerName(), false, true);
+		setHeader("TSG Hub", plugin.clan().playerName(), false, true);
 		page.removeAll();
 		for (int i = 0; i < sections.size(); i += 2)
 		{
@@ -636,7 +636,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (members.size() == 0) membersPage.add(hint("Nobody online right now."));
 		int myWorld = 0;
 		for (JsonObject member : objects(members))
-			if (samePlayer(str(member, "displayName"), plugin.getDetectedPlayerName())) myWorld = integer(member, "world", 0);
+			if (samePlayer(str(member, "displayName"), plugin.clan().playerName())) myWorld = integer(member, "world", 0);
 		for (JsonObject member : objects(members))
 		{
 			membersPage.add(memberCard(member, myWorld));
@@ -712,7 +712,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		String activity = str(member, "activity");
 		String note = visibleNote(member);
 		int world = integer(member, "world", 0);
-		boolean self = samePlayer(name, plugin.getDetectedPlayerName());
+		boolean self = samePlayer(name, plugin.clan().playerName());
 		JPanel card = card();
 		if (self) highlightSelf(card);
 
@@ -1058,7 +1058,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		String query = "";
 		String kind = DROP_KINDS[dropTypeIndex];
 		if (!kind.isEmpty()) query += "&kind=" + kind;
-		if (dropTypeIndex == 1) query += "&player=" + TsgHubApi.encode(plugin.getDetectedPlayerName());
+		if (dropTypeIndex == 1) query += "&player=" + TsgHubApi.encode(plugin.clan().playerName());
 		if (dropValueIndex > 0) query += "&minValue=" + DROP_VALUES[dropValueIndex];
 		return query;
 	}
@@ -1092,7 +1092,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		{
 			Instant now = clock.instant();
 			ZoneId zone = ZoneId.systemDefault();
-			String self = plugin.getDetectedPlayerName();
+			String self = plugin.clan().playerName();
 			JsonArray shown = new JsonArray();
 			for (int i = 0; i < drops.size(); i++)
 			{
@@ -1120,7 +1120,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private JPanel dropCard(JsonObject drop, Instant now, ZoneId zone)
 	{
 		String player = str(drop, "player");
-		boolean self = samePlayer(player, plugin.getDetectedPlayerName());
+		boolean self = samePlayer(player, plugin.clan().playerName());
 		JPanel card = card();
 		if (self) highlightSelf(card);
 		JLabel icon = dropIcon(integer(drop, "itemId", 0));
@@ -1241,14 +1241,14 @@ final class TsgHubSidebarPanel extends PluginPanel
 		lines.add(cardNote(str(announcement, "postedBy") + " · " + TsgHubFormat.shortDate(str(announcement, "postedAt"), now, zone) + poll));
 		card.add(fillWidth(lines), BorderLayout.CENTER);
 		String id = str(announcement, "id");
-		clickable(card, () -> plugin.openNews(id));
+		clickable(card, () -> plugin.windows().openNews(id));
 		return fitHeight(card);
 	}
 
 	private void openEvents()
 	{
 		showEventList();
-		if (!plugin.live()) plugin.loadClanEvents();
+		if (!plugin.live()) plugin.sessions().loadClanEvents();
 	}
 
 	void showEventList()
@@ -1303,7 +1303,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			competitionJoinButton.setEnabled(false);
 			competitionJoinButton.setText("Joining...");
 			joinError.setVisible(false);
-			plugin.participate(str(event, "id"));
+			plugin.sessions().participate(str(event, "id"));
 		});
 		page.add(fitHeight(competitionJoinButton));
 		joinError.setVisible(false);
@@ -1407,7 +1407,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		JButton leave = dangerButton("Leave competition");
 		leave.addActionListener(e -> {
 			if (confirm(this, "Leave competition", "Leave \"" + eventName(event) + "\"?\nYou'll drop off the leaderboard on this device. You can rejoin while it's running.", "Leave", true))
-				plugin.leaveEvent(str(event, "id"));
+				plugin.sessions().leaveEvent(str(event, "id"));
 		});
 		page.add(fitHeight(leave));
 		refreshPage();
@@ -1704,7 +1704,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		String leader = str(group, "leaderName");
 		int world = 0;
 		boolean leaderListed = false;
-		String self = plugin.getDetectedPlayerName();
+		String self = plugin.clan().playerName();
 		List<String> names = new ArrayList<>();
 		for (JsonObject member : objects(members))
 		{
@@ -1772,7 +1772,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		if (groupList == null) return 0;
 		for (JsonObject group : objects(groupList))
 			for (JsonObject member : objects(array(group, "members")))
-				if (samePlayer(str(member, "displayName"), plugin.getDetectedPlayerName())) return integer(member, "world", 0);
+				if (samePlayer(str(member, "displayName"), plugin.clan().playerName())) return integer(member, "world", 0);
 		return 0;
 	}
 
@@ -1997,7 +1997,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	private void renderEvents()
 	{
-		String clan = plugin.getDetectedClanName();
+		String clan = plugin.clan().name();
 		setHeader("Events", "", true, true);
 		page.removeAll();
 		if (clan.isEmpty())
@@ -2050,9 +2050,9 @@ final class TsgHubSidebarPanel extends PluginPanel
 		clickable(card, () -> {
 			String id = str(event, "id");
 			if (dropParty) showDropParty(event);
-			else if (competition && joined && !plugin.session().get(MEMBER_TOKEN + id).isEmpty()) plugin.openCompetition(id, true);
+			else if (competition && joined && !plugin.session().get(MEMBER_TOKEN + id).isEmpty()) plugin.sessions().openCompetition(id, true);
 			else if (competition) showCompetitionPreview(event);
-			else if (joined) plugin.activateEvent(id);
+			else if (joined) plugin.sessions().activateEvent(id);
 			else showPreview(event);
 		});
 		return fitHeight(card);
@@ -2118,7 +2118,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		joinError.setVisible(false);
 		joinButton.setEnabled(false);
 		joinButton.setText("Joining...");
-		plugin.join(code, str(previewEvent, "id"));
+		plugin.sessions().join(code, str(previewEvent, "id"));
 	}
 
 	private void renderBoard()
@@ -2492,7 +2492,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		if (boardEvent == null) return;
 		if (confirm(this, "Disconnect from event", "Stop tracking \"" + eventName(boardEvent) + "\" on this device?\nYour team keeps its progress and you can rejoin with your team code.", "Disconnect", true))
-			plugin.leaveEvent(str(boardEvent, "id"));
+			plugin.sessions().leaveEvent(str(boardEvent, "id"));
 	}
 
 	private void addBar(JPanel body, int value, int max, String label)

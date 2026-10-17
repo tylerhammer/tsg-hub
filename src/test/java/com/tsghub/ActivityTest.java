@@ -127,9 +127,9 @@ public class ActivityTest
 	@Test
 	public void clanmatesDedupesAndSkipsSelf()
 	{
-		List<String> names = TsgHubPlugin.clanmates(Arrays.asList("Iron Bob", "iron_bob", "Me", null, " ", "Carol"), "me");
+		List<String> names = TsgHubGameTracker.clanmates(Arrays.asList("Iron Bob", "iron_bob", "Me", null, " ", "Carol"), "me");
 		assertEquals(Arrays.asList("Iron Bob", "Carol"), names);
-		assertTrue(TsgHubPlugin.clanmates(Arrays.asList("Me"), "Me").isEmpty());
+		assertTrue(TsgHubGameTracker.clanmates(Arrays.asList("Me"), "Me").isEmpty());
 	}
 
 	@Test

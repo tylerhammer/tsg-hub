@@ -207,7 +207,7 @@ final class TsgHubPanel extends JPanel
 		right.add(status, BorderLayout.SOUTH);
 		add(right, BorderLayout.CENTER);
 
-		setDetectedClanName(plugin.getDetectedClanName(), plugin.getDetectedClanRank());
+		setDetectedClanName(plugin.clan().name(), plugin.clan().rank());
 		setManagedEvents(new JsonArray());
 	}
 
@@ -1226,7 +1226,7 @@ final class TsgHubPanel extends JPanel
 		eventSignalKc.setSelected(true);
 		partyWorld.setText("");
 		partyLocation.setText("");
-		partyHost.setText(plugin.getDetectedPlayerName());
+		partyHost.setText(plugin.clan().playerName());
 		partyNotes.setText("");
 		for (JTextField prize : prizeFields) prize.setText("");
 		showEventForm();

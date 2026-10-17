@@ -56,6 +56,7 @@ final class TsgHubPresence
 	private final Map<Integer, BufferedImage> accountIcons = new ConcurrentHashMap<>();
 	private final Map<String, BufferedImage> nameIcons = new ConcurrentHashMap<>();
 	private final ScheduledExecutorService executor;
+	private final Set<NPC> attackers = new HashSet<>();
 	private final Supplier<TsgHubApi> api;
 	private final Supplier<TsgHubSidebarPanel> sidebar;
 	private final TsgHubSocket socket;
@@ -112,6 +113,7 @@ final class TsgHubPresence
 
 	void onLoggedOut()
 	{
+		attackers.clear();
 		leave();
 		activity.reset();
 		slayerDirty = true;
@@ -134,7 +136,7 @@ final class TsgHubPresence
 	void loadMembers(boolean quiet)
 	{
 		if (!plugin.canUseHub() || executor.isShutdown()) return;
-		String clan = TsgHubApi.encode(plugin.getDetectedClanName());
+		String clan = TsgHubApi.encode(plugin.clan().name());
 		if (!quiet) plugin.ui(s -> s.setBusy(true));
 		String token = key.get();
 		CompletableFuture<JsonObject> notesCall = api.get().call("GET", "/v1/members?clanName=" + clan, token, null)
@@ -270,7 +272,7 @@ final class TsgHubPresence
 	private JsonObject adminBody()
 	{
 		JsonObject body = new JsonObject();
-		body.addProperty("clanName", plugin.getDetectedClanName());
+		body.addProperty("clanName", plugin.clan().name());
 		return body;
 	}
 
@@ -353,22 +355,22 @@ final class TsgHubPresence
 
 	private JsonObject snapshot()
 	{
-		if (!plugin.sharingEnabled() || !plugin.isInHubClan() || !plugin.inClanChat()) return null;
+		if (!plugin.sharingEnabled() || !plugin.clan().isHubClan() || !plugin.clan().inClanChat()) return null;
 		if (client.getGameState() != GameState.LOGGED_IN) return null;
 		Player player = client.getLocalPlayer();
 		long hash = client.getAccountHash();
-		String name = plugin.getDetectedPlayerName();
+		String name = plugin.clan().playerName();
 		if (player == null || player.getLocalLocation() == null || hash == -1 || name.isEmpty()) return null;
 		boolean detailed = plugin.locationSharingEnabled();
 		AreaNames.Area area = this.area;
 		JsonObject payload = new JsonObject();
-		payload.addProperty("clanName", plugin.getDetectedClanName());
+		payload.addProperty("clanName", plugin.clan().name());
 		payload.addProperty("displayName", name);
 		payload.addProperty("accountHash", Long.toString(hash));
 		payload.addProperty("world", client.getWorld());
 		payload.addProperty("version", TsgHubVersion.VERSION);
 		payload.addProperty("accountType", client.getVarbitValue(VarbitID.IRONMAN));
-		int clanRank = plugin.getDetectedClanRank();
+		int clanRank = plugin.clan().rank();
 		if (clanRank >= 0) payload.addProperty("clanRank", clanRank);
 		payload.addProperty("area", area == null ? "" : area.name);
 		payload.addProperty("activity", detailed ? activity.activity(area, System.currentTimeMillis()) : "Online");
@@ -405,12 +407,20 @@ final class TsgHubPresence
 		long now = System.currentTimeMillis();
 		Actor target = player.getInteracting();
 		if (target instanceof NPC) activity.onOpponent(target.getName(), now);
-		WorldView worldView = client.getTopLevelWorldView();
-		if (worldView == null) return;
-		for (NPC npc : worldView.npcs())
-		{
-			if (npc != null && npc.getInteracting() == player) activity.onOpponent(npc.getName(), now);
-		}
+		attackers.removeIf(npc -> npc.getInteracting() != player);
+		for (NPC npc : attackers) activity.onOpponent(npc.getName(), now);
+	}
+
+	void onInteractingChanged(Actor source, Actor target)
+	{
+		if (!(source instanceof NPC)) return;
+		if (target != null && target == client.getLocalPlayer()) attackers.add((NPC) source);
+		else attackers.remove(source);
+	}
+
+	void onNpcDespawned(NPC npc)
+	{
+		attackers.remove(npc);
 	}
 
 	private void trackSlayerTask()

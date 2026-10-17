@@ -35,7 +35,7 @@ final class TsgHubAnnouncements
 		this.api = api;
 		this.panel = panel;
 		this.chat = chat;
-		this.polls = new TsgHubNewsPoll(plugin, this, () -> plugin.newsWindow(TsgHubNewsWindow::render));
+		this.polls = new TsgHubNewsPoll(plugin, this, () -> plugin.windows().news(TsgHubNewsWindow::render));
 	}
 
 	TsgHubNewsPoll polls()
@@ -51,9 +51,9 @@ final class TsgHubAnnouncements
 	void load()
 	{
 		if (!plugin.canUseHub() || executor.isShutdown()) return;
-		String clan = TsgHubApi.encode(plugin.getDetectedClanName());
-		String token = plugin.adminKey();
-		String hash = plugin.accountHash();
+		String clan = TsgHubApi.encode(plugin.clan().name());
+		String token = plugin.keys().adminKey();
+		String hash = plugin.clan().accountHash();
 		String query = "/v1/announcements?clanName=" + clan + (hash.isEmpty() ? "" : "&accountHash=" + hash);
 		api.get().call("GET", query, token.isEmpty() ? null : token, null)
 			.thenAcceptAsync(result -> apply(TsgHubJson.array(result, "announcements")), executor);
@@ -66,7 +66,7 @@ final class TsgHubAnnouncements
 		list = announcements;
 		SwingUtilities.invokeLater(() -> polls.reset(announcements));
 		plugin.ui(s -> s.setAnnouncements(announcements));
-		plugin.newsWindow(w -> w.setAnnouncements(announcements));
+		plugin.windows().news(w -> w.setAnnouncements(announcements));
 		SwingUtilities.invokeLater(() -> {
 			TsgHubNewsEditor admin = panel.get();
 			if (admin != null) admin.setAnnouncements(all);
@@ -166,7 +166,7 @@ final class TsgHubAnnouncements
 
 	void vote(String id, List<Integer> options, Consumer<String> failed)
 	{
-		String hash = plugin.accountHash();
+		String hash = plugin.clan().accountHash();
 		if (hash.isEmpty() || !plugin.canUseHub() || executor.isShutdown())
 		{
 			failed.accept("Log in to vote.");
@@ -225,7 +225,7 @@ final class TsgHubAnnouncements
 
 	void delete(String id)
 	{
-		String clan = TsgHubApi.encode(plugin.getDetectedClanName());
+		String clan = TsgHubApi.encode(plugin.clan().name());
 		submit("Announcement deleted.", false, token -> api.get().call("DELETE", path(id) + "?clanName=" + clan, token, null).thenApply(done -> ""));
 	}
 
@@ -242,13 +242,13 @@ final class TsgHubAnnouncements
 	private JsonObject adminBody()
 	{
 		JsonObject body = new JsonObject();
-		body.addProperty("clanName", plugin.getDetectedClanName());
+		body.addProperty("clanName", plugin.clan().name());
 		return body;
 	}
 
 	private void submit(String success, boolean form, Function<String, CompletableFuture<String>> write)
 	{
-		String token = plugin.adminKey();
+		String token = plugin.keys().adminKey();
 		if (token.isEmpty() || executor.isShutdown())
 		{
 			status("Announcements need a hub key with admin access.", Tone.ERROR);

@@ -22,7 +22,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -54,6 +57,7 @@ final class TsgHubDrops
 	private final Client client;
 	private final ClientThread clientThread;
 	private final ScheduledExecutorService executor;
+	private final Set<ScheduledFuture<?>> pending = ConcurrentHashMap.newKeySet();
 	private final Supplier<TsgHubApi> api;
 	private final Supplier<TsgHubSidebarPanel> sidebar;
 	private final Map<String, Integer> itemIds = new HashMap<>();
@@ -96,15 +100,16 @@ final class TsgHubDrops
 		String message = broadcast(event.getMessage());
 		long hash = client.getAccountHash();
 		if (message == null || hash == -1 || executor.isShutdown()) return;
-		String self = plugin.getDetectedPlayerName();
+		String self = plugin.clan().playerName();
 		JsonObject body = new JsonObject();
-		body.addProperty("clanName", plugin.getDetectedClanName());
+		body.addProperty("clanName", plugin.clan().name());
 		body.addProperty("accountHash", Long.toString(hash));
 		body.addProperty("message", message);
 		body.addProperty("reporter", self);
 		int tick = client.getTickCount();
 		body.addProperty("tick", tick);
-		executor.schedule(() -> {
+		pending.removeIf(Future::isDone);
+		pending.add(executor.schedule(() -> {
 			if (!plugin.sharingEnabled()) return;
 			if (!fromSelf(message, self))
 			{
@@ -121,12 +126,18 @@ final class TsgHubDrops
 			}));
 			body.add("context", context);
 			post(body);
-		}, TsgHubRules.get().dropDelayMs, TimeUnit.MILLISECONDS);
+		}, TsgHubRules.get().dropDelayMs, TimeUnit.MILLISECONDS));
+	}
+
+	void shutDown()
+	{
+		pending.forEach(task -> task.cancel(false));
+		pending.clear();
 	}
 
 	private void post(JsonObject body)
 	{
-		plugin.report("drop", "/v1/drops", body);
+		plugin.tracker().report("drop", "/v1/drops", body);
 	}
 
 	static boolean fromSelf(String message, String self)
@@ -146,8 +157,8 @@ final class TsgHubDrops
 
 	void load(boolean quiet)
 	{
-		if (!plugin.isInHubClan() || !plugin.sharingEnabled() || executor.isShutdown()) return;
-		String clan = TsgHubApi.encode(plugin.getDetectedClanName());
+		if (!plugin.clan().isHubClan() || !plugin.sharingEnabled() || executor.isShutdown()) return;
+		String clan = TsgHubApi.encode(plugin.clan().name());
 		String query = query();
 		Runnable done = quiet ? null : () -> plugin.ui(s -> s.setBusy(false));
 		if (!quiet) plugin.ui(s -> s.setBusy(true));
