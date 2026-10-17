@@ -36,6 +36,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -63,7 +64,9 @@ import net.runelite.api.events.ClanChannelChanged;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.InteractingChanged;
 import net.runelite.api.events.ItemContainerChanged;
+import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.StatChanged;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.events.WidgetClosed;
@@ -142,6 +145,8 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubNewsWindow newsWindow;
 	private NavigationButton navigationButton;
 	private ScheduledExecutorService executor;
+	private final List<ScheduledFuture<?>> tasks = new ArrayList<>();
+	private ScheduledFuture<?> keyRetry;
 	private ExecutorService itemSearchExecutor;
 	private final Map<String, Integer> recentLootEvents = new ConcurrentHashMap<>();
 	private final Map<String, Integer> syncedClanRanks = new ConcurrentHashMap<>();
@@ -232,9 +237,9 @@ public class TsgHubPlugin extends Plugin
 		signals = new TsgHubSignals(socket, this::api, this::signalReply);
 		reports = new TsgHubReports(socket::send, (path, body) -> api().request("POST", path, null, body));
 		executor.execute(this::loadCachedRules);
-		executor.scheduleAtFixedRate(this::socketTick, 2, 5, TimeUnit.SECONDS);
-		executor.scheduleAtFixedRate(unlessLive(this::autoRefreshBoard), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
-		executor.scheduleAtFixedRate(unlessLive(this::pollTeamNotifications), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
+		every(this::socketTick, 2, 5, TimeUnit.SECONDS);
+		every(unlessLive(this::autoRefreshBoard), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
+		every(unlessLive(this::pollTeamNotifications), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
 		itemSearchExecutor = Executors.newFixedThreadPool(2, daemon("tsg-hub-item-search"));
 		organizer = new TsgHubOrganizer(this, client, clientThread, itemManager, executor, itemSearchExecutor, () -> panel);
 		announcements = new TsgHubAnnouncements(this, executor, this::api, () -> newsEditor, this::clanAnnouncement);
@@ -255,17 +260,17 @@ public class TsgHubPlugin extends Plugin
 		groups.setTracker(groupTracker);
 		eventBus.register(groupTracker);
 		groupTracker.start();
-		executor.scheduleAtFixedRate(groups::heartbeat, 5, TsgHubGroups.HEARTBEAT_SECONDS, TimeUnit.SECONDS);
-		executor.scheduleAtFixedRate(groupTracker::keepAlive, GroupTracker.KEEPALIVE_SECONDS, GroupTracker.KEEPALIVE_SECONDS, TimeUnit.SECONDS);
-		executor.scheduleAtFixedRate(unlessLive(groups::autoRefresh), TsgHubGroups.REFRESH_SECONDS, TsgHubGroups.REFRESH_SECONDS, TimeUnit.SECONDS);
+		every(groups::heartbeat, 5, TsgHubGroups.HEARTBEAT_SECONDS, TimeUnit.SECONDS);
+		every(groupTracker::keepAlive, GroupTracker.KEEPALIVE_SECONDS, GroupTracker.KEEPALIVE_SECONDS, TimeUnit.SECONDS);
+		every(unlessLive(groups::autoRefresh), TsgHubGroups.REFRESH_SECONDS, TsgHubGroups.REFRESH_SECONDS, TimeUnit.SECONDS);
 		presence = new TsgHubPresence(this, client, clientThread, rankIcons, spriteManager, executor, this::api, () -> sidebar, socket, this::adminKey);
-		executor.scheduleAtFixedRate(unlessLive(presence::autoRefresh), TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
+		every(unlessLive(presence::autoRefresh), TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
 		memberMap = new TsgHubMemberMap(this, client, clientThread, worldMapPointManager, executor, this::api);
 		mapOverlay = new TsgHubMapOverlay(client, worldMapOverlay, memberMap);
 		overlayManager.add(mapOverlay);
-		executor.scheduleAtFixedRate(unlessLive(memberMap::autoRefresh), TsgHubMemberMap.REFRESH_SECONDS, TsgHubMemberMap.REFRESH_SECONDS, TimeUnit.SECONDS);
+		every(unlessLive(memberMap::autoRefresh), TsgHubMemberMap.REFRESH_SECONDS, TsgHubMemberMap.REFRESH_SECONDS, TimeUnit.SECONDS);
 		drops = new TsgHubDrops(this, client, clientThread, executor, this::api, () -> sidebar);
-		executor.scheduleAtFixedRate(unlessLive(drops::autoRefresh), TsgHubDrops.REFRESH_SECONDS, TsgHubDrops.REFRESH_SECONDS, TimeUnit.SECONDS);
+		every(unlessLive(drops::autoRefresh), TsgHubDrops.REFRESH_SECONDS, TsgHubDrops.REFRESH_SECONDS, TimeUnit.SECONDS);
 		navigationButton = NavigationButton.builder()
 			.tooltip("TSG Hub")
 			.icon(ImageUtil.loadImageResource(getClass(), "icon.png"))
@@ -275,6 +280,11 @@ public class TsgHubPlugin extends Plugin
 		clientToolbar.addNavigation(navigationButton);
 		sidebarRouted = false;
 		clientThread.invokeLater(this::refreshDetectedClan);
+	}
+
+	private void every(Runnable task, long initialDelay, long period, TimeUnit unit)
+	{
+		tasks.add(executor.scheduleAtFixedRate(task, initialDelay, period, unit));
 	}
 
 	private static ThreadFactory daemon(String name)
@@ -303,6 +313,11 @@ public class TsgHubPlugin extends Plugin
 		if (memberMap != null) memberMap.setOpen(false);
 		if (mapOverlay != null) overlayManager.remove(mapOverlay);
 		if (socket != null) socket.disconnect();
+		tasks.forEach(task -> task.cancel(false));
+		tasks.clear();
+		if (keyRetry != null) keyRetry.cancel(false);
+		keyRetry = null;
+		if (drops != null) drops.shutDown();
 		if (executor != null) executor.shutdownNow();
 		if (itemSearchExecutor != null) itemSearchExecutor.shutdownNow();
 		resetState();
@@ -520,7 +535,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		if (!identity.equals(checkedKeyIdentity)) return;
 		checkedKeyIdentity = "";
-		if (executor != null && !executor.isShutdown()) executor.schedule(this::checkHubKey, keyCheckBackoff.next(), TimeUnit.MILLISECONDS);
+		if (executor != null && !executor.isShutdown()) keyRetry = executor.schedule(this::checkHubKey, keyCheckBackoff.next(), TimeUnit.MILLISECONDS);
 	}
 
 	private void recheckHubKey(String key)
@@ -1258,6 +1273,18 @@ public class TsgHubPlugin extends Plugin
 			session.clear(TOKEN, EVENT_ID);
 			ui(s -> s.closeBoard());
 		}
+	}
+
+	@Subscribe
+	public void onInteractingChanged(InteractingChanged event)
+	{
+		if (presence != null) presence.onInteractingChanged(event.getSource(), event.getTarget());
+	}
+
+	@Subscribe
+	public void onNpcDespawned(NpcDespawned event)
+	{
+		if (presence != null) presence.onNpcDespawned(event.getNpc());
 	}
 
 	@Subscribe

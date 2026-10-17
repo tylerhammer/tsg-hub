@@ -56,6 +56,7 @@ final class TsgHubPresence
 	private final Map<Integer, BufferedImage> accountIcons = new ConcurrentHashMap<>();
 	private final Map<String, BufferedImage> nameIcons = new ConcurrentHashMap<>();
 	private final ScheduledExecutorService executor;
+	private final Set<NPC> attackers = new HashSet<>();
 	private final Supplier<TsgHubApi> api;
 	private final Supplier<TsgHubSidebarPanel> sidebar;
 	private final TsgHubSocket socket;
@@ -112,6 +113,7 @@ final class TsgHubPresence
 
 	void onLoggedOut()
 	{
+		attackers.clear();
 		leave();
 		activity.reset();
 		slayerDirty = true;
@@ -405,12 +407,20 @@ final class TsgHubPresence
 		long now = System.currentTimeMillis();
 		Actor target = player.getInteracting();
 		if (target instanceof NPC) activity.onOpponent(target.getName(), now);
-		WorldView worldView = client.getTopLevelWorldView();
-		if (worldView == null) return;
-		for (NPC npc : worldView.npcs())
-		{
-			if (npc != null && npc.getInteracting() == player) activity.onOpponent(npc.getName(), now);
-		}
+		attackers.removeIf(npc -> npc.getInteracting() != player);
+		for (NPC npc : attackers) activity.onOpponent(npc.getName(), now);
+	}
+
+	void onInteractingChanged(Actor source, Actor target)
+	{
+		if (!(source instanceof NPC)) return;
+		if (target != null && target == client.getLocalPlayer()) attackers.add((NPC) source);
+		else attackers.remove(source);
+	}
+
+	void onNpcDespawned(NPC npc)
+	{
+		attackers.remove(npc);
 	}
 
 	private void trackSlayerTask()
