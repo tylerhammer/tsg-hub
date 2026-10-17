@@ -362,8 +362,13 @@ final class TsgHubUi
 			if (more != null && !more.isEmpty()) parts.add(more);
 			if (parts.isEmpty()) return null;
 			String body = String.join("<br>", parts);
-			return body.contains("<table") ? html("<div style='padding:2px'>" + body + "</div>", 240) : "<html>" + body + "</html>";
+			return tooltipHtml(body);
 		});
+	}
+
+	static String tooltipHtml(String body)
+	{
+		return body.contains("<table") ? html("<div style='padding:2px'>" + body + "</div>", 240) : "<html>" + body + "</html>";
 	}
 
 	static <T extends JComponent> T noFullText(T component)

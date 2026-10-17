@@ -17,6 +17,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.runelite.api.Actor;
 import net.runelite.api.Client;
@@ -60,6 +61,7 @@ final class TsgHubPresence
 	private final Supplier<TsgHubSidebarPanel> sidebar;
 	private final TsgHubSocket socket;
 	private final Supplier<String> key;
+	private final Consumer<JsonArray> onNotes;
 	private final ActivityDetector activity = new ActivityDetector();
 	private volatile JsonObject listed;
 	private volatile JsonArray notes;
@@ -68,9 +70,10 @@ final class TsgHubPresence
 	private boolean slayerDirty = true;
 
 	TsgHubPresence(TsgHubPlugin plugin, Client client, ClientThread clientThread, TsgHubRankIcons rankIcons, SpriteManager sprites, ScheduledExecutorService executor,
-		Supplier<TsgHubApi> api, Supplier<TsgHubSidebarPanel> sidebar, TsgHubSocket socket, Supplier<String> key)
+		Supplier<TsgHubApi> api, Supplier<TsgHubSidebarPanel> sidebar, TsgHubSocket socket, Supplier<String> key, Consumer<JsonArray> onNotes)
 	{
 		this.key = key;
+		this.onNotes = onNotes;
 		this.socket = socket;
 		this.plugin = plugin;
 		this.client = client;
@@ -151,7 +154,11 @@ final class TsgHubPresence
 	void apply(JsonArray members, JsonArray loaded)
 	{
 		if (!plugin.canUseHub()) return;
-		if (loaded != null) notes = loaded;
+		if (loaded != null)
+		{
+			notes = loaded;
+			onNotes.accept(loaded);
+		}
 		JsonArray known = notes;
 		clientThread.invokeLater(() -> {
 			JsonArray[] roster = roster(members, chatWorlds(), clanNames(), known == null ? new JsonArray() : known);
@@ -242,29 +249,22 @@ final class TsgHubPresence
 		return out;
 	}
 
-	void saveNote(String displayName, String altOf, String note)
+	CompletableFuture<Void> saveNote(String displayName, String altOf, String note)
 	{
 		JsonObject body = adminBody();
 		body.addProperty("displayName", displayName);
 		body.addProperty("altOf", altOf);
 		body.addProperty("note", note);
-		adminWrite("PUT", "/v1/members/notes", body, "Saved " + displayName + ".");
+		return adminWrite("PUT", "/v1/members/notes", body);
 	}
 
-	void addWarning(String displayName, String reason, int expiresInDays)
+	CompletableFuture<Void> addWarning(String displayName, String reason, int expiresInDays)
 	{
 		JsonObject body = adminBody();
 		body.addProperty("displayName", displayName);
 		body.addProperty("reason", reason);
 		body.addProperty("expiresInDays", expiresInDays);
-		adminWrite("POST", "/v1/members/warnings", body, "Warned " + displayName + ".");
-	}
-
-	void revokeWarning(String displayName, String warningId, String reason)
-	{
-		JsonObject body = adminBody();
-		body.addProperty("reason", reason);
-		adminWrite("POST", "/v1/members/warnings/" + TsgHubApi.encode(warningId) + "/revoke", body, "Revoked a warning for " + displayName + ".");
+		return adminWrite("POST", "/v1/members/warnings", body);
 	}
 
 	private JsonObject adminBody()
@@ -274,21 +274,16 @@ final class TsgHubPresence
 		return body;
 	}
 
-	private void adminWrite(String method, String path, JsonObject body, String success)
+	private CompletableFuture<Void> adminWrite(String method, String path, JsonObject body)
 	{
 		String token = key.get();
-		if (token.isEmpty() || executor.isShutdown()) return;
-		plugin.ui(s -> s.setBusy(true));
-		api.get().call(method, path, token, body).whenCompleteAsync((response, error) -> {
-			try
-			{
-				TsgHubApi.result(response, error);
-				plugin.ui(s -> s.setStatus(success, Tone.SUCCESS));
-				loadMembers(true);
-			}
-			catch (Exception e) { plugin.ui(s -> s.setStatus("Couldn't save. " + TsgHubFormat.friendlyError(e), Tone.ERROR)); }
-			finally { plugin.ui(s -> s.setBusy(false)); }
-		}, executor);
+		if (token.isEmpty() || executor.isShutdown())
+		{
+			CompletableFuture<Void> failed = new CompletableFuture<>();
+			failed.completeExceptionally(new IllegalStateException("Member notes need a hub key with admin access."));
+			return failed;
+		}
+		return api.get().call(method, path, token, body).thenAccept(response -> loadMembers(true));
 	}
 
 	void autoRefresh()
