@@ -21,7 +21,7 @@ import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.GridLayout;
 import java.awt.Image;
-import java.awt.KeyboardFocusManager;
+import java.awt.Window;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.time.Instant;
@@ -683,7 +683,8 @@ final class TsgHubPanel extends JPanel
 
 	boolean editingText()
 	{
-		Component focused = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+		Window window = SwingUtilities.getWindowAncestor(this);
+		Component focused = window == null ? null : window.getFocusOwner();
 		return focused instanceof JTextComponent && SwingUtilities.isDescendingFrom(focused, this);
 	}
 
