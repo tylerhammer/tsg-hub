@@ -4,9 +4,10 @@ import static com.tsghub.TsgHubFormat.*;
 import static com.tsghub.TsgHubIcons.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-import com.tsghub.TsgHubActivity.Member;
-import com.tsghub.TsgHubActivity.Snapshot;
-import com.tsghub.TsgHubActivity.Summary;
+import com.google.gson.JsonArray;
+import com.tsghub.TsgHubMembers.Member;
+import com.tsghub.TsgHubMembers.Snapshot;
+import com.tsghub.TsgHubMembers.Summary;
 import com.tsghub.TsgHubUi.Tone;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -53,7 +54,7 @@ import javax.swing.table.JTableHeader;
 import javax.swing.table.TableRowSorter;
 import net.runelite.client.util.ColorUtil;
 
-final class TsgHubActivityPanel extends JPanel
+final class TsgHubMembersPanel extends JPanel
 {
 	private static final String[] COLUMNS = {"Member", "Rank", "Joined clan", "Last seen", "Active days", "Hours", "Events", "Group", "Drops", "Version", "Discord"};
 	private static final int[] WIDTHS = {150, 110, 90, 80, 70, 60, 60, 60, 50, 120, 60};
@@ -64,12 +65,24 @@ final class TsgHubActivityPanel extends JPanel
 	private static final Color INACTIVE_ROW = ColorUtil.colorLerp(CARD, TsgHubTheme.ERROR, 0.12);
 	private static final int STATUS_W = 600;
 	private static final Icon CHECK = new TsgHubIcons.CheckIcon();
+	private static final Icon WARNED = new WarningIcon();
+	private static final Icon NOTED = new NoteIcon();
+	private static final int BADGE_GAP = 4;
+	private static final Border NOTED_BORDER = BorderFactory.createEmptyBorder(0, 6, 0, 6 + NOTED.getIconWidth() + BADGE_GAP);
+	private static final Border WARNED_BORDER = BorderFactory.createEmptyBorder(0, 6, 0, 6 + WARNED.getIconWidth() + BADGE_GAP + NOTED.getIconWidth() + BADGE_GAP);
 	private static final Border CELL_BORDER = BorderFactory.createEmptyBorder(0, 6, 0, 6);
 
-	private final TsgHubActivity activity;
+	private final TsgHubMembers members;
 	private final IntSupplier threshold;
 	private final Model model = new Model();
-	private final JTable table = new JTable(model);
+	private final JTable table = new JTable(model)
+	{
+		@Override public String getToolTipText(MouseEvent e)
+		{
+			int row = rowAtPoint(e.getPoint()), column = columnAtPoint(e.getPoint());
+			return row < 0 || column < 0 ? null : tooltip(model.get(convertRowIndexToModel(row)), convertColumnIndexToModel(column));
+		}
+	};
 	private final TableRowSorter<Model> sorter = new TableRowSorter<>(model);
 	private final JLabel activeValue = label("-", TEXT, headingFont());
 	private final JLabel activeCaption = caption(" ");
@@ -82,6 +95,7 @@ final class TsgHubActivityPanel extends JPanel
 	private final JCheckBox inactiveOnly = new JCheckBox("Inactive");
 	private final JCheckBox notOnHubOnly = new JCheckBox("Not on hub");
 	private final JCheckBox outdatedOnly = new JCheckBox("Outdated");
+	private final JCheckBox warnedOnly = new JCheckBox("Warned");
 	private final TsgHubSearchField search = new TsgHubSearchField(new JTextField(16))
 	{
 		@Override boolean isExact(String query) { return true; }
@@ -89,19 +103,20 @@ final class TsgHubActivityPanel extends JPanel
 	};
 	private final StatusLine status = new StatusLine(STATUS_W);
 	private final RefreshIcon refreshIcon = new RefreshIcon();
-	private final JButton refresh = iconButton(refreshIcon, "Refresh clan activity");
+	private final JButton refresh = iconButton(refreshIcon, "Refresh clan members");
 	private volatile int days = WINDOW_DAYS[DEFAULT_WINDOW];
 	private Snapshot snapshot;
+	private JsonArray appliedNotes;
 	private Instant now = Instant.now();
 	private int limit;
 	private final Map<Integer, ImageIcon> rankIcons = new HashMap<>();
 	private JDialog detailDialog;
-	private TsgHubActivityDetail detail;
+	private TsgHubMemberDetail detail;
 
-	TsgHubActivityPanel(TsgHubActivity activity, IntSupplier threshold)
+	TsgHubMembersPanel(TsgHubMembers members, IntSupplier threshold)
 	{
 		super(new BorderLayout(0, GAP_M));
-		this.activity = activity;
+		this.members = members;
 		this.threshold = threshold;
 		setBackground(BACKGROUND);
 		setBorder(BorderFactory.createEmptyBorder(12, 16, 10, 16));
@@ -143,10 +158,12 @@ final class TsgHubActivityPanel extends JPanel
 	void setActivity(Snapshot loaded)
 	{
 		snapshot = loaded;
+		appliedNotes = null;
 		now = Instant.now();
 		limit = threshold.getAsInt();
 		model.setMembers(loaded.members);
 		updateSummary();
+		refreshDetail();
 		setStatus(loaded.fromClan ? "" : "Clan settings aren't loaded, so this shows TSG Hub records only. Log in to see every clan member.", loaded.fromClan ? Tone.INFO : Tone.ERROR);
 	}
 
@@ -172,13 +189,13 @@ final class TsgHubActivityPanel extends JPanel
 			int index = window.getSelectedIndex();
 			if (index < 0 || WINDOW_DAYS[index] == days) return;
 			days = WINDOW_DAYS[index];
-			activity.load(days);
+			members.load(days);
 		});
-		refresh.addActionListener(e -> activity.load(days));
+		refresh.addActionListener(e -> members.load(days));
 
 		JPanel toggles = panel(new FlowLayout(FlowLayout.LEFT, GAP_M, 0));
 		toggles.add(caption("Show only:"));
-		for (JCheckBox toggle : new JCheckBox[] {inactiveOnly, notOnHubOnly, outdatedOnly})
+		for (JCheckBox toggle : new JCheckBox[] {inactiveOnly, notOnHubOnly, outdatedOnly, warnedOnly})
 		{
 			plain(toggle, TEXT);
 			toggle.addActionListener(e -> applyFilter());
@@ -204,7 +221,7 @@ final class TsgHubActivityPanel extends JPanel
 		sorter.setComparator(GROUP, Comparator.comparingInt((Member m) -> m.stat("groupContent")).thenComparingInt(m -> m.stat("groupPartners")));
 		sorter.setComparator(DROPS, Comparator.comparingInt((Member m) -> m.stat("drops")));
 		sorter.setComparator(DISCORD, Comparator.comparing((Member m) -> m.onHub()).thenComparing(Member::discordLinked));
-		sorter.setComparator(VERSION, Comparator.comparing((Member m) -> m.onHub()).thenComparing(m -> !m.outdated()).thenComparing(Member::version, TsgHubActivity::compareVersions));
+		sorter.setComparator(VERSION, Comparator.comparing((Member m) -> m.onHub()).thenComparing(m -> !m.outdated()).thenComparing(Member::version, TsgHubMembers::compareVersions));
 		List<RowSorter.SortKey> keys = new ArrayList<>();
 		keys.add(new RowSorter.SortKey(SEEN, SortOrder.DESCENDING));
 		sorter.setSortKeys(keys);
@@ -245,7 +262,7 @@ final class TsgHubActivityPanel extends JPanel
 	private void applyFilter()
 	{
 		String needle = PlayerNames.searchKey(search.getText());
-		boolean inactive = inactiveOnly.isSelected(), notOnHub = notOnHubOnly.isSelected(), outdated = outdatedOnly.isSelected();
+		boolean inactive = inactiveOnly.isSelected(), notOnHub = notOnHubOnly.isSelected(), outdated = outdatedOnly.isSelected(), warned = warnedOnly.isSelected();
 		limit = threshold.getAsInt();
 		sorter.setRowFilter(new RowFilter<Model, Integer>()
 		{
@@ -253,8 +270,9 @@ final class TsgHubActivityPanel extends JPanel
 			{
 				Member member = model.get(entry.getIdentifier());
 				if (!needle.isEmpty() && !matches(member, needle)) return false;
-				if (!inactive && !notOnHub && !outdated) return true;
-				return (inactive && member.inactive(now, limit)) || (notOnHub && !member.onHub()) || (outdated && member.outdated());
+				if (!inactive && !notOnHub && !outdated && !warned) return true;
+				return (inactive && member.inactive(now, limit)) || (notOnHub && !member.onHub()) || (outdated && member.outdated())
+					|| (warned && !member.activeWarnings().isEmpty());
 			}
 		});
 	}
@@ -271,7 +289,7 @@ final class TsgHubActivityPanel extends JPanel
 		Snapshot current = snapshot;
 		if (current == null) return;
 		limit = threshold.getAsInt();
-		Summary summary = TsgHubActivity.summarize(current.members, current.eventsInWindow, now, limit);
+		Summary summary = TsgHubMembers.summarize(current.members, current.eventsInWindow, now, limit);
 		activeValue.setText(summary.active + " / " + summary.total);
 		activeCaption.setText("seen in the last " + plural(limit, "day"));
 		adoptionValue.setText(summary.total == 0 ? "-" : Math.round(100f * summary.onHub / summary.total) + "%");
@@ -279,7 +297,7 @@ final class TsgHubActivityPanel extends JPanel
 		turnoutValue.setText(summary.turnoutPercent < 0 ? "-" : summary.turnoutPercent + "%");
 		turnoutCaption.setText(current.eventsInWindow == 0 ? "no events in the last " + plural(current.days, "day")
 			: "avg attendance across " + plural(current.eventsInWindow, "event"));
-		footnote.setText("Click a member for their daily activity, events and group content.");
+		footnote.setText("Click a member for their activity, admin note and warnings.");
 		applyFilter();
 	}
 
@@ -287,21 +305,55 @@ final class TsgHubActivityPanel extends JPanel
 	{
 		if (detailDialog == null || !detailDialog.isDisplayable())
 		{
-			detail = new TsgHubActivityDetail();
+			detail = new TsgHubMemberDetail(members, () -> snapshot == null ? Collections.emptyList() : snapshot.members);
 			detailDialog = new JDialog(SwingUtilities.getWindowAncestor(this), "", Dialog.ModalityType.MODELESS);
 			detailDialog.setDefaultCloseOperation(JDialog.HIDE_ON_CLOSE);
 			detailDialog.setContentPane(detail);
-			detailDialog.setSize(TsgHubActivityDetail.DETAIL_W + 40, 620);
+			detailDialog.setSize(TsgHubMemberDetail.DETAIL_W + 40, 620);
 			detailDialog.setLocationRelativeTo(this);
 		}
 		detailDialog.setTitle("TSG Hub · " + member.name);
-		detail.show(member, activity.rankIcon(member.rankId), now);
+		detail.show(member, members.rankIcon(member.rankId), now, snapshot != null && snapshot.notesLoaded);
 		detailDialog.setVisible(true);
 		detailDialog.toFront();
 		if (!member.onHub()) return;
-		String name = TsgHubJson.str(member.stats, "displayName");
 		int window = days;
-		activity.loadMember(name.isEmpty() ? member.name : name, window, loaded -> detail.setDetail(member, loaded, window), message -> detail.failed(member, message));
+		members.loadMember(member.hubName(), window, loaded -> detail.setDetail(member, loaded, window), message -> detail.failed(member, message));
+	}
+
+	void applyNotes(JsonArray notes)
+	{
+		Snapshot current = snapshot;
+		if (current == null || notes.equals(appliedNotes)) return;
+		appliedNotes = notes;
+		snapshot = new Snapshot(TsgHubMembers.withNotes(current.members, notes), current.days, current.eventsInWindow, current.latestVersion, current.fromClan, true);
+		model.setMembers(snapshot.members);
+		refreshDetail();
+	}
+
+	private void refreshDetail()
+	{
+		if (detailDialog == null || !detailDialog.isVisible()) return;
+		for (Member member : snapshot.members) detail.setNotes(member, snapshot.notesLoaded);
+	}
+
+	private String tooltip(Member member, int column)
+	{
+		if (column == MEMBER)
+		{
+			String tip = TsgHubRoster.rosterTooltip("", TsgHubJson.array(member.stats, "previousNames"), "", new JsonArray(), member.note(), member.warnings(), now, ZoneId.systemDefault());
+			return tip.isEmpty() ? null : tooltipHtml(tip);
+		}
+		if (column == EVENTS && member.onHub())
+		{
+			int window = snapshot == null ? 0 : snapshot.eventsInWindow;
+			return "Took part in " + member.stat("eventsAttended") + " of " + plural(window, "event") + ", joined " + member.stat("eventsJoined");
+		}
+		if (column == SEEN && member.lastSeen() != null) return localDate(member.lastSeen(), ZoneId.systemDefault());
+		if (column == VERSION && member.outdated()) return "Running an older plugin than " + (snapshot == null ? "the latest" : snapshot.latestVersion);
+		if (column == GROUP && member.stat("groupContent") > 0) return plural(member.stat("groupContent"), "completion") + " with " + plural(member.stat("groupPartners"), "clanmate");
+		if (column == DISCORD && member.discordLinked()) return "Linked to Discord";
+		return null;
 	}
 
 	private final class Model extends AbstractTableModel
@@ -327,6 +379,9 @@ final class TsgHubActivityPanel extends JPanel
 
 	private final class Cell extends DefaultTableCellRenderer
 	{
+		private boolean warned;
+		private boolean noted;
+
 		@Override
 		public Component getTableCellRendererComponent(JTable table, Object value, boolean selected, boolean focused, int row, int column)
 		{
@@ -335,7 +390,6 @@ final class TsgHubActivityPanel extends JPanel
 			setFont(column == MEMBER ? boldFont() : plainFont());
 			setBorder(CELL_BORDER);
 			setIcon(null);
-			setToolTipText(tooltip(member, column));
 			boolean inactive = member.inactive(now, limit);
 			setBackground(selected ? CARD_HOVER : inactive ? INACTIVE_ROW : CARD);
 			Color color = !member.onHub() ? DIM : column == SEEN && inactive ? TsgHubTheme.ERROR : TEXT;
@@ -345,10 +399,13 @@ final class TsgHubActivityPanel extends JPanel
 			if (column == RANK)
 			{
 				setIcon(rankIcons.computeIfAbsent(member.rankId, id -> {
-					BufferedImage icon = activity.rankIcon(id);
+					BufferedImage icon = members.rankIcon(id);
 					return icon == null ? null : new ImageIcon(icon);
 				}));
 			}
+			warned = column == MEMBER && !member.activeWarnings().isEmpty();
+			noted = column == MEMBER && !member.note().isEmpty();
+			if (warned || noted) setBorder(warned ? WARNED_BORDER : NOTED_BORDER);
 			if (column == DISCORD && member.discordLinked())
 			{
 				setText("");
@@ -358,6 +415,16 @@ final class TsgHubActivityPanel extends JPanel
 			return this;
 		}
 
+		@Override
+		protected void paintComponent(java.awt.Graphics g)
+		{
+			super.paintComponent(g);
+			int x = getWidth() - 6 - NOTED.getIconWidth();
+			if (noted) NOTED.paintIcon(this, g, x, (getHeight() - NOTED.getIconHeight()) / 2);
+			x -= BADGE_GAP + WARNED.getIconWidth();
+			if (warned) WARNED.paintIcon(this, g, x, (getHeight() - WARNED.getIconHeight()) / 2);
+		}
+
 		private String text(Member member, int column)
 		{
 			switch (column)
@@ -365,9 +432,9 @@ final class TsgHubActivityPanel extends JPanel
 				case MEMBER: return member.name;
 				case RANK: return member.rank;
 				case JOINED: return member.joined == null ? "-" : member.joined.format(TsgHubFormat.DATE_WITH_YEAR);
-				case SEEN: return member.onHub() ? TsgHubActivity.ago(member.lastSeen(), now) : "-";
+				case SEEN: return member.onHub() ? TsgHubMembers.ago(member.lastSeen(), now) : "-";
 				case ACTIVE: return count(member, "activeDays");
-				case HOURS: return member.onHub() ? String.format(Locale.US, "%.1f", member.stat("minutesOnline") / 60f) : "-";
+				case HOURS: return member.onHub() ? halfHours(member.stat("minutesOnline")) : "-";
 				case EVENTS: return member.onHub() ? member.stat("eventsAttended") + "/" + (snapshot == null ? 0 : snapshot.eventsInWindow) : "-";
 				case GROUP: return count(member, "groupContent");
 				case DROPS: return count(member, "drops");
@@ -377,25 +444,17 @@ final class TsgHubActivityPanel extends JPanel
 			}
 		}
 
-		private String tooltip(Member member, int column)
-		{
-			if (column == MEMBER && !member.previousNames().isEmpty()) return "Previously " + String.join(", ", member.previousNames());
-			if (column == EVENTS && member.onHub())
-			{
-				int window = snapshot == null ? 0 : snapshot.eventsInWindow;
-				return "Took part in " + member.stat("eventsAttended") + " of " + plural(window, "event") + ", joined " + member.stat("eventsJoined");
-			}
-			if (column == SEEN && member.lastSeen() != null) return localDate(member.lastSeen(), ZoneId.systemDefault());
-			if (column == VERSION && member.outdated()) return "Running an older plugin than " + (snapshot == null ? "the latest" : snapshot.latestVersion);
-			if (column == GROUP && member.stat("groupContent") > 0) return plural(member.stat("groupContent"), "completion") + " with " + plural(member.stat("groupPartners"), "clanmate");
-			if (column == DISCORD && member.discordLinked()) return "Linked to Discord";
-			return null;
-		}
 	}
 
 	private static String count(Member member, String key)
 	{
 		return member.onHub() ? String.valueOf(member.stat(key)) : "-";
+	}
+
+	static String halfHours(int minutes)
+	{
+		int halves = Math.round(minutes / 30f);
+		return halves / 2 + (halves % 2 == 0 ? "" : ".5");
 	}
 
 	private static String versionText(Member member)

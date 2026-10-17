@@ -104,7 +104,7 @@ public class ReadmeScreenshots
 		set(plugin, "sessions", new TsgHubSessions(plugin, stopped()));
 		set(plugin, "session", new TsgHubSession(null));
 		set(plugin, "groups", new TsgHubGroups(plugin, null, (PartyService) unsafe().allocateInstance(PartyService.class), null, null, null, null));
-		set(plugin, "presence", new TsgHubPresence(plugin, null, null, null, null, stopped(), null, null, null, () -> ""));
+		set(plugin, "presence", new TsgHubPresence(plugin, null, null, null, null, stopped(), null, null, null, () -> "", notes -> { }));
 		set(plugin, "drops", new TsgHubDrops(plugin, null, null, stopped(), null, null));
 		set(plugin, "announcements", new TsgHubAnnouncements(plugin, stopped(), null, () -> null, line -> { }));
 
@@ -181,7 +181,7 @@ public class ReadmeScreenshots
 			JsonArray announcements = data.getAsJsonObject("announcementsList").getAsJsonArray("announcements");
 			TsgHubNewsEditor news = new TsgHubNewsEditor(plugin);
 			news.setAnnouncements(announcements);
-			TsgHubAdminWindow window = new TsgHubAdminWindow(organizer, () -> { }, news, () -> { }, new TsgHubActivityPanel(null, () -> 14), () -> { });
+			TsgHubAdminWindow window = new TsgHubAdminWindow(organizer, () -> { }, news, () -> { }, new TsgHubMembersPanel(null, () -> 14), () -> { });
 			shoot(window, 860, 340, "admin-events");
 			selectTab(window, "Announcements");
 			news.showAnnouncement(TsgHubJson.str(announcements.get(0).getAsJsonObject(), "id"));

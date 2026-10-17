@@ -80,32 +80,21 @@ final class TsgHubRoster
 
 	static String warningSummary(List<JsonObject> warnings)
 	{
-		int active = 0, expired = 0, revoked = 0;
-		for (JsonObject warning : warnings)
-		{
-			if (bool(warning, "active")) active++;
-			else if (!str(warning, "revokedAt").isEmpty()) revoked++;
-			else expired++;
-		}
-		List<String> parts = new ArrayList<>();
-		parts.add(active + " active");
-		if (expired > 0) parts.add(expired + " expired");
-		if (revoked > 0) parts.add(revoked + " revoked");
-		return String.join(" · ", parts);
+		int active = activeWarningCount(warnings), expired = warnings.size() - active;
+		return active + " active" + (expired > 0 ? " · " + expired + " expired" : "");
 	}
 
 	static String warningCards(List<JsonObject> warnings, Instant now, ZoneId zone)
 	{
-		List<JsonObject> ordered = new ArrayList<>();
-		List<JsonObject> past = new ArrayList<>();
-		for (JsonObject warning : warnings) (bool(warning, "active") ? ordered : past).add(warning);
-		int inactive = past.size();
-		ordered.addAll(past.subList(0, Math.min(inactive, MAX_PAST_WARNINGS)));
+		List<JsonObject> all = activeFirst(warnings);
+		int current = activeWarningCount(warnings);
+		int inactive = all.size() - current;
+		List<JsonObject> ordered = all.subList(0, current + Math.min(inactive, MAX_PAST_WARNINGS));
 		StringBuilder out = new StringBuilder();
 		for (JsonObject warning : ordered)
 		{
 			boolean active = bool(warning, "active");
-			String meta = TsgHubFormat.shortDate(str(warning, "issuedAt"), now, zone) + " · " + escape(str(warning, "issuedBy")) + " · " + warningStatus(warning, now, zone);
+			String meta = warningMeta(warning, now, zone);
 			Color text = active ? TEXT : DIM;
 			out.append(tipCard(active ? TsgHubTheme.ERROR : BORDER, tipLine(text, escape(str(warning, "reason"))) + "<br>" + tipLine(active ? MUTED : DIM, meta)));
 		}
@@ -113,12 +102,32 @@ final class TsgHubRoster
 		return out.toString();
 	}
 
+	static List<JsonObject> activeFirst(List<JsonObject> warnings)
+	{
+		List<JsonObject> ordered = new ArrayList<>();
+		List<JsonObject> past = new ArrayList<>();
+		for (JsonObject warning : warnings) (bool(warning, "active") ? ordered : past).add(warning);
+		ordered.addAll(past);
+		return ordered;
+	}
+
+	private static int activeWarningCount(List<JsonObject> warnings)
+	{
+		int count = 0;
+		for (JsonObject warning : warnings) if (bool(warning, "active")) count++;
+		return count;
+	}
+
+	static String warningMeta(JsonObject warning, Instant now, ZoneId zone)
+	{
+		return TsgHubFormat.shortDate(str(warning, "issuedAt"), now, zone) + " · " + escape(str(warning, "issuedBy")) + " · " + warningStatus(warning, now, zone);
+	}
+
 	static String warningStatus(JsonObject warning, Instant now, ZoneId zone)
 	{
-		if (!str(warning, "revokedAt").isEmpty()) return "revoked by " + escape(str(warning, "revokedBy"));
+		if (!bool(warning, "active")) return "expired";
 		String expires = str(warning, "expiresAt");
-		if (expires.isEmpty()) return "no expiry";
-		return bool(warning, "active") ? "expires " + TsgHubFormat.shortDate(expires, now, zone) : "expired";
+		return expires.isEmpty() ? "no expiry" : "expires " + TsgHubFormat.shortDate(expires, now, zone);
 	}
 
 	static boolean isAltRank(String rank)

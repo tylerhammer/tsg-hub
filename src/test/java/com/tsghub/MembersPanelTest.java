@@ -47,7 +47,7 @@ public class MembersPanelTest
 
 	private static final java.time.Instant NOW = java.time.Instant.parse("2026-10-08T12:00:00Z");
 
-	private static JsonObject warning(String reason, boolean active, String expiresAt, String revokedBy)
+	private static JsonObject warning(String reason, boolean active, String expiresAt)
 	{
 		JsonObject warning = new JsonObject();
 		warning.addProperty("id", reason);
@@ -56,11 +56,6 @@ public class MembersPanelTest
 		warning.addProperty("issuedAt", "2026-09-12T10:00:00Z");
 		warning.addProperty("active", active);
 		if (expiresAt != null) warning.addProperty("expiresAt", expiresAt);
-		if (revokedBy != null)
-		{
-			warning.addProperty("revokedBy", revokedBy);
-			warning.addProperty("revokedAt", "2026-09-20T10:00:00Z");
-		}
 		return warning;
 	}
 
@@ -91,17 +86,16 @@ public class MembersPanelTest
 	public void warningCards()
 	{
 		JsonArray warnings = new JsonArray();
-		warnings.add(warning("Spam <chat>", true, "2026-12-11T10:00:00Z", null));
-		warnings.add(warning("Old one", false, "2026-06-01T10:00:00Z", null));
-		warnings.add(warning("Mistake", false, null, "Crab Legs"));
+		warnings.add(warning("Spam <chat>", true, "2026-12-11T10:00:00Z"));
+		warnings.add(warning("Old one", false, "2026-06-01T10:00:00Z"));
 		String html = tip("", new JsonArray(), "", warnings);
-		assertTrue(html.contains("WARNINGS") && html.contains("1 active · 1 expired · 1 revoked"));
+		assertTrue(html.contains("WARNINGS") && html.contains("1 active · 1 expired"));
 		assertTrue(html.contains("Spam &lt;chat&gt;") && html.contains("12 Sep · Fenrir · expires 11 Dec"));
-		assertTrue(html.contains("Fenrir · expired") && html.contains("revoked by Crab Legs"));
+		assertTrue(html.contains("Fenrir · expired"));
 		assertTrue(html.indexOf("Spam") < html.indexOf("Old one"));
 
 		JsonArray many = new JsonArray();
-		for (int i = 0; i < 5; i++) many.add(warning("Past " + i, false, "2026-06-01T10:00:00Z", null));
+		for (int i = 0; i < 5; i++) many.add(warning("Past " + i, false, "2026-06-01T10:00:00Z"));
 		assertTrue(tip("", new JsonArray(), "", many).contains("+2 older"));
 		assertTrue(TsgHubRoster.hasActiveWarning(warnings));
 		assertEquals(false, TsgHubRoster.hasActiveWarning(many));
