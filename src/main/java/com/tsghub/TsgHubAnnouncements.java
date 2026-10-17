@@ -65,7 +65,7 @@ final class TsgHubAnnouncements
 		JsonArray announcements = published(all);
 		list = announcements;
 		SwingUtilities.invokeLater(() -> polls.reset(announcements));
-		plugin.ui(s -> s.setAnnouncements(announcements));
+		plugin.ui(s -> s.newsView.setAnnouncements(announcements));
 		plugin.windows().news(w -> w.setAnnouncements(announcements));
 		SwingUtilities.invokeLater(() -> {
 			TsgHubNewsEditor admin = panel.get();

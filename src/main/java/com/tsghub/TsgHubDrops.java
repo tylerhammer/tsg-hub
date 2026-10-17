@@ -14,9 +14,9 @@ import com.tsghub.TsgHubUi.Tone;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.ArrayList;
 import java.util.AbstractMap;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -187,7 +187,7 @@ final class TsgHubDrops
 	private String query()
 	{
 		TsgHubSidebarPanel s = sidebar.get();
-		return s == null ? "" : s.dropsQuery();
+		return s == null ? "" : s.dropsView.dropsQuery();
 	}
 
 	void apply(JsonArray drops)
@@ -204,13 +204,13 @@ final class TsgHubDrops
 		}
 		if (clientThread == null)
 		{
-			plugin.ui(s -> s.setDrops(drops));
+			plugin.ui(s -> s.dropsView.setDrops(drops));
 			return;
 		}
 		clientThread.invoke(() -> {
 			if (!indexItems()) return false;
 			addItemIds(drops);
-			plugin.ui(s -> s.setDrops(drops));
+			plugin.ui(s -> s.dropsView.setDrops(drops));
 			if (done != null) done.run();
 			return true;
 		});
