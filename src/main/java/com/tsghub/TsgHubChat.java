@@ -62,7 +62,7 @@ final class TsgHubChat
 					long gained = Long.parseLong(TsgHubJson.str(message, "gained"));
 					String rank = TsgHubJson.str(message, "rank");
 					Long parsedRank = rank.isEmpty() ? null : Long.parseLong(rank);
-					plugin.ui(s -> s.competitionProgress(eventId, gained, parsedRank));
+					plugin.ui(s -> s.competitionView.competitionProgress(eventId, gained, parsedRank));
 				}
 				catch (NumberFormatException ignored) { /* Malformed progress waits for the next report. */ }
 				break;
@@ -122,7 +122,7 @@ final class TsgHubChat
 	{
 		if (version.equals(notifiedUpdate)) return;
 		notifiedUpdate = version;
-		plugin.ui(s -> s.setUpdate(version));
+		plugin.ui(s -> s.homeView.setUpdate(version));
 		local(new ChatMessageBuilder().append(ChatColorType.HIGHLIGHT).append("TSG Hub " + Text.escapeJagex(version) + " is available. Restart RuneLite to update."));
 	}
 

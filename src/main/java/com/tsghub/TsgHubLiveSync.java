@@ -136,7 +136,7 @@ final class TsgHubLiveSync
 		String eventId = session.get(EVENT_ID);
 		String token = session.get(TOKEN);
 		if (!eventId.isEmpty() && !token.isEmpty()) tokens.put(eventId, token);
-		String competitionId = sidebar == null ? null : sidebar.openCompetitionId();
+		String competitionId = sidebar == null ? null : sidebar.competitionView.openCompetitionId();
 		String memberToken = competitionId == null ? "" : session.get(MEMBER_TOKEN + competitionId);
 		if (!memberToken.isEmpty()) tokens.putIfAbsent(competitionId, memberToken);
 		for (String joinedId : plugin.sessions().joinedCompetitions())
@@ -202,10 +202,10 @@ final class TsgHubLiveSync
 		if (sidebar == null) return;
 		TsgHubSession session = plugin.session();
 		if (isActiveEvent(eventId) && sidebar.wantsAutoRefresh()) plugin.sessions().applyBoard(eventId, session.get(TOKEN), event, false);
-		if (eventId.equals(sidebar.openCompetitionId()))
+		if (eventId.equals(sidebar.competitionView.openCompetitionId()))
 		{
 			String name = session.get(MEMBER_NAME + eventId);
-			plugin.ui(s -> s.showCompetition(event, name, false));
+			plugin.ui(s -> s.competitionView.showCompetition(event, name, false));
 		}
 	}
 
@@ -215,7 +215,7 @@ final class TsgHubLiveSync
 		TsgHubSidebarPanel sidebar = plugin.sidebar();
 		if (sidebar == null) return;
 		if (isActiveEvent(eventId) && sidebar.wantsAutoRefresh()) plugin.sessions().refreshBoard();
-		if (eventId.equals(sidebar.openCompetitionId())) plugin.sessions().openCompetition(eventId);
+		if (eventId.equals(sidebar.competitionView.openCompetitionId())) plugin.sessions().openCompetition(eventId);
 	}
 
 	private boolean isActiveEvent(String eventId)
