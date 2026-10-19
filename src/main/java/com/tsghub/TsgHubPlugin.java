@@ -354,7 +354,7 @@ public class TsgHubPlugin extends Plugin
 		if (signals != null) signals.clear();
 		sessions.loggedOut();
 		SwingUtilities.invokeLater(() -> {
-			if (panel != null) panel.setDetectedClanName("", -1);
+			if (panel != null) panel.eventForm.setDetectedClanName("", -1);
 			if (sidebar != null)
 			{
 				sidebar.setOrganizerAccess(false);
@@ -432,7 +432,7 @@ public class TsgHubPlugin extends Plugin
 		String clanName = clan.name();
 		int rank = clan.rank();
 		SwingUtilities.invokeLater(() -> {
-			if (panel != null) panel.setDetectedClanName(clanName, rank);
+			if (panel != null) panel.eventForm.setDetectedClanName(clanName, rank);
 			if (sidebar != null) sidebar.setOrganizerAccess(organizerAccess);
 		});
 		if (!organizerAccess) windows.hideAdmin();

@@ -417,4 +417,14 @@ final class TsgHubIcons
 			g.dispose();
 		}
 	}
+
+	static final class RemoveIcon extends HoverIcon
+	{
+		RemoveIcon() { super(12); }
+		@Override void paint(Graphics2D g, Component c)
+		{
+			g.drawLine(2, 2, 10, 10);
+			g.drawLine(10, 2, 2, 10);
+		}
+	}
 }
