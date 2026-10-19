@@ -1,6 +1,7 @@
 package com.tsghub;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.tsghub.TsgHubUi.Tone;
 import java.awt.Graphics2D;
@@ -63,6 +64,7 @@ final class TsgHubPresence
 	private final Supplier<String> key;
 	private final ActivityDetector activity = new ActivityDetector();
 	private volatile JsonObject listed;
+	private volatile JsonArray online;
 	private volatile JsonArray notes;
 	private volatile long sentAt;
 	private volatile AreaNames.Area area;
@@ -153,16 +155,52 @@ final class TsgHubPresence
 	void apply(JsonArray members, JsonArray loaded)
 	{
 		if (!plugin.canUseHub()) return;
+		online = members;
 		if (loaded != null) notes = loaded;
 		JsonArray known = notes;
+		JsonArray rows = members.deepCopy();
 		clientThread.invokeLater(() -> {
-			JsonArray[] roster = roster(members, chatWorlds(), clanNames(), known == null ? new JsonArray() : known);
+			JsonArray[] roster = roster(rows, chatWorlds(), clanNames(), known == null ? new JsonArray() : known);
 			addRanks(roster[0]);
 			addRanks(roster[1]);
 			loadAccountIcons(roster[0]);
 			loadAccountIcons(roster[1]);
 			plugin.ui(s -> s.membersView.setMembers(roster[0], roster[1], known != null));
 		});
+	}
+
+	void applyDelta(JsonObject presenceDelta, JsonObject notesDelta)
+	{
+		JsonArray known = notes;
+		apply(merge(online, presenceDelta), notesDelta == null ? null : merge(known, notesDelta));
+	}
+
+	static JsonArray merge(JsonArray rows, JsonObject delta)
+	{
+		JsonArray base = rows == null ? new JsonArray() : rows;
+		if (delta == null) return base;
+		Map<String, JsonElement> byName = new LinkedHashMap<>();
+		for (JsonElement row : base)
+		{
+			if (row.isJsonObject()) byName.put(PlayerNames.key(TsgHubJson.str(row.getAsJsonObject(), "displayName")), row);
+		}
+		for (JsonElement name : TsgHubJson.array(delta, "remove"))
+		{
+			if (name.isJsonPrimitive()) byName.remove(PlayerNames.key(name.getAsString()));
+		}
+		for (JsonElement row : TsgHubJson.array(delta, "upsert"))
+		{
+			if (row.isJsonObject()) byName.put(PlayerNames.key(TsgHubJson.str(row.getAsJsonObject(), "displayName")), row);
+		}
+		JsonArray merged = new JsonArray();
+		byName.values().forEach(merged::add);
+		return merged;
+	}
+
+	void open(boolean quiet)
+	{
+		if (socket.isLive()) plugin.liveSync().syncNow();
+		else loadMembers(quiet);
 	}
 
 	private Map<String, Integer> chatWorlds()

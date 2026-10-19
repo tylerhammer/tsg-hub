@@ -188,6 +188,11 @@ final class TsgHubLiveSync
 
 	private void presence(JsonObject data, String eventId)
 	{
+		if (data.has("delta"))
+		{
+			plugin.presence().applyDelta(data.has("presence") ? TsgHubJson.object(data, "presence") : null, data.has("members") ? TsgHubJson.object(data, "members") : null);
+			return;
+		}
 		if (!data.has("presence") || !data.get("presence").isJsonObject()) return;
 		JsonObject notes = data.has("members") && data.get("members").isJsonObject() ? data.getAsJsonObject("members") : null;
 		plugin.presence().apply(TsgHubJson.array(data.getAsJsonObject("presence"), "members"), notes == null ? null : TsgHubJson.array(notes, "members"));

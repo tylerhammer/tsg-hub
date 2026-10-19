@@ -248,6 +248,7 @@ final class TsgHubSocket
 		watching.forEach(topics::add);
 		JsonObject message = new JsonObject();
 		message.add("topics", topics);
+		message.addProperty("deltas", true);
 		emit("watch", message);
 	}
 
