@@ -14,7 +14,7 @@ import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Component;
 import java.awt.FlowLayout;
-import java.awt.KeyboardFocusManager;
+import java.awt.Window;
 import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -170,7 +170,8 @@ final class TsgHubPanel extends JPanel
 
 	boolean editingText()
 	{
-		Component focused = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+		Window window = SwingUtilities.getWindowAncestor(this);
+		Component focused = window == null ? null : window.getFocusOwner();
 		return focused instanceof JTextComponent && SwingUtilities.isDescendingFrom(focused, this);
 	}
 
