@@ -51,7 +51,9 @@ final class TsgHubDropsView
 		"ToB", new Color(255, 122, 122),
 		"ToA", new Color(224, 180, 76),
 		"Pet", new Color(255, 138, 216),
-		"Dupe pet", new Color(255, 138, 216));
+		"Dupe pet", new Color(255, 138, 216),
+		"Spooned", new Color(255, 215, 64),
+		"Dry", new Color(214, 160, 105));
 	TsgHubDropsView(TsgHubPlugin plugin, TsgHubSidebarPanel shell)
 	{
 		this.plugin = plugin;
