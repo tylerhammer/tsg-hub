@@ -217,7 +217,6 @@ final class TsgHubSocket
 
 	synchronized boolean xp(String skill, int xp, int tick)
 	{
-		if (confirmed.isEmpty()) return false;
 		JsonObject message = new JsonObject();
 		message.addProperty("skill", skill);
 		message.addProperty("xp", xp);
@@ -227,7 +226,6 @@ final class TsgHubSocket
 
 	synchronized void rewardInterface(int group, boolean open, int tick)
 	{
-		if (confirmed.isEmpty()) return;
 		JsonObject message = new JsonObject();
 		message.addProperty("group", group);
 		message.addProperty("open", open);
