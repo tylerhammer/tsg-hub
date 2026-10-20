@@ -61,6 +61,33 @@ public class DropsPanelTest
 		JsonObject plain = drop("Abyssal whip", 1);
 		plain.addProperty("kind", "drop");
 		assertEquals(Collections.emptyList(), TsgHubDrops.dropTags(plain));
+		JsonObject pet = drop("Vorki", 1);
+		pet.addProperty("kind", "pet");
+		pet.add("luck", luck(0.004, "spooned"));
+		assertEquals(Arrays.asList("Pet", "Spooned"), TsgHubDrops.dropTags(pet));
+		plain.add("luck", luck(0.93, "dry"));
+		assertEquals(Arrays.asList("Dry"), TsgHubDrops.dropTags(plain));
+		plain.add("luck", luck(0.5, ""));
+		assertEquals(Collections.emptyList(), TsgHubDrops.dropTags(plain));
+	}
+
+	private static JsonObject luck(double share, String verdict)
+	{
+		JsonObject luck = new JsonObject();
+		luck.addProperty("share", share);
+		luck.addProperty("verdict", verdict);
+		return luck;
+	}
+
+	@Test
+	public void luckTooltip()
+	{
+		JsonObject drop = drop("Vorki", 1);
+		drop.addProperty("killCount", 12);
+		drop.add("luck", luck(0.004, "spooned"));
+		assertTrue(TsgHubDrops.dropTooltip(drop).contains("LUCK</b> </font>Only 0.4% of players would have it by this kill count"));
+		drop.add("luck", luck(0.93, "dry"));
+		assertTrue(TsgHubDrops.dropTooltip(drop).contains("93% of players would have it by this kill count"));
 	}
 
 	@Test

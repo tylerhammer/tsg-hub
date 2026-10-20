@@ -259,7 +259,20 @@ final class TsgHubDrops
 				+ tipCard(ACCENT, "<b>" + escape(source) + "</b>" + (rate.isEmpty() ? "" : "<br>" + escape(rate) + tipLine(MUTED, " drop rate")));
 		}
 		if (kc > 0) out += tipSection(out.isEmpty(), tipLine(MUTED, "<b>KILL COUNT</b> ") + TsgHubFormat.number(kc));
+		JsonObject luck = object(drop, "luck");
+		if (luck != null && luck.has("share") && kc > 0)
+		{
+			String share = luckPercent(luck.get("share").getAsDouble());
+			String text = "spooned".equals(str(luck, "verdict")) ? "Only " + share + " of players" : share + " of players";
+			out += tipSection(out.isEmpty(), tipLine(MUTED, "<b>LUCK</b> ") + text + " would have it by this kill count");
+		}
 		return out;
+	}
+
+	static String luckPercent(double share)
+	{
+		double percent = share * 100;
+		return (percent < 1 ? String.format(Locale.ROOT, "%.1f", percent) : String.format(Locale.ROOT, "%.0f", percent)) + "%";
 	}
 
 	static boolean dropMatches(JsonObject drop, int type, long minValue, String self)
@@ -286,6 +299,9 @@ final class TsgHubDrops
 		else if ("pet".equals(kind)) tags.add("Pet");
 		else if ("dupe".equals(kind)) tags.add("Dupe pet");
 		if (bool(drop, "newLog") || "clog".equals(kind)) tags.add("Log");
+		String verdict = str(object(drop, "luck"), "verdict");
+		if ("spooned".equals(verdict)) tags.add("Spooned");
+		else if ("dry".equals(verdict)) tags.add("Dry");
 		return tags;
 	}
 
