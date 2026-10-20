@@ -73,7 +73,7 @@ final class TsgHubMemberMap
 	void autoRefresh()
 	{
 		if (!open || !plugin.canUseHub() || executor.isShutdown()) return;
-		String clan = TsgHubApi.encode(plugin.getDetectedClanName());
+		String clan = TsgHubApi.encode(plugin.clan().name());
 		api.get().call("GET", "/v1/presence/positions?clanName=" + clan, null, null)
 			.thenAcceptAsync(result -> apply(TsgHubJson.array(result, "members")), executor);
 	}
@@ -81,7 +81,7 @@ final class TsgHubMemberMap
 	void apply(JsonArray members)
 	{
 		if (!open) return;
-		String self = PlayerNames.key(plugin.getDetectedPlayerName());
+		String self = PlayerNames.key(plugin.clan().playerName());
 		List<Member> next = new ArrayList<>();
 		Set<String> seen = new HashSet<>();
 		for (JsonObject member : TsgHubJson.objects(members))

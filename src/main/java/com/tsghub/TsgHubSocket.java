@@ -94,6 +94,7 @@ final class TsgHubSocket
 	private final HttpUrl url;
 	private final ScheduledExecutorService executor;
 	private final Listener listener;
+	private final TsgHubTraffic traffic;
 	private final Map<String, Subscription> subscriptions = new HashMap<>();
 	private final Map<String, String> rejectedTokens = new HashMap<>();
 	private final Set<String> confirmed = new HashSet<>();
@@ -108,10 +109,11 @@ final class TsgHubSocket
 	private final TsgHubBackoff backoff = new TsgHubBackoff(1_000, 60_000);
 	private State state = State.DISCONNECTED;
 
-	TsgHubSocket(OkHttpClient http, Gson gson, String baseUrl, ScheduledExecutorService executor, Listener listener)
+	TsgHubSocket(OkHttpClient http, Gson gson, String baseUrl, ScheduledExecutorService executor, Listener listener, TsgHubTraffic traffic)
 	{
 		this.gson = gson;
-		this.http = http.newBuilder().pingInterval(PING_SECONDS, TimeUnit.SECONDS).build();
+		this.traffic = traffic;
+		this.http = traffic.track(http).newBuilder().pingInterval(PING_SECONDS, TimeUnit.SECONDS).build();
 		this.url = HttpUrl.get(baseUrl.replaceAll("/+$", "") + "/v1/ws");
 		this.executor = executor;
 		this.listener = listener;
@@ -169,7 +171,7 @@ final class TsgHubSocket
 		boolean live = ready && socket != null;
 		if (payload == null)
 		{
-			if (live && presence != null) socket.send("{\"type\":\"presence.leave\"}");
+			if (live && presence != null) transmit("presence.leave", "{\"type\":\"presence.leave\"}");
 			presence = null;
 			return live;
 		}
@@ -194,7 +196,13 @@ final class TsgHubSocket
 	{
 		if (!ready || socket == null) return false;
 		message.addProperty("type", type);
-		return socket.send(message.toString());
+		return transmit(type, message.toString());
+	}
+
+	private boolean transmit(String type, String text)
+	{
+		traffic.sent(type, text);
+		return socket.send(text);
 	}
 
 	synchronized boolean signaling()
@@ -204,7 +212,7 @@ final class TsgHubSocket
 
 	synchronized boolean sendSignal(JsonObject message)
 	{
-		return signaling() && socket.send(message.toString());
+		return signaling() && transmit(TsgHubJson.str(message, "type"), message.toString());
 	}
 
 	synchronized boolean xp(String skill, int xp, int tick)
@@ -240,6 +248,7 @@ final class TsgHubSocket
 		watching.forEach(topics::add);
 		JsonObject message = new JsonObject();
 		message.add("topics", topics);
+		message.addProperty("deltas", true);
 		emit("watch", message);
 	}
 
@@ -385,6 +394,7 @@ final class TsgHubSocket
 			}
 			catch (RuntimeException e) { return; }
 			String type = TsgHubJson.str(message, "type");
+			traffic.received(type, text);
 			String eventId = TsgHubJson.str(message, "eventId");
 			switch (type)
 			{

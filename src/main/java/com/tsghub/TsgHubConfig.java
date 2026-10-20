@@ -100,7 +100,7 @@ public interface TsgHubConfig extends Config
 
 	@Range(min = 1, max = 365)
 	@Units(" days")
-	@ConfigItem(keyName = "inactivityDays", position = 1, section = discordSection, name = "Inactive after", description = "Admin tools only. In the admin Activity tab, clan members not seen on TSG Hub for this many days count as inactive.")
+	@ConfigItem(keyName = "inactivityDays", position = 1, section = discordSection, name = "Inactive after", description = "Admin tools only. In the admin Members tab, clan members not seen on TSG Hub for this many days count as inactive.")
 	default int inactivityDays()
 	{
 		return 14;

@@ -7,15 +7,17 @@ import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.tsghub.TsgHubActivity.Member;
+import com.tsghub.TsgHubMembers.Member;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
+import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
@@ -31,16 +33,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Supplier;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.ImageIcon;
+import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.ToolTipManager;
 import net.runelite.client.util.QuantityFormatter;
 
-final class TsgHubActivityDetail extends JPanel
+final class TsgHubMemberDetail extends JPanel
 {
 	static final int DETAIL_W = 520;
 	private static final int MAX_GROUP_CONTENT = 20;
@@ -48,6 +52,7 @@ final class TsgHubActivityDetail extends JPanel
 	private final JLabel name = label(" ", TEXT, titleFont());
 	private final JLabel rankBadge = badge(" ", MUTED);
 	private final JLabel previously = caption(" ");
+	private final JLabel alts = label(" ", ACCENT, smallFont());
 	private final JLabel joinedValue = label("-", TEXT, headingFont());
 	private final JLabel seenValue = label("-", TEXT, headingFont());
 	private final JLabel avgTitle = caption("AVG A DAY");
@@ -59,11 +64,17 @@ final class TsgHubActivityDetail extends JPanel
 	private final JPanel events = stack();
 	private final JPanel groupContent = stack();
 	private final JPanel body = stack();
+	private final JPanel admin = stack();
+	private final StatusLine adminStatus = new StatusLine(DETAIL_W);
+	private final TsgHubMembers members;
+	private final Supplier<List<Member>> roster;
 	private String showing = "";
 
-	TsgHubActivityDetail()
+	TsgHubMemberDetail(TsgHubMembers members, Supplier<List<Member>> roster)
 	{
 		super(new BorderLayout());
+		this.members = members;
+		this.roster = roster;
 		setBackground(BACKGROUND);
 		WidthTrackingPanel content = new WidthTrackingPanel();
 		content.setBorder(BorderFactory.createEmptyBorder(14, 16, 14, 16));
@@ -78,6 +89,7 @@ final class TsgHubActivityDetail extends JPanel
 		content.add(fitHeight(header));
 		content.add(Box.createVerticalStrut(GAP_XS));
 		content.add(previously);
+		content.add(alts);
 		content.add(Box.createVerticalStrut(GAP_M));
 		JPanel tiles = panel(new GridLayout(1, 4, GAP_S, 0));
 		tiles.add(statCard(caption("JOINED CLAN"), joinedValue, null));
@@ -85,6 +97,7 @@ final class TsgHubActivityDetail extends JPanel
 		tiles.add(statCard(avgTitle, avgValue, null));
 		tiles.add(statCard(caption("ACTIVE"), activeValue, null));
 		content.add(fitHeight(tiles));
+		content.add(admin);
 		content.add(Box.createVerticalStrut(GAP_M));
 		content.add(message);
 
@@ -98,7 +111,7 @@ final class TsgHubActivityDetail extends JPanel
 		add(scroll(content), BorderLayout.CENTER);
 	}
 
-	void show(Member member, BufferedImage rankIcon, Instant now)
+	void show(Member member, BufferedImage rankIcon, Instant now, boolean notesLoaded)
 	{
 		showing = member.name;
 		name.setText(member.name);
@@ -108,7 +121,7 @@ final class TsgHubActivityDetail extends JPanel
 		previously.setText(member.previousNames().isEmpty() ? "" : "previously " + String.join(", ", member.previousNames()));
 		previously.setVisible(!member.previousNames().isEmpty());
 		joinedValue.setText(member.joined == null ? "-" : member.joined.format(TsgHubFormat.DATE_WITH_YEAR));
-		seenValue.setText(member.onHub() ? TsgHubActivity.ago(member.lastSeen(), now) : "-");
+		seenValue.setText(member.onHub() ? TsgHubMembers.ago(member.lastSeen(), now) : "-");
 		avgTitle.setText("AVG A DAY");
 		avgValue.setText("-");
 		activeValue.setText("-");
@@ -116,8 +129,89 @@ final class TsgHubActivityDetail extends JPanel
 		message.setForeground(MUTED);
 		message.setText(member.onHub() ? "Loading activity..." : html(escape(member.name + " isn't on TSG Hub yet, so there's no activity to show."), DETAIL_W));
 		message.setVisible(true);
+		setNotes(member, notesLoaded);
+	}
+
+	void setNotes(Member member, boolean loaded)
+	{
+		if (!member.name.equals(showing)) return;
+		String altText = !member.altOf().isEmpty() ? "Alt of " + member.altOf() : altsText(strings(member.alts()));
+		alts.setText(altText);
+		alts.setVisible(!altText.isEmpty());
+		admin.removeAll();
+		admin.setVisible(loaded);
+		if (loaded)
+		{
+			addNote(member);
+			addWarnings(member);
+			admin.add(adminStatus);
+		}
 		refresh(this);
 	}
+
+	private static String altsText(List<String> names)
+	{
+		return names.isEmpty() ? "" : (names.size() == 1 ? "Alt: " : "Alts: ") + String.join(", ", names);
+	}
+
+	private void addNote(Member member)
+	{
+		String note = member.note();
+		JButton edit = button(note.isEmpty() ? "Add" : "Edit");
+		edit.setToolTipText(member.alt() ? "Edit the admin note and main character" : "Edit the admin note");
+		edit.addActionListener(e -> TsgHubMemberAdmin.editNote(this, members.presence(), member.hubName(), member.alt(), member.altOf(), note,
+			members.mainCandidates(member.hubName(), roster.get()), feedback));
+		JButton remove = dangerButton("Remove");
+		remove.addActionListener(e -> TsgHubMemberAdmin.removeNote(this, members.presence(), member.hubName(), member.altOf(), feedback));
+		remove.setVisible(!note.isEmpty());
+		admin.add(sectionHeader("Admin note", edit, remove));
+		admin.add(note.isEmpty() ? caption("No admin note.") : listCard(wrapped(note, TEXT, plainFont(), DETAIL_W - 40)));
+	}
+
+	private void addWarnings(Member member)
+	{
+		List<JsonObject> history = objects(member.warnings());
+		List<JsonObject> active = member.activeWarnings();
+		JButton warn = button("Add warning");
+		warn.addActionListener(e -> TsgHubMemberAdmin.addWarning(this, members.presence(), member.hubName(), active.size(), feedback));
+		String title = history.isEmpty() ? "Warnings" : "Warnings · " + TsgHubRoster.warningSummary(history);
+		admin.add(sectionHeader(title, warn));
+		if (history.isEmpty()) admin.add(caption("No warnings."));
+		Instant now = TsgHubFormat.clock.instant();
+		ZoneId zone = ZoneId.systemDefault();
+		for (JsonObject warning : TsgHubRoster.activeFirst(history))
+		{
+			boolean current = bool(warning, "active");
+			JLabel reason = wrapped(str(warning, "reason"), current ? TEXT : DIM, plainFont(), DETAIL_W - 140);
+			JLabel meta = label(html(TsgHubRoster.warningMeta(warning, now, zone), DETAIL_W - 140), current ? MUTED : DIM, smallFont());
+			admin.add(listCard(twoLines(reason, meta)));
+		}
+	}
+
+	private static JComponent sectionHeader(String title, JButton... buttons)
+	{
+		JPanel actions = panel(new FlowLayout(FlowLayout.RIGHT, GAP_S, 0));
+		for (JButton button : buttons) actions.add(button);
+		JPanel centered = panel(new GridBagLayout());
+		GridBagConstraints c = new GridBagConstraints();
+		c.insets = new Insets(5, 0, 0, 0);
+		centered.add(actions, c);
+		return fitHeight(row(sectionTitle(title), centered));
+	}
+
+	private final TsgHubMemberAdmin.Feedback feedback = new TsgHubMemberAdmin.Feedback()
+	{
+		@Override public void busy(boolean busy)
+		{
+			if (busy) status("Saving...", TsgHubUi.Tone.INFO);
+		}
+
+		@Override public void status(String message, TsgHubUi.Tone tone)
+		{
+			adminStatus.show(message, tone);
+			refresh(TsgHubMemberDetail.this);
+		}
+	};
 
 	void failed(Member member, String error)
 	{

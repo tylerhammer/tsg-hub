@@ -1,6 +1,7 @@
 package com.tsghub;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.tsghub.TsgHubUi.Tone;
 import java.awt.Graphics2D;
@@ -17,15 +18,16 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
-import net.runelite.api.Client;
 import net.runelite.api.Actor;
+import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.IconID;
 import net.runelite.api.NPC;
 import net.runelite.api.Player;
-import net.runelite.api.WorldView;
 import net.runelite.api.Skill;
+import net.runelite.api.WorldView;
 import net.runelite.api.clan.ClanChannel;
 import net.runelite.api.clan.ClanChannelMember;
 import net.runelite.api.clan.ClanMember;
@@ -56,21 +58,25 @@ final class TsgHubPresence
 	private final Map<Integer, BufferedImage> accountIcons = new ConcurrentHashMap<>();
 	private final Map<String, BufferedImage> nameIcons = new ConcurrentHashMap<>();
 	private final ScheduledExecutorService executor;
+	private final Set<NPC> attackers = new HashSet<>();
 	private final Supplier<TsgHubApi> api;
 	private final Supplier<TsgHubSidebarPanel> sidebar;
 	private final TsgHubSocket socket;
 	private final Supplier<String> key;
+	private final Consumer<JsonArray> onNotes;
 	private final ActivityDetector activity = new ActivityDetector();
 	private volatile JsonObject listed;
+	private volatile JsonArray online;
 	private volatile JsonArray notes;
 	private volatile long sentAt;
 	private volatile AreaNames.Area area;
 	private boolean slayerDirty = true;
 
 	TsgHubPresence(TsgHubPlugin plugin, Client client, ClientThread clientThread, TsgHubRankIcons rankIcons, SpriteManager sprites, ScheduledExecutorService executor,
-		Supplier<TsgHubApi> api, Supplier<TsgHubSidebarPanel> sidebar, TsgHubSocket socket, Supplier<String> key)
+		Supplier<TsgHubApi> api, Supplier<TsgHubSidebarPanel> sidebar, TsgHubSocket socket, Supplier<String> key, Consumer<JsonArray> onNotes)
 	{
 		this.key = key;
+		this.onNotes = onNotes;
 		this.socket = socket;
 		this.plugin = plugin;
 		this.client = client;
@@ -112,6 +118,7 @@ final class TsgHubPresence
 
 	void onLoggedOut()
 	{
+		attackers.clear();
 		leave();
 		activity.reset();
 		slayerDirty = true;
@@ -134,7 +141,7 @@ final class TsgHubPresence
 	void loadMembers(boolean quiet)
 	{
 		if (!plugin.canUseHub() || executor.isShutdown()) return;
-		String clan = TsgHubApi.encode(plugin.getDetectedClanName());
+		String clan = TsgHubApi.encode(plugin.clan().name());
 		if (!quiet) plugin.ui(s -> s.setBusy(true));
 		String token = key.get();
 		CompletableFuture<JsonObject> notesCall = api.get().call("GET", "/v1/members?clanName=" + clan, token, null)
@@ -151,16 +158,56 @@ final class TsgHubPresence
 	void apply(JsonArray members, JsonArray loaded)
 	{
 		if (!plugin.canUseHub()) return;
-		if (loaded != null) notes = loaded;
+		online = members;
+		if (loaded != null)
+		{
+			notes = loaded;
+			onNotes.accept(loaded);
+		}
 		JsonArray known = notes;
+		JsonArray rows = members.deepCopy();
 		clientThread.invokeLater(() -> {
-			JsonArray[] roster = roster(members, chatWorlds(), clanNames(), known == null ? new JsonArray() : known);
+			JsonArray[] roster = roster(rows, chatWorlds(), clanNames(), known == null ? new JsonArray() : known);
 			addRanks(roster[0]);
 			addRanks(roster[1]);
 			loadAccountIcons(roster[0]);
 			loadAccountIcons(roster[1]);
-			plugin.ui(s -> s.setMembers(roster[0], roster[1], known != null));
+			plugin.ui(s -> s.membersView.setMembers(roster[0], roster[1], known != null));
 		});
+	}
+
+	void applyDelta(JsonObject presenceDelta, JsonObject notesDelta)
+	{
+		JsonArray known = notes;
+		apply(merge(online, presenceDelta), notesDelta == null ? null : merge(known, notesDelta));
+	}
+
+	static JsonArray merge(JsonArray rows, JsonObject delta)
+	{
+		JsonArray base = rows == null ? new JsonArray() : rows;
+		if (delta == null) return base;
+		Map<String, JsonElement> byName = new LinkedHashMap<>();
+		for (JsonElement row : base)
+		{
+			if (row.isJsonObject()) byName.put(PlayerNames.key(TsgHubJson.str(row.getAsJsonObject(), "displayName")), row);
+		}
+		for (JsonElement name : TsgHubJson.array(delta, "remove"))
+		{
+			if (name.isJsonPrimitive()) byName.remove(PlayerNames.key(name.getAsString()));
+		}
+		for (JsonElement row : TsgHubJson.array(delta, "upsert"))
+		{
+			if (row.isJsonObject()) byName.put(PlayerNames.key(TsgHubJson.str(row.getAsJsonObject(), "displayName")), row);
+		}
+		JsonArray merged = new JsonArray();
+		byName.values().forEach(merged::add);
+		return merged;
+	}
+
+	void open(boolean quiet)
+	{
+		if (socket.isLive()) plugin.liveSync().syncNow();
+		else loadMembers(quiet);
 	}
 
 	private Map<String, Integer> chatWorlds()
@@ -242,53 +289,41 @@ final class TsgHubPresence
 		return out;
 	}
 
-	void saveNote(String displayName, String altOf, String note)
+	CompletableFuture<Void> saveNote(String displayName, String altOf, String note)
 	{
 		JsonObject body = adminBody();
 		body.addProperty("displayName", displayName);
 		body.addProperty("altOf", altOf);
 		body.addProperty("note", note);
-		adminWrite("PUT", "/v1/members/notes", body, "Saved " + displayName + ".");
+		return adminWrite("PUT", "/v1/members/notes", body);
 	}
 
-	void addWarning(String displayName, String reason, int expiresInDays)
+	CompletableFuture<Void> addWarning(String displayName, String reason, int expiresInDays)
 	{
 		JsonObject body = adminBody();
 		body.addProperty("displayName", displayName);
 		body.addProperty("reason", reason);
 		body.addProperty("expiresInDays", expiresInDays);
-		adminWrite("POST", "/v1/members/warnings", body, "Warned " + displayName + ".");
-	}
-
-	void revokeWarning(String displayName, String warningId, String reason)
-	{
-		JsonObject body = adminBody();
-		body.addProperty("reason", reason);
-		adminWrite("POST", "/v1/members/warnings/" + TsgHubApi.encode(warningId) + "/revoke", body, "Revoked a warning for " + displayName + ".");
+		return adminWrite("POST", "/v1/members/warnings", body);
 	}
 
 	private JsonObject adminBody()
 	{
 		JsonObject body = new JsonObject();
-		body.addProperty("clanName", plugin.getDetectedClanName());
+		body.addProperty("clanName", plugin.clan().name());
 		return body;
 	}
 
-	private void adminWrite(String method, String path, JsonObject body, String success)
+	private CompletableFuture<Void> adminWrite(String method, String path, JsonObject body)
 	{
 		String token = key.get();
-		if (token.isEmpty() || executor.isShutdown()) return;
-		plugin.ui(s -> s.setBusy(true));
-		api.get().call(method, path, token, body).whenCompleteAsync((response, error) -> {
-			try
-			{
-				TsgHubApi.result(response, error);
-				plugin.ui(s -> s.setStatus(success, Tone.SUCCESS));
-				loadMembers(true);
-			}
-			catch (Exception e) { plugin.ui(s -> s.setStatus("Couldn't save. " + TsgHubFormat.friendlyError(e), Tone.ERROR)); }
-			finally { plugin.ui(s -> s.setBusy(false)); }
-		}, executor);
+		if (token.isEmpty() || executor.isShutdown())
+		{
+			CompletableFuture<Void> failed = new CompletableFuture<>();
+			failed.completeExceptionally(new IllegalStateException("Member notes need a hub key with admin access."));
+			return failed;
+		}
+		return api.get().call(method, path, token, body).thenAccept(response -> loadMembers(true));
 	}
 
 	void autoRefresh()
@@ -353,22 +388,22 @@ final class TsgHubPresence
 
 	private JsonObject snapshot()
 	{
-		if (!plugin.sharingEnabled() || !plugin.isInHubClan() || !plugin.inClanChat()) return null;
+		if (!plugin.sharingEnabled() || !plugin.clan().isHubClan() || !plugin.clan().inClanChat()) return null;
 		if (client.getGameState() != GameState.LOGGED_IN) return null;
 		Player player = client.getLocalPlayer();
 		long hash = client.getAccountHash();
-		String name = plugin.getDetectedPlayerName();
+		String name = plugin.clan().playerName();
 		if (player == null || player.getLocalLocation() == null || hash == -1 || name.isEmpty()) return null;
 		boolean detailed = plugin.locationSharingEnabled();
 		AreaNames.Area area = this.area;
 		JsonObject payload = new JsonObject();
-		payload.addProperty("clanName", plugin.getDetectedClanName());
+		payload.addProperty("clanName", plugin.clan().name());
 		payload.addProperty("displayName", name);
 		payload.addProperty("accountHash", Long.toString(hash));
 		payload.addProperty("world", client.getWorld());
 		payload.addProperty("version", TsgHubVersion.VERSION);
 		payload.addProperty("accountType", client.getVarbitValue(VarbitID.IRONMAN));
-		int clanRank = plugin.getDetectedClanRank();
+		int clanRank = plugin.clan().rank();
 		if (clanRank >= 0) payload.addProperty("clanRank", clanRank);
 		payload.addProperty("area", area == null ? "" : area.name);
 		payload.addProperty("activity", detailed ? activity.activity(area, System.currentTimeMillis()) : "Online");
@@ -405,12 +440,20 @@ final class TsgHubPresence
 		long now = System.currentTimeMillis();
 		Actor target = player.getInteracting();
 		if (target instanceof NPC) activity.onOpponent(target.getName(), now);
-		WorldView worldView = client.getTopLevelWorldView();
-		if (worldView == null) return;
-		for (NPC npc : worldView.npcs())
-		{
-			if (npc != null && npc.getInteracting() == player) activity.onOpponent(npc.getName(), now);
-		}
+		attackers.removeIf(npc -> npc.getInteracting() != player);
+		for (NPC npc : attackers) activity.onOpponent(npc.getName(), now);
+	}
+
+	void onInteractingChanged(Actor source, Actor target)
+	{
+		if (!(source instanceof NPC)) return;
+		if (target != null && target == client.getLocalPlayer()) attackers.add((NPC) source);
+		else attackers.remove(source);
+	}
+
+	void onNpcDespawned(NPC npc)
+	{
+		attackers.remove(npc);
 	}
 
 	private void trackSlayerTask()

@@ -10,9 +10,11 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -26,7 +28,7 @@ import net.runelite.api.clan.ClanTitle;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.util.Text;
 
-final class TsgHubActivity
+final class TsgHubMembers
 {
 	static final int NO_RANK = Integer.MIN_VALUE;
 	private static final String NO_CLAN = "No clan detected. Log in to a clan member character.";
@@ -39,8 +41,15 @@ final class TsgHubActivity
 		final int rankId;
 		final LocalDate joined;
 		final JsonObject stats;
+		final JsonObject notes;
+		private final List<JsonObject> activeWarnings;
 
 		Member(String name, String rank, int rankValue, int rankId, LocalDate joined, JsonObject stats)
+		{
+			this(name, rank, rankValue, rankId, joined, stats, new JsonObject());
+		}
+
+		private Member(String name, String rank, int rankValue, int rankId, LocalDate joined, JsonObject stats, JsonObject notes)
 		{
 			this.name = name;
 			this.rank = rank;
@@ -48,11 +57,54 @@ final class TsgHubActivity
 			this.rankId = rankId;
 			this.joined = joined;
 			this.stats = stats;
+			this.notes = notes;
+			this.activeWarnings = TsgHubRoster.activeWarnings(TsgHubJson.array(notes, "warnings"));
 		}
 
 		Member withStats(JsonObject stats)
 		{
-			return new Member(name, rank, rankValue, rankId, joined, stats);
+			return new Member(name, rank, rankValue, rankId, joined, stats, notes);
+		}
+
+		Member withNotes(JsonObject notes)
+		{
+			return new Member(name, rank, rankValue, rankId, joined, stats, notes == null ? new JsonObject() : notes);
+		}
+
+		String note()
+		{
+			return TsgHubJson.str(notes, "note");
+		}
+
+		String altOf()
+		{
+			return TsgHubJson.str(notes, "altOf");
+		}
+
+		JsonArray alts()
+		{
+			return TsgHubJson.array(notes, "alts");
+		}
+
+		JsonArray warnings()
+		{
+			return TsgHubJson.array(notes, "warnings");
+		}
+
+		List<JsonObject> activeWarnings()
+		{
+			return activeWarnings;
+		}
+
+		String hubName()
+		{
+			String name = TsgHubJson.str(stats, "displayName");
+			return name.isEmpty() ? this.name : name;
+		}
+
+		boolean alt()
+		{
+			return !altOf().isEmpty() || TsgHubRoster.isAltRank(rank);
 		}
 
 		boolean onHub()
@@ -104,9 +156,11 @@ final class TsgHubActivity
 		final int eventsInWindow;
 		final String latestVersion;
 		final boolean fromClan;
+		final boolean notesLoaded;
 
-		Snapshot(List<Member> members, int days, int eventsInWindow, String latestVersion, boolean fromClan)
+		Snapshot(List<Member> members, int days, int eventsInWindow, String latestVersion, boolean fromClan, boolean notesLoaded)
 		{
+			this.notesLoaded = notesLoaded;
 			this.members = members;
 			this.days = days;
 			this.eventsInWindow = eventsInWindow;
@@ -137,11 +191,11 @@ final class TsgHubActivity
 	private final TsgHubRankIcons rankIcons;
 	private final ScheduledExecutorService executor;
 	private final Supplier<TsgHubApi> api;
-	private final Supplier<TsgHubActivityPanel> panel;
+	private final Supplier<TsgHubMembersPanel> panel;
 	private final AtomicInteger requests = new AtomicInteger();
 
-	TsgHubActivity(TsgHubPlugin plugin, Client client, ClientThread clientThread, TsgHubRankIcons rankIcons, ScheduledExecutorService executor,
-		Supplier<TsgHubApi> api, Supplier<TsgHubActivityPanel> panel)
+	TsgHubMembers(TsgHubPlugin plugin, Client client, ClientThread clientThread, TsgHubRankIcons rankIcons, ScheduledExecutorService executor,
+		Supplier<TsgHubApi> api, Supplier<TsgHubMembersPanel> panel)
 	{
 		this.plugin = plugin;
 		this.client = client;
@@ -154,60 +208,64 @@ final class TsgHubActivity
 
 	void load()
 	{
-		TsgHubActivityPanel view = panel.get();
+		TsgHubMembersPanel view = panel.get();
 		if (view != null) load(view.days());
 	}
 
 	void load(int days)
 	{
-		String token = plugin.adminKey();
+		String token = plugin.keys().adminKey();
 		if (token.isEmpty() || executor.isShutdown())
 		{
-			ui(p -> p.failed("Clan activity needs a hub key with admin access."));
+			ui(p -> p.failed("Clan members need a hub key with admin access."));
 			return;
 		}
-		if (plugin.getDetectedClanName().isEmpty())
+		if (plugin.clan().name().isEmpty())
 		{
 			ui(p -> p.failed(NO_CLAN));
 			return;
 		}
 		int request = requests.incrementAndGet();
-		String query = "/v1/admin/activity?clanName=" + TsgHubApi.encode(plugin.getDetectedClanName()) + "&days=" + days;
-		ui(p -> p.setStatus("Loading clan activity...", Tone.INFO));
-		api.get().call("GET", query, token, null).whenCompleteAsync((response, error) -> {
-			try
-			{
-				JsonObject result = TsgHubApi.result(response, error);
-				clientThread.invokeLater(() -> {
-					List<Member> clan = clanMembers();
-					Snapshot snapshot = new Snapshot(merge(clan, TsgHubJson.array(result, "members")), TsgHubJson.integer(result, "days", days),
-						TsgHubJson.integer(result, "eventsInWindow", 0), TsgHubJson.str(result, "latestVersion"), clan != null);
-					ui(p -> { if (request == requests.get()) p.setActivity(snapshot); });
-				});
-			}
-			catch (Exception e)
-			{
-				String message = "Couldn't load clan activity. " + TsgHubFormat.friendlyError(e);
-				ui(p -> { if (request == requests.get()) p.failed(message); });
-			}
-		}, executor);
+		String clan = TsgHubApi.encode(plugin.clan().name());
+		ui(p -> p.setStatus("Loading clan members...", Tone.INFO));
+		CompletableFuture<JsonObject> notesCall = api.get().call("GET", "/v1/members?clanName=" + clan, token, null).exceptionally(error -> null);
+		api.get().call("GET", "/v1/admin/activity?clanName=" + clan + "&days=" + days, token, null)
+			.thenCombine(notesCall, (activity, notes) -> new JsonObject[] {activity, notes})
+			.whenCompleteAsync((loaded, error) -> {
+				try
+				{
+					JsonObject result = TsgHubApi.result(loaded == null ? null : loaded[0], error);
+					JsonArray notes = loaded[1] == null ? null : TsgHubJson.array(loaded[1], "members");
+					clientThread.invokeLater(() -> {
+						List<Member> clanList = clanMembers();
+						Snapshot snapshot = new Snapshot(withNotes(merge(clanList, TsgHubJson.array(result, "members")), notes), TsgHubJson.integer(result, "days", days),
+							TsgHubJson.integer(result, "eventsInWindow", 0), TsgHubJson.str(result, "latestVersion"), clanList != null, notes != null);
+						ui(p -> { if (request == requests.get()) p.setActivity(snapshot); });
+					});
+				}
+				catch (Exception e)
+				{
+					String message = "Couldn't load clan members. " + TsgHubFormat.friendlyError(e);
+					ui(p -> { if (request == requests.get()) p.failed(message); });
+				}
+			}, executor);
 	}
 
 	void loadMember(String name, int days, Consumer<JsonObject> loaded, Consumer<String> failed)
 	{
-		String token = plugin.adminKey();
+		String token = plugin.keys().adminKey();
 		if (token.isEmpty() || executor.isShutdown())
 		{
 			SwingUtilities.invokeLater(() -> failed.accept("Member activity needs a hub key with admin access."));
 			return;
 		}
-		if (plugin.getDetectedClanName().isEmpty())
+		if (plugin.clan().name().isEmpty())
 		{
 			SwingUtilities.invokeLater(() -> failed.accept(NO_CLAN));
 			return;
 		}
-		String query = "/v1/admin/activity/member?clanName=" + TsgHubApi.encode(plugin.getDetectedClanName())
-			+ "&name=" + TsgHubApi.encode(name) + "&days=" + TsgHubActivityDetail.ActivityChart.requestDays(days);
+		String query = "/v1/admin/activity/member?clanName=" + TsgHubApi.encode(plugin.clan().name())
+			+ "&name=" + TsgHubApi.encode(name) + "&days=" + TsgHubMemberDetail.ActivityChart.requestDays(days);
 		api.get().call("GET", query, token, null).whenCompleteAsync((response, error) -> {
 			try
 			{
@@ -227,15 +285,20 @@ final class TsgHubActivity
 		}, executor);
 	}
 
+	void applyNotes(JsonArray notes)
+	{
+		ui(p -> p.applyNotes(notes));
+	}
+
 	BufferedImage rankIcon(int rankId)
 	{
 		return rankIcons == null ? null : rankIcons.get(rankId);
 	}
 
-	private void ui(Consumer<TsgHubActivityPanel> action)
+	private void ui(Consumer<TsgHubMembersPanel> action)
 	{
 		SwingUtilities.invokeLater(() -> {
-			TsgHubActivityPanel view = panel.get();
+			TsgHubMembersPanel view = panel.get();
 			if (view != null) action.accept(view);
 		});
 	}
@@ -289,6 +352,37 @@ final class TsgHubActivity
 			out.add(member.withStats(stats != null ? stats : previous.get(key)));
 		}
 		return out;
+	}
+
+	static List<Member> withNotes(List<Member> members, JsonArray notes)
+	{
+		if (notes == null) return members;
+		Map<String, JsonObject> byName = new HashMap<>();
+		for (int i = 0; i < notes.size(); i++)
+		{
+			if (!notes.get(i).isJsonObject()) continue;
+			JsonObject note = notes.get(i).getAsJsonObject();
+			byName.putIfAbsent(PlayerNames.key(TsgHubJson.str(note, "displayName")), note);
+		}
+		List<Member> out = new ArrayList<>();
+		for (Member member : members)
+		{
+			JsonObject note = byName.get(PlayerNames.key(member.hubName()));
+			out.add(member.withNotes(note != null ? note : byName.get(PlayerNames.key(member.name))));
+		}
+		return out;
+	}
+
+	List<String> mainCandidates(String alt, List<Member> members)
+	{
+		Map<String, String> ranks = new LinkedHashMap<>();
+		for (Member member : members) ranks.put(member.name, member.rank);
+		return TsgHubMemberAdmin.mainCandidates(alt, ranks);
+	}
+
+	TsgHubPresence presence()
+	{
+		return plugin.presence();
 	}
 
 	static Summary summarize(List<Member> members, int eventsInWindow, Instant now, int thresholdDays)
