@@ -31,7 +31,6 @@ import net.runelite.api.Client;
 import net.runelite.api.EnumComposition;
 import net.runelite.api.EnumID;
 import net.runelite.api.Prayer;
-import net.runelite.api.gameval.VarbitID;
 import com.tsghub.group.ui.prayer.PrayerSprites;
 
 public class Prayers
@@ -120,25 +119,7 @@ public class Prayers
 
 	private EnumComposition getPrayerEnum(Client client)
 	{
-		boolean deadeye = client.getVarbitValue(VarbitID.PRAYER_DEADEYE_UNLOCKED) != 0;
-		boolean vigour = client.getVarbitValue(VarbitID.PRAYER_MYSTIC_VIGOUR_UNLOCKED) != 0;
-
-		if (deadeye && vigour)
-		{
-			return client.getEnum(EnumID.PRAYERS_NORMAL_DEADEYE_MYSTIC_VIGOUR);
-		}
-		else if (deadeye)
-		{
-			return client.getEnum(EnumID.PRAYERS_NORMAL_DEADEYE);
-		}
-		else if (vigour)
-		{
-			return client.getEnum(EnumID.PRAYERS_NORMAL_MYSTIC_VIGOUR);
-		}
-		else
-		{
-			return client.getEnum(EnumID.PRAYERS_NORMAL);
-		}
+		return client.getEnum(EnumID.PRAYERS_NORMAL);
 	}
 
 	public static boolean isUnlockedByDefault(Prayer p)
