@@ -66,8 +66,8 @@ final class TsgHubHomeView
 	{
 		shell.setView(View.HOME);
 		renderHome();
-		plugin.groups().refresh();
-		plugin.presence().loadMembers(true);
+		plugin.groups().open();
+		plugin.presence().open(true);
 	}
 
 	void renderHome()

@@ -33,7 +33,7 @@ final class TsgHubLiveSync
 	private final Map<String, Topic> topics = new HashMap<>();
 	private volatile Filepath rulesCache;
 
-	TsgHubLiveSync(TsgHubPlugin plugin, OkHttpClient http, Gson gson, String serviceUrl, ScheduledExecutorService executor)
+	TsgHubLiveSync(TsgHubPlugin plugin, OkHttpClient http, Gson gson, String serviceUrl, ScheduledExecutorService executor, TsgHubTraffic traffic)
 	{
 		this.plugin = plugin;
 		this.executor = executor;
@@ -64,7 +64,7 @@ final class TsgHubLiveSync
 			@Override public void onXpRequest(String skills) { plugin.tracker().reportXp(skills); }
 			@Override public void onGroupHeartbeat(JsonObject message) { plugin.groups().beaten(message); }
 			@Override public void onGroupRejected(int status) { plugin.groups().beatRejected(status); }
-		});
+		}, traffic);
 		topics.put("groups", topic((data, eventId) -> plugin.groups().apply(TsgHubJson.array(data, "groups")), eventId -> plugin.groups().autoRefresh()));
 		topics.put("presence", topic(this::presence, eventId -> plugin.presence().autoRefresh()));
 		topics.put("positions", topic((data, eventId) -> plugin.memberMap().apply(TsgHubJson.array(data, "members")), eventId -> { }));
@@ -188,6 +188,11 @@ final class TsgHubLiveSync
 
 	private void presence(JsonObject data, String eventId)
 	{
+		if (data.has("delta"))
+		{
+			plugin.presence().applyDelta(data.has("presence") ? TsgHubJson.object(data, "presence") : null, data.has("members") ? TsgHubJson.object(data, "members") : null);
+			return;
+		}
 		if (!data.has("presence") || !data.get("presence").isJsonObject()) return;
 		JsonObject notes = data.has("members") && data.get("members").isJsonObject() ? data.getAsJsonObject("members") : null;
 		plugin.presence().apply(TsgHubJson.array(data.getAsJsonObject("presence"), "members"), notes == null ? null : TsgHubJson.array(notes, "members"));

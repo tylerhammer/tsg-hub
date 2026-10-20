@@ -68,12 +68,12 @@ final class TsgHubPartiesView
 		if (shell.pinned == View.GROUPS)
 		{
 			shell.dock.expand();
-			plugin.groups().refresh();
+			plugin.groups().open();
 			return;
 		}
 		shell.setView(View.GROUPS);
 		renderGroups();
-		plugin.groups().refresh();
+		plugin.groups().open();
 	}
 
 	void showGroupList()
