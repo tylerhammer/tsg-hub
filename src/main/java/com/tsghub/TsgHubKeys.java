@@ -77,7 +77,7 @@ final class TsgHubKeys
 				backoff.reset();
 				boolean admin = grantsAdmin(result);
 				if (admin != verified) setVerified(admin);
-				if (admin) plugin.sessions().loadClanEvents();
+				if (admin && !plugin.live()) plugin.sessions().loadClanEvents();
 				String linkError = TsgHubJson.str(result, "linkError");
 				boolean linked = TsgHubJson.bool(result, "linked");
 				if (!linkError.isEmpty()) plugin.memberStatus(linkError, Tone.ERROR);

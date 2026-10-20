@@ -45,7 +45,6 @@ final class TsgHubLiveSync
 				refreshRules(rulesVersion);
 				plugin.signals().resend();
 				plugin.reports().resend();
-				resyncAdmin();
 			}
 			@Override public void onChanged(String topic, String eventId) { changed(topic, eventId); }
 			@Override public void onAdminRevoked(String token) { plugin.keys().recheck(token); }
@@ -70,13 +69,13 @@ final class TsgHubLiveSync
 		topics.put("positions", topic((data, eventId) -> plugin.memberMap().apply(TsgHubJson.array(data, "members")), eventId -> { }));
 		topics.put("drops", topic((data, eventId) -> plugin.drops().onSnapshot(TsgHubJson.array(data, "drops")), eventId -> plugin.drops().autoRefresh()));
 		topics.put("announcements", topic((data, eventId) -> plugin.announcements().apply(TsgHubJson.array(data, "announcements")), eventId -> plugin.announcements().load()));
-		topics.put("events", topic((data, eventId) -> {
-			plugin.sessions().applyClanEvents(TsgHubJson.array(data, "events"));
-			reloadManagedEvents();
-		}, eventId -> {
-			plugin.sessions().loadClanEvents();
-			reloadManagedEvents();
-		}));
+		topics.put("events", topic((data, eventId) -> plugin.sessions().applyClanEvents(TsgHubJson.array(data, "events")), eventId -> plugin.sessions().loadClanEvents()));
+		topics.put("managed-events", topic((data, eventId) -> {
+			if (plugin.windows().adminOpen()) plugin.organizer().showManagedEvents(TsgHubJson.array(data, "events"));
+		}, eventId -> reloadManagedEvents()));
+		topics.put("organizer", topic((data, eventId) -> {
+			if (isOrganizerEvent(eventId)) plugin.organizer().showLive(eventId, data);
+		}, this::refreshOrganizerEvent));
 		topics.put("notifications", topic((data, eventId) -> {
 			if (isActiveEvent(eventId)) plugin.chat().notifications(TsgHubJson.array(data, "notifications"));
 		}, eventId -> {
@@ -171,6 +170,12 @@ final class TsgHubLiveSync
 		String eventId = plugin.session().get(EVENT_ID);
 		if (sidebar.wantsAutoRefresh() && !eventId.isEmpty()) watched.add("event:" + eventId);
 		if (competitionId != null) watched.add("event:" + competitionId);
+		if (plugin.windows().adminOpen())
+		{
+			watched.add("managed-events");
+			String organizerEventId = plugin.sessions().organizerEventId();
+			if (!organizerEventId.isEmpty()) watched.add("organizer:" + organizerEventId);
+		}
 		return watched;
 	}
 
@@ -202,7 +207,6 @@ final class TsgHubLiveSync
 	{
 		if (!data.has("event") || !data.get("event").isJsonObject()) return;
 		JsonObject event = data.getAsJsonObject("event");
-		refreshOrganizerEvent(eventId);
 		TsgHubSidebarPanel sidebar = plugin.sidebar();
 		if (sidebar == null) return;
 		TsgHubSession session = plugin.session();
@@ -216,7 +220,6 @@ final class TsgHubLiveSync
 
 	private void eventChanged(String eventId)
 	{
-		refreshOrganizerEvent(eventId);
 		TsgHubSidebarPanel sidebar = plugin.sidebar();
 		if (sidebar == null) return;
 		if (isActiveEvent(eventId) && sidebar.wantsAutoRefresh()) plugin.sessions().refreshBoard();
@@ -228,21 +231,19 @@ final class TsgHubLiveSync
 		return eventId.equals(plugin.session().get(EVENT_ID));
 	}
 
+	private boolean isOrganizerEvent(String eventId)
+	{
+		return plugin.windows().adminOpen() && eventId.equals(plugin.sessions().organizerEventId());
+	}
+
 	private void refreshOrganizerEvent(String eventId)
 	{
-		if (plugin.windows().adminOpen() && eventId.equals(plugin.sessions().organizerEventId())) plugin.organizer().liveRefresh();
+		if (isOrganizerEvent(eventId)) plugin.organizer().liveRefresh();
 	}
 
 	private void reloadManagedEvents()
 	{
 		if (plugin.windows().adminOpen()) plugin.organizer().loadManagedEvents();
-	}
-
-	private void resyncAdmin()
-	{
-		if (!plugin.windows().adminOpen()) return;
-		plugin.organizer().loadManagedEvents();
-		plugin.organizer().liveRefresh();
 	}
 
 	private void refreshRules(String version)

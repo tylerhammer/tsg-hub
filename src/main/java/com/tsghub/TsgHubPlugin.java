@@ -147,7 +147,7 @@ public class TsgHubPlugin extends Plugin
 		liveSync = new TsgHubLiveSync(this, okHttpClient, gson, serviceUrl, executor, traffic);
 		TsgHubSocket socket = liveSync.socket();
 		signals = new TsgHubSignals(socket, this::api, chat::reply);
-		reports = new TsgHubReports(socket::send, (path, body) -> api().request("POST", path, null, body));
+		reports = new TsgHubReports(socket::send, (path, token, body) -> api().request("POST", path, token, body));
 		executor.execute(this::loadCachedRules);
 		every(liveSync::tick, 2, 5, TimeUnit.SECONDS);
 		if (developerMode) every(traffic::log, 60, 60, TimeUnit.SECONDS);
@@ -318,7 +318,7 @@ public class TsgHubPlugin extends Plugin
 	void accessChanged()
 	{
 		liveSync.syncNow();
-		if (presence != null) presence.autoRefresh();
+		if (presence != null && !(keys.verified() && live())) presence.autoRefresh();
 		boolean access = canManageOrganizerUi();
 		SwingUtilities.invokeLater(() -> { if (sidebar != null) sidebar.setOrganizerAccess(access); });
 		if (!access) windows.hideAdmin();

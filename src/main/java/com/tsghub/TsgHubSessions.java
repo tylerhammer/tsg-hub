@@ -280,7 +280,7 @@ final class TsgHubSessions
 			try
 			{
 				JsonObject result = TsgHubApi.result(response, error);
-				if (TsgHubJson.bool(result, "updated") && !session().get(EVENT_ID).isEmpty()) refreshBoard();
+				if (TsgHubJson.bool(result, "updated") && !session().get(EVENT_ID).isEmpty() && !plugin.live()) refreshBoard();
 			}
 			catch (Exception e) { syncedIdentity = ""; }
 		}, executor);
@@ -386,10 +386,12 @@ final class TsgHubSessions
 		Integer synced = syncedClanRanks.get(key);
 		if (synced != null && synced == rank) return;
 		JsonObject body = new JsonObject();
+		body.addProperty("eventId", eventId);
 		body.addProperty("displayName", displayName);
 		body.addProperty("clanName", clan.name());
 		body.addProperty("clanRank", rank);
-		api().call("POST", "/v1/events/" + eventId + "/clan-rank", token, body).thenRun(() -> syncedClanRanks.put(key, rank));
+		syncedClanRanks.put(key, rank);
+		plugin.tracker().report("clan-rank", "/v1/events/" + eventId + "/clan-rank", token, body);
 	}
 
 	void forgetEvent(String eventId)
