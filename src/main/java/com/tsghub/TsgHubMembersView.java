@@ -93,12 +93,12 @@ final class TsgHubMembersView
 		if (shell.pinned == View.MEMBERS)
 		{
 			shell.dock.expand();
-			plugin.presence().loadMembers(false);
+			plugin.presence().open(false);
 			return;
 		}
 		shell.setView(View.MEMBERS);
 		renderMembers();
-		plugin.presence().loadMembers(false);
+		plugin.presence().open(false);
 	}
 
 	void renderMembers()

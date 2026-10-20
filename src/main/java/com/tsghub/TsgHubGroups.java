@@ -118,6 +118,12 @@ final class TsgHubGroups implements GroupTracker.Listener
 		plugin.ui(s -> s.partiesView.setGroups(groups));
 	}
 
+	void open()
+	{
+		if (socket.isLive()) plugin.liveSync().syncNow();
+		else refresh();
+	}
+
 	void refresh()
 	{
 		if (inGroup() && !executor.isShutdown()) executor.submit(this::heartbeat);
