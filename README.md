@@ -180,6 +180,7 @@ Once you opt in, it sends the following to the TSG Hub service:
 - Progress for events you've joined: kill counts, drops, raid completions, collection log unlocks and skill XP
 - Loot you receive while a bingo event you've joined is active, so admins can reconcile a task from earlier drops if its item list changes
 - Your boss kill count messages and the loot you receive, even outside events, so the clan Discord can post a summary of each boss session. The service keeps only the running session, not a history
+- Your skill XP totals as they change, even outside events. The service keeps the XP you gain per skill per day for a year, for clan XP leaderboards
 - Whether you're currently in the clan chat channel and your world, so teammates' completion alerts reach you and clanmates see you as online
 - With **Share location and activity** on, your area name, current activity and world map position (except inside instances)
 - Clan chat broadcasts for drops, raid loot, pets and collection log items, for the clan's **Drops** history. For your own broadcasts, also the monster or activity it came from and your kill count from the game message
