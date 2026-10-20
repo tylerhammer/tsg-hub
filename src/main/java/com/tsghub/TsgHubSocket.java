@@ -199,7 +199,7 @@ final class TsgHubSocket
 
 	synchronized boolean signaling()
 	{
-		return ready && socket != null && !confirmed.isEmpty();
+		return ready && socket != null;
 	}
 
 	synchronized boolean sendSignal(JsonObject message)
