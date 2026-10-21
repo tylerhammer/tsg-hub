@@ -121,7 +121,7 @@ final class TsgHubKeys
 		rejected = key;
 		announce = false;
 		setVerified(false);
-		plugin.memberStatus("Your hub key wasn't accepted. It may have expired or been revoked. Run /hub key in the clan Discord and paste the new key in the plugin settings.", Tone.ERROR);
+		plugin.memberStatus("Your hub key wasn't accepted. It may have expired or been revoked. Run /hub link in the clan Discord and paste the new key in the plugin settings.", Tone.ERROR);
 	}
 
 	void keyChanged()
