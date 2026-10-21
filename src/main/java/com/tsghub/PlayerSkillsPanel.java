@@ -22,11 +22,12 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.tsghub.group.ui.skills;
+package com.tsghub;
 
-import com.tsghub.TsgHubTheme;
+import static com.tsghub.TsgHubTheme.*;
+import static com.tsghub.TsgHubUi.*;
+
 import com.google.common.collect.ImmutableList;
-import com.tsghub.group.data.PartyPlayer;
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.util.HashMap;
@@ -41,9 +42,9 @@ import net.runelite.client.game.SpriteManager;
 import net.runelite.client.hiscore.HiscoreSkill;
 import net.runelite.client.util.QuantityFormatter;
 
-public class PlayerSkillsPanel extends JPanel
+class PlayerSkillsPanel extends JPanel
 {
-	public static final List<Skill> SKILL_ORDER = ImmutableList.of(
+	static final List<Skill> SKILL_ORDER = ImmutableList.of(
 		Skill.ATTACK, Skill.HITPOINTS, Skill.MINING,
 		Skill.STRENGTH, Skill.AGILITY, Skill.SMITHING,
 		Skill.DEFENCE, Skill.HERBLORE, Skill.FISHING,
@@ -55,9 +56,9 @@ public class PlayerSkillsPanel extends JPanel
 	);
 
 	private final Map<Skill, SkillPanelSlot> panelMap = new HashMap<>();
-	private final JLabel totalLabel = new JLabel();
+	private final JLabel totalLabel = label("", TEXT, smallFont());
 
-	public PlayerSkillsPanel(final PartyPlayer player, final boolean displayVirtualLevels, final SpriteManager spriteManager)
+	PlayerSkillsPanel(PartyPlayer player, boolean displayVirtualLevels, SpriteManager spriteManager)
 	{
 		setOpaque(false);
 		setLayout(new BorderLayout(0, 6));
@@ -72,23 +73,15 @@ public class PlayerSkillsPanel extends JPanel
 			spriteManager.getSpriteAsync(HiscoreSkill.valueOf(skill.name()).getSpriteId(), 0, img -> SwingUtilities.invokeLater(() -> slot.setSkillIcon(img)));
 		}
 
-		JLabel totalCaption = new JLabel("Total level");
-		totalCaption.setFont(TsgHubTheme.smallFont());
-		totalCaption.setForeground(TsgHubTheme.MUTED);
-		totalLabel.setFont(TsgHubTheme.smallFont());
-		totalLabel.setForeground(TsgHubTheme.TEXT);
-		JPanel total = new JPanel(new BorderLayout());
-		total.setOpaque(false);
+		JPanel total = row(label("Total level", MUTED, smallFont()), totalLabel);
 		total.setBorder(BorderFactory.createEmptyBorder(0, 1, 0, 1));
-		total.add(totalCaption, BorderLayout.CENTER);
-		total.add(totalLabel, BorderLayout.EAST);
 
 		add(grid, BorderLayout.CENTER);
 		add(total, BorderLayout.SOUTH);
 		update(player, displayVirtualLevels);
 	}
 
-	public void update(PartyPlayer player, boolean displayVirtualLevels)
+	void update(PartyPlayer player, boolean displayVirtualLevels)
 	{
 		if (player.getStats() == null)
 		{

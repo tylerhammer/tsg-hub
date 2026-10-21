@@ -7,9 +7,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.inject.Provides;
 import com.tsghub.TsgHubUi.Tone;
-import com.tsghub.group.GroupMembersPanel;
-import com.tsghub.group.GroupTracker;
-import com.tsghub.group.GroupViewSettings;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.util.ArrayList;
@@ -160,12 +157,7 @@ public class TsgHubPlugin extends Plugin
 		clanMembers = new TsgHubMembers(this, client, clientThread, rankIcons, executor, this::api, () -> membersPanel);
 		membersPanel = new TsgHubMembersPanel(clanMembers, config::inactivityDays);
 		windows = new TsgHubWindows(client, () -> new TsgHubAdminWindow(panel, organizer::loadManagedEvents, newsEditor, announcements::load, membersPanel, clanMembers::load), () -> announcements);
-		GroupMembersPanel groupMembers = new GroupMembersPanel(new GroupViewSettings()
-		{
-			@Override public boolean autoExpandMembers() { return config.partyExpandMembers(); }
-			@Override public boolean displayVirtualLevels() { return config.partyVirtualLevels(); }
-			@Override public boolean displayPlayerWorlds() { return config.partyShowWorlds(); }
-		}, spriteManager, itemManager);
+		GroupMembersPanel groupMembers = new GroupMembersPanel(config, spriteManager, itemManager);
 		sidebar = new TsgHubSidebarPanel(this, groupMembers);
 		groups = new TsgHubGroups(this, client, partyService, executor, this::api, () -> sidebar, socket);
 		groupTracker = new GroupTracker(client, clientThread, partyService, wsClient, itemManager, groups::isGroupParty, config::partyShowSelf, this::currentArea, groups);

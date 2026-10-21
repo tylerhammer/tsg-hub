@@ -243,7 +243,7 @@ final class TsgHubMembersView
 	{
 		card.putClientProperty(MEMBER_KEY, member);
 		card.setComponentPopupMenu(memberMenu);
-		inheritMenu(card);
+		eachDeep(card, c -> { if (c != card && c instanceof JComponent) ((JComponent) c).setInheritsPopupMenu(true); });
 	}
 
 	private void fillMemberMenu()
@@ -258,14 +258,5 @@ final class TsgHubMembersView
 		lookup.addActionListener(e -> shell.lookupView.showLookup(name, TsgHubPresence.accountType(member)));
 		memberMenu.add(lookup);
 		if (plugin.canManageOrganizerUi() && notesLoaded) shell.memberAdmin.addNoteItems(memberMenu, member);
-	}
-
-	private static void inheritMenu(java.awt.Container parent)
-	{
-		for (Component child : parent.getComponents())
-		{
-			if (child instanceof JComponent) ((JComponent) child).setInheritsPopupMenu(true);
-			if (child instanceof java.awt.Container) inheritMenu((java.awt.Container) child);
-		}
 	}
 }

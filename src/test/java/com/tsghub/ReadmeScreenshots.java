@@ -4,8 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.tsghub.group.GroupMembersPanel;
-import com.tsghub.group.GroupViewSettings;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
@@ -112,7 +110,7 @@ public class ReadmeScreenshots
 		set(plugin, "drops", new TsgHubDrops(plugin, null, null, stopped(), null, null));
 		set(plugin, "announcements", new TsgHubAnnouncements(plugin, stopped(), null, () -> null, line -> { }));
 
-		TsgHubSidebarPanel sidebar = new TsgHubSidebarPanel(plugin, new GroupMembersPanel(new GroupViewSettings() {}, null, null));
+		TsgHubSidebarPanel sidebar = new TsgHubSidebarPanel(plugin, new GroupMembersPanel(stub(TsgHubConfig.class), null, null));
 
 		JsonArray events = data.getAsJsonObject("eventList").getAsJsonArray("events");
 		for (int i = 0; i < events.size(); i++)

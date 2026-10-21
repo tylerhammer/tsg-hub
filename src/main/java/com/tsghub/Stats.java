@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.tsghub.group.data;
+package com.tsghub;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -32,11 +32,10 @@ import net.runelite.api.Client;
 import net.runelite.api.Experience;
 import net.runelite.api.Skill;
 import net.runelite.api.gameval.VarPlayerID;
-import com.tsghub.group.data.events.PartyStatChange;
 
 @Getter
 @Setter
-public class Stats
+class Stats
 {
 	private final Map<Skill, Integer> baseLevels = new HashMap<>();
 	private final Map<Skill, Integer> boostedLevels = new HashMap<>();
@@ -45,28 +44,21 @@ public class Stats
 	private int combatLevel;
 	private int totalLevel;
 
-	public Stats()
+	Stats()
 	{
-		for (final Skill s : Skill.values())
+		for (Skill s : Skill.values())
 		{
-			baseLevels.put(s, 1);
-			boostedLevels.put(s, 1);
+			baseLevels.put(s, s == Skill.HITPOINTS ? 10 : 1);
+			boostedLevels.put(s, s == Skill.HITPOINTS ? 10 : 1);
 		}
-
-		baseLevels.put(Skill.HITPOINTS, 10);
-		boostedLevels.put(Skill.HITPOINTS, 10);
-
 		combatLevel = 3;
-		specialPercent = 0;
-		runEnergy = 0;
-		totalLevel = 0;
 	}
 
-	public Stats(final Client client)
+	Stats(Client client)
 	{
-		final int[] bases = client.getSkillExperiences();
-		final int[] boosts = client.getBoostedSkillLevels();
-		for (final Skill s : Skill.values())
+		int[] bases = client.getSkillExperiences();
+		int[] boosts = client.getBoostedSkillLevels();
+		for (Skill s : Skill.values())
 		{
 			baseLevels.put(s, Experience.getLevelForXp(bases[s.ordinal()]));
 			boostedLevels.put(s, boosts[s.ordinal()]);
@@ -79,22 +71,18 @@ public class Stats
 		runEnergy = client.getEnergy() / 100;
 	}
 
-	public int recalculateCombatLevel()
+	void recalculateCombatLevel()
 	{
-		combatLevel = Experience.getCombatLevel(
-			Math.min(baseLevels.get(Skill.ATTACK), 99),
-			Math.min(baseLevels.get(Skill.STRENGTH), 99),
-			Math.min(baseLevels.get(Skill.DEFENCE), 99),
-			Math.min(baseLevels.get(Skill.HITPOINTS), 99),
-			Math.min(baseLevels.get(Skill.MAGIC), 99),
-			Math.min(baseLevels.get(Skill.RANGED), 99),
-			Math.min(baseLevels.get(Skill.PRAYER), 99)
-		);
-
-		return combatLevel;
+		combatLevel = Experience.getCombatLevel(capped(Skill.ATTACK), capped(Skill.STRENGTH), capped(Skill.DEFENCE),
+			capped(Skill.HITPOINTS), capped(Skill.MAGIC), capped(Skill.RANGED), capped(Skill.PRAYER));
 	}
 
-	public PartyStatChange createPartyStatChangeForSkill(Skill s)
+	private int capped(Skill skill)
+	{
+		return Math.min(baseLevels.get(skill), 99);
+	}
+
+	PartyStatChange createPartyStatChangeForSkill(Skill s)
 	{
 		return new PartyStatChange(s.ordinal(), baseLevels.get(s), boostedLevels.get(s));
 	}

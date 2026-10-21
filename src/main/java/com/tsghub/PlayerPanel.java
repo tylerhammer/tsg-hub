@@ -22,18 +22,13 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.tsghub.group.ui;
+package com.tsghub;
 
-import com.tsghub.TsgHubTheme;
-import com.tsghub.group.GroupViewSettings;
-import com.tsghub.group.data.PartyPlayer;
-import com.tsghub.group.ui.equipment.PlayerEquipmentPanel;
-import com.tsghub.group.ui.prayer.PlayerPrayerPanel;
-import com.tsghub.group.ui.skills.PlayerSkillsPanel;
+import static com.tsghub.TsgHubTheme.*;
+import static com.tsghub.TsgHubUi.*;
+
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Component;
-import java.awt.Container;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -41,7 +36,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
-import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
@@ -55,43 +49,38 @@ import net.runelite.client.ui.components.materialtabs.MaterialTab;
 import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
 import net.runelite.client.util.ImageUtil;
 
-public class PlayerPanel extends JPanel
+class PlayerPanel extends JPanel
 {
 	private static final int VENOM_THRESHOLD = 1000000;
 	private static final BufferedImage HEART_DISEASE = ImageUtil.loadImageResource(AlternateSprites.class, AlternateSprites.DISEASE_HEART);
 	private static final BufferedImage HEART_POISON = ImageUtil.loadImageResource(AlternateSprites.class, AlternateSprites.POISON_HEART);
 	private static final BufferedImage HEART_VENOM = ImageUtil.loadImageResource(AlternateSprites.class, AlternateSprites.VENOM_HEART);
 
-	private enum Tab
-	{
-		ITEMS, GEAR, PRAYER, SKILLS
-	}
-
 	@Getter
 	private PartyPlayer player;
-	private final GroupViewSettings config;
+	private final TsgHubConfig config;
 	private final PlayerBanner banner;
 	private final PlayerInventoryPanel inventoryPanel;
 	private final PlayerEquipmentPanel equipmentPanel;
 	private final PlayerSkillsPanel skillsPanel;
 	private final PlayerPrayerPanel prayersPanel;
 	private final JPanel details = new JPanel();
-	private Tab selected = Tab.ITEMS;
+	private int selected;
 	private boolean self;
 	private boolean hovered;
 
 	@Setter
 	private boolean showInfo;
 
-	public PlayerPanel(PartyPlayer player, GroupViewSettings config, SpriteManager spriteManager, ItemManager itemManager)
+	PlayerPanel(PartyPlayer player, TsgHubConfig config, SpriteManager spriteManager, ItemManager itemManager)
 	{
 		this.player = player;
 		this.config = config;
-		this.showInfo = config.autoExpandMembers();
-		this.banner = new PlayerBanner(player, config.displayPlayerWorlds(), spriteManager);
+		this.showInfo = config.partyExpandMembers();
+		this.banner = new PlayerBanner(player, config.partyShowWorlds(), spriteManager);
 		this.inventoryPanel = new PlayerInventoryPanel(player.getInventory(), player.getRunesInPouch(), itemManager);
 		this.equipmentPanel = new PlayerEquipmentPanel(player.getEquipment(), player.getQuiver(), spriteManager, itemManager);
-		this.skillsPanel = new PlayerSkillsPanel(player, config.displayVirtualLevels(), spriteManager);
+		this.skillsPanel = new PlayerSkillsPanel(player, config.partyVirtualLevels(), spriteManager);
 		this.prayersPanel = new PlayerPrayerPanel(player, spriteManager);
 
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
@@ -127,20 +116,20 @@ public class PlayerPanel extends JPanel
 				paintState();
 			}
 		});
-		setCursorDeep(banner, Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		eachDeep(banner, c -> c.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)));
 		paintState();
 		updatePanel();
 	}
 
-	public void setSelf(boolean self)
+	void setSelf(boolean self)
 	{
 		this.self = self;
 		paintState();
 	}
 
-	public void addBannerListener(MouseListener listener)
+	void addBannerListener(MouseListener listener)
 	{
-		addListenerDeep(banner, listener);
+		eachDeep(banner, c -> c.addMouseListener(listener));
 	}
 
 	private void buildDetails()
@@ -149,7 +138,7 @@ public class PlayerPanel extends JPanel
 		details.setLayout(new BoxLayout(details, BoxLayout.Y_AXIS));
 
 		JComponent rule = new JPanel();
-		rule.setBackground(TsgHubTheme.BORDER);
+		rule.setBackground(BORDER);
 		rule.setMinimumSize(new Dimension(0, 1));
 		rule.setPreferredSize(new Dimension(10, 1));
 		rule.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
@@ -169,24 +158,22 @@ public class PlayerPanel extends JPanel
 		MaterialTabGroup tabs = new MaterialTabGroup(display);
 		tabs.setLayout(new FlowLayout(FlowLayout.CENTER, 0, 0));
 		tabs.setOpaque(false);
-		addTab(tabs, "Items", inventoryPanel, Tab.ITEMS);
-		addTab(tabs, "Gear", equipmentPanel, Tab.GEAR);
-		addTab(tabs, "Prayer", prayersPanel, Tab.PRAYER);
-		addTab(tabs, "Skills", skillsPanel, Tab.SKILLS);
+		String[] names = {"Items", "Gear", "Prayer", "Skills"};
+		for (int i = 0; i < contents.length; i++) addTab(tabs, names[i], contents[i], i);
 
 		for (JComponent c : new JComponent[]{rule, tabs, display}) c.setAlignmentX(LEFT_ALIGNMENT);
-		details.add(Box.createVerticalStrut(TsgHubTheme.GAP_M));
+		details.add(gap(GAP_M));
 		details.add(rule);
-		details.add(Box.createVerticalStrut(TsgHubTheme.GAP_XS));
+		details.add(gap(GAP_XS));
 		details.add(tabs);
-		details.add(Box.createVerticalStrut(TsgHubTheme.GAP_S));
+		details.add(gap(GAP_S));
 		details.add(display);
 	}
 
-	private void addTab(MaterialTabGroup group, String name, JComponent content, Tab tab)
+	private void addTab(MaterialTabGroup group, String name, JComponent content, int tab)
 	{
-		MaterialTab materialTab = TsgHubTheme.themedTab(name, group, content);
-		materialTab.setFont(TsgHubTheme.smallFont());
+		MaterialTab materialTab = themedTab(name, group, content);
+		materialTab.setFont(smallFont());
 		materialTab.setOnSelectEvent(() -> {
 			selected = tab;
 			updatePlayerData(player);
@@ -196,7 +183,7 @@ public class PlayerPanel extends JPanel
 		if (tab == selected) group.select(materialTab);
 	}
 
-	public void updatePlayerData(PartyPlayer newPlayer)
+	void updatePlayerData(PartyPlayer newPlayer)
 	{
 		player = newPlayer;
 		banner.update(player);
@@ -209,24 +196,13 @@ public class PlayerPanel extends JPanel
 		banner.setUsingStamIcon(player.getStamina() > 0);
 
 		if (!showInfo) return;
-		switch (selected)
-		{
-			case ITEMS:
-				inventoryPanel.updateInventory(player.getInventory(), player.getRunesInPouch());
-				break;
-			case GEAR:
-				equipmentPanel.update(player.getEquipment(), player.getQuiver());
-				break;
-			case PRAYER:
-				if (player.getPrayers() != null) prayersPanel.update(player.getPrayers());
-				break;
-			case SKILLS:
-				if (player.getStats() != null) skillsPanel.update(player, config.displayVirtualLevels());
-				break;
-		}
+		if (selected == 0) inventoryPanel.updateInventory(player.getInventory(), player.getRunesInPouch());
+		else if (selected == 1) equipmentPanel.update(player.getEquipment(), player.getQuiver());
+		else if (selected == 2 && player.getPrayers() != null) prayersPanel.update(player.getPrayers());
+		else if (selected == 3) updateDisplayVirtualLevels();
 	}
 
-	public void updatePanel()
+	void updatePanel()
 	{
 		details.setVisible(showInfo);
 		banner.setToolTipText(showInfo ? "Hide details" : "Show inventory, gear, prayers and skills");
@@ -234,35 +210,21 @@ public class PlayerPanel extends JPanel
 		repaint();
 	}
 
-	public void updateDisplayVirtualLevels()
+	void updateDisplayVirtualLevels()
 	{
-		if (player.getStats() != null) skillsPanel.update(player, config.displayVirtualLevels());
+		if (player.getStats() != null) skillsPanel.update(player, config.partyVirtualLevels());
 	}
 
-	public void updateDisplayPlayerWorlds()
+	void updateDisplayPlayerWorlds()
 	{
-		banner.updateWorld(player, config.displayPlayerWorlds());
+		banner.updateWorld(player, config.partyShowWorlds());
 	}
 
 	private void paintState()
 	{
-		Color background = self ? (hovered ? TsgHubTheme.SELF_CARD_HOVER : TsgHubTheme.SELF_CARD) : (hovered ? TsgHubTheme.CARD_HOVER : TsgHubTheme.CARD);
+		Color background = self ? (hovered ? SELF_CARD_HOVER : SELF_CARD) : (hovered ? CARD_HOVER : CARD);
 		setBackground(background);
-		setBorder(self ? TsgHubTheme.selfBorder() : TsgHubTheme.cardBorder());
+		setBorder(self ? selfBorder() : cardBorder());
 		repaint();
-	}
-
-	private static void addListenerDeep(Component component, MouseListener listener)
-	{
-		component.addMouseListener(listener);
-		if (component instanceof Container)
-			for (Component child : ((Container) component).getComponents()) addListenerDeep(child, listener);
-	}
-
-	private static void setCursorDeep(Component component, Cursor cursor)
-	{
-		component.setCursor(cursor);
-		if (component instanceof Container)
-			for (Component child : ((Container) component).getComponents()) setCursorDeep(child, cursor);
 	}
 }

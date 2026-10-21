@@ -22,88 +22,22 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.tsghub.group.data.events;
+package com.tsghub;
 
-import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
-import com.tsghub.group.data.PartyPlayer;
+import lombok.Value;
+import net.runelite.api.Skill;
 
-@Data
-@Slf4j
-public class PartyMiscChange
+@Value
+class PartyStatChange
 {
-	PartyMisc t;
-	Integer v;
-	String s;
+	int s; // Skill ordinal
+	int l; // Level
+	int b; // Boosted Level
 
-	public enum PartyMisc
+	void process(PartyPlayer p)
 	{
-		S, // Special
-		R, // RUN
-		C, // Combat
-		T, // Total
-		ST, // Stamina duration
-		P, // Poison
-		D, // Disease
-		W, // World
-		U, // Username
-		SP, // Spellbook
-		A, // Area
-	}
-
-	public PartyMiscChange(PartyMisc t, Integer v)
-	{
-		this.t = t;
-		this.v = v;
-		this.s = null;
-	}
-
-	public PartyMiscChange(PartyMisc t, String s)
-	{
-		this.t = t;
-		this.v = null;
-		this.s = s;
-	}
-
-	public void process(PartyPlayer p)
-	{
-		switch (t)
-		{
-			case S:
-				p.getStats().setSpecialPercent(v);
-				break;
-			case C:
-				p.getStats().setCombatLevel(v);
-				break;
-			case T:
-				p.getStats().setTotalLevel(v);
-				break;
-			case R:
-				p.getStats().setRunEnergy(v);
-				break;
-			case ST:
-				p.setStamina(v);
-				break;
-			case P:
-				p.setPoison(v);
-				break;
-			case D:
-				p.setDisease(v);
-				break;
-			case W:
-				p.setWorld(v);
-				break;
-			case U:
-				p.setUsername(s);
-				break;
-			case SP:
-				p.setSpellbook(v);
-				break;
-			case A:
-				p.setArea(s == null ? "" : s);
-				break;
-			default:
-				log.warn("Unhandled misc change type for event: {}", this);
-		}
+		Skill skill = Skill.values()[s];
+		p.getStats().getBaseLevels().put(skill, l);
+		p.getStats().getBoostedLevels().put(skill, b);
 	}
 }

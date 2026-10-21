@@ -11,7 +11,6 @@ import static com.tsghub.TsgHubUi.*;
 import static net.runelite.client.util.ColorUtil.toHexColor;
 
 import com.google.gson.JsonObject;
-import com.tsghub.group.GroupMembersPanel;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;

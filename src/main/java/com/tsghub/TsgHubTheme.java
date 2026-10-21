@@ -34,6 +34,10 @@ public final class TsgHubTheme
 	public static final Color SELF_CARD_HOVER = new Color(0x342A45);
 	public static final Color SELF_BORDER = new Color(0x664C9E);
 	public static final Color SELF_TEXT = ACCENT;
+	public static final Color LOW = new Color(255, 90, 74);
+	public static final Color SLOT = new Color(0x18161B);
+	public static final Color PRAYER_ACTIVE = new Color(90, 67, 18);
+	public static final Color PRAYER_ACTIVE_BORDER = new Color(200, 144, 42);
 
 	public static final int GAP_XS = 3;
 	public static final int GAP_S = 4;

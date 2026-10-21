@@ -2,13 +2,12 @@
  * Adapted from Party Panel by TheStonedTurtle (https://github.com/TheStonedTurtle/party-panel),
  * BSD 2-Clause License. See THIRD_PARTY_NOTICES.md.
  */
-package com.tsghub.group;
+package com.tsghub;
 
-import com.tsghub.TsgHubTheme;
+import static com.tsghub.TsgHubTheme.*;
+import static com.tsghub.TsgHubUi.*;
+
 import com.google.common.base.Strings;
-import com.tsghub.PlayerNames;
-import com.tsghub.group.data.PartyPlayer;
-import com.tsghub.group.ui.PlayerPanel;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
@@ -31,11 +30,11 @@ import net.runelite.client.game.SpriteManager;
 import net.runelite.client.ui.DynamicGridLayout;
 
 // Swing thread only.
-public final class GroupMembersPanel extends JPanel
+final class GroupMembersPanel extends JPanel
 {
 	private final Map<Long, PlayerPanel> panels = new HashMap<>();
 	private final Map<Long, PartyPlayer> players = new HashMap<>();
-	private final GroupViewSettings settings;
+	private final TsgHubConfig settings;
 	private final SpriteManager spriteManager;
 	private final ItemManager itemManager;
 	private final JLabel empty = new JLabel("No one else has connected yet.");
@@ -46,25 +45,25 @@ public final class GroupMembersPanel extends JPanel
 	private BooleanSupplier canKick = () -> false;
 	private Consumer<String> kick = name -> { };
 
-	public GroupMembersPanel(GroupViewSettings settings, SpriteManager spriteManager, ItemManager itemManager)
+	GroupMembersPanel(TsgHubConfig settings, SpriteManager spriteManager, ItemManager itemManager)
 	{
 		this.settings = settings;
 		this.spriteManager = spriteManager;
 		this.itemManager = itemManager;
-		setLayout(new DynamicGridLayout(0, 1, 0, TsgHubTheme.LIST_GAP));
+		setLayout(new DynamicGridLayout(0, 1, 0, LIST_GAP));
 		setOpaque(false);
-		empty.setForeground(TsgHubTheme.MUTED);
-		empty.setFont(TsgHubTheme.smallFont());
+		empty.setForeground(MUTED);
+		empty.setFont(smallFont());
 		add(empty);
 	}
 
-	public void setKickHandler(BooleanSupplier canKick, Consumer<String> kick)
+	void setKickHandler(BooleanSupplier canKick, Consumer<String> kick)
 	{
 		this.canKick = canKick;
 		this.kick = kick;
 	}
 
-	public void setOrder(List<String> names)
+	void setOrder(List<String> names)
 	{
 		List<String> keys = preferred.stream().filter(k -> names.stream().anyMatch(n -> PlayerNames.key(n).equals(k))).collect(Collectors.toList());
 		names.stream().map(PlayerNames::key).filter(k -> !keys.contains(k)).forEach(keys::add);
@@ -73,9 +72,9 @@ public final class GroupMembersPanel extends JPanel
 		rebuild();
 	}
 
-	public void update(PartyPlayer player, boolean self)
+	void update(PartyPlayer player, boolean self)
 	{
-		final long id = player.getMember().getMemberId();
+		long id = player.getMember().getMemberId();
 		if (self && selfId != id)
 		{
 			players.remove(selfId);
@@ -83,8 +82,8 @@ public final class GroupMembersPanel extends JPanel
 			selfId = id;
 		}
 		players.put(id, player);
-		final boolean moved = isOffline(player) ? offline.add(id) : offline.remove(id);
-		final PlayerPanel existing = panels.get(id);
+		boolean moved = isOffline(player) ? offline.add(id) : offline.remove(id);
+		PlayerPanel existing = panels.get(id);
 		if (existing != null)
 		{
 			existing.setSelf(id == selfId);
@@ -92,7 +91,7 @@ public final class GroupMembersPanel extends JPanel
 			if (moved) rebuild();
 			return;
 		}
-		final PlayerPanel panel = new PlayerPanel(player, settings, spriteManager, itemManager);
+		PlayerPanel panel = new PlayerPanel(player, settings, spriteManager, itemManager);
 		panel.setSelf(self);
 		panel.updatePlayerData(player);
 		addMenu(panel, id);
@@ -100,21 +99,21 @@ public final class GroupMembersPanel extends JPanel
 		rebuild();
 	}
 
-	public void remove(PartyPlayer player)
+	void remove(PartyPlayer player)
 	{
-		final long id = player.getMember().getMemberId();
+		long id = player.getMember().getMemberId();
 		players.remove(id);
 		offline.remove(id);
 		if (panels.remove(id) != null) rebuild();
 	}
 
-	public void settingsChanged(boolean expandChanged)
+	void settingsChanged(boolean expandChanged)
 	{
 		for (PlayerPanel panel : panels.values())
 		{
 			if (expandChanged)
 			{
-				panel.setShowInfo(settings.autoExpandMembers());
+				panel.setShowInfo(settings.partyExpandMembers());
 				panel.updatePanel();
 				panel.updatePlayerData(panel.getPlayer());
 			}
@@ -125,7 +124,7 @@ public final class GroupMembersPanel extends JPanel
 		repaint();
 	}
 
-	public void removeSelf()
+	void removeSelf()
 	{
 		players.remove(selfId);
 		offline.remove(selfId);
@@ -133,7 +132,7 @@ public final class GroupMembersPanel extends JPanel
 		selfId = -1;
 	}
 
-	public void clear()
+	void clear()
 	{
 		players.clear();
 		panels.clear();
@@ -157,7 +156,7 @@ public final class GroupMembersPanel extends JPanel
 		Comparator<PartyPlayer> sort = order.isEmpty()
 			? Comparator.comparing((PartyPlayer p) -> p.getMember().getMemberId() != selfId)
 			: Comparator.comparingInt(this::position);
-		final List<Long> ids = players.values().stream()
+		List<Long> ids = players.values().stream()
 			.filter(this::inRoster)
 			.sorted(Comparator.comparing(GroupMembersPanel::isOffline).thenComparing(sort).thenComparing(p -> name(p).toLowerCase()))
 			.map(p -> p.getMember().getMemberId())
@@ -165,7 +164,7 @@ public final class GroupMembersPanel extends JPanel
 		int others = 0;
 		for (Long id : ids)
 		{
-			final PlayerPanel panel = panels.get(id);
+			PlayerPanel panel = panels.get(id);
 			if (panel == null) continue;
 			add(panel);
 			if (id != selfId) others++;

@@ -25,6 +25,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.LongFunction;
 import java.util.function.Supplier;
 import javax.swing.AbstractButton;
@@ -225,6 +226,12 @@ final class TsgHubUi
 	static Component gap(int height)
 	{
 		return Box.createVerticalStrut(height);
+	}
+
+	static void eachDeep(Component component, Consumer<Component> action)
+	{
+		action.accept(component);
+		if (component instanceof Container) for (Component child : ((Container) component).getComponents()) eachDeep(child, action);
 	}
 
 	static void addCard(Container list, Component card)
@@ -668,6 +675,12 @@ final class TsgHubUi
 			row.add(label(formatGp(prizes.get(i)), coinColor(prizes.get(i)), font));
 		}
 		return fitHeight(row);
+	}
+
+	static Color levelColor(int current, int max)
+	{
+		double ratio = max <= 0 ? 1 : (double) current / max;
+		return ratio <= 0.25 ? LOW : ratio <= 0.5 ? WARNING : TEXT;
 	}
 
 	static Color coinColor(long value)

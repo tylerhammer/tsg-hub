@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.tsghub.group.ui.prayer;
+package com.tsghub;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -33,7 +33,7 @@ import net.runelite.api.gameval.VarbitID;
 
 @AllArgsConstructor
 @Getter
-public enum PrayerSprites
+enum PrayerSprites
 {
 	THICK_SKIN(SpriteID.Prayeron.THICK_SKIN, SpriteID.Prayeroff.THICK_SKIN_DISABLED, 0),
 	BURST_OF_STRENGTH(SpriteID.Prayeron.BURST_OF_STRENGTH, SpriteID.Prayeroff.BURST_OF_STRENGTH_DISABLED, 1),
@@ -109,12 +109,12 @@ public enum PrayerSprites
 	private final int unavailable;
 	private final int scriptIndex;
 
-	public Prayer getPrayer()
+	Prayer getPrayer()
 	{
 		return Prayer.valueOf(name());
 	}
 
-	public boolean isUnlocked(Client client)
+	boolean isUnlocked(Client client)
 	{
 		return true;
 	}

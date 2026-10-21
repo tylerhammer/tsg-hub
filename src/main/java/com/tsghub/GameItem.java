@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.tsghub.group.data;
+package com.tsghub;
 
 import lombok.Value;
 import net.runelite.api.Item;
@@ -31,73 +31,51 @@ import net.runelite.client.game.ItemManager;
 import net.runelite.client.util.QuantityFormatter;
 
 @Value
-public class GameItem
+class GameItem
 {
 	int id;
 	int qty;
 	String name;
 	boolean stackable;
 
-	public GameItem(final Item item, final ItemManager itemManager)
-	{
-		this(item.getId(), item.getQuantity(), itemManager);
-	}
-
-	public GameItem(final int id, final int qty, final ItemManager itemManager)
+	GameItem(int id, int qty, ItemManager itemManager)
 	{
 		this.id = id;
 		this.qty = qty;
-
-		final ItemComposition c = itemManager.getItemComposition(id);
-
+		ItemComposition c = itemManager.getItemComposition(id);
 		this.name = c.getName();
 		this.stackable = c.isStackable();
 	}
 
-	public static GameItem[] convertItemsToGameItems(final int[] items, final ItemManager itemManager)
+	static GameItem[] of(int[] packed, ItemManager itemManager)
 	{
-		GameItem[] output = new GameItem[items.length / 2];
-		for (int i = 0; i < items.length; i += 2)
-		{
-			if (items[i] == -1 || items[i + 1] <= 0)
-			{
-				output[i / 2] = null;
-			}
-			else
-			{
-				output[i / 2] = new GameItem(items[i], items[i + 1], itemManager);
-			}
-		}
-
-		return output;
+		GameItem[] out = new GameItem[packed.length / 2];
+		for (int i = 0; i < out.length; i++)
+			out[i] = packed[i * 2] == -1 || packed[i * 2 + 1] <= 0 ? null : new GameItem(packed[i * 2], packed[i * 2 + 1], itemManager);
+		return out;
 	}
 
-	public static GameItem[] convertItemsToGameItems(final Item[] items, final ItemManager itemManager)
+	static GameItem[] of(Item[] items, ItemManager itemManager)
 	{
-		final GameItem[] output = new GameItem[items.length];
+		GameItem[] out = new GameItem[items.length];
+		for (int i = 0; i < items.length; i++)
+			out[i] = items[i] == null || items[i].getId() == -1 ? null : new GameItem(items[i].getId(), items[i].getQuantity(), itemManager);
+		return out;
+	}
+
+	static int[] pack(GameItem[] items)
+	{
+		int[] out = new int[items.length * 2];
 		for (int i = 0; i < items.length; i++)
 		{
-			final Item item = items[i];
-			if (item == null || item.getId() == -1)
-			{
-				output[i] = null;
-			}
-			else
-			{
-				output[i] = new GameItem(item, itemManager);
-			}
+			out[i * 2] = items[i] == null ? -1 : items[i].id;
+			out[i * 2 + 1] = items[i] == null ? 0 : items[i].qty;
 		}
-
-		return output;
+		return out;
 	}
 
-	public String getDisplayName()
+	String getDisplayName()
 	{
-		if (this.qty <= 1)
-		{
-			return this.name;
-		}
-
-		return this.name + " x " + QuantityFormatter.formatNumber(this.qty);
+		return qty <= 1 ? name : name + " x " + QuantityFormatter.formatNumber(qty);
 	}
 }

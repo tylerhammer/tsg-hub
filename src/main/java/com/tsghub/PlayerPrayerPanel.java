@@ -22,11 +22,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.tsghub.group.ui.prayer;
+package com.tsghub;
 
-import com.tsghub.group.data.PartyPlayer;
-import com.tsghub.group.data.PrayerData;
-import com.tsghub.group.data.Prayers;
+import static com.tsghub.TsgHubTheme.*;
+import static com.tsghub.TsgHubUi.*;
+
 import java.awt.GridLayout;
 import java.util.HashMap;
 import java.util.Map;
@@ -34,11 +34,11 @@ import javax.swing.JPanel;
 import net.runelite.api.Prayer;
 import net.runelite.client.game.SpriteManager;
 
-public class PlayerPrayerPanel extends JPanel
+class PlayerPrayerPanel extends JPanel
 {
 	private final Map<Prayer, PrayerSlot> slotMap = new HashMap<>();
 
-	public PlayerPrayerPanel(final PartyPlayer player, final SpriteManager spriteManager)
+	PlayerPrayerPanel(PartyPlayer player, SpriteManager spriteManager)
 	{
 		setOpaque(false);
 		setLayout(new GridLayout(0, 5, 2, 2));
@@ -47,7 +47,7 @@ public class PlayerPrayerPanel extends JPanel
 		else updateSlots();
 	}
 
-	public void update(Prayers prayers)
+	void update(Prayers prayers)
 	{
 		boolean unlockChanged = false;
 		for (Map.Entry<Prayer, PrayerSlot> entry : slotMap.entrySet())
