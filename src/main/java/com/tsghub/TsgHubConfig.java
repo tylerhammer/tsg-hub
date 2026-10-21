@@ -92,7 +92,7 @@ public interface TsgHubConfig extends Config
 		return true;
 	}
 
-	@ConfigItem(keyName = "hubKey", position = 0, section = discordSection, secret = true, name = "Hub key", description = "Your key from /hub key in the clan Discord. Links your Discord account to this RuneScape account and unlocks the admin tools if you're a Discord admin.")
+	@ConfigItem(keyName = "hubKey", position = 0, section = discordSection, secret = true, name = "Hub key", description = "Your key from /hub link in the clan Discord. Links your Discord account to this RuneScape account and unlocks the admin tools if you're a Discord admin.")
 	default String hubKey()
 	{
 		return "";
