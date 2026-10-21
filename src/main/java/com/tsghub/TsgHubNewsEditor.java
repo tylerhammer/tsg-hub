@@ -36,8 +36,7 @@ import javax.swing.JTextField;
 
 final class TsgHubNewsEditor extends JPanel
 {
-	private static final int LIST_W = 270;
-	private static final int TEXT_W = 480;
+		private static final int TEXT_W = 480;
 	private static final int MAX_TITLE = 80;
 	private static final int MAX_BODY = 1000;
 	private static final int MAX_POLL_OPTIONS = 10;
@@ -90,7 +89,7 @@ final class TsgHubNewsEditor extends JPanel
 		super(new BorderLayout());
 		this.plugin = plugin;
 		setBackground(BACKGROUND);
-		add(buildListColumn(), BorderLayout.WEST);
+		add(listColumn("Announcements", "Refresh announcements", () -> plugin.announcements().load(), "New announcement", this::beginPost, list), BorderLayout.WEST);
 
 		detail.setOpaque(false);
 		detail.add(north(emptyState("Pick an announcement", "Choose one on the left, or post a new one.", 320)), "empty");
@@ -105,36 +104,12 @@ final class TsgHubNewsEditor extends JPanel
 		setAnnouncements(null);
 	}
 
-	private JComponent buildListColumn()
-	{
-		JPanel column = new JPanel(new BorderLayout(0, 8));
-		column.setBackground(CARD);
-		column.setPreferredSize(new Dimension(LIST_W, 100));
-		column.setBorder(BorderFactory.createEmptyBorder(12, 10, 10, 10));
-
-		JButton refresh = iconButton(hover("refresh"), "Refresh announcements");
-		refresh.addActionListener(e -> plugin.announcements().load());
-		JButton create = primaryButton("New announcement");
-		create.addActionListener(e -> beginPost());
-
-		JPanel top = stack();
-		top.add(fitHeight(row(boldLabel("Announcements"), refresh)));
-		top.add(Box.createVerticalStrut(GAP_M));
-		top.add(fitHeight(create));
-		column.add(top, BorderLayout.NORTH);
-
-		WidthTrackingPanel listWrap = new WidthTrackingPanel();
-		listWrap.add(list);
-		column.add(scroll(listWrap), BorderLayout.CENTER);
-		return column;
-	}
-
 	private JPanel buildForm()
 	{
 		JPanel form = stack();
 		form.add(formTitle);
 		form.add(wrapped("Clan members get a chat message once and see it under News in the TSG Hub sidebar. Save it as a draft to let other admins review it first.", MUTED, smallFont(), TEXT_W));
-		form.add(Box.createVerticalStrut(GAP_M));
+		form.add(gap(GAP_M));
 		form.add(field("Title", title));
 		body.setLineWrap(true);
 		body.setWrapStyleWord(true);
@@ -166,11 +141,10 @@ final class TsgHubNewsEditor extends JPanel
 			pollFields.setVisible(hasPoll.isSelected());
 			refresh(form);
 		});
-		form.add(Box.createVerticalStrut(GAP_L));
+		form.add(gap(GAP_L));
 		error.setVisible(false);
 		form.add(error);
-		JButton cancel = button("Cancel");
-		cancel.addActionListener(e -> show(selected));
+		JButton cancel = onClick(button("Cancel"), () -> show(selected));
 		JPanel footer = panel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
 		footer.add(cancel);
 		footer.add(draft);
@@ -189,7 +163,7 @@ final class TsgHubNewsEditor extends JPanel
 		JPanel header = panel(new BorderLayout(12, 0));
 		JPanel titles = stack();
 		titles.add(viewTitle);
-		titles.add(Box.createVerticalStrut(GAP_XS));
+		titles.add(gap(GAP_XS));
 		titles.add(viewMeta);
 		titles.add(draftNote);
 		titles.add(expiredNote);
@@ -465,7 +439,7 @@ final class TsgHubNewsEditor extends JPanel
 		}
 		else if (announcements.size() == 0)
 		{
-			list.add(wrapped("Nothing posted right now. Post one to get started.", MUTED, smallFont(), LIST_W - 30));
+			list.add(wrapped("Nothing posted right now. Post one to get started.", MUTED, smallFont(), TsgHubPanel.LIST_W - 30));
 		}
 		else
 		{
@@ -480,8 +454,7 @@ final class TsgHubNewsEditor extends JPanel
 					list.add(listHeading(next, section == null));
 					section = next;
 				}
-				list.add(listCard(announcement, now, zone));
-				list.add(Box.createVerticalStrut(LIST_GAP));
+				addCard(list, listCard(announcement, now, zone));
 			}
 		}
 		refresh(list);
@@ -510,7 +483,7 @@ final class TsgHubNewsEditor extends JPanel
 
 	private void addPollResults(JsonObject poll, boolean closed)
 	{
-		viewBody.add(Box.createVerticalStrut(GAP_M));
+		viewBody.add(gap(GAP_M));
 		viewBody.add(sectionTitle(closed ? "Final results" : "Poll results"));
 		JPanel tags = panel(new FlowLayout(FlowLayout.LEFT, 0, 0));
 		int voters = integer(poll, "voters", 0);
@@ -526,14 +499,13 @@ final class TsgHubNewsEditor extends JPanel
 		tags.add(Box.createHorizontalStrut(GAP_S));
 		tags.add(caption(voters == 0 ? "No votes yet" : plural(voters, "voter")));
 		viewBody.add(fitHeight(tags));
-		viewBody.add(Box.createVerticalStrut(GAP_M));
+		viewBody.add(gap(GAP_M));
 		List<JsonObject> options = objects(array(poll, "options"));
 		int top = 0;
 		for (JsonObject option : options) top = Math.max(top, integer(option, "votes", 0));
 		for (JsonObject option : options)
 		{
-			viewBody.add(pollOptionCard(option, voters, top, bool(poll, "anonymous")));
-			viewBody.add(Box.createVerticalStrut(LIST_GAP));
+			addCard(viewBody, pollOptionCard(option, voters, top, bool(poll, "anonymous")));
 		}
 	}
 
@@ -546,12 +518,12 @@ final class TsgHubNewsEditor extends JPanel
 		String share = voters == 0 ? "" : " · " + Math.round(votes * 100f / voters) + "%";
 		lines.add(fitHeight(row(shrinkable(boldLabel(str(option, "label"))),
 			label(plural(votes, "vote") + share, leading ? ACCENT : MUTED, leading ? boldFont() : smallFont()))));
-		lines.add(Box.createVerticalStrut(GAP_S));
+		lines.add(gap(GAP_S));
 		lines.add(voteBar(votes, voters, leading));
 		List<String> names = strings(array(option, "voters"));
 		if (!anonymous && !names.isEmpty())
 		{
-			lines.add(Box.createVerticalStrut(GAP_S));
+			lines.add(gap(GAP_S));
 			lines.add(wrapped(String.join(", ", names), MUTED, smallFont(), TEXT_W - 30));
 		}
 		card.add(lines, BorderLayout.CENTER);

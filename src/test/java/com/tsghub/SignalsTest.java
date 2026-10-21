@@ -63,7 +63,7 @@ public class SignalsTest
 			return new Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(code).message("")
 				.body(ResponseBody.create(MediaType.get("application/json"), reply)).build();
 		}).build();
-		TsgHubSocket socket = new TsgHubSocket(http, new Gson(), "https://hub.test", executor, null, TsgHubTraffic.OFF);
+		TsgHubSocket socket = new TsgHubSocket(http, new Gson(), "https://hub.test", executor, null);
 		TsgHubApi api = new TsgHubApi(http, new Gson(), "https://hub.test");
 		return new TsgHubSignals(socket, () -> api, received::add);
 	}
@@ -96,7 +96,7 @@ public class SignalsTest
 	@Test
 	public void socketSendFallsBackWhenNotReady()
 	{
-		TsgHubSocket socket = new TsgHubSocket(new OkHttpClient(), new Gson(), "https://hub.test", executor, null, TsgHubTraffic.OFF);
+		TsgHubSocket socket = new TsgHubSocket(new OkHttpClient(), new Gson(), "https://hub.test", executor, null);
 		JsonObject body = new JsonObject();
 		body.addProperty("message", "Bob received a drop: Abyssal whip");
 		assertFalse(socket.send("drop", body));

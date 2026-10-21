@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import javax.swing.BorderFactory;
-import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.Icon;
 import javax.swing.JComponent;
@@ -85,12 +84,11 @@ final class TsgHubHomeView
 			JPanel row = panel(new GridLayout(1, pair ? 2 : 1, 6, 0));
 			row.add(sectionTile(sections.get(i), pair));
 			if (pair) row.add(sectionTile(sections.get(i + 1), true));
-			shell.page.add(fitHeight(row));
-			shell.page.add(Box.createVerticalStrut(LIST_GAP));
+			addCard(shell.page, fitHeight(row));
 		}
 		if (update != null)
 		{
-			shell.page.add(Box.createVerticalStrut(GAP_S));
+			shell.page.add(gap(GAP_S));
 			JLabel notice = label("Update available. Restart RuneLite.", WARNING, smallFont());
 			notice.setHorizontalAlignment(JLabel.CENTER);
 			notice.setToolTipText("Version " + update);
@@ -120,9 +118,9 @@ final class TsgHubHomeView
 		section.half = half;
 		summarize(section);
 		tile.add(icon);
-		tile.add(Box.createVerticalStrut(GAP_M));
+		tile.add(gap(GAP_M));
 		tile.add(name);
-		tile.add(Box.createVerticalStrut(GAP_XS));
+		tile.add(gap(GAP_XS));
 		tile.add(summary);
 		for (Component part : tile.getComponents())
 		{

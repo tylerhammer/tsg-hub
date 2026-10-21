@@ -15,7 +15,6 @@ import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.time.Instant;
 import java.time.ZoneId;
-import javax.swing.Box;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
@@ -95,8 +94,7 @@ final class TsgHubNewsView
 			ZoneId zone = ZoneId.systemDefault();
 			for (JsonObject announcement : objects(announcements))
 			{
-				shell.page.add(newsCard(announcement, now, zone));
-				shell.page.add(Box.createVerticalStrut(LIST_GAP));
+				addCard(shell.page, newsCard(announcement, now, zone));
 			}
 		}
 		shell.refreshPage();
@@ -109,7 +107,7 @@ final class TsgHubNewsView
 		JPanel icons = newsIcons(announcement);
 		lines.add(row(label(html(escape(str(announcement, "title")), TsgHubSidebarPanel.CARD_TEXT_W - icons.getPreferredSize().width - 6), TEXT, boldFont()), north(icons)));
 		String poll = TsgHubAnnouncements.poll(announcement) == null ? "" : " · Poll";
-		lines.add(Box.createVerticalStrut(GAP_XS));
+		lines.add(gap(GAP_XS));
 		lines.add(TsgHubSidebarPanel.cardNote(str(announcement, "postedBy") + " · " + TsgHubFormat.shortDate(str(announcement, "postedAt"), now, zone) + poll));
 		card.add(TsgHubSidebarPanel.fillWidth(lines), BorderLayout.CENTER);
 		String id = str(announcement, "id");

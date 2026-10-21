@@ -21,7 +21,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import javax.swing.BorderFactory;
-import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -82,7 +81,7 @@ final class TsgHubEventForm
 		JPanel form = stack();
 		form.add(eventFormTitle);
 		form.add(detectedClan);
-		form.add(Box.createVerticalStrut(GAP_M));
+		form.add(gap(GAP_M));
 		JPanel typeField = field("Event type", eventType);
 		typeField.setBorder(BorderFactory.createEmptyBorder(0, 0, 3, 0));
 		form.add(typeField);
@@ -134,10 +133,10 @@ final class TsgHubEventForm
 		hideScoresRow.add(plain(eventHideScores, TEXT));
 		hideScoresRow.add(wrapped("Players still see their own progress, but not other players' or teams' scores and ranks. You can change this any time.", MUTED, smallFont(), 480));
 		form.add(hideScoresRow);
-		form.add(Box.createVerticalStrut(GAP_S));
+		form.add(gap(GAP_S));
 		form.add(plain(eventHidden, TEXT));
 		form.add(wrapped("Only admins can see and join it, so you can set it up and test it first. Publish it when it's ready. Players who already joined keep access.", MUTED, smallFont(), 480));
-		form.add(Box.createVerticalStrut(GAP_L));
+		form.add(gap(GAP_L));
 		eventType.addActionListener(e -> {
 			if (!editingEvent) defaultEventEnd();
 			updateEventFormType();
@@ -149,7 +148,7 @@ final class TsgHubEventForm
 		placeholder(partyNotes, "e.g. Bring an empty inventory");
 		eventFormError.setVisible(false);
 		form.add(eventFormError);
-		form.add(Box.createVerticalStrut(GAP_L));
+		form.add(gap(GAP_L));
 
 		JButton cancel = button("Cancel");
 		cancel.addActionListener(e -> {

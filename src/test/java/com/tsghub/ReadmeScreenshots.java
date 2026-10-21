@@ -106,7 +106,7 @@ public class ReadmeScreenshots
 		set(plugin, "keys", new TsgHubKeys(plugin, stub(TsgHubConfig.class), null, stopped()));
 		set(plugin, "sessions", new TsgHubSessions(plugin, stopped()));
 		set(plugin, "session", new TsgHubSession(null));
-		TsgHubSocket socket = new TsgHubSocket(new OkHttpClient(), null, "http://localhost", stopped(), null, TsgHubTraffic.OFF);
+		TsgHubSocket socket = new TsgHubSocket(new OkHttpClient(), null, "http://localhost", stopped(), null);
 		set(plugin, "groups", new TsgHubGroups(plugin, null, (PartyService) unsafe().allocateInstance(PartyService.class), stopped(), null, null, socket));
 		set(plugin, "presence", new TsgHubPresence(plugin, null, null, null, null, stopped(), null, null, socket, () -> "", notes -> { }));
 		set(plugin, "drops", new TsgHubDrops(plugin, null, null, stopped(), null, null));

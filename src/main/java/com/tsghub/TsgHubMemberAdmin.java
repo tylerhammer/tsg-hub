@@ -12,7 +12,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import javax.swing.Box;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
@@ -102,7 +101,7 @@ final class TsgHubMemberAdmin
 		{
 			form.add(new JLabel("Alt of (main character)"));
 			form.add(main);
-			form.add(Box.createVerticalStrut(GAP_M));
+			form.add(gap(GAP_M));
 		}
 		form.add(new JLabel("Admin note (only admins see this)"));
 		form.add(new JScrollPane(notes));
@@ -139,13 +138,13 @@ final class TsgHubMemberAdmin
 		expiry.setAlignmentX(Component.LEFT_ALIGNMENT);
 		JPanel form = stack();
 		form.add(label(active == 0 ? name + " has no active warnings." : name + " has " + active + " active warning" + (active == 1 ? "." : "s."), MUTED, smallFont()));
-		form.add(Box.createVerticalStrut(GAP_M));
+		form.add(gap(GAP_M));
 		form.add(new JLabel("Reason"));
 		form.add(new JScrollPane(reason));
-		form.add(Box.createVerticalStrut(GAP_M));
+		form.add(gap(GAP_M));
 		form.add(new JLabel("Expires"));
 		form.add(expiry);
-		form.add(Box.createVerticalStrut(GAP_M));
+		form.add(gap(GAP_M));
 		form.add(label("Only admins see warnings.", MUTED, smallFont()));
 		Object[] options = {"Add warning", "Cancel"};
 		if (JOptionPane.showOptionDialog(parent, form, "Warn " + name, JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, options, options[0]) != 0) return;

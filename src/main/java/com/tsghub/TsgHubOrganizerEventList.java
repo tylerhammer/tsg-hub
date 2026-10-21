@@ -10,12 +10,8 @@ import static com.tsghub.TsgHubUi.*;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.awt.BorderLayout;
-import java.awt.Dimension;
 import java.util.Comparator;
 import java.util.List;
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 
@@ -36,28 +32,7 @@ final class TsgHubOrganizerEventList
 
 	JComponent buildEventListColumn()
 	{
-		JPanel column = new JPanel(new BorderLayout(0, 8));
-		column.setBackground(CARD);
-		column.setPreferredSize(new Dimension(TsgHubPanel.LIST_W, 100));
-		column.setBorder(BorderFactory.createEmptyBorder(12, 10, 10, 10));
-
-		JButton refresh = iconButton(hover("refresh"), "Refresh events");
-		refresh.addActionListener(e -> plugin.organizer().loadManagedEvents());
-		JPanel header = row(boldLabel("Events"), refresh);
-
-		JButton create = primaryButton("New event");
-		create.addActionListener(e -> shell.eventForm.beginCreateEvent());
-
-		JPanel top = stack();
-		top.add(fitHeight(header));
-		top.add(Box.createVerticalStrut(GAP_M));
-		top.add(fitHeight(create));
-		column.add(top, BorderLayout.NORTH);
-
-		WidthTrackingPanel listWrap = new WidthTrackingPanel();
-		listWrap.add(eventList);
-		column.add(scroll(listWrap), BorderLayout.CENTER);
-		return column;
+		return listColumn("Events", "Refresh events", () -> plugin.organizer().loadManagedEvents(), "New event", () -> shell.eventForm.beginCreateEvent(), eventList);
 	}
 
 	void setManagedEvents(JsonArray events)
@@ -89,8 +64,7 @@ final class TsgHubOrganizerEventList
 				setManagedEvents(managedEvents);
 				plugin.organizer().selectEvent(id);
 			});
-			eventList.add(fitHeight(card));
-			eventList.add(Box.createVerticalStrut(LIST_GAP));
+			addCard(eventList, fitHeight(card));
 		}
 		if (sorted.isEmpty())
 		{

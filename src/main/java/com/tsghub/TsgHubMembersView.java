@@ -21,7 +21,6 @@ import java.awt.image.BufferedImage;
 import java.time.ZoneId;
 import java.util.Objects;
 import javax.swing.BorderFactory;
-import javax.swing.Box;
 import javax.swing.ImageIcon;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
@@ -118,23 +117,21 @@ final class TsgHubMembersView
 			if (samePlayer(str(member, "displayName"), plugin.clan().playerName())) myWorld = integer(member, "world", 0);
 		for (JsonObject member : objects(members))
 		{
-			membersPage.add(memberCard(member, myWorld));
-			membersPage.add(Box.createVerticalStrut(LIST_GAP));
+			addCard(membersPage, memberCard(member, myWorld));
 		}
 		if (offlineMembers.size() > 0)
 		{
-			membersPage.add(Box.createVerticalStrut(GAP_S));
+			membersPage.add(gap(GAP_S));
 			membersPage.add(shell.sectionHeading("Offline (" + offlineMembers.size() + ")", showOffline));
 			if (showOffline.isSelected())
 			{
 				for (JsonObject member : objects(offlineMembers))
 				{
-					membersPage.add(offlineRow(member));
-					membersPage.add(Box.createVerticalStrut(LIST_GAP));
+					addCard(membersPage, offlineRow(member));
 				}
 			}
 		}
-		membersPage.add(Box.createVerticalStrut(GAP_M));
+		membersPage.add(gap(GAP_M));
 		membersPage.add(TsgHubSidebarPanel.hint(plugin.locationSharingEnabled() ? "Leave clan chat to hide yourself."
 			: "You show as Online. Turn on location sharing in settings to show what you're doing."));
 		refresh(membersPage);
@@ -205,7 +202,7 @@ final class TsgHubMembersView
 			detailLabel = noFullText(shrinkable(label(detail, active ? SUCCESS : MUTED, small)));
 			JPanel bottom = row();
 			bottom.add(detailLabel, BorderLayout.CENTER);
-			text.add(Box.createVerticalStrut(GAP_XS));
+			text.add(gap(GAP_XS));
 			text.add(bottom);
 		}
 		card.add(text, BorderLayout.CENTER);

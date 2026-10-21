@@ -17,7 +17,6 @@ import java.awt.Font;
 import java.awt.GridLayout;
 import java.util.ArrayList;
 import java.util.List;
-import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
@@ -76,7 +75,7 @@ final class TsgHubTeamsTab
 		if (ranked.isEmpty())
 		{
 			teamsTab.add(wrapped("No teams yet. Add your first team below, then share its code with the players on it.", MUTED, plainFont(), TsgHubPanel.DETAIL_TEXT_W));
-			teamsTab.add(Box.createVerticalStrut(GAP_M));
+			teamsTab.add(gap(GAP_M));
 		}
 		for (int i = 0; i < ranked.size(); i++)
 		{
@@ -108,8 +107,7 @@ final class TsgHubTeamsTab
 				});
 				actions.add(copy);
 			}
-			JButton rename = button("Rename");
-			rename.addActionListener(e -> promptRename(teamId, str(team, "name")));
+			JButton rename = onClick(button("Rename"), () -> promptRename(teamId, str(team, "name")));
 			actions.add(rename);
 			JButton view = button("Details");
 			view.addActionListener(e -> {
@@ -117,17 +115,14 @@ final class TsgHubTeamsTab
 				renderTeams();
 			});
 			actions.add(view);
-			JButton delete = iconButton(hover("trash", TsgHubTheme.ERROR), "Delete team");
-			delete.addActionListener(e -> confirmDeleteTeam(team, members));
+			JButton delete = onClick(iconButton(hover("trash", TsgHubTheme.ERROR), "Delete team"), () -> confirmDeleteTeam(team, members));
 			actions.add(delete);
 			card.add(actions, BorderLayout.EAST);
-			teamsTab.add(fitHeight(card));
-			teamsTab.add(Box.createVerticalStrut(LIST_GAP));
+			addCard(teamsTab, fitHeight(card));
 		}
 
-		teamsTab.add(Box.createVerticalStrut(GAP_M));
-		JButton add = button("Add team");
-		add.addActionListener(e -> addTeam());
+		teamsTab.add(gap(GAP_M));
+		JButton add = onClick(button("Add team"), () -> addTeam());
 		JPanel addField = panel(new BorderLayout(0, 3));
 		addField.add(caption("New team name"), BorderLayout.NORTH);
 		addField.add(row(newTeamName, add), BorderLayout.CENTER);
@@ -145,7 +140,7 @@ final class TsgHubTeamsTab
 			renderTeams();
 		});
 		teamsTab.add(back);
-		teamsTab.add(Box.createVerticalStrut(GAP_M));
+		teamsTab.add(gap(GAP_M));
 		JsonObject score = scoreFor(array(shell.currentEvent, "teamScores"), teamId);
 		teamsTab.add(label(str(team, "name"), TEXT, headingFont()));
 		String code = str(team, "inviteCode");
@@ -237,8 +232,7 @@ final class TsgHubTeamsTab
 				complete.addActionListener(e -> promptComplete(taskId, teamId, str(task, "title"), str(team, "name")));
 				card.add(north(complete), BorderLayout.EAST);
 			}
-			teamsTab.add(fitHeight(card));
-			teamsTab.add(Box.createVerticalStrut(LIST_GAP));
+			addCard(teamsTab, fitHeight(card));
 		}
 	}
 
