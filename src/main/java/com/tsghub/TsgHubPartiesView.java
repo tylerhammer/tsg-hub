@@ -304,7 +304,7 @@ final class TsgHubPartiesView
 		heading.putClientProperty("html.disable", Boolean.TRUE);
 		if (bool(group, "locked"))
 		{
-			heading.setIcon(new LockIcon());
+			heading.setIcon(icon("lock", MUTED));
 			heading.setIconTextGap(5);
 		}
 		int myWorld = myPartyWorld();

@@ -103,7 +103,7 @@ final class TsgHubTasksTab
 			card.add(text, BorderLayout.CENTER);
 			JButton edit = button("Edit");
 			edit.addActionListener(e -> shell.taskEditor.beginTaskEdit(task));
-			JButton delete = iconButton(new TrashIcon(), "Delete task");
+			JButton delete = iconButton(hover("trash", TsgHubTheme.ERROR), "Delete task");
 			delete.addActionListener(e -> confirmDeleteTask(task));
 			JPanel taskButtons = panel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
 			if (reconcilable(task))

@@ -23,7 +23,6 @@ import java.time.format.DateTimeFormatter;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -49,17 +48,17 @@ final class TsgHubSidebarPanel extends PluginPanel
 	final TsgHubCompetitionView competitionView;
 	final TsgHubPartiesView partiesView;
 	final TsgHubBoardView boardView;
-	final JButton back = iconButton(new BackIcon(), "Back to events");
+	final JButton back = iconButton(hover("back"), "Back to events");
 	private final JLabel title = boldLabel("TSG Hub");
 	private final JLabel subtitle = caption(" ");
 	private String titleText = "TSG Hub";
-	private final RefreshIcon refreshIcon = new RefreshIcon();
+	private final Glyph refreshIcon = hover("refresh");
 	final JButton refresh = iconButton(refreshIcon, "Refresh");
-	private final JButton organizer = iconButton(new OrganizerIcon(), "Admin tools");
-	private final JButton settings = iconButton(new CogIcon(), "Plugin settings");
-	private final JButton pin = iconButton(new PinIcon(), "Pin below");
+	private final JButton organizer = iconButton(hover("organizer"), "Admin tools");
+	private final JButton settings = iconButton(hover("cog"), "Plugin settings");
+	private final JButton pin = iconButton(hover("pin"), "Pin below");
 	private final JPanel footer = new JPanel();
-	private final JButton discord = iconButton(new DiscordIcon(), "Copy an invite to the clan Discord");
+	private final JButton discord = iconButton(hover("discord", new Color(88, 101, 242)), "Copy an invite to the clan Discord");
 	private final JLabel connection = label("", MUTED, smallFont());
 	private final JLabel version = label("v" + TsgHubVersion.VERSION, DIM, smallFont());
 	private final StatusLine status = new StatusLine(TEXT_W);
@@ -290,7 +289,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		Color color = state == TsgHubSocket.State.CONNECTED ? SUCCESS : state == TsgHubSocket.State.CONNECTING ? WARNING : TsgHubTheme.ERROR;
 		String status = state == TsgHubSocket.State.CONNECTED ? "Connected" : state == TsgHubSocket.State.CONNECTING ? "Connecting…" : "Disconnected";
-		connection.setIcon(new DotIcon(color));
+		connection.setIcon(icon("dot", color, 7));
 		connection.setText(status);
 		connection.setToolTipText(state == TsgHubSocket.State.CONNECTED ? "Receiving live updates" : state == TsgHubSocket.State.CONNECTING ? "Connecting to TSG Hub" : "Not connected to TSG Hub");
 	}
@@ -404,9 +403,9 @@ final class TsgHubSidebarPanel extends PluginPanel
 		return owner == View.MEMBERS ? membersView.membersScroll : owner == View.DROPS ? dropsView.dropsPanel : partiesView.groupsScroll;
 	}
 
-	private Icon pinIcon(View owner)
+	private String pinIcon(View owner)
 	{
-		return owner == View.MEMBERS ? new MembersIcon() : owner == View.DROPS ? new DropsIcon() : new PartyIcon();
+		return owner == View.MEMBERS ? "members" : owner == View.DROPS ? "drops" : "party";
 	}
 
 	void pinCurrent()

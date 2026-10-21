@@ -22,6 +22,7 @@ public class DropsPanelTest
 	public static void rules()
 	{
 		TsgHubRules.loadBundled(new Gson());
+		TsgHubItemSets.load(new Gson());
 	}
 
 	@Test
@@ -93,10 +94,10 @@ public class DropsPanelTest
 	@Test
 	public void raidName()
 	{
-		assertEquals("ToB", TsgHubDrops.raidName("Scythe of vitur (uncharged)"));
-		assertEquals("ToA", TsgHubDrops.raidName("Elidinis' ward"));
-		assertEquals("CoX", TsgHubDrops.raidName("Dexterous prayer scroll"));
-		assertEquals("Raid", TsgHubDrops.raidName("Mystery box"));
+		assertEquals("ToB", TsgHubItemSets.raidName("Scythe of vitur (uncharged)"));
+		assertEquals("ToA", TsgHubItemSets.raidName("Elidinis' ward"));
+		assertEquals("CoX", TsgHubItemSets.raidName("Dexterous prayer scroll"));
+		assertEquals("Raid", TsgHubItemSets.raidName("Mystery box"));
 	}
 
 	@Test

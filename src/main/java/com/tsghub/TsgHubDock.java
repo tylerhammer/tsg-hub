@@ -8,13 +8,11 @@ import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 
 import java.awt.BorderLayout;
-import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import javax.swing.BorderFactory;
-import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -51,9 +49,9 @@ final class TsgHubDock extends JPanel
 	private final JLabel icon = new JLabel();
 	private final JLabel title = boldLabel(" ");
 	private final JLabel subtitle = shrinkable(caption(" "));
-	private final ChevronIcon chevron = new ChevronIcon();
+	private final Glyph chevron = hover("chevron");
 	private final JButton toggle = iconButton(chevron, "Collapse");
-	private final JButton close = iconButton(new CloseIcon(), "Unpin");
+	private final JButton close = iconButton(hover("close"), "Unpin");
 	private JComponent content;
 	private final TsgHubSession session;
 	private final Timer saveTimer = new Timer(500, e -> saveSplit());
@@ -103,9 +101,9 @@ final class TsgHubDock extends JPanel
 		rebuild();
 	}
 
-	void pin(Icon pinIcon, JComponent next)
+	void pin(String pinIcon, JComponent next)
 	{
-		icon.setIcon(new SmallIcon(pinIcon));
+		icon.setIcon(TsgHubIcons.icon(pinIcon, ACCENT, 16));
 		content = next;
 		rebuild();
 	}
@@ -171,7 +169,7 @@ final class TsgHubDock extends JPanel
 			applySplit = true;
 			add(split, BorderLayout.CENTER);
 		}
-		chevron.down = !collapsed;
+		chevron.angle = collapsed ? Math.PI : 0;
 		toggle.setToolTipText(collapsed ? "Expand" : "Collapse");
 		revalidate();
 		repaint();
@@ -220,56 +218,6 @@ final class TsgHubDock extends JPanel
 			int x = getWidth() / 2;
 			g.fillRoundRect(x - 12, y - 1, 24, 3, 3, 3);
 			g.dispose();
-		}
-	}
-
-	private static final class SmallIcon implements Icon
-	{
-		private static final double SCALE = 2 / 3.0;
-		private final Icon icon;
-
-		SmallIcon(Icon icon) { this.icon = icon; }
-		@Override public int getIconWidth() { return (int) Math.round(icon.getIconWidth() * SCALE); }
-		@Override public int getIconHeight() { return (int) Math.round(icon.getIconHeight() * SCALE); }
-
-		@Override
-		public void paintIcon(Component c, Graphics graphics, int x, int y)
-		{
-			Graphics2D g = (Graphics2D) graphics.create();
-			g.translate(x, y);
-			g.scale(SCALE, SCALE);
-			icon.paintIcon(c, g, 0, 0);
-			g.dispose();
-		}
-	}
-
-	private static final class ChevronIcon extends HoverIcon
-	{
-		private boolean down = true;
-
-		ChevronIcon() { super(16); }
-		@Override void paint(Graphics2D g, Component c)
-		{
-			if (down)
-			{
-				g.drawLine(4, 6, 8, 10);
-				g.drawLine(8, 10, 12, 6);
-			}
-			else
-			{
-				g.drawLine(4, 10, 8, 6);
-				g.drawLine(8, 6, 12, 10);
-			}
-		}
-	}
-
-	private static final class CloseIcon extends HoverIcon
-	{
-		CloseIcon() { super(16); }
-		@Override void paint(Graphics2D g, Component c)
-		{
-			g.drawLine(5, 5, 11, 11);
-			g.drawLine(11, 5, 5, 11);
 		}
 	}
 }

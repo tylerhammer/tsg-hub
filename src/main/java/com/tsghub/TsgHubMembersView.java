@@ -163,13 +163,13 @@ final class TsgHubMembersView
 		boolean warned = TsgHubRoster.hasActiveWarning(visibleWarnings(member));
 		if (warned)
 		{
-			JLabel warning = new JLabel(new WarningIcon());
+			JLabel warning = new JLabel(icon("warning", TsgHubTheme.ERROR));
 			if (!note.isEmpty() || more) warning.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
 			badges.add(warning);
 		}
 		if (!note.isEmpty())
 		{
-			JLabel noteLabel = new JLabel(new NoteIcon());
+			JLabel noteLabel = new JLabel(icon("note", WARNING));
 			if (more) noteLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
 			badges.add(noteLabel);
 		}

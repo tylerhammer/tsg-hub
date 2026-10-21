@@ -669,7 +669,7 @@ final class TsgHubTaskEditor
 		header.add(caption(group.size() == 1 ? "1 piece" : group.size() + " pieces"), BorderLayout.CENTER);
 		if (itemGroups.size() > 1)
 		{
-			JButton remove = iconButton(new RemoveIcon(), "Remove this set");
+			JButton remove = iconButton(hover("remove"), "Remove this set");
 			remove.addActionListener(e -> {
 				itemGroups.remove(index);
 				refreshGroupChoices(Math.max(0, Math.min(index, itemGroups.size() - 1)));
@@ -702,7 +702,7 @@ final class TsgHubTaskEditor
 		JLabel name = label(item.name, TEXT, plainFont());
 		name.setIcon(iconFor(item.id, selectedItemsPanel));
 		row.add(name, BorderLayout.CENTER);
-		JButton remove = iconButton(new RemoveIcon(), "Remove " + item.name);
+		JButton remove = iconButton(hover("remove"), "Remove " + item.name);
 		remove.addActionListener(e -> {
 			owner.remove(item);
 			refreshGroupChoices(Math.max(0, activeGroup.getSelectedIndex()));

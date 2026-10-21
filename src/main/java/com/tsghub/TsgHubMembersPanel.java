@@ -64,9 +64,9 @@ final class TsgHubMembersPanel extends JPanel
 	private static final int DEFAULT_WINDOW = 1;
 	private static final Color INACTIVE_ROW = ColorUtil.colorLerp(CARD, TsgHubTheme.ERROR, 0.12);
 	private static final int STATUS_W = 600;
-	private static final Icon CHECK = new TsgHubIcons.CheckIcon();
-	private static final Icon WARNED = new WarningIcon();
-	private static final Icon NOTED = new NoteIcon();
+	private static final Icon CHECK = icon("check", SUCCESS);
+	private static final Icon WARNED = icon("warning", TsgHubTheme.ERROR);
+	private static final Icon NOTED = icon("note", WARNING);
 	private static final int BADGE_GAP = 4;
 	private static final Border NOTED_BORDER = BorderFactory.createEmptyBorder(0, 6, 0, 6 + NOTED.getIconWidth() + BADGE_GAP);
 	private static final Border WARNED_BORDER = BorderFactory.createEmptyBorder(0, 6, 0, 6 + WARNED.getIconWidth() + BADGE_GAP + NOTED.getIconWidth() + BADGE_GAP);
@@ -102,7 +102,7 @@ final class TsgHubMembersPanel extends JPanel
 		@Override List<String> matches(String query) { return Collections.emptyList(); }
 	};
 	private final StatusLine status = new StatusLine(STATUS_W);
-	private final RefreshIcon refreshIcon = new RefreshIcon();
+	private final Glyph refreshIcon = hover("refresh");
 	private final JButton refresh = iconButton(refreshIcon, "Refresh clan members");
 	private volatile int days = WINDOW_DAYS[DEFAULT_WINDOW];
 	private Snapshot snapshot;

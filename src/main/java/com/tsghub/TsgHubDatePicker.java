@@ -2,10 +2,8 @@ package com.tsghub;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
-import java.awt.Graphics2D;
 import java.awt.GridLayout;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -35,7 +33,7 @@ final class TsgHubDatePicker extends JButton
 	TsgHubDatePicker()
 	{
 		setHorizontalAlignment(SwingConstants.LEFT);
-		setIcon(new CalendarIcon());
+		setIcon(TsgHubIcons.icon("calendar", TsgHubTheme.MUTED, 14));
 		setIconTextGap(8);
 		setFocusPainted(false);
 		setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -141,24 +139,5 @@ final class TsgHubDatePicker extends JButton
 		grid.revalidate();
 		grid.repaint();
 		popup.pack();
-	}
-
-	private static final class CalendarIcon implements javax.swing.Icon
-	{
-		@Override public int getIconWidth() { return 14; }
-		@Override public int getIconHeight() { return 14; }
-		@Override public void paintIcon(Component c, java.awt.Graphics graphics, int x, int y)
-		{
-			Graphics2D g = (Graphics2D) graphics.create();
-			g.translate(x, y);
-			g.setColor(TsgHubTheme.MUTED);
-			g.drawRect(1, 2, 12, 11);
-			g.fillRect(1, 2, 13, 3);
-			g.fillRect(4, 0, 2, 3);
-			g.fillRect(9, 0, 2, 3);
-			for (int row = 0; row < 2; row++)
-				for (int col = 0; col < 3; col++) g.fillRect(3 + col * 3, 7 + row * 3, 2, 2);
-			g.dispose();
-		}
 	}
 }

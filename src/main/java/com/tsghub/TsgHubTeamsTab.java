@@ -117,7 +117,7 @@ final class TsgHubTeamsTab
 				renderTeams();
 			});
 			actions.add(view);
-			JButton delete = iconButton(new TrashIcon(), "Delete team");
+			JButton delete = iconButton(hover("trash", TsgHubTheme.ERROR), "Delete team");
 			delete.addActionListener(e -> confirmDeleteTeam(team, members));
 			actions.add(delete);
 			card.add(actions, BorderLayout.EAST);
@@ -139,7 +139,7 @@ final class TsgHubTeamsTab
 	{
 		String teamId = str(team, "id");
 		JButton back = button("All teams");
-		back.setIcon(new BackIcon());
+		back.setIcon(hover("back"));
 		back.addActionListener(e -> {
 			viewedTeamId = "";
 			renderTeams();
@@ -171,7 +171,7 @@ final class TsgHubTeamsTab
 			JPanel card = card();
 			JPanel text = stack();
 			JLabel name = label(str(task, "title"), completed ? MUTED : TEXT, boldFont());
-			if (completed) name.setIcon(new CheckIcon());
+			if (completed) name.setIcon(icon("check", SUCCESS));
 			text.add(name);
 			String progressScope = str(progress, "scope");
 			boolean perMember = "individual".equals(progressScope) || "solo".equals(progressScope);

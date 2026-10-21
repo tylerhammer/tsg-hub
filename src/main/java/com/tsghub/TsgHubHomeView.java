@@ -35,11 +35,11 @@ final class TsgHubHomeView
 		this.plugin = plugin;
 		this.shell = shell;
 		sections = Arrays.asList(
-			new Section("Events", new CalendarIcon(), () -> shell.eventsView.openEvents(), () -> shell.eventsView.eventsSummary(), () -> shell.eventsView.liveEvents() > 0),
-			new Section("Parties", new PartyIcon(), () -> shell.partiesView.showParties(), () -> shell.partiesView.partiesSummary(), () -> plugin.groups().inGroup()),
-			new Section("Members", new MembersIcon(), () -> shell.membersView.showMembers(), () -> shell.membersView.membersSummary(), () -> shell.membersView.onlineCount() > 0),
-			new Section("Drops", new DropsIcon(), () -> shell.dropsView.showDrops(), () -> "", () -> false),
-			new Section("News", new NewsIcon(), () -> shell.newsView.showNews(), () -> shell.newsView.newsSummary(), () -> plugin.announcements().unreadCount() > 0));
+			new Section("Events", icon("calendar", ACCENT), () -> shell.eventsView.openEvents(), () -> shell.eventsView.eventsSummary(), () -> shell.eventsView.liveEvents() > 0),
+			new Section("Parties", icon("party", ACCENT), () -> shell.partiesView.showParties(), () -> shell.partiesView.partiesSummary(), () -> plugin.groups().inGroup()),
+			new Section("Members", icon("members", ACCENT), () -> shell.membersView.showMembers(), () -> shell.membersView.membersSummary(), () -> shell.membersView.onlineCount() > 0),
+			new Section("Drops", icon("drops", ACCENT), () -> shell.dropsView.showDrops(), () -> "", () -> false),
+			new Section("News", icon("news", ACCENT), () -> shell.newsView.showNews(), () -> shell.newsView.newsSummary(), () -> plugin.announcements().unreadCount() > 0));
 	}
 
 	private static final class Section
