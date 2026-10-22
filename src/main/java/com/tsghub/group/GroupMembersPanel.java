@@ -43,6 +43,7 @@ public final class GroupMembersPanel extends JPanel
 	private List<String> order = Collections.emptyList();
 	private List<String> preferred = Collections.emptyList();
 	private final Set<Long> offline = new HashSet<>();
+	private final Set<String> departed = new HashSet<>();
 	private BooleanSupplier canKick = () -> false;
 	private Consumer<String> kick = name -> { };
 
@@ -69,6 +70,8 @@ public final class GroupMembersPanel extends JPanel
 		List<String> keys = preferred.stream().filter(k -> names.stream().anyMatch(n -> PlayerNames.key(n).equals(k))).collect(Collectors.toList());
 		names.stream().map(PlayerNames::key).filter(k -> !keys.contains(k)).forEach(keys::add);
 		if (keys.equals(order)) return;
+		order.stream().filter(k -> !keys.contains(k)).forEach(departed::add);
+		departed.removeAll(keys);
 		order = keys;
 		rebuild();
 	}
@@ -138,6 +141,7 @@ public final class GroupMembersPanel extends JPanel
 		players.clear();
 		panels.clear();
 		offline.clear();
+		departed.clear();
 		selfId = -1;
 		order = Collections.emptyList();
 		preferred = Collections.emptyList();
@@ -177,8 +181,8 @@ public final class GroupMembersPanel extends JPanel
 
 	private boolean inRoster(PartyPlayer player)
 	{
-		if (player.getMember().getMemberId() == selfId || order.isEmpty() || Strings.isNullOrEmpty(player.getUsername())) return true;
-		return order.contains(PlayerNames.key(player.getUsername()));
+		if (player.getMember().getMemberId() == selfId || Strings.isNullOrEmpty(player.getUsername())) return true;
+		return !departed.contains(PlayerNames.key(player.getUsername()));
 	}
 
 	private static boolean isOffline(PartyPlayer player)
