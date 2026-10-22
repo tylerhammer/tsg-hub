@@ -215,6 +215,7 @@ final class TsgHubSocket
 		JsonObject message = new JsonObject();
 		message.add("topics", topics);
 		message.addProperty("deltas", true);
+		message.addProperty("sets", true);
 		emit("watch", message);
 	}
 

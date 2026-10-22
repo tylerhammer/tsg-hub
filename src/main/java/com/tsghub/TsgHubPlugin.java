@@ -123,7 +123,6 @@ public class TsgHubPlugin extends Plugin
 	{
 		session = new TsgHubSession(configManager);
 		TsgHubRules.loadBundled(gson);
-		TsgHubItemSets.load(gson);
 		String clanOverride = System.getProperty("tsghub.clanName", "").trim();
 		clan = new TsgHubClan(client, developerMode && !clanOverride.isEmpty() ? clanOverride : "TSGaming");
 		String serviceOverride = System.getProperty("tsghub.serviceUrl", "").trim();
@@ -160,7 +159,7 @@ public class TsgHubPlugin extends Plugin
 		mapOverlay = new TsgHubMapOverlay(client, worldMapOverlay, memberMap);
 		overlayManager.add(mapOverlay);
 		every(liveSync.unlessLive(memberMap::autoRefresh), TsgHubMemberMap.REFRESH_SECONDS, TsgHubMemberMap.REFRESH_SECONDS, TimeUnit.SECONDS);
-		drops = new TsgHubDrops(this, client, clientThread, executor, this::api, () -> sidebar);
+		drops = new TsgHubDrops(this, client, executor, this::api, () -> sidebar);
 		every(liveSync.unlessLive(drops::autoRefresh), TsgHubDrops.REFRESH_SECONDS, TsgHubDrops.REFRESH_SECONDS, TimeUnit.SECONDS);
 		tracker = new TsgHubGameTracker(this, client, clientThread, itemManager, executor);
 		eventBus.register(tracker);

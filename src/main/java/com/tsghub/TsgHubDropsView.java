@@ -9,6 +9,7 @@ import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.tsghub.TsgHubSidebarPanel.View;
 import java.awt.BorderLayout;
@@ -18,7 +19,6 @@ import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.Map;
 import java.util.Objects;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
@@ -26,6 +26,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import lombok.RequiredArgsConstructor;
 import net.runelite.client.util.AsyncBufferedImage;
+import net.runelite.client.util.ColorUtil;
 
 @RequiredArgsConstructor
 final class TsgHubDropsView
@@ -44,16 +45,6 @@ final class TsgHubDropsView
 	private static final int DROP_ICON_W = 40;
 	private static final String[] DROP_KINDS = {"", "", "raid", "pet", "log"};
 	private static final long[] DROP_VALUES = {0, 100_000, 1_000_000, 10_000_000};
-	private static final Color TAG_DEFAULT = new Color(195, 140, 255);
-	private static final Map<String, Color> TAG_COLORS = Map.of(
-		"Log", new Color(55, 240, 70),
-		"CoX", new Color(111, 179, 255),
-		"ToB", new Color(255, 122, 122),
-		"ToA", new Color(224, 180, 76),
-		"Pet", new Color(255, 138, 216),
-		"Dupe pet", new Color(255, 138, 216),
-		"Spooned", new Color(255, 215, 64),
-		"Dry", new Color(214, 160, 105));
 	void setDrops(JsonArray drops)
 	{
 		if (Objects.equals(this.drops, drops)) return;
@@ -100,6 +91,7 @@ final class TsgHubDropsView
 		dropValueIndex = Math.max(0, dropValue.getSelectedIndex());
 		plugin.session().set(DROP_TYPE, dropTypeIndex == 0 ? "" : String.valueOf(dropTypeIndex));
 		plugin.session().set(DROP_VALUE, dropValueIndex == 0 ? "" : String.valueOf(dropValueIndex));
+		drops = null;
 		if (shell.shows(View.DROPS)) renderDrops();
 		plugin.drops().load(false);
 	}
@@ -139,22 +131,18 @@ final class TsgHubDropsView
 		{
 			dropsPage.add(shell.errorPanel("No drops yet", "Clan broadcasts for drops, raid loot, pets and collection log items show up here."));
 		}
+		else if (drops.size() == 0)
+		{
+			dropsPage.add(shell.errorPanel("No matching drops", "Nothing recent matches this type and value."));
+		}
 		else
 		{
 			Instant now = clock.instant();
 			ZoneId zone = ZoneId.systemDefault();
-			String self = plugin.clan().playerName();
-			JsonArray shown = new JsonArray();
+			String day = null;
 			for (int i = 0; i < drops.size(); i++)
 			{
 				JsonObject drop = drops.get(i).getAsJsonObject();
-				if (TsgHubDrops.dropMatches(drop, dropTypeIndex, DROP_VALUES[dropValueIndex], self)) shown.add(drop);
-			}
-			if (shown.size() == 0) dropsPage.add(shell.errorPanel("No matching drops", "Nothing recent matches this type and value."));
-			String day = null;
-			for (int i = 0; i < shown.size(); i++)
-			{
-				JsonObject drop = shown.get(i).getAsJsonObject();
 				String nextDay = TsgHubDrops.dropDay(str(drop, "receivedAt"), now, zone);
 				if (!nextDay.equals(day))
 				{
@@ -176,9 +164,14 @@ final class TsgHubDropsView
 		JLabel icon = dropIcon(integer(drop, "itemId", 0));
 		if (icon != null) card.add(icon, BorderLayout.WEST);
 
-		JLabel name = shrinkable(boldLabel(TsgHubDrops.dropItem(drop)));
+		String item = str(drop, "name");
+		JLabel name = shrinkable(boldLabel(item.isEmpty() ? str(drop, "item") : item));
 		JPanel extras = panel(new FlowLayout(FlowLayout.RIGHT, 3, 0));
-		for (String tag : TsgHubDrops.dropTags(drop)) extras.add(badge(tag, TAG_COLORS.getOrDefault(tag, TAG_DEFAULT)));
+		for (JsonElement tag : array(drop, "tags"))
+		{
+			Color color = tag.isJsonObject() ? ColorUtil.fromHex(str(tag.getAsJsonObject(), "color")) : null;
+			if (color != null) extras.add(badge(str(tag.getAsJsonObject(), "text"), color));
+		}
 		long value = drop.has("value") ? drop.get("value").getAsLong() : 0;
 		if (value > 0) extras.add(label(formatGp(value), coinColor(value), smallFont()));
 		card.add(TsgHubSidebarPanel.fillWidth(twoLines(
