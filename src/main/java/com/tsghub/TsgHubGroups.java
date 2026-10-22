@@ -94,14 +94,10 @@ final class TsgHubGroups implements GroupTracker.Listener
 		if (!plugin.canUseHub() || executor.isShutdown()) return;
 		String clan = TsgHubApi.encode(plugin.clan().name());
 		if (!quiet) busy(true);
-		api.get().call("GET", "/v1/groups?clanName=" + clan, null, null).whenCompleteAsync((response, error) -> {
-			try
-			{
-				apply(TsgHubApi.result(response, error).getAsJsonArray("groups"));
-			}
-			catch (Exception e) { if (!quiet) status("Couldn't load parties. " + TsgHubFormat.friendlyError(e), Tone.ERROR); }
-			finally { if (!quiet) busy(false); }
-		}, executor);
+		api.get().call("GET", "/v1/groups?clanName=" + clan, null, null).whenCompleteAsync(TsgHubApi.handle(response ->
+		{
+			apply(response.getAsJsonArray("groups"));
+		}, e -> { if (!quiet) status("Couldn't load parties. " + TsgHubFormat.friendlyError(e), Tone.ERROR); }, () -> { if (!quiet) busy(false); }), executor);
 	}
 
 	void apply(JsonArray groups)

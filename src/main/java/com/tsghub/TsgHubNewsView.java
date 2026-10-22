@@ -17,19 +17,15 @@ import java.time.Instant;
 import java.time.ZoneId;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import lombok.RequiredArgsConstructor;
 
+@RequiredArgsConstructor
 final class TsgHubNewsView
 {
 	private final TsgHubPlugin plugin;
 	private final TsgHubSidebarPanel shell;
 
 	private JsonArray announcements;
-
-	TsgHubNewsView(TsgHubPlugin plugin, TsgHubSidebarPanel shell)
-	{
-		this.plugin = plugin;
-		this.shell = shell;
-	}
 
 	void setAnnouncements(JsonArray announcements)
 	{

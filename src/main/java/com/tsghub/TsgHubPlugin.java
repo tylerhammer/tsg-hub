@@ -137,7 +137,6 @@ public class TsgHubPlugin extends Plugin
 		api = new TsgHubApi(okHttpClient, gson, serviceUrl);
 		executor = Executors.newSingleThreadScheduledExecutor(daemon("tsg-hub-api"));
 		keys = new TsgHubKeys(this, config, configManager, executor);
-		keys.migrate();
 		chat = new TsgHubChat(this, config, configManager, chatMessageManager);
 		sessions = new TsgHubSessions(this, executor);
 		liveSync = new TsgHubLiveSync(this, okHttpClient, gson, serviceUrl, executor);
@@ -489,16 +488,12 @@ public class TsgHubPlugin extends Plugin
 		body.addProperty("displayName", clan.playerName());
 		body.addProperty("clanName", clan.name());
 		clan.addAccountHash(body);
-		api().call("POST", "/v1/discord/invite", null, body).whenCompleteAsync((response, error) -> {
-			try
-			{
-				String url = TsgHubApi.result(response, error).get("url").getAsString();
-				SwingUtilities.invokeLater(() -> TsgHubUi.copyToClipboard(url));
-				memberStatus("Discord invite copied. Paste it in your browser to join.", Tone.SUCCESS);
-			}
-			catch (Exception e) { memberError("", e); }
-			finally { SwingUtilities.invokeLater(done); }
-		}, executor);
+		api().call("POST", "/v1/discord/invite", null, body).whenCompleteAsync(TsgHubApi.handle(response ->
+		{
+			String url = response.get("url").getAsString();
+			SwingUtilities.invokeLater(() -> TsgHubUi.copyToClipboard(url));
+			memberStatus("Discord invite copied. Paste it in your browser to join.", Tone.SUCCESS);
+		}, e -> memberError("", e), () -> SwingUtilities.invokeLater(done)), executor);
 	}
 
 	@Subscribe

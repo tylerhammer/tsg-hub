@@ -1,11 +1,13 @@
 package com.tsghub;
 
 import com.google.gson.JsonObject;
+import lombok.RequiredArgsConstructor;
 import net.runelite.api.Client;
 import net.runelite.api.clan.ClanChannel;
 import net.runelite.api.clan.ClanMember;
 import net.runelite.api.clan.ClanSettings;
 
+@RequiredArgsConstructor
 class TsgHubClan
 {
 	private static final int CHECK_TICKS = 50;
@@ -17,12 +19,6 @@ class TsgHubClan
 	private volatile int rank = -1;
 	private volatile boolean inClanChat;
 	private volatile int checkTicks;
-
-	TsgHubClan(Client client, String hubName)
-	{
-		this.client = client;
-		this.hubName = hubName;
-	}
 
 	String name() { return clanName; }
 	String playerName() { return playerName; }

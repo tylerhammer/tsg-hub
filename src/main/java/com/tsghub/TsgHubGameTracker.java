@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
+import lombok.RequiredArgsConstructor;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.Item;
@@ -35,6 +36,7 @@ import net.runelite.client.game.ItemStack;
 import net.runelite.client.plugins.loottracker.LootReceived;
 import net.runelite.client.util.Text;
 
+@RequiredArgsConstructor
 final class TsgHubGameTracker
 {
 	private static final int PET_CHECK_TICKS = 5;
@@ -52,15 +54,6 @@ final class TsgHubGameTracker
 	private String lastGroupContent = "";
 	private int lastGroupContentTick = -1;
 	private Set<Integer> inventoryPets = Collections.emptySet();
-
-	TsgHubGameTracker(TsgHubPlugin plugin, Client client, ClientThread clientThread, ItemManager itemManager, ScheduledExecutorService executor)
-	{
-		this.plugin = plugin;
-		this.client = client;
-		this.clientThread = clientThread;
-		this.itemManager = itemManager;
-		this.executor = executor;
-	}
 
 	@Subscribe
 	public void onStatChanged(StatChanged event)

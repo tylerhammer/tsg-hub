@@ -12,6 +12,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.MediaType;
@@ -68,6 +70,21 @@ final class TsgHubApi
 			return started;
 		});
 		return shared.thenApply(JsonObject::deepCopy);
+	}
+
+	static BiConsumer<JsonObject, Throwable> handle(Consumer<JsonObject> onResult, Consumer<Exception> onError)
+	{
+		return handle(onResult, onError, () -> { });
+	}
+
+	static BiConsumer<JsonObject, Throwable> handle(Consumer<JsonObject> onResult, Consumer<Exception> onError, Runnable after)
+	{
+		return (response, error) ->
+		{
+			try { onResult.accept(result(response, error)); }
+			catch (Exception e) { onError.accept(e); }
+			finally { after.run(); }
+		};
 	}
 
 	static JsonObject result(JsonObject value, Throwable error) throws Exception

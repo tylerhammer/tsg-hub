@@ -13,7 +13,9 @@ import java.awt.FlowLayout;
 import javax.swing.JButton;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import lombok.RequiredArgsConstructor;
 
+@RequiredArgsConstructor
 final class TsgHubTasksTab
 {
 	private final TsgHubPlugin plugin;
@@ -22,12 +24,6 @@ final class TsgHubTasksTab
 	private static final int MAX_RECONCILE_LINES = 10;
 
 	final WidthTrackingPanel tasksTab = new WidthTrackingPanel();
-
-	TsgHubTasksTab(TsgHubPlugin plugin, TsgHubPanel shell)
-	{
-		this.plugin = plugin;
-		this.shell = shell;
-	}
 
 	void taskDeleted(String taskId)
 	{
@@ -75,7 +71,7 @@ final class TsgHubTasksTab
 		JPanel top = panel(new BorderLayout());
 		JsonArray tasks = array(shell.currentEvent, "tasks");
 		top.add(caption(tasks.size() + (tasks.size() == 1 ? " task" : " tasks") + ", shared by every team"), BorderLayout.CENTER);
-		JButton add = onClick(primaryButton("New task"), () -> shell.taskEditor.beginNewTask());
+		JButton add = onClick(primaryButton("New task"), () -> shell.taskEditor.beginTaskEdit(new JsonObject()));
 		top.add(add, BorderLayout.EAST);
 		tasksTab.add(fitHeight(top));
 		tasksTab.add(gap(GAP_M));

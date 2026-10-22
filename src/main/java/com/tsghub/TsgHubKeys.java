@@ -5,8 +5,10 @@ import com.tsghub.TsgHubUi.Tone;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import lombok.RequiredArgsConstructor;
 import net.runelite.client.config.ConfigManager;
 
+@RequiredArgsConstructor
 final class TsgHubKeys
 {
 	private final TsgHubPlugin plugin;
@@ -19,14 +21,6 @@ final class TsgHubKeys
 	private volatile String rejected = "";
 	private volatile boolean announce;
 	private ScheduledFuture<?> retry;
-
-	TsgHubKeys(TsgHubPlugin plugin, TsgHubConfig config, ConfigManager configManager, ScheduledExecutorService executor)
-	{
-		this.plugin = plugin;
-		this.config = config;
-		this.configManager = configManager;
-		this.executor = executor;
-	}
 
 	boolean verified()
 	{
@@ -42,14 +36,6 @@ final class TsgHubKeys
 	{
 		String key = config.hubKey();
 		return key == null ? "" : key.trim();
-	}
-
-	void migrate()
-	{
-		String legacy = configManager.getConfiguration("tsghub", "adminKey");
-		if (legacy == null) return;
-		if (!legacy.trim().isEmpty() && configured().isEmpty()) configManager.setConfiguration("tsghub", "hubKey", legacy.trim());
-		configManager.unsetConfiguration("tsghub", "adminKey");
 	}
 
 	void check()

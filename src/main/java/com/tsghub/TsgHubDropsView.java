@@ -25,8 +25,10 @@ import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import lombok.RequiredArgsConstructor;
 import net.runelite.client.util.AsyncBufferedImage;
 
+@RequiredArgsConstructor
 final class TsgHubDropsView
 {
 	private final TsgHubPlugin plugin;
@@ -53,12 +55,6 @@ final class TsgHubDropsView
 		"Dupe pet", new Color(255, 138, 216),
 		"Spooned", new Color(255, 215, 64),
 		"Dry", new Color(214, 160, 105));
-	TsgHubDropsView(TsgHubPlugin plugin, TsgHubSidebarPanel shell)
-	{
-		this.plugin = plugin;
-		this.shell = shell;
-	}
-
 	void setDrops(JsonArray drops)
 	{
 		if (Objects.equals(this.drops, drops)) return;

@@ -7,12 +7,12 @@ import com.google.gson.Gson;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
@@ -63,30 +63,11 @@ final class TsgHubSocket
 	private static final long RESTART_MIN_MILLIS = 2_000;
 	private static final long RESTART_SPREAD_MILLIS = 8_000;
 
-	private static final class Subscription
+	@Value
+	private static class Subscription
 	{
-		final String token;
-		final boolean inClanChat;
-
-		Subscription(String token, boolean inClanChat)
-		{
-			this.token = token;
-			this.inClanChat = inClanChat;
-		}
-
-		@Override
-		public boolean equals(Object other)
-		{
-			if (!(other instanceof Subscription)) return false;
-			Subscription that = (Subscription) other;
-			return inClanChat == that.inClanChat && token.equals(that.token);
-		}
-
-		@Override
-		public int hashCode()
-		{
-			return Objects.hash(token, inClanChat);
-		}
+		String token;
+		boolean inClanChat;
 	}
 
 	private final OkHttpClient http;
@@ -197,14 +178,9 @@ final class TsgHubSocket
 		return socket.send(message.toString());
 	}
 
-	synchronized boolean signaling()
-	{
-		return ready && socket != null;
-	}
-
 	synchronized boolean sendSignal(JsonObject message)
 	{
-		return signaling() && socket.send(message.toString());
+		return isLive() && socket.send(message.toString());
 	}
 
 	synchronized boolean xp(String skill, int xp, int tick)

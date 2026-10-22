@@ -7,6 +7,7 @@ import com.google.gson.JsonObject;
 import com.tsghub.TsgHubUi.Tone;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.RequiredArgsConstructor;
 import net.runelite.api.ChatMessageType;
 import net.runelite.client.chat.ChatColorType;
 import net.runelite.client.chat.ChatMessageBuilder;
@@ -16,6 +17,7 @@ import net.runelite.client.config.ConfigManager;
 import net.runelite.client.util.ColorUtil;
 import net.runelite.client.util.Text;
 
+@RequiredArgsConstructor
 final class TsgHubChat
 {
 	private final TsgHubPlugin plugin;
@@ -25,14 +27,6 @@ final class TsgHubChat
 	private final Set<String> localMessages = ConcurrentHashMap.newKeySet();
 	private volatile String notifiedUpdate = "";
 	private volatile boolean mapNoticeChecked;
-
-	TsgHubChat(TsgHubPlugin plugin, TsgHubConfig config, ConfigManager configManager, ChatMessageManager chatMessageManager)
-	{
-		this.plugin = plugin;
-		this.config = config;
-		this.configManager = configManager;
-		this.chatMessageManager = chatMessageManager;
-	}
 
 	boolean isOwnEcho(String message)
 	{

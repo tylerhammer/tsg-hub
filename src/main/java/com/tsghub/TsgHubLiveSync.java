@@ -14,16 +14,17 @@ import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import lombok.AllArgsConstructor;
 import net.runelite.client.util.Filepath;
 import okhttp3.OkHttpClient;
 
 final class TsgHubLiveSync
 {
-	private interface Topic
+	@AllArgsConstructor
+	private static final class Topic
 	{
-		void snapshot(JsonObject data, String eventId);
-
-		void changed(String eventId);
+		final BiConsumer<JsonObject, String> snapshot;
+		final Consumer<String> changed;
 	}
 
 	private final TsgHubPlugin plugin;
@@ -64,33 +65,24 @@ final class TsgHubLiveSync
 			@Override public void onGroupHeartbeat(JsonObject message) { plugin.groups().beaten(message); }
 			@Override public void onGroupRejected(int status) { plugin.groups().beatRejected(status); }
 		});
-		topics.put("groups", topic((data, eventId) -> plugin.groups().apply(TsgHubJson.array(data, "groups")), eventId -> plugin.groups().autoRefresh()));
-		topics.put("presence", topic(this::presence, eventId -> plugin.presence().autoRefresh()));
-		topics.put("positions", topic((data, eventId) -> plugin.memberMap().apply(TsgHubJson.array(data, "members")), eventId -> { }));
-		topics.put("drops", topic((data, eventId) -> plugin.drops().onSnapshot(TsgHubJson.array(data, "drops")), eventId -> plugin.drops().autoRefresh()));
-		topics.put("announcements", topic((data, eventId) -> plugin.announcements().apply(TsgHubJson.array(data, "announcements")), eventId -> plugin.announcements().load()));
-		topics.put("events", topic((data, eventId) -> plugin.sessions().applyClanEvents(TsgHubJson.array(data, "events")), eventId -> plugin.sessions().loadClanEvents()));
-		topics.put("managed-events", topic((data, eventId) -> {
+		topics.put("groups", new Topic((data, eventId) -> plugin.groups().apply(TsgHubJson.array(data, "groups")), eventId -> plugin.groups().autoRefresh()));
+		topics.put("presence", new Topic(this::presence, eventId -> plugin.presence().autoRefresh()));
+		topics.put("positions", new Topic((data, eventId) -> plugin.memberMap().apply(TsgHubJson.array(data, "members")), eventId -> { }));
+		topics.put("drops", new Topic((data, eventId) -> plugin.drops().onSnapshot(TsgHubJson.array(data, "drops")), eventId -> plugin.drops().autoRefresh()));
+		topics.put("announcements", new Topic((data, eventId) -> plugin.announcements().apply(TsgHubJson.array(data, "announcements")), eventId -> plugin.announcements().load()));
+		topics.put("events", new Topic((data, eventId) -> plugin.sessions().applyClanEvents(TsgHubJson.array(data, "events")), eventId -> plugin.sessions().loadClanEvents()));
+		topics.put("managed-events", new Topic((data, eventId) -> {
 			if (plugin.windows().adminOpen()) plugin.organizer().showManagedEvents(TsgHubJson.array(data, "events"));
 		}, eventId -> reloadManagedEvents()));
-		topics.put("organizer", topic((data, eventId) -> {
+		topics.put("organizer", new Topic((data, eventId) -> {
 			if (isOrganizerEvent(eventId)) plugin.organizer().showLive(eventId, data);
 		}, this::refreshOrganizerEvent));
-		topics.put("notifications", topic((data, eventId) -> {
+		topics.put("notifications", new Topic((data, eventId) -> {
 			if (isActiveEvent(eventId)) plugin.chat().notifications(TsgHubJson.array(data, "notifications"));
 		}, eventId -> {
 			if (isActiveEvent(eventId)) plugin.sessions().pollNotifications();
 		}));
-		topics.put("event", topic(this::eventSnapshot, this::eventChanged));
-	}
-
-	private static Topic topic(BiConsumer<JsonObject, String> snapshot, Consumer<String> changed)
-	{
-		return new Topic()
-		{
-			@Override public void snapshot(JsonObject data, String eventId) { snapshot.accept(data, eventId); }
-			@Override public void changed(String eventId) { changed.accept(eventId); }
-		};
+		topics.put("event", new Topic(this::eventSnapshot, this::eventChanged));
 	}
 
 	TsgHubSocket socket()
@@ -182,13 +174,13 @@ final class TsgHubLiveSync
 	private void snapshot(JsonObject message)
 	{
 		Topic topic = topics.get(TsgHubJson.str(message, "topic"));
-		if (topic != null) topic.snapshot(TsgHubJson.object(message, "data"), TsgHubJson.str(message, "eventId"));
+		if (topic != null) topic.snapshot.accept(TsgHubJson.object(message, "data"), TsgHubJson.str(message, "eventId"));
 	}
 
 	private void changed(String name, String eventId)
 	{
 		Topic topic = topics.get(name);
-		if (topic != null) topic.changed(eventId);
+		if (topic != null) topic.changed.accept(eventId);
 	}
 
 	private void presence(JsonObject data, String eventId)

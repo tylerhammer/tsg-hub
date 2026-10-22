@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.IntConsumer;
 import java.util.function.Predicate;
 import javax.swing.SwingUtilities;
+import lombok.RequiredArgsConstructor;
 import net.runelite.api.Client;
 import net.runelite.api.EnumComposition;
 import net.runelite.api.EnumID;
@@ -49,6 +50,7 @@ import net.runelite.client.party.events.UserPart;
 import net.runelite.client.party.messages.UserSync;
 import org.apache.commons.lang3.ArrayUtils;
 
+@RequiredArgsConstructor
 final class GroupTracker
 {
 	private static final int[] RUNEPOUCH_AMOUNT_VARBITS = {
@@ -98,21 +100,6 @@ final class GroupTracker
 	private volatile PartyPlayer selfView;
 	private volatile Instant lastLogout = Instant.now();
 	private TsgGroupUpdate currentChange = new TsgGroupUpdate();
-
-	GroupTracker(Client client, ClientThread clientThread, PartyService partyService, WSClient wsClient,
-		ItemManager itemManager, Predicate<String> isGroupParty, java.util.function.BooleanSupplier showSelf,
-		java.util.function.Supplier<String> area, Listener listener)
-	{
-		this.client = client;
-		this.clientThread = clientThread;
-		this.partyService = partyService;
-		this.wsClient = wsClient;
-		this.itemManager = itemManager;
-		this.isGroupParty = isGroupParty;
-		this.showSelf = showSelf;
-		this.area = area;
-		this.listener = listener;
-	}
 
 	void start()
 	{

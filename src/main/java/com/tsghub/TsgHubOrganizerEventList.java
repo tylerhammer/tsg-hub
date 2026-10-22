@@ -14,7 +14,9 @@ import java.util.Comparator;
 import java.util.List;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
+import lombok.RequiredArgsConstructor;
 
+@RequiredArgsConstructor
 final class TsgHubOrganizerEventList
 {
 	private final TsgHubPlugin plugin;
@@ -23,12 +25,6 @@ final class TsgHubOrganizerEventList
 	private final JPanel eventList = stack();
 	String selectedEventId = "";
 	JsonArray managedEvents = new JsonArray();
-
-	TsgHubOrganizerEventList(TsgHubPlugin plugin, TsgHubPanel shell)
-	{
-		this.plugin = plugin;
-		this.shell = shell;
-	}
 
 	JComponent buildEventListColumn()
 	{

@@ -10,7 +10,6 @@ import static com.tsghub.TsgHubUi.*;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.awt.BorderLayout;
-import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.Image;
@@ -55,14 +54,13 @@ final class TsgHubTaskEditor
 
 	private enum TaskType
 	{
-		KILL(1, "Boss kill count"),
-		DROP(2, "Item drop"),
-		ITEM_SET(3, "Complete a set"),
-		RAID(4, "Raid completion");
+		KILL("Boss kill count"),
+		DROP("Item drop"),
+		ITEM_SET("Complete a set"),
+		RAID("Raid completion");
 
-		private final int code;
 		private final String label;
-		TaskType(int code, String label) { this.code = code; this.label = label; }
+		TaskType(String label) { this.label = label; }
 		@Override public String toString() { return label; }
 	}
 
@@ -93,6 +91,7 @@ final class TsgHubTaskEditor
 	private final JTextField itemSearch = new JTextField();
 	private final DefaultListModel<ItemSuggestion> itemResults = new DefaultListModel<>();
 	private final JList<ItemSuggestion> itemResultList = new JList<>(itemResults);
+	private final JScrollPane resultsScroll = new JScrollPane(itemResultList);
 	private final JLabel itemSearchHint = caption("");
 	private final JComboBox<String> activeGroup = new JComboBox<>();
 	private final JPanel selectedItemsPanel = stack();
@@ -330,10 +329,8 @@ final class TsgHubTaskEditor
 				if (index >= 0 && itemResultList.getCellBounds(index, index).contains(e.getPoint())) addItem(itemResults.get(index));
 			}
 		});
-		JScrollPane resultsScroll = new JScrollPane(itemResultList);
 		resultsScroll.setBorder(BorderFactory.createLineBorder(BORDER));
 		resultsScroll.setVisible(false);
-		resultsScroll.setName("results");
 		picker.add(resultsScroll);
 		picker.add(gap(GAP_S));
 		picker.add(selectedItemsPanel);
@@ -352,31 +349,11 @@ final class TsgHubTaskEditor
 		shell.tabs.select(shell.tasksTabButton);
 	}
 
-	void beginNewTask()
-	{
-		editingTaskId = "";
-		taskEditorTitle.setText("New task");
-		taskSave.setText("Add task");
-		taskTitle.setText("");
-		taskDescription.setText("");
-		taskType.setSelectedItem(TaskType.KILL);
-		scopeTeam.setSelected(true);
-		taskBoss.setText("");
-		signalKc.setSelected(true);
-		raidChoice.setSelectedIndex(0);
-		rebuildRaidModes("");
-		dropSpecific.setSelected(true);
-		resetItems();
-		targetCount.setText("1");
-		taskPoints.setText("1");
-		openTaskEditor();
-	}
-
 	void beginTaskEdit(JsonObject task)
 	{
 		editingTaskId = str(task, "id");
-		taskEditorTitle.setText("Edit task");
-		taskSave.setText("Save task");
+		taskEditorTitle.setText(editingTaskId.isEmpty() ? "New task" : "Edit task");
+		taskSave.setText(editingTaskId.isEmpty() ? "Add task" : "Save task");
 		taskTitle.setText(str(task, "title"));
 		taskDescription.setText(str(task, "description"));
 		String scope = str(task, "scope");
@@ -485,12 +462,52 @@ final class TsgHubTaskEditor
 		String error = validateTask(type);
 		if (error != null) { taskFormFailed(error); return; }
 		taskFormError.setVisible(false);
-		String targets = type == TaskType.KILL ? taskBoss.getText() : type == TaskType.RAID ? String.join("\n", selectedRaidModes()) : "";
-		int dropCategory = dropJar.isSelected() ? 1 : dropPet.isSelected() ? 2 : 0;
-		plugin.organizer().saveTask(editingTaskId, taskTitle.getText(), taskDescription.getText(), type.code,
-			scopeIndividual.isSelected() ? 1 : scopeSolo.isSelected() ? 2 : 0, signalLoot.isSelected() ? 1 : 0, dropCategory,
-			targets, selectedItemsJson(type), type == TaskType.ITEM_SET ? 1 : 0,
-			targetCount.getText(), taskPoints.getText());
+		JsonObject body = new JsonObject();
+		body.addProperty("title", taskTitle.getText().trim());
+		body.addProperty("description", taskDescription.getText().trim());
+		body.addProperty("type", type == TaskType.KILL ? "kill" : type == TaskType.RAID ? "raid" : "drop");
+		body.addProperty("scope", scopeIndividual.isSelected() ? "individual" : scopeSolo.isSelected() ? "solo" : "team");
+		body.addProperty("points", positiveInt(taskPoints.getText()));
+		JsonObject cfg = new JsonObject();
+		if (type != TaskType.ITEM_SET) cfg.addProperty("targetCount", positiveInt(targetCount.getText()));
+		if (type == TaskType.KILL)
+		{
+			cfg.addProperty("npcName", taskBoss.getText().trim());
+			cfg.addProperty("signal", signalLoot.isSelected() ? "loot" : "chat");
+		}
+		else if (type == TaskType.RAID)
+		{
+			JsonArray modes = new JsonArray();
+			selectedRaidModes().forEach(mode -> modes.add(mode.toLowerCase(Locale.ROOT)));
+			cfg.add("modes", modes);
+			cfg.addProperty("clanOnly", true);
+		}
+		else if (type == TaskType.DROP && (dropJar.isSelected() || dropPet.isSelected())) cfg.addProperty("itemGroup", dropJar.isSelected() ? "jar" : "pet");
+		else
+		{
+			JsonArray itemNames = new JsonArray();
+			JsonArray itemIds = new JsonArray();
+			JsonArray groups = new JsonArray();
+			for (List<ItemSuggestion> group : itemGroups)
+			{
+				JsonArray groupItems = new JsonArray();
+				for (ItemSuggestion item : group)
+				{
+					itemNames.add(item.name);
+					itemIds.add(item.id);
+					JsonObject json = new JsonObject();
+					json.addProperty("name", item.name);
+					json.addProperty("id", item.id);
+					groupItems.add(json);
+				}
+				if (groupItems.size() > 0) groups.add(groupItems);
+			}
+			cfg.add("itemNames", itemNames);
+			cfg.add("itemIds", itemIds);
+			if (type == TaskType.ITEM_SET) cfg.add("itemGroups", groups);
+		}
+		body.add("config", cfg);
+		plugin.organizer().saveTask(editingTaskId, body);
 	}
 
 	private String validateTask(TaskType type)
@@ -536,28 +553,10 @@ final class TsgHubTaskEditor
 		return modes;
 	}
 
-	private JsonArray selectedItemsJson(TaskType type)
-	{
-		JsonArray items = new JsonArray();
-		boolean grouped = type == TaskType.ITEM_SET;
-		for (int g = 0; g < itemGroups.size(); g++)
-		{
-			for (ItemSuggestion item : itemGroups.get(g))
-			{
-				JsonObject json = new JsonObject();
-				json.addProperty("name", item.name);
-				json.addProperty("id", item.id);
-				json.addProperty("group", grouped ? g : -1);
-				items.add(json);
-			}
-		}
-		return items;
-	}
-
 	private void runItemSearch()
 	{
 		String query = itemSearch.getText().trim();
-		JScrollPane results = resultsScroll();
+		JScrollPane results = resultsScroll;
 		if (query.length() < 2)
 		{
 			itemResults.clear();
@@ -582,13 +581,6 @@ final class TsgHubTaskEditor
 		});
 	}
 
-	private JScrollPane resultsScroll()
-	{
-		for (Component component : itemPickerRow.getComponents())
-			if (component instanceof JScrollPane && "results".equals(component.getName())) return (JScrollPane) component;
-		throw new IllegalStateException("results list missing");
-	}
-
 	private void addItem(ItemSuggestion item)
 	{
 		int group = groupRow.isVisible() ? Math.max(0, activeGroup.getSelectedIndex()) : 0;
@@ -601,7 +593,7 @@ final class TsgHubTaskEditor
 		target.add(item);
 		itemSearch.setText("");
 		itemResults.clear();
-		resultsScroll().setVisible(false);
+		resultsScroll.setVisible(false);
 		itemSearchHint.setText("Added " + item.name + ". Search again to add more.");
 		renderSelectedItems();
 		itemSearch.requestFocusInWindow();

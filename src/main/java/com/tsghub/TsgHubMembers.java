@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.swing.SwingUtilities;
+import lombok.RequiredArgsConstructor;
 import net.runelite.api.Client;
 import net.runelite.api.clan.ClanMember;
 import net.runelite.api.clan.ClanRank;
@@ -28,6 +29,7 @@ import net.runelite.api.clan.ClanTitle;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.util.Text;
 
+@RequiredArgsConstructor
 final class TsgHubMembers
 {
 	static final int NO_RANK = Integer.MIN_VALUE;
@@ -169,20 +171,13 @@ final class TsgHubMembers
 		}
 	}
 
+	@RequiredArgsConstructor
 	static final class Summary
 	{
 		final int total;
 		final int active;
 		final int onHub;
 		final int turnoutPercent;
-
-		Summary(int total, int active, int onHub, int turnoutPercent)
-		{
-			this.total = total;
-			this.active = active;
-			this.onHub = onHub;
-			this.turnoutPercent = turnoutPercent;
-		}
 	}
 
 	private final TsgHubPlugin plugin;
@@ -193,18 +188,6 @@ final class TsgHubMembers
 	private final Supplier<TsgHubApi> api;
 	private final Supplier<TsgHubMembersPanel> panel;
 	private final AtomicInteger requests = new AtomicInteger();
-
-	TsgHubMembers(TsgHubPlugin plugin, Client client, ClientThread clientThread, TsgHubRankIcons rankIcons, ScheduledExecutorService executor,
-		Supplier<TsgHubApi> api, Supplier<TsgHubMembersPanel> panel)
-	{
-		this.plugin = plugin;
-		this.client = client;
-		this.clientThread = clientThread;
-		this.rankIcons = rankIcons;
-		this.executor = executor;
-		this.api = api;
-		this.panel = panel;
-	}
 
 	void load()
 	{

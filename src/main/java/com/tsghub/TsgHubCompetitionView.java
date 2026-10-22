@@ -20,7 +20,9 @@ import java.util.List;
 import java.util.Objects;
 import javax.swing.JButton;
 import javax.swing.JPanel;
+import lombok.RequiredArgsConstructor;
 
+@RequiredArgsConstructor
 final class TsgHubCompetitionView
 {
 	private final TsgHubPlugin plugin;
@@ -30,12 +32,6 @@ final class TsgHubCompetitionView
 	String competitionName = "";
 	volatile String openCompetitionId;
 	private final JButton competitionJoinButton = primaryButton("Join");
-
-	TsgHubCompetitionView(TsgHubPlugin plugin, TsgHubSidebarPanel shell)
-	{
-		this.plugin = plugin;
-		this.shell = shell;
-	}
 
 	String openCompetitionId()
 	{

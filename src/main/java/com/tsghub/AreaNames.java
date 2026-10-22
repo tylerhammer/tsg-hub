@@ -1,21 +1,17 @@
 package com.tsghub;
 
+import lombok.RequiredArgsConstructor;
 import net.runelite.api.coords.WorldPoint;
 
 final class AreaNames
 {
 	enum Type { BOSSES, RAIDS, MINIGAMES, DUNGEONS, CITIES, REGIONS }
 
+	@RequiredArgsConstructor
 	static final class Area
 	{
 		final String name;
 		final Type type;
-
-		Area(String name, Type type)
-		{
-			this.name = name;
-			this.type = type;
-		}
 	}
 
 	private AreaNames() {}

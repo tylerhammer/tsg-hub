@@ -1,18 +1,14 @@
 package com.tsghub;
 
 import java.util.concurrent.ThreadLocalRandom;
+import lombok.RequiredArgsConstructor;
 
+@RequiredArgsConstructor
 final class TsgHubBackoff
 {
 	private final long minMillis;
 	private final long maxMillis;
 	private int attempts;
-
-	TsgHubBackoff(long minMillis, long maxMillis)
-	{
-		this.minMillis = minMillis;
-		this.maxMillis = maxMillis;
-	}
 
 	synchronized long next()
 	{
