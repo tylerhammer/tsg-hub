@@ -71,12 +71,6 @@ final class TsgHubLiveSync
 		topics.put("drops", new Topic((data, eventId) -> plugin.drops().onSnapshot(TsgHubJson.array(data, "drops")), eventId -> plugin.drops().autoRefresh()));
 		topics.put("announcements", new Topic((data, eventId) -> plugin.announcements().apply(TsgHubJson.array(data, "announcements")), eventId -> plugin.announcements().load()));
 		topics.put("events", new Topic((data, eventId) -> plugin.sessions().applyClanEvents(TsgHubJson.array(data, "events")), eventId -> plugin.sessions().loadClanEvents()));
-		topics.put("managed-events", new Topic((data, eventId) -> {
-			if (plugin.windows().adminOpen()) plugin.organizer().showManagedEvents(TsgHubJson.array(data, "events"));
-		}, eventId -> reloadManagedEvents()));
-		topics.put("organizer", new Topic((data, eventId) -> {
-			if (isOrganizerEvent(eventId)) plugin.organizer().showLive(eventId, data);
-		}, this::refreshOrganizerEvent));
 		topics.put("notifications", new Topic((data, eventId) -> {
 			if (isActiveEvent(eventId)) plugin.chat().notifications(TsgHubJson.array(data, "notifications"));
 		}, eventId -> {
@@ -121,7 +115,6 @@ final class TsgHubLiveSync
 		TsgHubClan clan = plugin.clan();
 		TsgHubSession session = plugin.session();
 		TsgHubSidebarPanel sidebar = plugin.sidebar();
-		TsgHubOrganizer organizer = plugin.organizer();
 		socket.connect(clan.name());
 		Map<String, String> tokens = new HashMap<>();
 		String eventId = session.get(EVENT_ID);
@@ -135,16 +128,10 @@ final class TsgHubLiveSync
 			String joinedToken = session.get(MEMBER_TOKEN + joinedId);
 			if (!joinedToken.isEmpty()) tokens.putIfAbsent(joinedId, joinedToken);
 		}
-		Map<String, String> memberTokens = new HashMap<>(tokens);
-		boolean adminOpen = plugin.windows().adminOpen();
-		String organizerEventId = adminOpen ? plugin.sessions().organizerEventId() : "";
-		String organizerToken = organizerEventId.isEmpty() ? "" : organizer.credential(organizerEventId);
-		if (!organizerToken.isEmpty()) tokens.putIfAbsent(organizerEventId, organizerToken);
-		if (organizer.refreshPending() && adminOpen) organizer.liveRefresh();
 		socket.sync(tokens, clan.inClanChat());
 		socket.admin(plugin.keys().adminKey());
 		socket.watch(watched(sidebar, competitionId));
-		plugin.signals().flush(memberTokens);
+		plugin.signals().flush(tokens);
 	}
 
 	private Set<String> watched(TsgHubSidebarPanel sidebar, String competitionId)
@@ -162,12 +149,6 @@ final class TsgHubLiveSync
 		String eventId = plugin.session().get(EVENT_ID);
 		if (sidebar.wantsAutoRefresh() && !eventId.isEmpty()) watched.add("event:" + eventId);
 		if (competitionId != null) watched.add("event:" + competitionId);
-		if (plugin.windows().adminOpen())
-		{
-			watched.add("managed-events");
-			String organizerEventId = plugin.sessions().organizerEventId();
-			if (!organizerEventId.isEmpty()) watched.add("organizer:" + organizerEventId);
-		}
 		return watched;
 	}
 
@@ -221,21 +202,6 @@ final class TsgHubLiveSync
 	private boolean isActiveEvent(String eventId)
 	{
 		return eventId.equals(plugin.session().get(EVENT_ID));
-	}
-
-	private boolean isOrganizerEvent(String eventId)
-	{
-		return plugin.windows().adminOpen() && eventId.equals(plugin.sessions().organizerEventId());
-	}
-
-	private void refreshOrganizerEvent(String eventId)
-	{
-		if (isOrganizerEvent(eventId)) plugin.organizer().liveRefresh();
-	}
-
-	private void reloadManagedEvents()
-	{
-		if (plugin.windows().adminOpen()) plugin.organizer().loadManagedEvents();
 	}
 
 	private void refreshRules(String version)

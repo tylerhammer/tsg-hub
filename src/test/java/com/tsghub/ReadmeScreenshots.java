@@ -106,9 +106,9 @@ public class ReadmeScreenshots
 		set(plugin, "session", new TsgHubSession(null));
 		TsgHubSocket socket = new TsgHubSocket(new OkHttpClient(), null, "http://localhost", stopped(), null);
 		set(plugin, "groups", new TsgHubGroups(plugin, null, (PartyService) unsafe().allocateInstance(PartyService.class), stopped(), null, null, socket));
-		set(plugin, "presence", new TsgHubPresence(plugin, null, null, null, null, stopped(), null, null, socket, () -> "", notes -> { }));
+		set(plugin, "presence", new TsgHubPresence(plugin, null, null, null, null, stopped(), null, null, socket, () -> ""));
 		set(plugin, "drops", new TsgHubDrops(plugin, null, null, stopped(), null, null));
-		set(plugin, "announcements", new TsgHubAnnouncements(plugin, stopped(), null, () -> null, line -> { }));
+		set(plugin, "announcements", new TsgHubAnnouncements(plugin, stopped(), null, line -> { }));
 
 		TsgHubSidebarPanel sidebar = new TsgHubSidebarPanel(plugin, new GroupMembersPanel(stub(TsgHubConfig.class), null, null));
 
@@ -171,28 +171,6 @@ public class ReadmeScreenshots
 		sidebar.boardView.showBoard(data.getAsJsonObject("board").getAsJsonObject("event"), "Crab Legs", true);
 		selectTab(sidebar, "Tasks");
 		shoot(sidebar, SIDEBAR_W, 680, "dock");
-
-		TsgHubPanel organizer = new TsgHubPanel(plugin);
-		organizer.eventListView.setManagedEvents(data.getAsJsonObject("managed").getAsJsonArray("events"));
-		organizer.openOrganizerEvent(data.getAsJsonObject("organizer"));
-		shoot(organizer, 860, 300, "admin-teams");
-		selectTab(organizer, "Tasks");
-		shoot(organizer, 860, 580, "admin-tasks");
-		if (data.has("announcementsList"))
-		{
-			JsonArray announcements = data.getAsJsonObject("announcementsList").getAsJsonArray("announcements");
-			TsgHubNewsEditor news = new TsgHubNewsEditor(plugin);
-			news.setAnnouncements(announcements);
-			TsgHubAdminWindow window = new TsgHubAdminWindow(organizer, () -> { }, news, () -> { }, new TsgHubMembersPanel(null, () -> 14), () -> { });
-			shoot(window, 860, 340, "admin-events");
-			selectTab(window, "Announcements");
-			news.showAnnouncement(TsgHubJson.str(announcements.get(0).getAsJsonObject(), "id"));
-			shoot(window, 860, 560, "admin-news");
-			((AbstractButton) find(window, "Edit", AbstractButton.class)).doClick();
-			shoot(window, 860, 560, "admin-news-edit");
-			((AbstractButton) find(window, "New announcement", AbstractButton.class)).doClick();
-			shoot(window, 860, 560, "admin-news-form");
-		}
 
 		hero(480, eventList, board, parties);
 	}

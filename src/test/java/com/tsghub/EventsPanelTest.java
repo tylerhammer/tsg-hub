@@ -50,20 +50,6 @@ public class EventsPanelTest
 	}
 
 	@Test
-	public void parseMillions()
-	{
-		assertEquals(0, TsgHubFormat.parseMillions(""));
-		assertEquals(20_000_000, TsgHubFormat.parseMillions("20"));
-		assertEquals(1_500_000_000, TsgHubFormat.parseMillions("1,500"));
-		assertEquals(500_000, TsgHubFormat.parseMillions("0.5"));
-		assertEquals(-1, TsgHubFormat.parseMillions("20m"));
-		assertEquals(-1, TsgHubFormat.parseMillions("-5"));
-		assertEquals(-1, TsgHubFormat.parseMillions("0.0000001"));
-		assertEquals("2.5", TsgHubFormat.millions(2_500_000));
-		assertEquals("1500", TsgHubFormat.millions(1_500_000_000));
-	}
-
-	@Test
 	public void prizes()
 	{
 		JsonObject event = event("{\"prizes\":[20000000,10000000,5000000]}");

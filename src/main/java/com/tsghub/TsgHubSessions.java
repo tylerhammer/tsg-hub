@@ -4,9 +4,6 @@ import static com.tsghub.TsgHubSession.DISPLAY_NAME;
 import static com.tsghub.TsgHubSession.EVENT_ID;
 import static com.tsghub.TsgHubSession.MEMBER_NAME;
 import static com.tsghub.TsgHubSession.MEMBER_TOKEN;
-import static com.tsghub.TsgHubSession.ORGANIZER_EVENT_ID;
-import static com.tsghub.TsgHubSession.ORGANIZER_NAME;
-import static com.tsghub.TsgHubSession.ORGANIZER_TOKEN;
 import static com.tsghub.TsgHubSession.TOKEN;
 
 import com.google.gson.JsonArray;
@@ -43,11 +40,6 @@ final class TsgHubSessions
 	List<String> joinedCompetitions()
 	{
 		return joinedCompetitions;
-	}
-
-	String organizerEventId()
-	{
-		return session().get(ORGANIZER_EVENT_ID);
 	}
 
 	void profileChanged()
@@ -87,7 +79,7 @@ final class TsgHubSessions
 		JsonObject payload = clan.memberBody(clan.playerName());
 		payload.addProperty("code", code.trim());
 		if (expectedEventId != null && !expectedEventId.trim().isEmpty()) payload.addProperty("eventId", expectedEventId.trim());
-		api().call("POST", "/v1/join", plugin.keys().adminKey(), payload).whenCompleteAsync(TsgHubApi.handle(result ->
+		api().call("POST", "/v1/join", null, payload).whenCompleteAsync(TsgHubApi.handle(result ->
 		{
 			String joinedEventId = result.getAsJsonObject("member").get("eventId").getAsString();
 			String memberToken = result.get("token").getAsString();
@@ -121,11 +113,9 @@ final class TsgHubSessions
 		joinedCompetitions = Collections.emptyList();
 		revokeRemote();
 		TsgHubSession session = session();
-		session.clear(TOKEN, EVENT_ID, ORGANIZER_EVENT_ID);
+		session.clear(TOKEN, EVENT_ID);
 		session.removePrefix(MEMBER_TOKEN);
 		session.removePrefix(MEMBER_NAME);
-		session.removePrefix(ORGANIZER_TOKEN);
-		session.removePrefix(ORGANIZER_NAME);
 		syncedClanRanks.clear();
 	}
 
@@ -202,7 +192,7 @@ final class TsgHubSessions
 		if (!plugin.sharingInClan() || clan.playerName().isEmpty()) return;
 		JsonObject body = clan.memberBody(clan.playerName());
 		plugin.sidebarBusy(true);
-		api().call("POST", "/v1/events/" + eventId + "/participate", plugin.keys().adminKey(), body).whenCompleteAsync(TsgHubApi.handle(result ->
+		api().call("POST", "/v1/events/" + eventId + "/participate", null, body).whenCompleteAsync(TsgHubApi.handle(result ->
 		{
 			session().set(MEMBER_TOKEN + eventId, result.get("token").getAsString());
 			session().set(MEMBER_NAME + eventId, result.getAsJsonObject("member").get("displayName").getAsString());
@@ -242,19 +232,15 @@ final class TsgHubSessions
 		syncedIdentity = identity;
 		TsgHubSession session = session();
 		JsonArray memberTokens = new JsonArray();
-		JsonArray organizerTokens = new JsonArray();
 		for (String key : session.keysWithPrefix(MEMBER_TOKEN)) memberTokens.add(session.get(key));
 		if (!session.get(TOKEN).isEmpty()) memberTokens.add(session.get(TOKEN));
-		for (String key : session.keysWithPrefix(ORGANIZER_TOKEN)) organizerTokens.add(session.get(key));
 		for (String key : session.keysWithPrefix(MEMBER_NAME)) renameStored(key, name);
-		for (String key : session.keysWithPrefix(ORGANIZER_NAME)) renameStored(key, name);
 		renameStored(DISPLAY_NAME, name);
 		JsonObject body = new JsonObject();
 		body.addProperty("displayName", name);
 		body.addProperty("clanName", clan.name());
 		body.addProperty("accountHash", hash);
 		body.add("memberTokens", memberTokens);
-		body.add("organizerTokens", organizerTokens);
 		api().call("POST", "/v1/identity", null, body).whenCompleteAsync(TsgHubApi.handle(result ->
 		{
 			if (TsgHubJson.bool(result, "updated") && !session().get(EVENT_ID).isEmpty() && !plugin.live()) refreshBoard();
@@ -277,7 +263,7 @@ final class TsgHubSessions
 			return;
 		}
 		plugin.sidebarBusy(true);
-		api().call("GET", "/v1/events?clanName=" + TsgHubApi.encode(clanName), plugin.keys().adminKey(), null).whenCompleteAsync(TsgHubApi.handle(response ->
+		api().call("GET", "/v1/events?clanName=" + TsgHubApi.encode(clanName), null, null).whenCompleteAsync(TsgHubApi.handle(response ->
 		{
 			applyClanEvents(response.getAsJsonArray("events"));
 		}, e -> plugin.memberError("Couldn't load events. ", e), () -> plugin.sidebarBusy(false)), executor);
@@ -358,8 +344,7 @@ final class TsgHubSessions
 	void forgetEvent(String eventId)
 	{
 		TsgHubSession session = session();
-		session.clear(ORGANIZER_TOKEN + eventId, ORGANIZER_NAME + eventId, MEMBER_TOKEN + eventId, MEMBER_NAME + eventId);
-		if (eventId.equals(session.get(ORGANIZER_EVENT_ID))) session.clear(ORGANIZER_EVENT_ID);
+		session.clear(MEMBER_TOKEN + eventId, MEMBER_NAME + eventId);
 		if (eventId.equals(session.get(EVENT_ID)))
 		{
 			session.clear(TOKEN, EVENT_ID);

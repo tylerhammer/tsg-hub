@@ -12,7 +12,6 @@ import java.awt.Graphics2D;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -64,6 +63,7 @@ import net.runelite.client.ui.overlay.worldmap.WorldMapOverlay;
 import net.runelite.client.ui.overlay.worldmap.WorldMapPointManager;
 import net.runelite.client.util.AsyncBufferedImage;
 import net.runelite.client.util.ImageUtil;
+import net.runelite.client.util.LinkBrowser;
 import okhttp3.OkHttpClient;
 
 @Slf4j
@@ -99,19 +99,16 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubSessions sessions;
 	private TsgHubLiveSync liveSync;
 	private TsgHubGameTracker tracker;
-	private TsgHubPanel panel;
 	private TsgHubSidebarPanel sidebar;
 	private NavigationButton navigationButton;
 	private ScheduledExecutorService executor;
 	private final List<ScheduledFuture<?>> tasks = new ArrayList<>();
-	private ExecutorService itemSearchExecutor;
 	private volatile boolean sidebarRouted;
 	private volatile boolean routedAsHubMember;
 	private volatile boolean routedClanPending;
 	private volatile TsgHubApi api;
 	private TsgHubSignals signals;
 	private TsgHubReports reports;
-	private TsgHubOrganizer organizer;
 	private TsgHubGroups groups;
 	private TsgHubPresence presence;
 	private TsgHubMemberMap memberMap;
@@ -119,9 +116,6 @@ public class TsgHubPlugin extends Plugin
 	private boolean worldMapOpen;
 	private TsgHubDrops drops;
 	private TsgHubAnnouncements announcements;
-	private TsgHubNewsEditor newsEditor;
-	private TsgHubMembers clanMembers;
-	private TsgHubMembersPanel membersPanel;
 	private GroupTracker groupTracker;
 
 	@Override
@@ -147,15 +141,9 @@ public class TsgHubPlugin extends Plugin
 		every(liveSync::tick, 2, 5, TimeUnit.SECONDS);
 		every(liveSync.unlessLive(() -> sessions.autoRefreshBoard(sidebar)), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
 		every(liveSync.unlessLive(sessions::pollNotifications), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
-		itemSearchExecutor = Executors.newFixedThreadPool(2, daemon("tsg-hub-item-search"));
-		organizer = new TsgHubOrganizer(this, client, clientThread, itemManager, executor, itemSearchExecutor, () -> panel);
-		announcements = new TsgHubAnnouncements(this, executor, this::api, () -> newsEditor, chat::clanAnnouncement);
-		panel = new TsgHubPanel(this);
-		newsEditor = new TsgHubNewsEditor(this);
+		announcements = new TsgHubAnnouncements(this, executor, this::api, chat::clanAnnouncement);
 		TsgHubRankIcons rankIcons = new TsgHubRankIcons(chatIconManager);
-		clanMembers = new TsgHubMembers(this, client, clientThread, rankIcons, executor, this::api, () -> membersPanel);
-		membersPanel = new TsgHubMembersPanel(clanMembers, config::inactivityDays);
-		windows = new TsgHubWindows(client, () -> new TsgHubAdminWindow(panel, organizer::loadManagedEvents, newsEditor, announcements::load, membersPanel, clanMembers::load), () -> announcements);
+		windows = new TsgHubWindows(client, () -> announcements);
 		GroupMembersPanel groupMembers = new GroupMembersPanel(config, spriteManager, itemManager);
 		sidebar = new TsgHubSidebarPanel(this, groupMembers);
 		groups = new TsgHubGroups(this, client, partyService, executor, this::api, () -> sidebar, socket);
@@ -166,7 +154,7 @@ public class TsgHubPlugin extends Plugin
 		every(groups::heartbeat, 5, TsgHubGroups.HEARTBEAT_SECONDS, TimeUnit.SECONDS);
 		every(groupTracker::keepAlive, GroupTracker.KEEPALIVE_SECONDS, GroupTracker.KEEPALIVE_SECONDS, TimeUnit.SECONDS);
 		every(liveSync.unlessLive(groups::autoRefresh), TsgHubGroups.REFRESH_SECONDS, TsgHubGroups.REFRESH_SECONDS, TimeUnit.SECONDS);
-		presence = new TsgHubPresence(this, client, clientThread, rankIcons, spriteManager, executor, this::api, () -> sidebar, socket, keys::adminKey, clanMembers::applyNotes);
+		presence = new TsgHubPresence(this, client, clientThread, rankIcons, spriteManager, executor, this::api, () -> sidebar, socket, keys::adminKey);
 		every(liveSync.unlessLive(presence::autoRefresh), TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
 		memberMap = new TsgHubMemberMap(this, client, clientThread, worldMapPointManager, executor, this::api);
 		mapOverlay = new TsgHubMapOverlay(client, worldMapOverlay, memberMap);
@@ -223,7 +211,6 @@ public class TsgHubPlugin extends Plugin
 		if (keys != null) keys.cancelRetry();
 		if (drops != null) drops.shutDown();
 		if (executor != null) executor.shutdownNow();
-		if (itemSearchExecutor != null) itemSearchExecutor.shutdownNow();
 		TsgHubRules.reset();
 		if (clan != null) clan.reset();
 		if (keys != null) keys.reset();
@@ -242,17 +229,29 @@ public class TsgHubPlugin extends Plugin
 		catch (Exception ignored) { }
 	}
 
-	void openWorkspace()
+	void openAdminSite(Runnable done)
 	{
-		if (!canManageOrganizerUi())
+		String key = keys.adminKey();
+		if (!isAdmin() || key.isEmpty())
 		{
-			memberStatus("Admin tools need a hub key with admin access. Run /hub key in the clan Discord and paste it in the plugin settings.", Tone.ERROR);
+			memberStatus("The admin site needs a hub key with admin access. Run /hub key in the clan Discord and paste it in the plugin settings.", Tone.ERROR);
+			SwingUtilities.invokeLater(done);
 			return;
 		}
-		windows.openAdmin(() -> {
-			organizer.loadManagedEvents();
-			liveSync.syncNow();
-		});
+		JsonObject body = new JsonObject();
+		body.addProperty("displayName", clan.playerName());
+		clan.addAccountHash(body);
+		api().call("POST", "/v1/admin/login-link", key, body).whenCompleteAsync(TsgHubApi.handle(response ->
+			LinkBrowser.browse(response.get("url").getAsString()),
+			e -> {
+				int status = e instanceof TsgHubApi.HttpError ? ((TsgHubApi.HttpError) e).status : 0;
+				if (status == 401) keys.rejected(key);
+				else
+				{
+					if (status == 403) keys.recheck(key);
+					memberError("Couldn't open the admin site. ", e);
+				}
+			}, () -> SwingUtilities.invokeLater(done)), executor);
 	}
 
 	@Provides
@@ -272,7 +271,6 @@ public class TsgHubPlugin extends Plugin
 	TsgHubSignals signals() { return signals; }
 	TsgHubReports reports() { return reports; }
 	TsgHubApi api() { return api; }
-	TsgHubOrganizer organizer() { return organizer; }
 	TsgHubSidebarPanel sidebar() { return sidebar; }
 	TsgHubGroups groups() { return groups; }
 	TsgHubPresence presence() { return presence; }
@@ -294,7 +292,7 @@ public class TsgHubPlugin extends Plugin
 		return clan.isHubClan() && config.dataSharingOptIn();
 	}
 
-	boolean canManageOrganizerUi()
+	boolean isAdmin()
 	{
 		return clan.isHubClan() && keys.verified();
 	}
@@ -308,9 +306,8 @@ public class TsgHubPlugin extends Plugin
 	{
 		liveSync.syncNow();
 		if (presence != null && !(keys.verified() && live())) presence.autoRefresh();
-		boolean access = canManageOrganizerUi();
-		SwingUtilities.invokeLater(() -> { if (sidebar != null) sidebar.setOrganizerAccess(access); });
-		if (!access) windows.hideAdmin();
+		boolean access = isAdmin();
+		SwingUtilities.invokeLater(() -> { if (sidebar != null) sidebar.setAdminAccess(access); });
 	}
 
 	@Subscribe
@@ -343,10 +340,9 @@ public class TsgHubPlugin extends Plugin
 		if (signals != null) signals.clear();
 		sessions.loggedOut();
 		SwingUtilities.invokeLater(() -> {
-			if (panel != null) panel.eventForm.setDetectedClanName("", -1);
 			if (sidebar != null)
 			{
-				sidebar.setOrganizerAccess(false);
+				sidebar.setAdminAccess(false);
 				sidebar.showLoggedOut();
 			}
 		});
@@ -416,15 +412,9 @@ public class TsgHubPlugin extends Plugin
 	private void refreshDetectedClan()
 	{
 		clan.detect();
-		boolean organizerAccess = canManageOrganizerUi();
+		boolean adminAccess = isAdmin();
 		liveSync.syncNow();
-		String clanName = clan.name();
-		int rank = clan.rank();
-		SwingUtilities.invokeLater(() -> {
-			if (panel != null) panel.eventForm.setDetectedClanName(clanName, rank);
-			if (sidebar != null) sidebar.setOrganizerAccess(organizerAccess);
-		});
-		if (!organizerAccess) windows.hideAdmin();
+		ui(s -> s.setAdminAccess(adminAccess));
 		if (!sidebarRouted && !clan.playerName().isEmpty()) routeSidebar();
 		else if (sidebarRouted && (routedAsHubMember != clan.isHubClan() || routedClanPending != clan.pending())) routeSidebar();
 		else if (client.getGameState() != GameState.LOGGED_IN && !sidebarRouted) ui(s -> s.showLoggedOut());

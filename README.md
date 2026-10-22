@@ -39,7 +39,7 @@ Join a bingo team, climb the Skill of the Week leaderboard, find a raid party, a
 | 📰 **[News](#news)** | Announcements from the admins, in the sidebar and your chatbox |
 | 📌 **[Split view](#split-view)** | Pin Members, Parties or Drops below the main view |
 | 🔗 **[Discord linking](#link-your-discord)** | Link your RuneScape account to the clan Discord |
-| 🛠️ **[Admin tools](#for-admins)** | Create events, teams and tasks, and review flagged claims, without leaving the game |
+| 🛠️ **[Admin tools](#for-admins)** | One click to the admin site, plus member notes and warnings in the sidebar |
 
 ---
 
@@ -109,7 +109,7 @@ Clanmates who share their location show on your world map with their name. Membe
 
 Admins with a hub key can right-click any member to edit their admin note. On Gnome Child characters it also sets whose alt they are; type part of a name to search the clan for their main. Alt links, notes and last seen times follow TSG Hub users through name changes. Hover anywhere on a member to see their rank, whose alt they are or a main's alts, and for admins their admin note. Members with a note also show a note icon.
 
-Admins can also right-click a member to **Add warning** with a reason and an expiry (30 days by default, 90 days, or never). Members with an active warning show a red warning icon, and the hover lists each warning with its date, who issued it and when it expires. Expired warnings stay in the history, greyed out. The admin **Members** tab shows the same notes and warnings, and you can edit or remove a member's note and add warnings from their detail panel. Only admins see warnings.
+Admins can also right-click a member to **Add warning** with a reason and an expiry (30 days by default, 90 days, or never). Members with an active warning show a red warning icon, and the hover lists each warning with its date, who issued it and when it expires. Expired warnings stay in the history, greyed out. The admin site's **Members** page shows the same notes and warnings. Only admins see warnings.
 
 </details>
 
@@ -144,28 +144,11 @@ The plugin confirms the key in the sidebar and links your Discord account to the
 
 ## For admins
 
-<img src="docs/images/admin-tasks.png" alt="Admin window: events on the left, the selected event's tasks on the right">
-
 Admin tools use the same hub key. If you're a Discord admin (the server owner, a member with an admin role, or anyone with Manage Server), `/hub key` gives you a key with admin access. Keys from before hub keys existed, starting with `tsgadm_`, keep working and move into the **Hub key** setting by themselves.
 
-Once the key checks out, an admin button appears in the sidebar header. It opens a separate window with **Events** and **Announcements** tabs. Events lists your clan's events on the left and the selected event on the right. Admins also see and can join hidden events. If you lose your Discord admin role, your key keeps linking your account but the admin tools disappear.
+Once the key checks out, an admin button appears in the sidebar header. It opens the TSG Hub admin site in your browser, already signed in. That's where you create and edit events, teams and tasks, review results, post announcements, and manage members. `/admin login` in the clan Discord gives you the same one-time link. If you lose your Discord admin role, your key keeps linking your account but the admin button disappears.
 
-Your in-game clan rank doesn't grant admin access. Owners and Deputy Owners keep admin tools through their Discord admin role.
-
-1. **New event**: pick bingo, Skill of the Week, Boss of the Week or a custom event, then set its name and its start and end date and time. Times are entered in your computer's time zone, shown next to the fields, and players see them converted to theirs. Custom events can leave the end time empty. You can add optional prizes for 1st, 2nd and 3rd place, in millions of GP, and hide scores from players until the end.
-2. **Teams**: add teams. Each gets a permanent invite code; use **Copy code** to share it.
-3. **Tasks**: add tasks shared by every team. Item tasks have type-ahead search with icons and ready-made sets, and raid tasks let you choose each raid and mode.
-
-<details>
-<summary><b>Screenshots: teams</b></summary>
-
-<img src="docs/images/admin-teams.png" alt="Teams for the selected event with invite codes and actions">
-
-</details>
-
-You can edit a task after the event starts. Progress the service already recorded is recalculated against the new requirements. To credit something the plugin couldn't see, open a team's **Details** and use **Mark complete** with a short note.
-
-The **Announcements** tab works the same way: drafts, pinned and active announcements on the left, and the selected one on the right with **Edit**, **Pin**/**Unpin** and delete. **New announcement** takes a title, an optional message, how long it stays up, and whether it's pinned to the top of News. **Post now** sends it to the clan. **Save as draft** keeps it visible to admins only, so another admin can review or edit it and **Publish** it when it's ready. Editing a posted announcement updates it without alerting players again.
+Your in-game clan rank doesn't grant admin access. Owners and Deputy Owners keep admin access through their Discord admin role.
 
 ---
 

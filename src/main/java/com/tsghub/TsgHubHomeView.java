@@ -4,7 +4,6 @@ import static com.tsghub.TsgHubHtml.*;
 import static com.tsghub.TsgHubIcons.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-import static net.runelite.client.util.ColorUtil.toHexColor;
 
 import com.tsghub.TsgHubSidebarPanel.View;
 import java.awt.Component;

@@ -9,23 +9,12 @@ import com.google.gson.JsonObject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.function.UnaryOperator;
 import lombok.RequiredArgsConstructor;
 
 final class TsgHubBingo
 {
 	private TsgHubBingo()
 	{
-	}
-
-	static JsonObject bestSet(JsonObject progress)
-	{
-		JsonObject best = null;
-		for (JsonObject alt : objects(array(progress, "alternatives")))
-		{
-			if (best == null || share(alt) > share(best) || share(alt) == share(best) && integer(alt, "progress", 0) > integer(best, "progress", 0)) best = alt;
-		}
-		return best;
 	}
 
 	private static double share(JsonObject alt)
@@ -55,13 +44,6 @@ final class TsgHubBingo
 		final List<String> found = new ArrayList<>();
 		final List<String> finders = new ArrayList<>();
 		final List<String> needed = new ArrayList<>();
-
-		String foundText()
-		{
-			List<String> parts = new ArrayList<>();
-			for (int i = 0; i < found.size(); i++) parts.add(finders.get(i).isEmpty() ? found.get(i) : found.get(i) + " (" + finders.get(i) + ")");
-			return String.join(", ", parts);
-		}
 
 		String foundHtml(String self)
 		{
@@ -120,17 +102,7 @@ final class TsgHubBingo
 		return missing;
 	}
 
-	static String contributorsText(JsonObject progress, String separator, int max)
-	{
-		return contributors(progress, separator, max, name -> name);
-	}
-
 	static String contributorsHtml(JsonObject progress, String separator, int max, String self)
-	{
-		return contributors(progress, separator, max, name -> nameHtml(name, self));
-	}
-
-	private static String contributors(JsonObject progress, String separator, int max, UnaryOperator<String> name)
 	{
 		JsonArray contributors = array(progress, "contributors");
 		if (contributors.size() == 0) return "";
@@ -138,7 +110,7 @@ final class TsgHubBingo
 		for (int i = 0; i < Math.min(max, contributors.size()); i++)
 		{
 			JsonObject entry = contributors.get(i).getAsJsonObject();
-			parts.add(name.apply(str(entry, "displayName")) + " " + integer(entry, "amount", 1));
+			parts.add(nameHtml(str(entry, "displayName"), self) + " " + integer(entry, "amount", 1));
 		}
 		if (contributors.size() > max) parts.add("+" + (contributors.size() - max));
 		return String.join(separator, parts);

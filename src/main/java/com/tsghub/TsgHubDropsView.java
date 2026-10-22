@@ -7,7 +7,6 @@ import static com.tsghub.TsgHubSession.DROP_TYPE;
 import static com.tsghub.TsgHubSession.DROP_VALUE;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-import static net.runelite.client.util.ColorUtil.toHexColor;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;

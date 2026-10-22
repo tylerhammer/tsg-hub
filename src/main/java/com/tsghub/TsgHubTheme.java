@@ -47,7 +47,6 @@ public final class TsgHubTheme
 
 	public static final int CARD_PAD_V = 7;
 	public static final int CARD_PAD_H = 8;
-	private static final int SELECTED_BAR = 3;
 
 	private TsgHubTheme()
 	{
@@ -73,11 +72,6 @@ public final class TsgHubTheme
 		return boldFont().deriveFont(18f);
 	}
 
-	public static Font titleFont()
-	{
-		return boldFont().deriveFont(20f);
-	}
-
 	private static final Border CARD_EDGE = BorderFactory.createEmptyBorder(CARD_PAD_V, CARD_PAD_H, CARD_PAD_V, CARD_PAD_H);
 	private static final Border SELF_EDGE = BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(SELF_BORDER),
 		BorderFactory.createEmptyBorder(CARD_PAD_V - 1, CARD_PAD_H - 1, CARD_PAD_V - 1, CARD_PAD_H - 1));
@@ -90,12 +84,6 @@ public final class TsgHubTheme
 	public static Border selfBorder()
 	{
 		return SELF_EDGE;
-	}
-
-	public static Border selectedBorder(boolean selected, Color idle)
-	{
-		return BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0, SELECTED_BAR, 0, 0, selected ? ACCENT : idle),
-			BorderFactory.createEmptyBorder(CARD_PAD_V, CARD_PAD_H - SELECTED_BAR, CARD_PAD_V, CARD_PAD_H));
 	}
 
 	public static boolean truncated(JLabel label)

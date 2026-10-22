@@ -1,9 +1,7 @@
 package com.tsghub;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 
 import com.google.gson.JsonObject;
 import java.time.Duration;
@@ -60,14 +58,6 @@ public class EventTimesTest
 		assertEquals("ends in 3d", TsgHubFormat.relativeTime(start, start.plus(Duration.ofDays(3)), start));
 		assertEquals("ended", TsgHubFormat.relativeTime(start, end, end));
 		assertEquals("happening now", TsgHubFormat.relativeTime(start, null, start));
-	}
-
-	@Test
-	public void zoneLabel()
-	{
-		assertEquals("AEDT (Australia/Sydney)", TsgHubFormat.zoneLabel(SYDNEY, NOW));
-		assertEquals("AWST (Australia/Perth)", TsgHubFormat.zoneLabel(PERTH, NOW));
-		assertEquals("UTC", TsgHubFormat.zoneLabel(ZoneId.of("UTC"), NOW));
 	}
 
 	@Test

@@ -163,16 +163,6 @@ final class TsgHubUi
 		return label;
 	}
 
-	static JLabel listRow(String text, boolean selected)
-	{
-		JLabel row = new JLabel(text);
-		row.setOpaque(true);
-		row.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
-		row.setBackground(selected ? CARD_HOVER : CARD);
-		row.setForeground(TEXT);
-		return row;
-	}
-
 	static JPanel emptyState(String heading, String body, int widthPx)
 	{
 		JPanel panel = new JPanel();
@@ -190,28 +180,6 @@ final class TsgHubUi
 		panel.setAlignmentX(Component.LEFT_ALIGNMENT);
 		panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, panel.getPreferredSize().height));
 		return panel;
-	}
-
-	static JLabel sectionTitle(String text)
-	{
-		JLabel label = label(text, ACCENT, boldFont());
-		label.setBorder(BorderFactory.createEmptyBorder(10, 0, 5, 0));
-		return label;
-	}
-
-	static JPanel statCard(JLabel title, JLabel value, JLabel detail)
-	{
-		JPanel card = stack();
-		card.setOpaque(true);
-		card.setBackground(CARD);
-		card.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(BORDER), BorderFactory.createEmptyBorder(8, 10, 8, 10)));
-		card.add(title);
-		card.add(gap(GAP_XS));
-		card.add(value);
-		if (detail == null) return card;
-		card.add(gap(GAP_XS));
-		card.add(detail);
-		return card;
 	}
 
 	static JLabel badge(String text, Color color)
@@ -433,27 +401,6 @@ final class TsgHubUi
 			for (Component child : ((Container) component).getComponents()) recolor(child, from, to);
 	}
 
-	static JComponent narrowPage(JPanel form)
-	{
-		JPanel holder = panel(new BorderLayout());
-		form.setMaximumSize(new Dimension(520, Integer.MAX_VALUE));
-		JPanel limiter = new JPanel()
-		{
-			@Override public Dimension getPreferredSize()
-			{
-				int available = holder.getWidth() > 0 ? holder.getWidth() : 520;
-				return new Dimension(Math.min(520, available), form.getPreferredSize().height);
-			}
-		};
-		limiter.setLayout(new BorderLayout());
-		limiter.setOpaque(false);
-		limiter.add(form, BorderLayout.CENTER);
-		holder.add(limiter, BorderLayout.WEST);
-		WidthTrackingPanel page = new WidthTrackingPanel();
-		page.add(holder);
-		return scroll(page);
-	}
-
 	static ProgressBar progressBar(int value, int max)
 	{
 		ProgressBar bar = new ProgressBar();
@@ -478,22 +425,6 @@ final class TsgHubUi
 		return scroll;
 	}
 
-	static JComponent listColumn(String title, String refreshTip, Runnable onRefresh, String createText, Runnable onCreate, JComponent list)
-	{
-		JPanel column = new JPanel(new BorderLayout(0, 8));
-		column.setBackground(CARD);
-		column.setPreferredSize(new Dimension(TsgHubPanel.LIST_W, 100));
-		column.setBorder(BorderFactory.createEmptyBorder(12, 10, 10, 10));
-		JPanel top = stack();
-		top.add(fitHeight(row(boldLabel(title), onClick(iconButton(TsgHubIcons.hover("refresh"), refreshTip), onRefresh))));
-		top.add(gap(GAP_M));
-		top.add(fitHeight(onClick(primaryButton(createText), onCreate)));
-		column.add(top, BorderLayout.NORTH);
-		WidthTrackingPanel listWrap = new WidthTrackingPanel();
-		listWrap.add(list);
-		column.add(scroll(listWrap), BorderLayout.CENTER);
-		return column;
-	}
 
 	static final class WidthTrackingPanel extends JPanel implements Scrollable
 	{
@@ -575,16 +506,6 @@ final class TsgHubUi
 		button.setRolloverEnabled(true);
 		button.setFocusable(false);
 		return button;
-	}
-
-	static void flashText(AbstractButton button, String text, int millis)
-	{
-		String original = button.getText();
-		if (text.equals(original)) return;
-		button.setText(text);
-		Timer timer = new Timer(millis, e -> button.setText(original));
-		timer.setRepeats(false);
-		timer.start();
 	}
 
 	static void copyToClipboard(String text)

@@ -8,7 +8,6 @@ import static com.tsghub.TsgHubJson.*;
 import static com.tsghub.TsgHubSession.DOCK_VIEW;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-import static net.runelite.client.util.ColorUtil.toHexColor;
 
 import com.google.gson.JsonObject;
 import java.awt.BorderLayout;
@@ -52,7 +51,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private String titleText = "TSG Hub";
 	private final Glyph refreshIcon = hover("refresh");
 	final JButton refresh = iconButton(refreshIcon, "Refresh");
-	private final JButton organizer = iconButton(hover("organizer"), "Admin tools");
+	private final JButton admin = iconButton(hover("organizer"), "Open the admin site");
 	private final JButton settings = iconButton(hover("cog"), "Plugin settings");
 	private final JButton pin = iconButton(hover("pin"), "Pin below");
 	private final JPanel footer = new JPanel();
@@ -143,8 +142,11 @@ final class TsgHubSidebarPanel extends PluginPanel
 		titleRow.add(fillWidth(titles), BorderLayout.CENTER);
 
 		actions.setOpaque(false);
-		organizer.addActionListener(e -> plugin.openWorkspace());
-		organizer.setVisible(false);
+		admin.addActionListener(e -> {
+			admin.setEnabled(false);
+			plugin.openAdminSite(() -> admin.setEnabled(true));
+		});
+		admin.setVisible(false);
 		refresh.addActionListener(e -> {
 			if (view == View.HOME)
 			{
@@ -168,7 +170,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		settings.addActionListener(e -> plugin.openSettings());
 		pin.addActionListener(e -> pinCurrent());
 		pin.setVisible(false);
-		actions.add(organizer);
+		actions.add(admin);
 		actions.add(pin);
 		actions.add(refreshSlot);
 		actions.add(settings);
@@ -183,16 +185,16 @@ final class TsgHubSidebarPanel extends PluginPanel
 		return header;
 	}
 
-	void setOrganizerAccess(boolean allowed)
+	void setAdminAccess(boolean allowed)
 	{
-		organizer.setVisible(allowed);
+		admin.setVisible(allowed);
 		title.setText(html(escape(titleText), titleWidth()));
 		if (shows(View.MEMBERS)) membersView.renderMembers();
 	}
 
 	private int titleWidth()
 	{
-		return 150 - (organizer.isVisible() ? organizer.getPreferredSize().width + 2 : 0)
+		return 150 - (admin.isVisible() ? admin.getPreferredSize().width + 2 : 0)
 			- (pin.isVisible() ? pin.getPreferredSize().width + 2 : 0);
 	}
 

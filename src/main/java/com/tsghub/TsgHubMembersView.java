@@ -7,7 +7,6 @@ import static com.tsghub.TsgHubJson.*;
 import static com.tsghub.TsgHubSession.SHOW_OFFLINE;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-import static net.runelite.client.util.ColorUtil.toHexColor;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -231,12 +230,12 @@ final class TsgHubMembersView
 
 	private String visibleNote(JsonObject member)
 	{
-		return plugin.canManageOrganizerUi() ? str(member, "note") : "";
+		return plugin.isAdmin() ? str(member, "note") : "";
 	}
 
 	private JsonArray visibleWarnings(JsonObject member)
 	{
-		return plugin.canManageOrganizerUi() ? array(member, "warnings") : new JsonArray();
+		return plugin.isAdmin() ? array(member, "warnings") : new JsonArray();
 	}
 
 	private void addMemberMenu(JComponent card, JsonObject member)
@@ -257,6 +256,6 @@ final class TsgHubMembersView
 		javax.swing.JMenuItem lookup = new javax.swing.JMenuItem("Lookup");
 		lookup.addActionListener(e -> shell.lookupView.showLookup(name, TsgHubPresence.accountType(member)));
 		memberMenu.add(lookup);
-		if (plugin.canManageOrganizerUi() && notesLoaded) shell.memberAdmin.addNoteItems(memberMenu, member);
+		if (plugin.isAdmin() && notesLoaded) shell.memberAdmin.addNoteItems(memberMenu, member);
 	}
 }

@@ -63,11 +63,10 @@ final class TsgHubKeys
 				backoff.reset();
 				boolean admin = grantsAdmin(result);
 				if (admin != verified) setVerified(admin);
-				if (admin && !plugin.live()) plugin.sessions().loadClanEvents();
 				String linkError = TsgHubJson.str(result, "linkError");
 				boolean linked = TsgHubJson.bool(result, "linked");
 				if (!linkError.isEmpty()) plugin.memberStatus(linkError, Tone.ERROR);
-				else if (announce && linked) plugin.memberStatus(admin ? "Hub key accepted. Your Discord account is linked and admin tools are unlocked." : "Hub key accepted. Your Discord account is linked.", Tone.SUCCESS);
+				else if (announce && linked) plugin.memberStatus(admin ? "Hub key accepted. Your Discord account is linked and the admin site button is unlocked." : "Hub key accepted. Your Discord account is linked.", Tone.SUCCESS);
 				if (linked || !linkError.isEmpty()) announce = false;
 				if (!linked && hash.isEmpty()) retry(identity);
 			}

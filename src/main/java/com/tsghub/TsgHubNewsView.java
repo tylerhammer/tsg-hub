@@ -6,7 +6,6 @@ import static com.tsghub.TsgHubIcons.*;
 import static com.tsghub.TsgHubJson.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-import static net.runelite.client.util.ColorUtil.toHexColor;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
