@@ -8,7 +8,6 @@ import com.google.gson.JsonObject;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -26,7 +25,6 @@ final class TsgHubItemSets
 	}
 
 	private static final Map<String, ItemSet> SETS = new LinkedHashMap<>();
-	private static final Map<String, String> RAIDS = new HashMap<>();
 
 	private TsgHubItemSets()
 	{
@@ -43,15 +41,8 @@ final class TsgHubItemSets
 				ItemSet parsed = gson.fromJson(set, ItemSet.class);
 				SETS.put(parsed.name, parsed);
 			}
-			for (Map.Entry<String, JsonElement> raid : object(json, "raids").entrySet())
-				for (JsonElement item : raid.getValue().getAsJsonArray()) RAIDS.put(item.getAsString(), raid.getKey());
 		}
 		catch (Exception e) { log.debug("TSG Hub item sets unreadable", e); }
-	}
-
-	static String raidName(String item)
-	{
-		return RAIDS.getOrDefault(item.replaceAll("(\\s*\\([^)]*\\))+$", ""), "Raid");
 	}
 
 	static String nameFor(Collection<Integer> itemIds)

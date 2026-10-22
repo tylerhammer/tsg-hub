@@ -143,10 +143,5 @@
 			{"id": 27232, "name": "Masori chaps"},
 			{"id": 27277, "name": "Tumeken's shadow (uncharged)"}
 		]}
-	],
-	"raids": {
-		"CoX": ["Dexterous prayer scroll", "Arcane prayer scroll", "Twisted buckler", "Dragon hunter crossbow", "Dinh's bulwark", "Ancestral hat", "Ancestral robe top", "Ancestral robe bottom", "Dragon claws", "Elder maul", "Kodai insignia", "Twisted bow", "Olmlet", "Metamorphic dust", "Twisted ancestral colour kit"],
-		"ToB": ["Avernic defender hilt", "Ghrazi rapier", "Sanguinesti staff", "Justiciar faceguard", "Justiciar chestguard", "Justiciar legguards", "Scythe of vitur", "Lil' zik", "Sanguine dust", "Sanguine ornament kit", "Holy ornament kit"],
-		"ToA": ["Osmumten's fang", "Lightbearer", "Elidinis' ward", "Masori mask", "Masori body", "Masori chaps", "Tumeken's shadow", "Tumeken's guardian", "Thread of Elidinis", "Breach of the scarab", "Eye of the corruptor", "Jewel of the sun", "Menaphite ornament kit", "Remnant of Akkha", "Remnant of Ba-Ba", "Remnant of Kephri", "Remnant of Zebak", "Ancient remnant"]
-	}
+	]
 }
