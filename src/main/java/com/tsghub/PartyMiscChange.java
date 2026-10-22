@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, TheStonedTurtle <https://github.com/TheStonedTurtle>
+ * Copyright (c) 2022, TheStonedTurtle <https://github.com/TheStonedTurtle>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,21 +22,59 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.tsghub.group.data;
+package com.tsghub;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 
-@AllArgsConstructor
 @Data
-public class Quiver
+class PartyMiscChange
 {
-	private GameItem quiverAmmo;
-	private boolean beingWorn;
-	private boolean inInventory;
+	PartyMisc t;
+	Integer v;
+	String s;
 
-	public boolean isSlotVisible()
+	enum PartyMisc
 	{
-		return beingWorn || inInventory;
+		S, // Special
+		R, // RUN
+		C, // Combat
+		T, // Total
+		ST, // Stamina duration
+		P, // Poison
+		D, // Disease
+		W, // World
+		U, // Username
+		SP, // Spellbook
+		A, // Area
+	}
+
+	PartyMiscChange(PartyMisc t, Integer v)
+	{
+		this.t = t;
+		this.v = v;
+	}
+
+	PartyMiscChange(PartyMisc t, String s)
+	{
+		this.t = t;
+		this.s = s;
+	}
+
+	void process(PartyPlayer p)
+	{
+		switch (t)
+		{
+			case S: p.getStats().setSpecialPercent(v); break;
+			case C: p.getStats().setCombatLevel(v); break;
+			case T: p.getStats().setTotalLevel(v); break;
+			case R: p.getStats().setRunEnergy(v); break;
+			case ST: p.setStamina(v); break;
+			case P: p.setPoison(v); break;
+			case D: p.setDisease(v); break;
+			case W: p.setWorld(v); break;
+			case U: p.setUsername(s); break;
+			case SP: p.setSpellbook(v); break;
+			case A: p.setArea(s == null ? "" : s); break;
+		}
 	}
 }

@@ -9,8 +9,6 @@ import static com.tsghub.TsgHubUi.*;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.tsghub.TsgHubUi.Tone;
-import com.tsghub.group.GroupTracker;
-import com.tsghub.group.data.PartyPlayer;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -18,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -299,19 +298,9 @@ final class TsgHubGroups implements GroupTracker.Listener
 		plugin.session().set(GROUP_PLAYER, "");
 	}
 
-	@Override
-	public void memberUpdated(PartyPlayer player, boolean self)
-	{
-		TsgHubSidebarPanel s = sidebar.get();
-		if (s != null) s.partiesView.groupMemberUpdated(player, self);
-	}
+	@Override public void memberUpdated(PartyPlayer player, boolean self) { parties(v -> v.groupMemberUpdated(player, self)); }
 
-	@Override
-	public void memberRemoved(PartyPlayer player)
-	{
-		TsgHubSidebarPanel s = sidebar.get();
-		if (s != null) s.partiesView.groupMemberRemoved(player);
-	}
+	@Override public void memberRemoved(PartyPlayer player) { parties(v -> v.groupMemberRemoved(player)); }
 
 	List<String> liveAreas()
 	{
@@ -325,18 +314,14 @@ final class TsgHubGroups implements GroupTracker.Listener
 		if (s != null && s.wantsGroups()) loadGroups(true);
 	}
 
-	@Override
-	public void areasChanged()
-	{
-		TsgHubSidebarPanel s = sidebar.get();
-		if (s != null) s.partiesView.partyAreasChanged();
-	}
+	@Override public void areasChanged() { parties(v -> v.partyAreasChanged()); }
 
-	@Override
-	public void membersCleared()
+	@Override public void membersCleared() { parties(v -> v.groupMembersCleared()); }
+
+	private void parties(Consumer<TsgHubPartiesView> action)
 	{
 		TsgHubSidebarPanel s = sidebar.get();
-		if (s != null) s.partiesView.groupMembersCleared();
+		if (s != null) action.accept(s.partiesView);
 	}
 
 	@Override

@@ -22,10 +22,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.tsghub.group.ui.skills;
+package com.tsghub;
 
-import com.tsghub.TsgHubTheme;
-import com.tsghub.group.ui.PartyStyle;
+import static com.tsghub.TsgHubTheme.*;
+import static com.tsghub.TsgHubUi.*;
+
 import java.awt.image.BufferedImage;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -35,11 +36,11 @@ import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 import net.runelite.client.util.ImageUtil;
 
-public class SkillPanelSlot extends JPanel
+class SkillPanelSlot extends JPanel
 {
 	private final String name;
-	private final JLabel levelLabel = new JLabel();
-	private final JLabel baseLabel = new JLabel();
+	private final JLabel levelLabel = label("", TEXT, plainFont());
+	private final JLabel baseLabel = label("", MUTED, smallFont());
 	private int boosted = -1;
 	private int base = -1;
 
@@ -47,14 +48,10 @@ public class SkillPanelSlot extends JPanel
 	{
 		this.name = name;
 		setOpaque(true);
-		setBackground(PartyStyle.SLOT);
+		setBackground(SLOT);
 		setBorder(new EmptyBorder(3, 3, 3, 1));
 		setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
-		levelLabel.setFont(TsgHubTheme.plainFont());
-		levelLabel.setForeground(TsgHubTheme.TEXT);
 		levelLabel.setIconTextGap(3);
-		baseLabel.setFont(TsgHubTheme.smallFont());
-		baseLabel.setForeground(TsgHubTheme.MUTED);
 		add(levelLabel);
 		add(baseLabel);
 		add(Box.createHorizontalGlue());
@@ -82,7 +79,7 @@ public class SkillPanelSlot extends JPanel
 		base = baseLevel;
 		boolean changed = boostedLevel != baseLevel;
 		levelLabel.setText(String.valueOf(boostedLevel));
-		levelLabel.setForeground(!changed ? TsgHubTheme.TEXT : boostedLevel > baseLevel ? TsgHubTheme.SUCCESS : PartyStyle.LOW);
+		levelLabel.setForeground(!changed ? TEXT : boostedLevel > baseLevel ? SUCCESS : LOW);
 		baseLabel.setText(changed ? "/" + baseLevel : "");
 		setToolTipText(name + " " + boostedLevel + "/" + baseLevel);
 	}

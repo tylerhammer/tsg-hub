@@ -22,14 +22,16 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.tsghub.group.ui.prayer;
+package com.tsghub;
 
-import com.tsghub.group.data.PrayerData;
-import com.tsghub.group.ui.PartyStyle;
+import static com.tsghub.Prayers.isUnlockedByDefault;
+import static com.tsghub.TsgHubTheme.*;
+import static com.tsghub.TsgHubUi.*;
+
 import java.awt.AlphaComposite;
 import java.awt.Dimension;
-import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
@@ -37,9 +39,7 @@ import lombok.Getter;
 import net.runelite.client.game.SpriteManager;
 import net.runelite.client.util.Text;
 
-import static com.tsghub.group.data.Prayers.isUnlockedByDefault;
-
-public class PrayerSlot extends JComponent
+class PrayerSlot extends JComponent
 {
 	private static final Dimension SIZE = new Dimension(38, 34);
 
@@ -49,7 +49,7 @@ public class PrayerSlot extends JComponent
 	@Getter
 	private PrayerData data;
 
-	public PrayerSlot(final PrayerSprites sprites, final SpriteManager spriteManager)
+	PrayerSlot(PrayerSprites sprites, SpriteManager spriteManager)
 	{
 		data = new PrayerData(sprites.getPrayer(), false, false, isUnlockedByDefault(sprites.getPrayer()));
 		spriteManager.getSpriteAsync(sprites.getUnavailable(), 0, img -> SwingUtilities.invokeLater(() -> {
@@ -65,7 +65,7 @@ public class PrayerSlot extends JComponent
 		setMinimumSize(SIZE);
 	}
 
-	public void updatePrayerData(final PrayerData updatedData)
+	void updatePrayerData(PrayerData updatedData)
 	{
 		if (!data.getPrayer().equals(updatedData.getPrayer())) return;
 		data = updatedData;
@@ -77,11 +77,11 @@ public class PrayerSlot extends JComponent
 	{
 		Graphics2D g = (Graphics2D) g0.create();
 		boolean active = data.isEnabled();
-		g.setColor(active ? PartyStyle.PRAYER_ACTIVE : PartyStyle.SLOT);
+		g.setColor(active ? PRAYER_ACTIVE : SLOT);
 		g.fillRect(0, 0, getWidth(), getHeight());
 		if (active)
 		{
-			g.setColor(PartyStyle.PRAYER_ACTIVE_BORDER);
+			g.setColor(PRAYER_ACTIVE_BORDER);
 			g.drawRect(0, 0, getWidth() - 1, getHeight() - 1);
 		}
 		else g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.35f));

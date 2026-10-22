@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.tsghub.group.data;
+package com.tsghub;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -30,7 +30,7 @@ import net.runelite.api.Prayer;
 
 @Data
 @AllArgsConstructor
-public class PrayerData
+class PrayerData
 {
 	private final Prayer prayer;
 	private boolean available;

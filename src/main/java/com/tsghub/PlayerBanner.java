@@ -22,16 +22,15 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.tsghub.group.ui;
+package com.tsghub;
 
-import com.tsghub.TsgHubTheme;
+import static com.tsghub.TsgHubTheme.*;
+import static com.tsghub.TsgHubUi.*;
+
 import com.google.common.base.Strings;
-import com.tsghub.group.data.PartyPlayer;
-import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.image.BufferedImage;
-import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
@@ -42,15 +41,17 @@ import net.runelite.api.gameval.SpriteID;
 import net.runelite.client.game.SpriteManager;
 import net.runelite.client.util.ImageUtil;
 
-public class PlayerBanner extends JPanel
+class PlayerBanner extends JPanel
 {
 	private static final int STAT_ICON = 16;
 	private static final String SPRITE_KEY = "tsghub.sprite";
+	private static final int[] SPELLBOOK_SPRITES = {SpriteID.SideIcons.MAGIC, SpriteID.SideIcons.SPELLBOOK_ANCIENT_MAGICKS, SpriteID.SideIcons.SPELLBOOK_LUNAR, SpriteID.SideIcons.SPELLBOOK_ARCEUUS};
+	private static final String[] SPELLBOOKS = {"Standard", "Ancient", "Lunar", "Arceuus"};
 
 	private final SpriteManager spriteManager;
-	private final JLabel nameLabel = TsgHubTheme.fullTextLabel();
+	private final JLabel nameLabel = fullTextLabel();
 	private final JLabel worldLabel = new JLabel();
-	private final JLabel areaLabel = TsgHubTheme.fullTextLabel();
+	private final JLabel areaLabel = fullTextLabel();
 	private final JLabel spellbookLabel = new JLabel();
 	private final JLabel hpLabel = statLabel("Hitpoints");
 	private final JLabel prayerLabel = statLabel("Prayer");
@@ -64,7 +65,7 @@ public class PlayerBanner extends JPanel
 	private Boolean usingStamIcon;
 	private int spellbook = Integer.MIN_VALUE;
 
-	public PlayerBanner(PartyPlayer player, boolean displayWorld, SpriteManager spriteManager)
+	PlayerBanner(PartyPlayer player, boolean displayWorld, SpriteManager spriteManager)
 	{
 		this.player = player;
 		this.displayWorld = displayWorld;
@@ -72,33 +73,21 @@ public class PlayerBanner extends JPanel
 		setOpaque(false);
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
-		nameLabel.setFont(TsgHubTheme.boldFont());
+		nameLabel.setFont(boldFont());
 		nameLabel.setMinimumSize(new Dimension(0, 0));
 		nameLabel.putClientProperty("html.disable", Boolean.TRUE);
-		worldLabel.setFont(TsgHubTheme.smallFont());
-		worldLabel.setForeground(TsgHubTheme.MUTED);
-		areaLabel.setFont(TsgHubTheme.smallFont());
+		worldLabel.setFont(smallFont());
+		worldLabel.setForeground(MUTED);
+		areaLabel.setFont(smallFont());
 		areaLabel.setMinimumSize(new Dimension(0, 0));
 		areaLabel.putClientProperty("html.disable", Boolean.TRUE);
 
-		JPanel top = row();
-		top.add(nameLabel, BorderLayout.CENTER);
-		top.add(worldLabel, BorderLayout.EAST);
-		JPanel bottom = row();
-		bottom.add(areaLabel, BorderLayout.CENTER);
-		bottom.add(spellbookLabel, BorderLayout.EAST);
-		JPanel stats = new JPanel(new GridLayout(1, 4, 2, 0));
-		stats.setOpaque(false);
-		stats.add(hpLabel);
-		stats.add(prayerLabel);
-		stats.add(specLabel);
-		stats.add(runLabel);
-
-		stats.setAlignmentX(LEFT_ALIGNMENT);
-		add(top);
-		add(Box.createVerticalStrut(TsgHubTheme.GAP_XS));
-		add(bottom);
-		add(Box.createVerticalStrut(TsgHubTheme.GAP_S));
+		JPanel stats = panel(new GridLayout(1, 4, 2, 0));
+		for (JLabel stat : new JLabel[]{hpLabel, prayerLabel, specLabel, runLabel}) stats.add(stat);
+		add(row(nameLabel, worldLabel));
+		add(gap(GAP_XS));
+		add(row(areaLabel, spellbookLabel));
+		add(gap(GAP_S));
 		add(stats);
 
 		setSprite(prayerLabel, SpriteID.Staticons.PRAYER);
@@ -106,31 +95,31 @@ public class PlayerBanner extends JPanel
 		update(player);
 	}
 
-	public void update(PartyPlayer player)
+	void update(PartyPlayer player)
 	{
 		this.player = player;
 		boolean online = !Strings.isNullOrEmpty(player.getUsername());
 		nameLabel.setText(online ? player.getUsername() : "Not logged in");
-		nameLabel.setForeground(online ? TsgHubTheme.TEXT : TsgHubTheme.MUTED);
+		nameLabel.setForeground(online ? TEXT : MUTED);
 		nameLabel.setToolTipText(online && player.getStats() != null ? "Combat level " + player.getStats().getCombatLevel() : null);
 		updateWorld(player, displayWorld);
 		refreshStats();
 		updateSpellbookIcon(player.getSpellbook());
 	}
 
-	public void refreshStats()
+	void refreshStats()
 	{
 		int hp = player.getSkillBoostedLevel(Skill.HITPOINTS);
 		int prayer = player.getSkillBoostedLevel(Skill.PRAYER);
 		hpLabel.setText(String.valueOf(hp));
-		hpLabel.setForeground(PartyStyle.levelColor(hp, player.getSkillRealLevel(Skill.HITPOINTS)));
+		hpLabel.setForeground(levelColor(hp, player.getSkillRealLevel(Skill.HITPOINTS, false)));
 		prayerLabel.setText(String.valueOf(prayer));
-		prayerLabel.setForeground(PartyStyle.levelColor(prayer, player.getSkillRealLevel(Skill.PRAYER)));
+		prayerLabel.setForeground(levelColor(prayer, player.getSkillRealLevel(Skill.PRAYER, false)));
 		specLabel.setText(player.getStats() == null ? "0" : String.valueOf(player.getStats().getSpecialPercent()));
 		runLabel.setText(player.getStats() == null ? "0" : String.valueOf(player.getStats().getRunEnergy()));
 	}
 
-	public void updateWorld(PartyPlayer player, boolean displayWorlds)
+	void updateWorld(PartyPlayer player, boolean displayWorlds)
 	{
 		displayWorld = displayWorlds;
 		boolean online = !Strings.isNullOrEmpty(player.getUsername());
@@ -139,10 +128,10 @@ public class PlayerBanner extends JPanel
 		String area = Strings.nullToEmpty(player.getArea());
 		String text = !online ? "Last seen stats" : !inGame ? "Not logged in" : area;
 		areaLabel.setText(text);
-		areaLabel.setForeground(inGame && !area.isEmpty() ? TsgHubTheme.SUCCESS : TsgHubTheme.MUTED);
+		areaLabel.setForeground(inGame && !area.isEmpty() ? SUCCESS : MUTED);
 	}
 
-	public void setCurrentHeart(BufferedImage img)
+	void setCurrentHeart(BufferedImage img)
 	{
 		if (heartSet && img == currentHeart) return;
 		heartSet = true;
@@ -156,7 +145,7 @@ public class PlayerBanner extends JPanel
 		hpLabel.setIcon(new ImageIcon(ImageUtil.resizeImage(img, STAT_ICON, STAT_ICON)));
 	}
 
-	public void setUsingStamIcon(boolean stamina)
+	void setUsingStamIcon(boolean stamina)
 	{
 		if (usingStamIcon != null && usingStamIcon == stamina) return;
 		usingStamIcon = stamina;
@@ -167,28 +156,9 @@ public class PlayerBanner extends JPanel
 	{
 		if (book == spellbook) return;
 		spellbook = book;
-		int spriteID;
-		String name;
-		switch (book)
-		{
-			case 3:
-				spriteID = SpriteID.SideIcons.SPELLBOOK_ARCEUUS;
-				name = "Arceuus spellbook";
-				break;
-			case 2:
-				spriteID = SpriteID.SideIcons.SPELLBOOK_LUNAR;
-				name = "Lunar spellbook";
-				break;
-			case 1:
-				spriteID = SpriteID.SideIcons.SPELLBOOK_ANCIENT_MAGICKS;
-				name = "Ancient spellbook";
-				break;
-			default:
-				spriteID = SpriteID.SideIcons.MAGIC;
-				name = "Standard spellbook";
-		}
-		setSprite(spellbookLabel, spriteID);
-		spellbookLabel.setToolTipText(name);
+		int i = book >= 1 && book <= 3 ? book : 0;
+		setSprite(spellbookLabel, SPELLBOOK_SPRITES[i]);
+		spellbookLabel.setToolTipText(SPELLBOOKS[i] + " spellbook");
 	}
 
 	private void setSprite(JLabel label, int spriteID)
@@ -202,20 +172,10 @@ public class PlayerBanner extends JPanel
 
 	private static JLabel statLabel(String tooltip)
 	{
-		JLabel label = new JLabel();
-		label.setFont(TsgHubTheme.plainFont());
-		label.setForeground(TsgHubTheme.TEXT);
+		JLabel label = label("", TEXT, plainFont());
 		label.setIconTextGap(3);
 		label.setToolTipText(tooltip);
 		return label;
-	}
-
-	private static JPanel row()
-	{
-		JPanel row = new JPanel(new BorderLayout(4, 0));
-		row.setOpaque(false);
-		row.setAlignmentX(LEFT_ALIGNMENT);
-		return row;
 	}
 
 	@Override

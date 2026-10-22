@@ -4,7 +4,6 @@ import static com.tsghub.TsgHubHtml.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 
-import com.tsghub.group.ui.skills.PlayerSkillsPanel;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.GridLayout;

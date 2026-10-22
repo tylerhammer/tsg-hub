@@ -22,107 +22,65 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.tsghub.group.data;
+package com.tsghub;
 
 import java.util.HashMap;
 import java.util.Map;
 import lombok.Getter;
 import net.runelite.api.Client;
-import net.runelite.api.EnumComposition;
 import net.runelite.api.EnumID;
 import net.runelite.api.Prayer;
-import com.tsghub.group.ui.prayer.PrayerSprites;
 
-public class Prayers
+class Prayers
 {
-	public static final int PRAYER_IS_AVAILABLE = 464;
+	static final int PRAYER_IS_AVAILABLE = 464;
 
 	@Getter
 	private final Map<Prayer, PrayerData> prayerData = new HashMap<>();
 	private int[] prayerIds = new int[0];
 
-	public Prayers()
+	Prayers()
 	{
-		for (final Prayer p : Prayer.values())
-		{
+		for (Prayer p : Prayer.values())
 			prayerData.put(p, new PrayerData(p, p.ordinal() == 0, false, isUnlockedByDefault(p)));
-		}
 	}
 
-	public Prayers(final Client client)
+	Prayers(Client client)
 	{
-		if (client.getLocalPlayer() != null)
-		{
-			for (final PrayerSprites p : PrayerSprites.values())
-			{
-				updatePrayerState(p, client);
-			}
-		}
-		else
-		{
-			setCurrentPrayerIds(client);
-		}
+		if (client.getLocalPlayer() == null) prayerIds = client.getEnum(EnumID.PRAYERS_NORMAL).getIntVals();
+		else for (PrayerSprites p : PrayerSprites.values()) updatePrayerState(p, client);
 	}
 
-	public boolean updatePrayerState(final PrayerSprites p, final Client client)
+	boolean updatePrayerState(PrayerSprites p, Client client)
 	{
-		if (prayerIds.length == 0)
-		{
-			setCurrentPrayerIds(client);
-		}
-
-		assert prayerIds.length > 0;
-		boolean changed, available, enabled, unlocked;
-
-		PrayerData data = prayerData.get(p.getPrayer());
-		if (p.isUnlocked(client))
+		if (prayerIds.length == 0) prayerIds = client.getEnum(EnumID.PRAYERS_NORMAL).getIntVals();
+		boolean unlocked = p.isUnlocked(client);
+		boolean available = false;
+		if (unlocked)
 		{
 			client.runScript(PRAYER_IS_AVAILABLE, prayerIds[p.getScriptIndex()]);
 			available = client.getIntStack()[0] > 0;
-			enabled = client.getVarbitValue(p.getPrayer().getVarbit()) == 1;
-			unlocked = true;
 		}
-		else
-		{
-			available = false;
-			enabled = false;
-			unlocked = false;
-		}
-
+		boolean enabled = unlocked && client.getVarbitValue(p.getPrayer().getVarbit()) == 1;
+		PrayerData data = prayerData.get(p.getPrayer());
 		if (data == null)
 		{
-			data = new PrayerData(p.getPrayer(), available, enabled, unlocked);
-			changed = true;
+			prayerData.put(p.getPrayer(), new PrayerData(p.getPrayer(), available, enabled, unlocked));
+			return true;
 		}
-		else
-		{
-			changed = data.isAvailable() != available || data.isEnabled() != enabled || data.isUnlocked() != unlocked;
-			data.setAvailable(available);
-			data.setEnabled(enabled);
-			data.setUnlocked(unlocked);
-		}
-
-		prayerData.put(data.getPrayer(), data);
+		boolean changed = data.isAvailable() != available || data.isEnabled() != enabled || data.isUnlocked() != unlocked;
+		data.setAvailable(available);
+		data.setEnabled(enabled);
+		data.setUnlocked(unlocked);
 		return changed;
 	}
 
-	public void resetPrayerIds()
+	void resetPrayerIds()
 	{
 		prayerIds = new int[0];
 	}
 
-	private void setCurrentPrayerIds(Client client)
-	{
-		final EnumComposition prayers = getPrayerEnum(client);
-		this.prayerIds = prayers.getIntVals();
-	}
-
-	private EnumComposition getPrayerEnum(Client client)
-	{
-		return client.getEnum(EnumID.PRAYERS_NORMAL);
-	}
-
-	public static boolean isUnlockedByDefault(Prayer p)
+	static boolean isUnlockedByDefault(Prayer p)
 	{
 		return !p.name().equals("DEADEYE") && !p.name().equals("MYSTIC_VIGOUR");
 	}
