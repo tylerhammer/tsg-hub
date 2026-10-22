@@ -1,7 +1,6 @@
 package com.tsghub;
 
 import static com.tsghub.PlayerNames.*;
-import static com.tsghub.TsgHubBingo.*;
 import static com.tsghub.TsgHubEvents.*;
 import static com.tsghub.TsgHubHtml.*;
 import static com.tsghub.TsgHubIcons.*;
@@ -219,12 +218,11 @@ final class TsgHubBoardView
 
 		int value = integer(progress, "progress", 0);
 		int target = Math.max(1, integer(progress, "target", 1));
-		JsonObject mine = individual || solo ? myEntry(progress) : null;
+		JsonObject mine = (individual || solo) && progress.has("mine") ? object(progress, "mine") : null;
 		if (completed)
 		{
-			boolean creditedToOrganizer = creditedToOrganizer(progress);
-			String line = creditedToOrganizer ? "Marked complete by an admin" : completedLine(progress);
-			if (!"Completed".equals(line)) body.add(label(line, SUCCESS, smallFont()));
+			String line = str(progress, "completedLine");
+			if (!line.isEmpty() && !"Completed".equals(line)) body.add(label(line, SUCCESS, smallFont()));
 		}
 		else if (addSetProgress(body, individual || solo ? mine : progress, individual || solo))
 		{
@@ -245,8 +243,7 @@ final class TsgHubBoardView
 			body.add(teammatesLine(mine, value, target));
 		}
 		else if (target > 1) addBar(body, value, target, value + " / " + target);
-		boolean setTile = array(progress, "alternatives").size() > 0 || progress.has("items");
-		if (!individual && !solo && (!setTile || completed))
+		if (!individual && !solo && (!progress.has("sets") || completed))
 		{
 			String amounts = contributorsHtml(progress, " · ", CARD_CONTRIBUTORS, boardDisplayName);
 			if (!amounts.isEmpty()) body.add(TsgHubSidebarPanel.cardNoteHtml(amounts));
@@ -279,20 +276,23 @@ final class TsgHubBoardView
 
 	private boolean addSetProgress(JPanel body, JsonObject source, boolean mine)
 	{
-		if (source == null || array(source, "alternatives").size() == 0 && !source.has("items")) return false;
+		if (source == null || !source.has("sets")) return false;
 		if (bool(source, "completed")) return true;
-		List<SetLine> sets = setLines(source, !mine);
-		List<SetLine> shown = new ArrayList<>();
-		for (SetLine set : sets) if (set.have > 0) shown.add(set);
+		List<JsonObject> sets = objects(array(source, "sets"));
+		List<JsonObject> shown = new ArrayList<>();
+		for (JsonObject set : sets) if (integer(set, "have", 0) > 0) shown.add(set);
 		if (shown.isEmpty() && !sets.isEmpty()) shown.add(sets.get(0));
-		for (SetLine set : shown)
+		for (JsonObject set : shown)
 		{
-			ProgressBar bar = progressBar(set.have, set.target);
-			bar.setCenterLabel((mine ? "You: " : "") + set.name + " " + set.have + "/" + set.target);
+			int have = integer(set, "have", 0);
+			int target = integer(set, "target", 1);
+			ProgressBar bar = progressBar(have, target);
+			bar.setCenterLabel((mine ? "You: " : "") + str(set, "name") + " " + have + "/" + target);
 			body.add(gap(GAP_S));
 			body.add(bar);
 			body.add(gap(GAP_XS));
-			if (!set.needed.isEmpty()) body.add(TsgHubSidebarPanel.cardNote("Need: " + String.join(", ", set.needed)));
+			List<String> needed = strings(array(set, "needed"));
+			if (!needed.isEmpty()) body.add(TsgHubSidebarPanel.cardNote("Need: " + String.join(", ", needed)));
 		}
 		int notStarted = sets.size() - shown.size();
 		if (notStarted > 0) body.add(caption("+" + notStarted + (notStarted == 1 ? " more set" : " more sets") + " not started"));
@@ -335,13 +335,17 @@ final class TsgHubBoardView
 
 	private String setSections(JsonObject progress, boolean first)
 	{
-		if (array(progress, "alternatives").size() == 0 && !progress.has("items")) return "";
 		StringBuilder out = new StringBuilder();
-		for (SetLine set : setLines(progress, true))
+		for (JsonObject set : objects(array(progress, "sets")))
 		{
-			if (set.have == 0) continue;
-			if (set.found.isEmpty()) continue;
-			out.append(tipCard(ACCENT, "<b>" + escape(set.name) + "</b><br>" + set.foundHtml(boardDisplayName)));
+			if (integer(set, "have", 0) == 0) continue;
+			List<String> found = new ArrayList<>();
+			for (JsonObject piece : objects(array(set, "found")))
+			{
+				String by = str(piece, "by");
+				found.add(escape(str(piece, "piece")) + (by.isEmpty() ? "" : " (" + nameHtml(by, boardDisplayName) + ")"));
+			}
+			if (!found.isEmpty()) out.append(tipCard(ACCENT, "<b>" + escape(str(set, "name")) + "</b><br>" + String.join(", ", found)));
 		}
 		return out.length() == 0 ? "" : tipSection(first, tipLine(MUTED, "<b>FOUND</b>")) + out;
 	}
@@ -372,15 +376,22 @@ final class TsgHubBoardView
 	private void addSoloLeader(JPanel body, JsonObject progress)
 	{
 		String leader = str(progress, "leader");
-		if (leader.isEmpty() || samePlayer(leader, boardDisplayName)) return;
+		if (leader.isEmpty()) return;
 		body.add(caption("Leader: " + leader + " (" + integer(progress, "progress", 0) + "/" + integer(progress, "target", 1) + ")"));
 	}
 
-	private JsonObject myEntry(JsonObject progress)
+	private static String contributorsHtml(JsonObject progress, String separator, int max, String self)
 	{
-		for (JsonObject member : objects(array(progress, "members")))
-			if (samePlayer(str(member, "displayName"), boardDisplayName)) return member;
-		return null;
+		JsonArray contributors = array(progress, "contributors");
+		if (contributors.size() == 0) return "";
+		List<String> parts = new ArrayList<>();
+		for (int i = 0; i < Math.min(max, contributors.size()); i++)
+		{
+			JsonObject entry = contributors.get(i).getAsJsonObject();
+			parts.add(nameHtml(str(entry, "displayName"), self) + " " + integer(entry, "amount", 1));
+		}
+		if (contributors.size() > max) parts.add("+" + (contributors.size() - max));
+		return String.join(separator, parts);
 	}
 
 	private void renderScoreboard()

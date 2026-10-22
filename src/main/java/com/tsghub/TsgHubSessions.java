@@ -152,7 +152,7 @@ final class TsgHubSessions
 		String token = session().get(TOKEN);
 		if (eventId.isEmpty() || token.isEmpty()) return;
 		plugin.sidebarBusy(true);
-		api().call("GET", "/v1/events/" + eventId, token, null).whenCompleteAsync(TsgHubApi.handle(response ->
+		api().call("GET", "/v1/events/" + eventId + "?sets=1", token, null).whenCompleteAsync(TsgHubApi.handle(response ->
 		{
 			JsonObject event = response.getAsJsonObject("event");
 			applyBoard(eventId, token, event, open);

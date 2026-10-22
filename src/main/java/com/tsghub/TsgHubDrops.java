@@ -1,7 +1,6 @@
 package com.tsghub;
 
 import static com.tsghub.PlayerNames.*;
-import static com.tsghub.TsgHubBingo.*;
 import static com.tsghub.TsgHubFormat.*;
 import static com.tsghub.TsgHubHtml.*;
 import static com.tsghub.TsgHubJson.*;

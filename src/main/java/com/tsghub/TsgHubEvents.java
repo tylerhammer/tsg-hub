@@ -24,10 +24,6 @@ final class TsgHubEvents
 	private TsgHubEvents()
 	{
 	}
-	static boolean creditedToOrganizer(JsonObject progress)
-	{
-		return bool(progress, "override") && !bool(progress, "overrideCredited");
-	}
 
 	private static ZoneId eventZone(JsonObject event)
 	{
@@ -186,7 +182,6 @@ final class TsgHubEvents
 		JsonObject empty = new JsonObject();
 		empty.addProperty("progress", 0);
 		empty.addProperty("target", 1);
-		empty.addProperty("pending", false);
 		empty.addProperty("completed", false);
 		empty.add("completedBy", JsonNull.INSTANCE);
 		return empty;

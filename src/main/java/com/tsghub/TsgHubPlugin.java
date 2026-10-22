@@ -123,7 +123,6 @@ public class TsgHubPlugin extends Plugin
 	{
 		session = new TsgHubSession(configManager);
 		TsgHubRules.loadBundled(gson);
-		TsgHubItemSets.load(gson);
 		String clanOverride = System.getProperty("tsghub.clanName", "").trim();
 		clan = new TsgHubClan(client, developerMode && !clanOverride.isEmpty() ? clanOverride : "TSGaming");
 		String serviceOverride = System.getProperty("tsghub.serviceUrl", "").trim();
