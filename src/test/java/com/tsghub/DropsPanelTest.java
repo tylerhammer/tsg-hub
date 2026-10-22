@@ -11,8 +11,6 @@ import com.google.gson.JsonObject;
 import java.awt.Color;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.Arrays;
-import java.util.Collections;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -22,7 +20,6 @@ public class DropsPanelTest
 	public static void rules()
 	{
 		TsgHubRules.loadBundled(new Gson());
-		TsgHubItemSets.load(new Gson());
 	}
 
 	@Test
@@ -34,42 +31,6 @@ public class DropsPanelTest
 		assertEquals("1.5M", TsgHubFormat.formatGp(1_512_345));
 		assertEquals("12M", TsgHubFormat.formatGp(12_000_000));
 		assertEquals("1.2B", TsgHubFormat.formatGp(1_234_567_890L));
-	}
-
-	@Test
-	public void dropItem()
-	{
-		assertEquals("Abyssal whip", TsgHubDrops.dropItem(drop("Abyssal whip", 1)));
-		assertEquals("3 x Dragon bones", TsgHubDrops.dropItem(drop("Dragon bones", 3)));
-		assertEquals("Tumeken's shadow", TsgHubDrops.dropItem(drop("Tumeken's shadow (uncharged)", 1)));
-		assertEquals("3 x Onyx bolts", TsgHubDrops.dropItem(drop("Onyx bolts (e)", 3)));
-	}
-
-	@Test
-	public void dropTags()
-	{
-		JsonObject raid = drop("Twisted bow", 1);
-		raid.addProperty("kind", "raid");
-		assertEquals(Arrays.asList("CoX"), TsgHubDrops.dropTags(raid));
-		raid.addProperty("newLog", true);
-		assertEquals(Arrays.asList("CoX", "Log"), TsgHubDrops.dropTags(raid));
-		JsonObject clog = drop("Dragon warhammer", 1);
-		clog.addProperty("kind", "clog");
-		assertEquals(Arrays.asList("Log"), TsgHubDrops.dropTags(clog));
-		JsonObject dupe = drop("Vorki", 1);
-		dupe.addProperty("kind", "dupe");
-		assertEquals(Arrays.asList("Dupe pet"), TsgHubDrops.dropTags(dupe));
-		JsonObject plain = drop("Abyssal whip", 1);
-		plain.addProperty("kind", "drop");
-		assertEquals(Collections.emptyList(), TsgHubDrops.dropTags(plain));
-		JsonObject pet = drop("Vorki", 1);
-		pet.addProperty("kind", "pet");
-		pet.add("luck", luck(0.004, "spooned"));
-		assertEquals(Arrays.asList("Pet", "Spooned"), TsgHubDrops.dropTags(pet));
-		plain.add("luck", luck(0.93, "dry"));
-		assertEquals(Arrays.asList("Dry"), TsgHubDrops.dropTags(plain));
-		plain.add("luck", luck(0.5, ""));
-		assertEquals(Collections.emptyList(), TsgHubDrops.dropTags(plain));
 	}
 
 	private static JsonObject luck(double share, String verdict)
@@ -89,15 +50,6 @@ public class DropsPanelTest
 		assertTrue(TsgHubDrops.dropTooltip(drop).contains("LUCK</b> </font>Only 0.4% of players would have it by this kill count"));
 		drop.add("luck", luck(0.93, "dry"));
 		assertTrue(TsgHubDrops.dropTooltip(drop).contains("93% of players would have it by this kill count"));
-	}
-
-	@Test
-	public void raidName()
-	{
-		assertEquals("ToB", TsgHubItemSets.raidName("Scythe of vitur (uncharged)"));
-		assertEquals("ToA", TsgHubItemSets.raidName("Elidinis' ward"));
-		assertEquals("CoX", TsgHubItemSets.raidName("Dexterous prayer scroll"));
-		assertEquals("Raid", TsgHubItemSets.raidName("Mystery box"));
 	}
 
 	@Test
@@ -178,34 +130,6 @@ public class DropsPanelTest
 		drop.addProperty("rate", "1/358");
 		String tip = TsgHubDrops.dropTooltip(drop);
 		assertTrue(tip, tip.contains("<b>Spindel</b><br>1/358") && tip.contains("DROPPED BY"));
-	}
-
-	@Test
-	public void dropMatches()
-	{
-		JsonObject whip = drop("Abyssal whip", 1);
-		whip.addProperty("kind", "drop");
-		whip.addProperty("player", "Iron Mo");
-		whip.addProperty("value", 1_512_345);
-		JsonObject raid = drop("Twisted bow", 1);
-		raid.addProperty("kind", "raid");
-		raid.addProperty("player", "Crab Legs");
-		raid.addProperty("newLog", true);
-		JsonObject dupe = drop("Vorki", 1);
-		dupe.addProperty("kind", "dupe");
-		dupe.addProperty("player", "Crab Legs");
-
-		assertTrue(TsgHubDrops.dropMatches(whip, 0, 0, "Crab Legs"));
-		assertFalse(TsgHubDrops.dropMatches(whip, 1, 0, "Crab Legs"));
-		assertTrue(TsgHubDrops.dropMatches(raid, 1, 0, "crab\u00a0legs"));
-		assertTrue(TsgHubDrops.dropMatches(raid, 2, 0, "Crab Legs"));
-		assertFalse(TsgHubDrops.dropMatches(whip, 2, 0, "Crab Legs"));
-		assertTrue(TsgHubDrops.dropMatches(dupe, 3, 0, "Crab Legs"));
-		assertTrue(TsgHubDrops.dropMatches(raid, 4, 0, "Crab Legs"));
-		assertFalse(TsgHubDrops.dropMatches(dupe, 4, 0, "Crab Legs"));
-		assertTrue(TsgHubDrops.dropMatches(whip, 0, 1_000_000, "Crab Legs"));
-		assertFalse(TsgHubDrops.dropMatches(whip, 0, 10_000_000, "Crab Legs"));
-		assertFalse(TsgHubDrops.dropMatches(raid, 2, 100_000, "Crab Legs"));
 	}
 
 	private static JsonObject drop(String item, int quantity)

@@ -1,7 +1,6 @@
 package com.tsghub;
 
 import static com.tsghub.PlayerNames.*;
-import static com.tsghub.TsgHubBingo.*;
 import static com.tsghub.TsgHubFormat.*;
 import static com.tsghub.TsgHubHtml.*;
 import static com.tsghub.TsgHubJson.*;
@@ -16,8 +15,6 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.AbstractMap;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -32,26 +29,20 @@ import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
-import net.runelite.api.ItemComposition;
 import net.runelite.api.events.ChatMessage;
-import net.runelite.client.callback.ClientThread;
 import net.runelite.client.util.Text;
 
 @RequiredArgsConstructor
 final class TsgHubDrops
 {
 	static final int REFRESH_SECONDS = 60;
-	private static final int INDEX_CHUNK = 2000;
 
 	private final TsgHubPlugin plugin;
 	private final Client client;
-	private final ClientThread clientThread;
 	private final ScheduledExecutorService executor;
 	private final Set<ScheduledFuture<?>> pending = ConcurrentHashMap.newKeySet();
 	private final Supplier<TsgHubApi> api;
 	private final Supplier<TsgHubSidebarPanel> sidebar;
-	private final Map<String, Integer> itemIds = new HashMap<>();
-	private int indexedItems;
 	private final Recent<JsonObject> lootSources = new Recent<>();
 	private final Recent<String> countMessages = new Recent<>();
 
@@ -160,7 +151,7 @@ final class TsgHubDrops
 
 	void onSnapshot(JsonArray drops)
 	{
-		if (query().isEmpty()) apply(drops);
+		if (query().isEmpty()) apply(drops, null);
 		else load(true);
 	}
 
@@ -170,55 +161,10 @@ final class TsgHubDrops
 		return s == null ? "" : s.dropsView.dropsQuery();
 	}
 
-	void apply(JsonArray drops)
-	{
-		apply(drops, null);
-	}
-
 	private void apply(JsonArray drops, Runnable done)
 	{
-		if (drops == null)
-		{
-			if (done != null) done.run();
-			return;
-		}
-		if (clientThread == null)
-		{
-			plugin.ui(s -> s.dropsView.setDrops(drops));
-			return;
-		}
-		clientThread.invoke(() -> {
-			if (!indexItems()) return false;
-			addItemIds(drops);
-			plugin.ui(s -> s.dropsView.setDrops(drops));
-			if (done != null) done.run();
-			return true;
-		});
-	}
-
-	private void addItemIds(JsonArray drops)
-	{
-		for (int i = 0; i < drops.size(); i++)
-		{
-			JsonObject drop = drops.get(i).getAsJsonObject();
-			Integer id = itemIds.get(TsgHubJson.str(drop, "item").toLowerCase(Locale.ROOT));
-			if (id != null) drop.addProperty("itemId", id);
-		}
-	}
-
-	private boolean indexItems()
-	{
-		int end = Math.min(client.getItemCount(), indexedItems + INDEX_CHUNK);
-		for (int id = indexedItems; id < end; id++)
-		{
-			ItemComposition item = client.getItemDefinition(id);
-			if (item == null || item.getNote() != -1 || item.getPlaceholderTemplateId() != -1) continue;
-			String name = item.getName();
-			if (name == null || name.isEmpty() || "null".equalsIgnoreCase(name)) continue;
-			itemIds.putIfAbsent(name.toLowerCase(Locale.ROOT), id);
-		}
-		indexedItems = end;
-		return client.getItemCount() > 0 && end >= client.getItemCount();
+		if (drops != null) plugin.ui(s -> s.dropsView.setDrops(drops));
+		if (done != null) done.run();
 	}
 
 	void autoRefresh()
@@ -253,43 +199,6 @@ final class TsgHubDrops
 	{
 		double percent = share * 100;
 		return (percent < 1 ? String.format(Locale.ROOT, "%.1f", percent) : String.format(Locale.ROOT, "%.0f", percent)) + "%";
-	}
-
-	static boolean dropMatches(JsonObject drop, int type, long minValue, String self)
-	{
-		String kind = str(drop, "kind");
-		boolean typeMatches;
-		switch (type)
-		{
-			case 1: typeMatches = samePlayer(str(drop, "player"), self); break;
-			case 2: typeMatches = "raid".equals(kind); break;
-			case 3: typeMatches = "pet".equals(kind) || "dupe".equals(kind); break;
-			case 4: typeMatches = bool(drop, "newLog") || "clog".equals(kind); break;
-			default: typeMatches = true;
-		}
-		long value = drop.has("value") ? drop.get("value").getAsLong() : 0;
-		return typeMatches && value >= minValue;
-	}
-
-	static List<String> dropTags(JsonObject drop)
-	{
-		List<String> tags = new ArrayList<>();
-		String kind = str(drop, "kind");
-		if ("raid".equals(kind)) tags.add(TsgHubItemSets.raidName(str(drop, "item")));
-		else if ("pet".equals(kind)) tags.add("Pet");
-		else if ("dupe".equals(kind)) tags.add("Dupe pet");
-		if (bool(drop, "newLog") || "clog".equals(kind)) tags.add("Log");
-		String verdict = str(object(drop, "luck"), "verdict");
-		if ("spooned".equals(verdict)) tags.add("Spooned");
-		else if ("dry".equals(verdict)) tags.add("Dry");
-		return tags;
-	}
-
-	static String dropItem(JsonObject drop)
-	{
-		int quantity = integer(drop, "quantity", 1);
-		String item = str(drop, "item").replaceAll("(\\s*\\([^)]*\\))+$", "");
-		return quantity > 1 ? quantity + " x " + item : item;
 	}
 
 	static String dropAge(String iso, Instant now)
