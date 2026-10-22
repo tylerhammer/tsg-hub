@@ -122,7 +122,7 @@ final class TsgHubDrops
 		if (raw == null) return null;
 		String message = Text.removeTags(raw).replace(' ', ' ').trim();
 		String lower = message.toLowerCase(Locale.ROOT);
-		for (String keyword : TsgHubRules.get().dropKeywords) if (lower.contains(keyword)) return message;
+		for (String keyword : TsgHubRules.get().broadcastKeywords) if (lower.contains(keyword)) return message;
 		return null;
 	}
 

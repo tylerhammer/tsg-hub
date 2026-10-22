@@ -24,7 +24,7 @@ final class TsgHubRules
 	final String version;
 	final List<String> chat;
 	final List<String> players;
-	final List<String> dropKeywords;
+	final List<String> broadcastKeywords;
 	final List<String> petMessages;
 	final List<String> dropContext;
 	final List<String> groupContent;
@@ -46,7 +46,7 @@ final class TsgHubRules
 		version = TsgHubJson.str(json, "version");
 		chat = strings(json, "chat");
 		players = strings(json, "players");
-		dropKeywords = strings(json, "dropKeywords");
+		broadcastKeywords = strings(json, "broadcastKeywords");
 		petMessages = strings(json, "petMessages");
 		dropContext = strings(json, "dropContext");
 		groupContent = strings(json, "groupContent");
