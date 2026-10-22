@@ -210,7 +210,7 @@ final class TsgHubBoardView
 		JPanel card = card();
 		JLabel name = shrinkable(label(str(task, "title"), completed ? MUTED : TEXT, boldFont()));
 		name.putClientProperty("html.disable", Boolean.TRUE);
-		if (completed) name.setIcon(new CheckIcon());
+		if (completed) name.setIcon(icon("check", SUCCESS));
 		JLabel points = label(integer(task, "points", 1) + " pts", completed ? MUTED : ACCENT, smallFont());
 		card.add(row(name, north(points)), BorderLayout.NORTH);
 
@@ -261,7 +261,7 @@ final class TsgHubBoardView
 
 	private static void addScopeIcon(JPanel body, boolean solo, boolean individual)
 	{
-		JLabel scope = new JLabel(new ScopeIcon(solo ? 1 : individual ? 3 : 2));
+		JLabel scope = new JLabel(icon("scope" + (solo ? 1 : individual ? 3 : 2), MUTED));
 		scope.setToolTipText(solo ? "Solo: one player completes it" : individual ? "Everyone: each teammate completes it" : "Team: progress is shared");
 		JPanel corner = panel(new BorderLayout());
 		corner.add(scope, BorderLayout.SOUTH);

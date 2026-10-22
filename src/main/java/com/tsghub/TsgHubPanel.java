@@ -104,7 +104,7 @@ final class TsgHubPanel extends JPanel
 		header.add(titles, BorderLayout.CENTER);
 		JButton edit = button("Edit event");
 		edit.addActionListener(e -> eventForm.beginEditEvent());
-		JButton deleteEvent = iconButton(new TrashIcon(), "Delete event");
+		JButton deleteEvent = iconButton(hover("trash", TsgHubTheme.ERROR), "Delete event");
 		deleteEvent.addActionListener(e -> confirmDeleteEvent());
 		publishEvent.setToolTipText("Let players see and join this event");
 		publishEvent.addActionListener(e -> { if (currentEvent != null) plugin.organizer().publishEvent(currentEvent); });

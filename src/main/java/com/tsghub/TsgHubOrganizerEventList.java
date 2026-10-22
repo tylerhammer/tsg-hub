@@ -41,7 +41,7 @@ final class TsgHubOrganizerEventList
 		column.setPreferredSize(new Dimension(TsgHubPanel.LIST_W, 100));
 		column.setBorder(BorderFactory.createEmptyBorder(12, 10, 10, 10));
 
-		JButton refresh = iconButton(new RefreshIcon(), "Refresh events");
+		JButton refresh = iconButton(hover("refresh"), "Refresh events");
 		refresh.addActionListener(e -> plugin.organizer().loadManagedEvents());
 		JPanel header = row(boldLabel("Events"), refresh);
 

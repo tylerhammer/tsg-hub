@@ -26,7 +26,6 @@ package com.tsghub.group.ui.skills;
 
 import com.tsghub.TsgHubTheme;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.tsghub.group.data.PartyPlayer;
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
@@ -38,74 +37,22 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import net.runelite.api.Skill;
-import net.runelite.api.gameval.SpriteID;
 import net.runelite.client.game.SpriteManager;
+import net.runelite.client.hiscore.HiscoreSkill;
 import net.runelite.client.util.QuantityFormatter;
-
-import static net.runelite.api.Skill.AGILITY;
-import static net.runelite.api.Skill.ATTACK;
-import static net.runelite.api.Skill.CONSTRUCTION;
-import static net.runelite.api.Skill.COOKING;
-import static net.runelite.api.Skill.CRAFTING;
-import static net.runelite.api.Skill.DEFENCE;
-import static net.runelite.api.Skill.FARMING;
-import static net.runelite.api.Skill.FIREMAKING;
-import static net.runelite.api.Skill.FISHING;
-import static net.runelite.api.Skill.FLETCHING;
-import static net.runelite.api.Skill.HERBLORE;
-import static net.runelite.api.Skill.HITPOINTS;
-import static net.runelite.api.Skill.HUNTER;
-import static net.runelite.api.Skill.MAGIC;
-import static net.runelite.api.Skill.MINING;
-import static net.runelite.api.Skill.PRAYER;
-import static net.runelite.api.Skill.RANGED;
-import static net.runelite.api.Skill.RUNECRAFT;
-import static net.runelite.api.Skill.SAILING;
-import static net.runelite.api.Skill.SLAYER;
-import static net.runelite.api.Skill.SMITHING;
-import static net.runelite.api.Skill.STRENGTH;
-import static net.runelite.api.Skill.THIEVING;
-import static net.runelite.api.Skill.WOODCUTTING;
 
 public class PlayerSkillsPanel extends JPanel
 {
 	public static final List<Skill> SKILL_ORDER = ImmutableList.of(
-		ATTACK, HITPOINTS, MINING,
-		STRENGTH, AGILITY, SMITHING,
-		DEFENCE, HERBLORE, FISHING,
-		RANGED, THIEVING, COOKING,
-		PRAYER, CRAFTING, FIREMAKING,
-		MAGIC, FLETCHING, WOODCUTTING,
-		RUNECRAFT, SLAYER, FARMING,
-		CONSTRUCTION, HUNTER, SAILING
+		Skill.ATTACK, Skill.HITPOINTS, Skill.MINING,
+		Skill.STRENGTH, Skill.AGILITY, Skill.SMITHING,
+		Skill.DEFENCE, Skill.HERBLORE, Skill.FISHING,
+		Skill.RANGED, Skill.THIEVING, Skill.COOKING,
+		Skill.PRAYER, Skill.CRAFTING, Skill.FIREMAKING,
+		Skill.MAGIC, Skill.FLETCHING, Skill.WOODCUTTING,
+		Skill.RUNECRAFT, Skill.SLAYER, Skill.FARMING,
+		Skill.CONSTRUCTION, Skill.HUNTER, Skill.SAILING
 	);
-
-	private static final ImmutableMap<Skill, Integer> SPRITE_MAP = ImmutableMap.<Skill, Integer>builder()
-		.put(Skill.ATTACK, SpriteID.Staticons.ATTACK)
-		.put(Skill.STRENGTH, SpriteID.Staticons.STRENGTH)
-		.put(Skill.DEFENCE, SpriteID.Staticons.DEFENCE)
-		.put(Skill.RANGED, SpriteID.Staticons.RANGED)
-		.put(Skill.PRAYER, SpriteID.Staticons.PRAYER)
-		.put(Skill.MAGIC, SpriteID.Staticons.MAGIC)
-		.put(Skill.HITPOINTS, SpriteID.Staticons.HITPOINTS)
-		.put(Skill.AGILITY, SpriteID.Staticons.AGILITY)
-		.put(Skill.HERBLORE, SpriteID.Staticons.HERBLORE)
-		.put(Skill.THIEVING, SpriteID.Staticons.THIEVING)
-		.put(Skill.CRAFTING, SpriteID.Staticons.CRAFTING)
-		.put(Skill.FLETCHING, SpriteID.Staticons.FLETCHING)
-		.put(Skill.MINING, SpriteID.Staticons.MINING)
-		.put(Skill.SMITHING, SpriteID.Staticons.SMITHING)
-		.put(Skill.FISHING, SpriteID.Staticons.FISHING)
-		.put(Skill.COOKING, SpriteID.Staticons.COOKING)
-		.put(Skill.FIREMAKING, SpriteID.Staticons.FIREMAKING)
-		.put(Skill.WOODCUTTING, SpriteID.Staticons.WOODCUTTING)
-		.put(Skill.RUNECRAFT, SpriteID.Staticons2.RUNECRAFT)
-		.put(Skill.SLAYER, SpriteID.Staticons2.SLAYER)
-		.put(Skill.FARMING, SpriteID.Staticons2.FARMING)
-		.put(Skill.CONSTRUCTION, SpriteID.Staticons2.CONSTRUCTION)
-		.put(Skill.HUNTER, SpriteID.Staticons2.HUNTER)
-		.put(Skill.SAILING, SpriteID.Staticons2.SAILING)
-		.build();
 
 	private final Map<Skill, SkillPanelSlot> panelMap = new HashMap<>();
 	private final JLabel totalLabel = new JLabel();
@@ -122,7 +69,7 @@ public class PlayerSkillsPanel extends JPanel
 			SkillPanelSlot slot = new SkillPanelSlot(skill.getName());
 			panelMap.put(skill, slot);
 			grid.add(slot);
-			spriteManager.getSpriteAsync(SPRITE_MAP.get(skill), 0, img -> SwingUtilities.invokeLater(() -> slot.setSkillIcon(img)));
+			spriteManager.getSpriteAsync(HiscoreSkill.valueOf(skill.name()).getSpriteId(), 0, img -> SwingUtilities.invokeLater(() -> slot.setSkillIcon(img)));
 		}
 
 		JLabel totalCaption = new JLabel("Total level");

@@ -1,5 +1,6 @@
 package com.tsghub;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -24,6 +25,7 @@ import javax.swing.AbstractButton;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
+import okhttp3.OkHttpClient;
 import net.runelite.client.party.PartyService;
 import net.runelite.client.ui.components.materialtabs.MaterialTab;
 import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
@@ -60,6 +62,7 @@ public class ReadmeScreenshots
 	private static void run() throws Exception
 	{
 		RuneLiteLAF.setup();
+		TsgHubItemSets.load(new Gson());
 		Instant now = Instant.parse(str("now"));
 		TsgHubFormat.clock = Clock.fixed(now, ZoneOffset.UTC);
 		TsgHubPlugin plugin = new TsgHubPlugin()
@@ -103,8 +106,9 @@ public class ReadmeScreenshots
 		set(plugin, "keys", new TsgHubKeys(plugin, stub(TsgHubConfig.class), null, stopped()));
 		set(plugin, "sessions", new TsgHubSessions(plugin, stopped()));
 		set(plugin, "session", new TsgHubSession(null));
-		set(plugin, "groups", new TsgHubGroups(plugin, null, (PartyService) unsafe().allocateInstance(PartyService.class), null, null, null, null));
-		set(plugin, "presence", new TsgHubPresence(plugin, null, null, null, null, stopped(), null, null, null, () -> "", notes -> { }));
+		TsgHubSocket socket = new TsgHubSocket(new OkHttpClient(), null, "http://localhost", stopped(), null, TsgHubTraffic.OFF);
+		set(plugin, "groups", new TsgHubGroups(plugin, null, (PartyService) unsafe().allocateInstance(PartyService.class), stopped(), null, null, socket));
+		set(plugin, "presence", new TsgHubPresence(plugin, null, null, null, null, stopped(), null, null, socket, () -> "", notes -> { }));
 		set(plugin, "drops", new TsgHubDrops(plugin, null, null, stopped(), null, null));
 		set(plugin, "announcements", new TsgHubAnnouncements(plugin, stopped(), null, () -> null, line -> { }));
 

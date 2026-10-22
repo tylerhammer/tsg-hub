@@ -64,13 +64,13 @@ final class TsgHubNewsView
 		JPanel icons = panel(new FlowLayout(FlowLayout.RIGHT, 4, 4));
 		if (bool(announcement, "pinned"))
 		{
-			JLabel pinned = new JLabel(new PinnedIcon());
+			JLabel pinned = new JLabel(icon("pinned", ACCENT));
 			pinned.setToolTipText("Pinned");
 			icons.add(pinned);
 		}
 		if (plugin.announcements().isUnread(str(announcement, "id")))
 		{
-			JLabel unread = new JLabel(new UnreadIcon());
+			JLabel unread = new JLabel(icon("dot", SUCCESS));
 			unread.setToolTipText("New");
 			icons.add(unread);
 		}

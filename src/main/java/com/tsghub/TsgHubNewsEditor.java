@@ -77,7 +77,7 @@ final class TsgHubNewsEditor extends JPanel
 	private final JButton edit = button("Edit");
 	private final JButton publish = primaryButton("Publish");
 	private final JButton pin = button("Pin");
-	private final JButton delete = iconButton(new TrashIcon(), "Delete announcement");
+	private final JButton delete = iconButton(hover("trash", TsgHubTheme.ERROR), "Delete announcement");
 
 	private JsonArray announcements;
 	private JsonObject selected;
@@ -112,7 +112,7 @@ final class TsgHubNewsEditor extends JPanel
 		column.setPreferredSize(new Dimension(LIST_W, 100));
 		column.setBorder(BorderFactory.createEmptyBorder(12, 10, 10, 10));
 
-		JButton refresh = iconButton(new RefreshIcon(), "Refresh announcements");
+		JButton refresh = iconButton(hover("refresh"), "Refresh announcements");
 		refresh.addActionListener(e -> plugin.announcements().load());
 		JButton create = primaryButton("New announcement");
 		create.addActionListener(e -> beginPost());

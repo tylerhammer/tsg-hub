@@ -38,18 +38,6 @@ import net.runelite.client.util.Text;
 
 final class TsgHubDrops
 {
-	private static final Set<String> COX_ITEMS = Set.of(
-		"Dexterous prayer scroll", "Arcane prayer scroll", "Twisted buckler", "Dragon hunter crossbow",
-		"Dinh's bulwark", "Ancestral hat", "Ancestral robe top", "Ancestral robe bottom", "Dragon claws",
-		"Elder maul", "Kodai insignia", "Twisted bow", "Olmlet", "Metamorphic dust", "Twisted ancestral colour kit");
-	private static final Set<String> TOB_ITEMS = Set.of(
-		"Avernic defender hilt", "Ghrazi rapier", "Sanguinesti staff", "Justiciar faceguard", "Justiciar chestguard",
-		"Justiciar legguards", "Scythe of vitur", "Lil' zik", "Sanguine dust", "Sanguine ornament kit", "Holy ornament kit");
-	private static final Set<String> TOA_ITEMS = Set.of(
-		"Osmumten's fang", "Lightbearer", "Elidinis' ward", "Masori mask", "Masori body", "Masori chaps",
-		"Tumeken's shadow", "Tumeken's guardian", "Thread of Elidinis", "Breach of the scarab", "Eye of the corruptor",
-		"Jewel of the sun", "Menaphite ornament kit", "Remnant of Akkha",
-		"Remnant of Ba-Ba", "Remnant of Kephri", "Remnant of Zebak", "Ancient remnant");
 	static final int REFRESH_SECONDS = 60;
 	private static final int INDEX_CHUNK = 2000;
 
@@ -295,7 +283,7 @@ final class TsgHubDrops
 	{
 		List<String> tags = new ArrayList<>();
 		String kind = str(drop, "kind");
-		if ("raid".equals(kind)) tags.add(raidName(str(drop, "item")));
+		if ("raid".equals(kind)) tags.add(TsgHubItemSets.raidName(str(drop, "item")));
 		else if ("pet".equals(kind)) tags.add("Pet");
 		else if ("dupe".equals(kind)) tags.add("Dupe pet");
 		if (bool(drop, "newLog") || "clog".equals(kind)) tags.add("Log");
@@ -303,15 +291,6 @@ final class TsgHubDrops
 		if ("spooned".equals(verdict)) tags.add("Spooned");
 		else if ("dry".equals(verdict)) tags.add("Dry");
 		return tags;
-	}
-
-	static String raidName(String item)
-	{
-		String base = item.replaceAll("(\\s*\\([^)]*\\))+$", "");
-		if (COX_ITEMS.contains(base)) return "CoX";
-		if (TOB_ITEMS.contains(base)) return "ToB";
-		if (TOA_ITEMS.contains(base)) return "ToA";
-		return "Raid";
 	}
 
 	static String dropItem(JsonObject drop)
