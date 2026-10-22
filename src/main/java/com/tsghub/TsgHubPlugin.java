@@ -99,6 +99,7 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubSessions sessions;
 	private TsgHubLiveSync liveSync;
 	private TsgHubGameTracker tracker;
+	private TsgHubCoffer coffer;
 	private TsgHubSidebarPanel sidebar;
 	private NavigationButton navigationButton;
 	private ScheduledExecutorService executor;
@@ -163,6 +164,8 @@ public class TsgHubPlugin extends Plugin
 		every(liveSync.unlessLive(drops::autoRefresh), TsgHubDrops.REFRESH_SECONDS, TsgHubDrops.REFRESH_SECONDS, TimeUnit.SECONDS);
 		tracker = new TsgHubGameTracker(this, client, clientThread, itemManager, executor);
 		eventBus.register(tracker);
+		coffer = new TsgHubCoffer(this, client, body -> tracker.report("coffer", "/v1/coffer", body));
+		eventBus.register(coffer);
 		navigationButton = NavigationButton.builder()
 			.tooltip("TSG Hub")
 			.icon(ImageUtil.loadImageResource(getClass(), "icon.png"))
@@ -194,6 +197,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		if (navigationButton != null) clientToolbar.removeNavigation(navigationButton);
 		if (tracker != null) eventBus.unregister(tracker);
+		if (coffer != null) eventBus.unregister(coffer);
 		if (groupTracker != null)
 		{
 			groupTracker.stop();
