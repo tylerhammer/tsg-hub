@@ -44,11 +44,3 @@ tasks.register('run', JavaExec) {
 	// Test with another clan (developer mode only); should match the server's CLAN_NAME.
 	systemProperty 'tsghub.clanName', System.getenv('TSGHUB_CLAN') ?: ''
 }
-
-// Regenerates the README screenshots from fixture JSON: ./gradlew readmeScreenshots [-Pfixtures=<file>]
-tasks.register('readmeScreenshots', JavaExec) {
-	classpath = sourceSets.test.runtimeClasspath
-	mainClass = 'com.tsghub.ReadmeScreenshots'
-	jvmArgs '-Duser.timezone=Australia/Sydney'
-	args project.findProperty('fixtures') ?: 'docs/screenshot-fixtures.json', 'docs/images'
-}

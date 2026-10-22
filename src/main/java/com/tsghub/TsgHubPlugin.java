@@ -234,7 +234,7 @@ public class TsgHubPlugin extends Plugin
 		String key = keys.adminKey();
 		if (!isAdmin() || key.isEmpty())
 		{
-			memberStatus("The admin site needs a hub key with admin access. Run /hub key in the clan Discord and paste it in the plugin settings.", Tone.ERROR);
+			memberStatus("The admin site needs a hub key with admin access. Run /hub link in the clan Discord and paste it in the plugin settings.", Tone.ERROR);
 			SwingUtilities.invokeLater(done);
 			return;
 		}
