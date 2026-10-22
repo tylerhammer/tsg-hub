@@ -24,6 +24,7 @@ import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.Timer;
 import net.runelite.client.ui.PluginPanel;
 
 final class TsgHubSidebarPanel extends PluginPanel
@@ -55,7 +56,11 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final JButton settings = iconButton(hover("cog"), "Plugin settings");
 	private final JButton pin = iconButton(hover("pin"), "Pin below");
 	private final JPanel footer = new JPanel();
-	private final JButton discord = iconButton(hover("discord", new Color(88, 101, 242)), "Copy an invite to the clan Discord");
+	private final JButton discord = iconButton(hover("discord", DISCORD), "Open the clan Discord");
+	private final JButton link = button("Link Discord");
+	private final Timer linkTimer = new Timer(1000, e -> renderLink());
+	private boolean needsLink;
+	private long linkDeadline;
 	private final JLabel connection = label("", MUTED, smallFont());
 	private final JLabel version = label("v" + TsgHubVersion.VERSION, DIM, smallFont());
 	private final StatusLine status = new StatusLine(TEXT_W);
@@ -323,7 +328,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 		dropsWanted = next == View.DROPS || docked && pinned == View.DROPS;
 		if (next != View.COMPETITION) competitionView.openCompetitionId = null;
 		centerLayout.show(center, cardName(next));
-		discord.setVisible(next == View.HOME);
+		discord.setVisible(next == View.HOME && !needsLink);
+		link.setVisible(next == View.HOME && needsLink);
 		dock.setShown(!gated(next));
 		pin.setVisible(pinnable(next));
 		title.setText(html(escape(titleText), titleWidth()));
@@ -460,9 +466,19 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		discord.addActionListener(e -> {
 			discord.setEnabled(false);
-			plugin.copyDiscordInvite(() -> discord.setEnabled(true));
+			plugin.openDiscordInvite(() -> discord.setEnabled(true));
 		});
 		discord.setAlignmentX(Component.CENTER_ALIGNMENT);
+		link.setIcon(icon("discord", Color.WHITE, 14));
+		link.setIconTextGap(6);
+		link.setBackground(DISCORD);
+		link.setForeground(Color.WHITE);
+		link.setAlignmentX(Component.CENTER_ALIGNMENT);
+		link.addActionListener(e -> {
+			link.setEnabled(false);
+			if (linkDeadline > System.currentTimeMillis()) plugin.keys().cancelLink();
+			else plugin.keys().startLink();
+		});
 		connection.setIconTextGap(6);
 		setConnection(TsgHubSocket.State.DISCONNECTED);
 		JPanel status = new JPanel(new BorderLayout());
@@ -474,10 +490,38 @@ final class TsgHubSidebarPanel extends PluginPanel
 		footer.setLayout(new BoxLayout(footer, BoxLayout.Y_AXIS));
 		footer.setOpaque(false);
 		footer.add(discord);
+		footer.add(link);
 		footer.add(gap(6));
 		footer.add(status);
 		discord.setVisible(false);
+		link.setVisible(false);
 		return footer;
+	}
+
+	void setDiscordLink(boolean needsLink, long deadline, boolean starting)
+	{
+		this.needsLink = needsLink;
+		linkDeadline = needsLink ? deadline : 0;
+		link.setEnabled(!starting);
+		discord.setVisible(view == View.HOME && !needsLink);
+		link.setVisible(view == View.HOME && needsLink);
+		renderLink();
+	}
+
+	private void renderLink()
+	{
+		long left = linkDeadline - System.currentTimeMillis();
+		if (linkDeadline > 0 && left > 0)
+		{
+			long seconds = (left + 999) / 1000;
+			link.setText(String.format("Waiting\u2026 %d:%02d", seconds / 60, seconds % 60));
+			link.setToolTipText("Run the copied command in the clan Discord. Click to cancel.");
+			if (!linkTimer.isRunning()) linkTimer.start();
+			return;
+		}
+		linkTimer.stop();
+		link.setText("Link Discord");
+		link.setToolTipText("Copy a /plugin link command and open the clan Discord");
 	}
 
 	void setEventHeader(JsonObject event, boolean showBack, boolean showRefresh)
