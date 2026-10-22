@@ -170,6 +170,7 @@ public class TsgHubPlugin extends Plugin
 			.panel(sidebar)
 			.build();
 		clientToolbar.addNavigation(navigationButton);
+		discordLinkChanged();
 		sidebarRouted = false;
 		clientThread.invokeLater(this::refreshDetectedClan);
 	}
@@ -233,7 +234,7 @@ public class TsgHubPlugin extends Plugin
 		String key = keys.adminKey();
 		if (!isAdmin() || key.isEmpty())
 		{
-			memberStatus("The admin site needs a hub key with admin access. Run /hub link in the clan Discord and paste it in the plugin settings.", Tone.ERROR);
+			memberStatus(keys.needsLink() ? "The admin site needs a linked Discord account with admin access. Click Link Discord on the home screen." : "The admin site needs a Discord account with admin access.", Tone.ERROR);
 			SwingUtilities.invokeLater(done);
 			return;
 		}
@@ -386,6 +387,7 @@ public class TsgHubPlugin extends Plugin
 		if ("hubKey".equals(event.getKey()))
 		{
 			keys.keyChanged();
+			discordLinkChanged();
 			return;
 		}
 		if (!"dataSharingOptIn".equals(event.getKey())) return;
@@ -471,18 +473,32 @@ public class TsgHubPlugin extends Plugin
 		eventBus.post(new OverlayMenuClicked(new OverlayMenuEntry(MenuAction.RUNELITE_OVERLAY_CONFIG, "", ""), owner));
 	}
 
-	void copyDiscordInvite(Runnable done)
+	void openDiscordInvite(Runnable done)
+	{
+		discordInvite(e -> memberError("Couldn't open the Discord invite. ", e), () -> SwingUtilities.invokeLater(done));
+	}
+
+	void joinDiscord(Consumer<Exception> onError)
+	{
+		discordInvite(onError, () -> { });
+	}
+
+	private void discordInvite(Consumer<Exception> onError, Runnable done)
 	{
 		JsonObject body = new JsonObject();
 		body.addProperty("displayName", clan.playerName());
 		body.addProperty("clanName", clan.name());
 		clan.addAccountHash(body);
 		api().call("POST", "/v1/discord/invite", null, body).whenCompleteAsync(TsgHubApi.handle(response ->
-		{
-			String url = response.get("url").getAsString();
-			SwingUtilities.invokeLater(() -> TsgHubUi.copyToClipboard(url));
-			memberStatus("Discord invite copied. Paste it in your browser to join.", Tone.SUCCESS);
-		}, e -> memberError("", e), () -> SwingUtilities.invokeLater(done)), executor);
+			LinkBrowser.browse(response.get("url").getAsString()), onError, done), executor);
+	}
+
+	void discordLinkChanged()
+	{
+		boolean needsLink = keys.needsLink();
+		long deadline = keys.linkDeadline();
+		boolean starting = keys.linkStarting();
+		ui(s -> s.setDiscordLink(needsLink, deadline, starting));
 	}
 
 	@Subscribe

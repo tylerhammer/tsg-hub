@@ -137,14 +137,16 @@ Click the pin icon on **Members**, **Parties** or **Drops** to dock it below the
 
 Every clan member can link their RuneScape account to the clan Discord:
 
-1. Run `/hub link` in the clan Discord. The bot replies with a key that starts with `tsghub_`.
-2. Paste it into **Hub key** under **Discord** in the TSG Hub plugin settings, with sharing on.
+1. Click **Link Discord** at the bottom of the TSG Hub home screen, with sharing on. It copies a `/plugin link code:...` command and opens the clan Discord.
+2. Paste the command in the clan Discord. The plugin fills in **Hub key** under **Discord** in its settings by itself within a few seconds.
 
-The plugin confirms the key in the sidebar and links your Discord account to the character you're logged in as. Using the same key on your alts links them too. A name change carries over automatically next time you log in. The key renews itself while you use it. If it stops working, or you lose it, run `/hub link` again for a new one; `/hub unlink` disables it and unlinks your account.
+You can also run `/plugin link` without a code. The bot replies with a key that starts with `tsghub_` for you to paste into **Hub key** yourself.
+
+The plugin confirms the key in the sidebar and links your Discord account to the character you're logged in as. Using the same key on your alts links them too. A name change carries over automatically next time you log in. The key renews itself while you use it. If it stops working, or you lose it, click **Link Discord** again (it shows whenever your key is missing or rejected); `/plugin unlink` disables it and unlinks your account.
 
 ## For admins
 
-Admin tools use the same hub key. If you're a Discord admin (the server owner, a member with an admin role, or anyone with Manage Server), `/hub link` gives you a key with admin access. Keys from before hub keys existed, starting with `tsgadm_`, keep working and move into the **Hub key** setting by themselves.
+Admin tools use the same hub key. If you're a Discord admin (the server owner, a member with an admin role, or anyone with Manage Server), linking gives you a key with admin access. Keys from before hub keys existed, starting with `tsgadm_`, keep working and move into the **Hub key** setting by themselves.
 
 Once the key checks out, an admin button appears in the sidebar header. It opens the TSG Hub admin site in your browser, already signed in. That's where you create and edit events, teams and tasks, review results, post announcements, and manage members. `/admin login` in the clan Discord gives you the same one-time link. If you lose your Discord admin role, your key keeps linking your account but the admin button disappears.
 

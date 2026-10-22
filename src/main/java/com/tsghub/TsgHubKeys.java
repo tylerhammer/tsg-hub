@@ -5,6 +5,7 @@ import com.tsghub.TsgHubUi.Tone;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import javax.swing.SwingUtilities;
 import lombok.RequiredArgsConstructor;
 import net.runelite.client.config.ConfigManager;
 
@@ -21,6 +22,10 @@ final class TsgHubKeys
 	private volatile String rejected = "";
 	private volatile boolean announce;
 	private ScheduledFuture<?> retry;
+	private volatile String deviceCode = "";
+	private volatile long linkDeadline;
+	private volatile boolean linkStarting;
+	private volatile ScheduledFuture<?> linkPoll;
 
 	boolean verified()
 	{
@@ -30,6 +35,107 @@ final class TsgHubKeys
 	String adminKey()
 	{
 		return verified ? configured() : "";
+	}
+
+	boolean needsLink()
+	{
+		String key = configured();
+		return key.isEmpty() || key.equals(rejected);
+	}
+
+	long linkDeadline()
+	{
+		return deviceCode.isEmpty() ? 0 : linkDeadline;
+	}
+
+	boolean linkStarting()
+	{
+		return linkStarting;
+	}
+
+	void startLink()
+	{
+		if (linkStarting || linkDeadline() > System.currentTimeMillis() || executor.isShutdown()) return;
+		stopLink();
+		linkStarting = true;
+		JsonObject body = new JsonObject();
+		body.addProperty("clanName", plugin.clan().name());
+		plugin.api().call("POST", "/v1/auth/start", null, body).whenCompleteAsync(TsgHubApi.handle(response -> {
+			String code = TsgHubJson.str(response, "deviceCode");
+			String command = TsgHubJson.str(response, "command");
+			if (code.isEmpty() || command.isEmpty()) throw new IllegalStateException("The server didn't return a link code.");
+			linkDeadline = System.currentTimeMillis() + Math.max(60, TsgHubJson.integer(response, "expiresIn", 600)) * 1000L;
+			deviceCode = code;
+			scheduleLinkPoll(code, Math.max(2, TsgHubJson.integer(response, "interval", 5)));
+			SwingUtilities.invokeLater(() -> TsgHubUi.copyToClipboard(command));
+			plugin.memberStatus("Copied " + command + ". Paste it in the clan Discord to link.", Tone.SUCCESS);
+			plugin.joinDiscord(e -> plugin.memberError("Copied " + command + ", but couldn't open the Discord invite. ", e));
+		}, e -> plugin.memberError("Couldn't start linking. ", e), () -> {
+			linkStarting = false;
+			plugin.discordLinkChanged();
+		}), executor);
+	}
+
+	void cancelLink()
+	{
+		stopLink();
+		plugin.discordLinkChanged();
+	}
+
+	private void stopLink()
+	{
+		deviceCode = "";
+		ScheduledFuture<?> pending = linkPoll;
+		if (pending != null) pending.cancel(false);
+		linkPoll = null;
+	}
+
+	private void scheduleLinkPoll(String code, int seconds)
+	{
+		if (!executor.isShutdown()) linkPoll = executor.schedule(() -> pollLink(code, seconds), seconds, TimeUnit.SECONDS);
+	}
+
+	private void pollLink(String code, int seconds)
+	{
+		if (!code.equals(deviceCode)) return;
+		if (System.currentTimeMillis() > linkDeadline)
+		{
+			linkExpired();
+			return;
+		}
+		JsonObject body = new JsonObject();
+		body.addProperty("deviceCode", code);
+		plugin.api().call("POST", "/v1/auth/poll", null, body).whenCompleteAsync((response, error) -> {
+			if (!code.equals(deviceCode)) return;
+			try
+			{
+				JsonObject result = TsgHubApi.result(response, error);
+				String status = TsgHubJson.str(result, "status");
+				if ("complete".equals(status))
+				{
+					stopLink();
+					String key = TsgHubJson.str(result, "key");
+					if (key.isEmpty()) plugin.memberStatus("Linking didn't finish. Click Link Discord to try again.", Tone.ERROR);
+					else configManager.setConfiguration("tsghub", "hubKey", key);
+					plugin.discordLinkChanged();
+					return;
+				}
+				if ("expired".equals(status))
+				{
+					linkExpired();
+					return;
+				}
+			}
+			catch (Exception ignored) { }
+			scheduleLinkPoll(code, seconds);
+		}, executor);
+	}
+
+	private void linkExpired()
+	{
+		stopLink();
+		plugin.memberStatus("The link code expired. Click Link Discord to try again.", Tone.ERROR);
+		plugin.discordLinkChanged();
 	}
 
 	private String configured()
@@ -106,11 +212,13 @@ final class TsgHubKeys
 		rejected = key;
 		announce = false;
 		setVerified(false);
-		plugin.memberStatus("Your hub key wasn't accepted. It may have expired or been revoked. Run /hub link in the clan Discord and paste the new key in the plugin settings.", Tone.ERROR);
+		plugin.discordLinkChanged();
+		plugin.memberStatus("Your hub key wasn't accepted. It may have expired or been revoked. Click Link Discord on the home screen to link again.", Tone.ERROR);
 	}
 
 	void keyChanged()
 	{
+		if (!configured().isEmpty()) stopLink();
 		checkedIdentity = "";
 		rejected = "";
 		backoff.reset();
@@ -130,6 +238,7 @@ final class TsgHubKeys
 		ScheduledFuture<?> pending = retry;
 		if (pending != null) pending.cancel(false);
 		retry = null;
+		stopLink();
 	}
 
 	void loggedOut()
