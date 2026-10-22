@@ -19,7 +19,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -189,7 +188,7 @@ final class TsgHubPartiesView
 		setPartyHeader(group);
 
 		groupsPage.add(shell.groupMembers);
-		groupsPage.add(Box.createVerticalStrut(GAP_L));
+		groupsPage.add(gap(GAP_L));
 
 		JButton title = button("Set title");
 		title.setToolTipText("Name the party. Leave blank to title it by location.");
@@ -210,7 +209,7 @@ final class TsgHubPartiesView
 			groupsPage.add(fitHeight(leaderActions));
 		}
 		else groupsPage.add(fitHeight(title));
-		groupsPage.add(Box.createVerticalStrut(GAP_S));
+		groupsPage.add(gap(GAP_S));
 
 		String currentId = group == null ? "" : str(group, "id");
 		int others = 0;
@@ -255,22 +254,21 @@ final class TsgHubPartiesView
 			sorted.sort(Comparator.comparing((JsonObject g) -> !str(g, "id").equals(currentId)));
 			for (JsonObject group : sorted)
 			{
-				groupsPage.add(groupCard(group, current));
-				groupsPage.add(Box.createVerticalStrut(LIST_GAP));
+				addCard(groupsPage, groupCard(group, current));
 			}
 		}
 
-		groupsPage.add(Box.createVerticalStrut(GAP_L));
+		groupsPage.add(gap(GAP_L));
 		createGroupButton.setEnabled(!groupBusy);
 		createGroupButton.setText(groupBusy ? "Working..." : "New party");
 		groupsPage.add(fitHeight(createGroupButton));
 		groupsPage.add(groupError);
-		groupsPage.add(Box.createVerticalStrut(GAP_M));
+		groupsPage.add(gap(GAP_M));
 		groupsPage.add(TsgHubSidebarPanel.hint(current != null ? "Joining or starting another party leaves your current one."
 			: "Party members see each other's health, prayer, gear, inventory and skills while they're in the party."));
 		if (plugin.groups().inOtherParty())
 		{
-			groupsPage.add(Box.createVerticalStrut(GAP_S));
+			groupsPage.add(gap(GAP_S));
 			groupsPage.add(wrapped("You're in a RuneLite party from outside TSG Hub. Joining or starting a party here leaves it.", WARNING, smallFont(), TsgHubSidebarPanel.TEXT_W));
 		}
 	}
@@ -320,7 +318,7 @@ final class TsgHubPartiesView
 		JPanel text = extra.isEmpty() ? twoLines(top, who) : twoLines(top, detail);
 		if (!extra.isEmpty())
 		{
-			text.add(Box.createVerticalStrut(GAP_XS));
+			text.add(gap(GAP_XS));
 			text.add(who);
 		}
 		card.add(text, BorderLayout.CENTER);

@@ -7,7 +7,6 @@ import static net.runelite.client.util.ColorUtil.toHexColor;
 
 import com.tsghub.TsgHubSidebarPanel.View;
 import java.util.List;
-import javax.swing.Box;
 import javax.swing.SwingUtilities;
 import net.runelite.client.hiscore.HiscoreResult;
 import net.runelite.client.hiscore.HiscoreSkill;
@@ -75,7 +74,7 @@ final class TsgHubLookupView
 		{
 			shell.page.add(shell.sectionHeading("Skills", null));
 			shell.page.add(TsgHubHiscores.skillGrid(result));
-			shell.page.add(Box.createVerticalStrut(GAP_XS));
+			shell.page.add(gap(GAP_XS));
 			shell.page.add(TsgHubHiscores.totalRow(result));
 			addScores("Bosses", result, HiscoreSkillType.BOSS);
 			addScores("Activities", result, HiscoreSkillType.ACTIVITY);
@@ -87,12 +86,12 @@ final class TsgHubLookupView
 	{
 		List<HiscoreSkill> scored = TsgHubHiscores.scored(result, type);
 		if (scored.isEmpty()) return;
-		shell.page.add(Box.createVerticalStrut(GAP_L));
+		shell.page.add(gap(GAP_L));
 		shell.page.add(shell.sectionHeading(heading + " (" + scored.size() + ")", null));
 		for (HiscoreSkill skill : scored)
 		{
 			shell.page.add(TsgHubHiscores.scoreRow(result, skill, plugin.sprites()));
-			shell.page.add(Box.createVerticalStrut(2));
+			shell.page.add(gap(2));
 		}
 	}
 }

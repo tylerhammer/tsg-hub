@@ -10,7 +10,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
-import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -76,11 +75,10 @@ final class TsgHubTasksTab
 		JPanel top = panel(new BorderLayout());
 		JsonArray tasks = array(shell.currentEvent, "tasks");
 		top.add(caption(tasks.size() + (tasks.size() == 1 ? " task" : " tasks") + ", shared by every team"), BorderLayout.CENTER);
-		JButton add = primaryButton("New task");
-		add.addActionListener(e -> shell.taskEditor.beginNewTask());
+		JButton add = onClick(primaryButton("New task"), () -> shell.taskEditor.beginNewTask());
 		top.add(add, BorderLayout.EAST);
 		tasksTab.add(fitHeight(top));
-		tasksTab.add(Box.createVerticalStrut(GAP_M));
+		tasksTab.add(gap(GAP_M));
 		if (tasks.size() == 0)
 		{
 			tasksTab.add(wrapped("No tasks yet. Choose New task to add the first one.", MUTED, plainFont(), TsgHubPanel.DETAIL_TEXT_W));
@@ -101,10 +99,8 @@ final class TsgHubTasksTab
 			String description = str(task, "description");
 			if (!description.isEmpty()) text.add(wrapped(description, MUTED, smallFont(), TsgHubPanel.DETAIL_TEXT_W - 80));
 			card.add(text, BorderLayout.CENTER);
-			JButton edit = button("Edit");
-			edit.addActionListener(e -> shell.taskEditor.beginTaskEdit(task));
-			JButton delete = iconButton(hover("trash", TsgHubTheme.ERROR), "Delete task");
-			delete.addActionListener(e -> confirmDeleteTask(task));
+			JButton edit = onClick(button("Edit"), () -> shell.taskEditor.beginTaskEdit(task));
+			JButton delete = onClick(iconButton(hover("trash", TsgHubTheme.ERROR), "Delete task"), () -> confirmDeleteTask(task));
 			JPanel taskButtons = panel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
 			if (reconcilable(task))
 			{
@@ -116,8 +112,7 @@ final class TsgHubTasksTab
 			taskButtons.add(edit);
 			taskButtons.add(delete);
 			card.add(north(taskButtons), BorderLayout.EAST);
-			tasksTab.add(fitHeight(card));
-			tasksTab.add(Box.createVerticalStrut(LIST_GAP));
+			addCard(tasksTab, fitHeight(card));
 		}
 		refresh(tasksTab);
 	}

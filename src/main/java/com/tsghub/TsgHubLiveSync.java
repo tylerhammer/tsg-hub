@@ -33,7 +33,7 @@ final class TsgHubLiveSync
 	private final Map<String, Topic> topics = new HashMap<>();
 	private volatile Filepath rulesCache;
 
-	TsgHubLiveSync(TsgHubPlugin plugin, OkHttpClient http, Gson gson, String serviceUrl, ScheduledExecutorService executor, TsgHubTraffic traffic)
+	TsgHubLiveSync(TsgHubPlugin plugin, OkHttpClient http, Gson gson, String serviceUrl, ScheduledExecutorService executor)
 	{
 		this.plugin = plugin;
 		this.executor = executor;
@@ -63,7 +63,7 @@ final class TsgHubLiveSync
 			@Override public void onXpRequest(String skills) { plugin.tracker().reportXp(skills); }
 			@Override public void onGroupHeartbeat(JsonObject message) { plugin.groups().beaten(message); }
 			@Override public void onGroupRejected(int status) { plugin.groups().beatRejected(status); }
-		}, traffic);
+		});
 		topics.put("groups", topic((data, eventId) -> plugin.groups().apply(TsgHubJson.array(data, "groups")), eventId -> plugin.groups().autoRefresh()));
 		topics.put("presence", topic(this::presence, eventId -> plugin.presence().autoRefresh()));
 		topics.put("positions", topic((data, eventId) -> plugin.memberMap().apply(TsgHubJson.array(data, "members")), eventId -> { }));

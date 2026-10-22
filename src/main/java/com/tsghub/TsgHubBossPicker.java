@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import javax.swing.BorderFactory;
-import javax.swing.Box;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 import net.runelite.client.hiscore.HiscoreSkill;
@@ -23,7 +22,7 @@ final class TsgHubBossPicker extends TsgHubSearchField
 		super(new JTextField());
 		this.onChosen = onChosen;
 		add(TsgHubUi.caption(caption));
-		add(Box.createVerticalStrut(TsgHubTheme.GAP_XS));
+		add(TsgHubUi.gap(TsgHubTheme.GAP_XS));
 		addSearch("e.g. Vorkath");
 		add(hint);
 		setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));

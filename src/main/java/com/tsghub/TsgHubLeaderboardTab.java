@@ -9,7 +9,6 @@ import static com.tsghub.TsgHubUi.*;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.awt.BorderLayout;
-import javax.swing.Box;
 import javax.swing.JPanel;
 
 final class TsgHubLeaderboardTab
@@ -37,7 +36,7 @@ final class TsgHubLeaderboardTab
 		String what = "skill".equals(type) ? skillName(str(config, "skill")) + " XP gained" : str(config, "npcName") + " kills";
 		leaderboardTab.add(caption(started ? what + " · " + participants + " taking part"
 			: participants + " signed up · counting starts " + eventStartWhen(shell.currentEvent)));
-		leaderboardTab.add(Box.createVerticalStrut(GAP_M));
+		leaderboardTab.add(gap(GAP_M));
 		JsonArray rows = array(shell.currentEvent, "leaderboard");
 		if (rows.size() == 0) leaderboardTab.add(wrapped("Nobody has joined yet. Players join with one click from the TSG Hub sidebar.", MUTED, plainFont(), TsgHubPanel.DETAIL_TEXT_W));
 		for (int i = 0; i < rows.size(); i++)
@@ -57,8 +56,7 @@ final class TsgHubLeaderboardTab
 				String gained = tracking ? "+" + TsgHubFormat.number(integer(row, "gained", 0)) + " " + unit : "Waiting for first " + ("XP".equals(unit) ? "XP" : "kill");
 				card.add(label(gained, !tracking ? MUTED : rank == 1 ? ACCENT : TEXT, tracking ? boldFont() : smallFont()), BorderLayout.EAST);
 			}
-			leaderboardTab.add(fitHeight(card));
-			leaderboardTab.add(Box.createVerticalStrut(LIST_GAP));
+			addCard(leaderboardTab, fitHeight(card));
 		}
 		refresh(leaderboardTab);
 	}

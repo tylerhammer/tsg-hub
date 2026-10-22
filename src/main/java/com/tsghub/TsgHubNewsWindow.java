@@ -10,7 +10,6 @@ import com.google.gson.JsonObject;
 import java.awt.BorderLayout;
 import java.time.ZoneId;
 import javax.swing.BorderFactory;
-import javax.swing.Box;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.SwingUtilities;
@@ -58,12 +57,12 @@ final class TsgHubNewsWindow extends JPanel
 		else
 		{
 			page.add(wrapped(str(announcement, "title"), TEXT, headingFont(), TEXT_W));
-			page.add(Box.createVerticalStrut(GAP_XS));
+			page.add(gap(GAP_XS));
 			page.add(wrapped(str(announcement, "postedBy") + " · " + TsgHubFormat.shortDate(str(announcement, "postedAt"), clock.instant(), ZoneId.systemDefault()), MUTED, smallFont(), TEXT_W));
 			String body = str(announcement, "body");
 			if (!body.isEmpty())
 			{
-				page.add(Box.createVerticalStrut(GAP_L));
+				page.add(gap(GAP_L));
 				page.add(linkedHtml(postHtml(body), TEXT, plainFont(), TEXT_W));
 			}
 			JsonObject poll = TsgHubAnnouncements.poll(announcement);
@@ -71,7 +70,7 @@ final class TsgHubNewsWindow extends JPanel
 			{
 				JPanel card = card();
 				card.add(polls.block(id, poll, TEXT_W - 2 * CARD_PAD_H), BorderLayout.CENTER);
-				page.add(Box.createVerticalStrut(GAP_L));
+				page.add(gap(GAP_L));
 				page.add(fitHeight(card));
 			}
 		}

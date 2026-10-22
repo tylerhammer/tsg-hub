@@ -30,7 +30,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.function.IntSupplier;
 import javax.swing.BorderFactory;
-import javax.swing.Box;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -123,7 +122,7 @@ final class TsgHubMembersPanel extends JPanel
 
 		JPanel top = stack();
 		top.add(buildSummary());
-		top.add(Box.createVerticalStrut(GAP_M));
+		top.add(gap(GAP_M));
 		top.add(buildToolbar());
 		add(top, BorderLayout.NORTH);
 		add(buildTable(), BorderLayout.CENTER);
@@ -175,7 +174,7 @@ final class TsgHubMembersPanel extends JPanel
 		strip.add(statCard(caption("EVENT TURNOUT"), turnoutValue, turnoutCaption));
 		JPanel wrap = stack();
 		wrap.add(fitHeight(strip));
-		wrap.add(Box.createVerticalStrut(GAP_S));
+		wrap.add(gap(GAP_S));
 		wrap.add(footnote);
 		return wrap;
 	}

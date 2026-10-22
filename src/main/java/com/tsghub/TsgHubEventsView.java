@@ -17,7 +17,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import javax.swing.BorderFactory;
-import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -99,7 +98,7 @@ final class TsgHubEventsView
 		JPanel lines = stack();
 		String countdown = capitalize(eventRelative(event));
 		if (!countdown.isEmpty()) lines.add(label(countdown, "Ended".equals(countdown) ? MUTED : SUCCESS, boldFont()));
-		lines.add(Box.createVerticalStrut(GAP_S));
+		lines.add(gap(GAP_S));
 		lines.add(detail("When", eventWhen(event)));
 		if (integer(config, "world", 0) > 0) lines.add(detail("World", String.valueOf(integer(config, "world", 0))));
 		if (!str(config, "location").isEmpty()) lines.add(detail("Where", str(config, "location")));
@@ -107,7 +106,7 @@ final class TsgHubEventsView
 		JPanel prizes = prizeRow(event, smallFont());
 		if (prizes != null)
 		{
-			lines.add(Box.createVerticalStrut(GAP_S));
+			lines.add(gap(GAP_S));
 			lines.add(prizes);
 		}
 		card.add(lines, BorderLayout.CENTER);
@@ -115,7 +114,7 @@ final class TsgHubEventsView
 		String notes = str(config, "notes");
 		if (!notes.isEmpty())
 		{
-			shell.page.add(Box.createVerticalStrut(GAP_M));
+			shell.page.add(gap(GAP_M));
 			shell.page.add(TsgHubSidebarPanel.hint(notes));
 		}
 		shell.refreshPage();
@@ -171,8 +170,7 @@ final class TsgHubEventsView
 					shell.page.add(listHeading(next, section == null));
 					section = next;
 				}
-				shell.page.add(eventCard(event));
-				shell.page.add(Box.createVerticalStrut(LIST_GAP));
+				addCard(shell.page, eventCard(event));
 			}
 		}
 		shell.refreshPage();
@@ -205,20 +203,20 @@ final class TsgHubEventsView
 		JPanel card = card();
 		JPanel lines = stack();
 		lines.add(shrinkable(boldLabel(subject)));
-		lines.add(Box.createVerticalStrut(GAP_XS));
+		lines.add(gap(GAP_XS));
 		lines.add(wrapped(goal, TEXT, smallFont(), TsgHubSidebarPanel.CARD_TEXT_W));
-		lines.add(Box.createVerticalStrut(GAP_XS));
+		lines.add(gap(GAP_XS));
 		lines.add(TsgHubSidebarPanel.cardNote(eventWhen(event)));
 		String description = str(event, "description").trim();
 		if (!description.isEmpty())
 		{
-			lines.add(Box.createVerticalStrut(GAP_S));
+			lines.add(gap(GAP_S));
 			lines.add(TsgHubSidebarPanel.cardNote(description));
 		}
 		JPanel prizes = prizeRow(event, smallFont());
 		if (prizes != null)
 		{
-			lines.add(Box.createVerticalStrut(GAP_S));
+			lines.add(gap(GAP_S));
 			lines.add(prizes);
 		}
 		card.add(lines, BorderLayout.CENTER);
@@ -232,18 +230,18 @@ final class TsgHubEventsView
 		shell.setEventHeader(event, true, false);
 		shell.page.removeAll();
 		shell.page.add(eventSummaryCard(event, "Bingo", "Complete tasks with your team for points. Most points wins."));
-		shell.page.add(Box.createVerticalStrut(GAP_L));
+		shell.page.add(gap(GAP_L));
 		shell.page.add(label("Team code", TEXT, smallFont()));
-		shell.page.add(Box.createVerticalStrut(GAP_S));
+		shell.page.add(gap(GAP_S));
 		codeField.setText("");
 		shell.page.add(fitHeight(codeField));
 		joinError.setVisible(false);
 		shell.page.add(joinError);
-		shell.page.add(Box.createVerticalStrut(GAP_S));
+		shell.page.add(gap(GAP_S));
 		joinButton.setEnabled(true);
 		joinButton.setText("Join event");
 		shell.page.add(fitHeight(joinButton));
-		shell.page.add(Box.createVerticalStrut(GAP_S));
+		shell.page.add(gap(GAP_S));
 		shell.page.add(TsgHubSidebarPanel.hint("Ask an admin for your team's code. Your team can't be changed after you join."));
 		shell.refreshPage();
 		SwingUtilities.invokeLater(codeField::requestFocusInWindow);

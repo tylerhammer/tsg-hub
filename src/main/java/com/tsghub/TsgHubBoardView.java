@@ -72,7 +72,7 @@ final class TsgHubBoardView
 
 		JPanel north = stack();
 		north.add(boardSummary);
-		north.add(Box.createVerticalStrut(GAP_M));
+		north.add(gap(GAP_M));
 		north.add(fitHeight(tabs));
 		board.add(north, BorderLayout.NORTH);
 		board.add(display, BorderLayout.CENTER);
@@ -176,7 +176,7 @@ final class TsgHubBoardView
 		left.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
 		controls.add(left, BorderLayout.EAST);
 		tasksTab.add(fitHeight(controls));
-		tasksTab.add(Box.createVerticalStrut(GAP_S));
+		tasksTab.add(gap(GAP_S));
 
 		if (tasks.size() == 0)
 		{
@@ -196,8 +196,7 @@ final class TsgHubBoardView
 
 	private void addTaskCard(JsonObject task, JsonObject progress)
 	{
-		tasksTab.add(taskCard(task, progress));
-		tasksTab.add(Box.createVerticalStrut(LIST_GAP));
+		addCard(tasksTab, taskCard(task, progress));
 	}
 
 	private JPanel taskCard(JsonObject task, JsonObject progress)
@@ -290,9 +289,9 @@ final class TsgHubBoardView
 		{
 			ProgressBar bar = progressBar(set.have, set.target);
 			bar.setCenterLabel((mine ? "You: " : "") + set.name + " " + set.have + "/" + set.target);
-			body.add(Box.createVerticalStrut(GAP_S));
+			body.add(gap(GAP_S));
 			body.add(bar);
-			body.add(Box.createVerticalStrut(GAP_XS));
+			body.add(gap(GAP_XS));
 			if (!set.needed.isEmpty()) body.add(TsgHubSidebarPanel.cardNote("Need: " + String.join(", ", set.needed)));
 		}
 		int notStarted = sets.size() - shown.size();
@@ -310,7 +309,7 @@ final class TsgHubBoardView
 		{
 			body.add(parts[i]);
 			boolean next = i + 1 < parts.length;
-			if (next && parts[i] instanceof JLabel && parts[i + 1] instanceof JLabel) body.add(Box.createVerticalStrut(GAP_XS));
+			if (next && parts[i] instanceof JLabel && parts[i + 1] instanceof JLabel) body.add(gap(GAP_XS));
 		}
 	}
 
@@ -411,8 +410,7 @@ final class TsgHubBoardView
 			text.add(caption(integer(score, "completedTasks", 0) + "/" + totalTasks + " tasks"));
 			card.add(text, BorderLayout.CENTER);
 			card.add(label(integer(score, "points", 0) + " pts", i == 0 ? ACCENT : TEXT, boldFont()), BorderLayout.EAST);
-			scoreboardTab.add(fitHeight(card));
-			scoreboardTab.add(Box.createVerticalStrut(LIST_GAP));
+			addCard(scoreboardTab, fitHeight(card));
 		}
 		refresh(scoreboardTab);
 	}
@@ -429,8 +427,7 @@ final class TsgHubBoardView
 			JPanel card = card();
 			if (mine) highlightSelf(card);
 			card.add(wrapped(str(team, "name"), TEXT, plainFont(), TsgHubSidebarPanel.CARD_TEXT_W), BorderLayout.CENTER);
-			scoreboardTab.add(fitHeight(card));
-			scoreboardTab.add(Box.createVerticalStrut(LIST_GAP));
+			addCard(scoreboardTab, fitHeight(card));
 		}
 		refresh(scoreboardTab);
 	}
@@ -446,20 +443,18 @@ final class TsgHubBoardView
 		}
 		teammates.sort(String.CASE_INSENSITIVE_ORDER);
 		teamTab.add(caption(teammates.size() == 1 ? "1 member" : teammates.size() + " members"));
-		teamTab.add(Box.createVerticalStrut(GAP_S));
+		teamTab.add(gap(GAP_S));
 		for (String name : teammates)
 		{
 			JPanel row = card();
 			if (samePlayer(name, boardDisplayName)) highlightSelf(row);
 			row.add(wrapped(name, TEXT, plainFont(), TsgHubSidebarPanel.CARD_TEXT_W), BorderLayout.CENTER);
-			teamTab.add(fitHeight(row));
-			teamTab.add(Box.createVerticalStrut(LIST_GAP));
+			addCard(teamTab, fitHeight(row));
 		}
-		teamTab.add(Box.createVerticalStrut(GAP_L));
-		JButton leave = dangerButton("Disconnect from event");
-		leave.addActionListener(e -> confirmLeave());
+		teamTab.add(gap(GAP_L));
+		JButton leave = onClick(dangerButton("Disconnect from event"), () -> confirmLeave());
 		teamTab.add(fitHeight(leave));
-		teamTab.add(Box.createVerticalStrut(GAP_S));
+		teamTab.add(gap(GAP_S));
 		teamTab.add(TsgHubSidebarPanel.hint("Stops tracking on this device. Your team keeps its progress and you can rejoin with the same code."));
 		refresh(teamTab);
 	}
@@ -475,8 +470,8 @@ final class TsgHubBoardView
 	{
 		ProgressBar bar = progressBar(value, max);
 		bar.setCenterLabel(label);
-		body.add(Box.createVerticalStrut(GAP_S));
+		body.add(gap(GAP_S));
 		body.add(bar);
-		body.add(Box.createVerticalStrut(GAP_S));
+		body.add(gap(GAP_S));
 	}
 }
