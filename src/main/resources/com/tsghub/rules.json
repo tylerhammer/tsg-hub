@@ -2,7 +2,7 @@
 	"notice": "Region names seeded from the RuneLite Discord plugin (BSD 2-Clause License, Copyright (c) RuneLite contributors), extended with coordinates from the Old School RuneScape Wiki",
 	"chat": ["kill count", "kill-count", "completion time", "completed chambers of xeric", "collection log"],
 	"players": ["completion time", "completed chambers of xeric"],
-	"dropKeywords": ["received a drop:", "received special loot from a raid:", "funny feeling", "sneaking into", "acquired something special", "new collection log item:"],
+	"broadcastKeywords": ["received a drop:", "received special loot from a raid:", "funny feeling", "sneaking into", "acquired something special", "new collection log item:"],
 	"dropContext": ["count is:"],
 	"groupContent": ["kill count is:", "your completed ", "your subdued ", "amount of rifts you have closed"],
 	"dropDelayMs": 1200,
