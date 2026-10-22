@@ -176,8 +176,13 @@ final class TsgHubGameTracker
 
 	void report(String type, String path, String token, JsonObject body)
 	{
+		report(type, "POST", path, token, body);
+	}
+
+	void report(String type, String method, String path, String token, JsonObject body)
+	{
 		TsgHubReports reports = plugin.reports();
-		if (reports == null || reports.send(type, path, token, body) || executor.isShutdown()) return;
+		if (reports == null || reports.send(type, method, path, token, body) || executor.isShutdown()) return;
 		if (client.isClientThread()) executor.execute(reports::flush);
 		else reports.flush();
 	}

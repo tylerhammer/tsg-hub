@@ -14,22 +14,24 @@ final class TsgHubReports
 
 	interface Poster
 	{
-		void post(String path, String token, JsonObject body) throws Exception;
+		void post(String method, String path, String token, JsonObject body) throws Exception;
 	}
 
 	private static final class Pending extends TsgHubOutbox.Item
 	{
 		final String type;
+		final String method;
 		final String path;
 		final String token;
 		final JsonObject body;
 		long nextAt;
 		boolean socketTried;
 
-		Pending(String type, String path, String token, JsonObject body, long now)
+		Pending(String type, String method, String path, String token, JsonObject body, long now)
 		{
 			super(now);
 			this.type = type;
+			this.method = method;
 			this.path = path;
 			this.token = token;
 			this.body = body;
@@ -59,11 +61,16 @@ final class TsgHubReports
 		return send(type, path, null, body);
 	}
 
-	synchronized boolean send(String type, String path, String token, JsonObject body)
+	boolean send(String type, String path, String token, JsonObject body)
+	{
+		return send(type, "POST", path, token, body);
+	}
+
+	synchronized boolean send(String type, String method, String path, String token, JsonObject body)
 	{
 		if (!body.has("id")) body.addProperty("id", TsgHubSignals.newId());
 		long now = clock.getAsLong();
-		Pending entry = new Pending(type, path, token, body, now);
+		Pending entry = new Pending(type, method, path, token, body, now);
 		pending.add(body.get("id").getAsString(), entry);
 		return sendSocket(entry, now);
 	}
@@ -116,7 +123,7 @@ final class TsgHubReports
 			String id = entry.body.get("id").getAsString();
 			try
 			{
-				poster.post(entry.path, entry.token, entry.body);
+				poster.post(entry.method, entry.path, entry.token, entry.body);
 				acked(id);
 			}
 			catch (TsgHubApi.HttpError e)

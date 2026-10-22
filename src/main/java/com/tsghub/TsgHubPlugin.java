@@ -135,7 +135,7 @@ public class TsgHubPlugin extends Plugin
 		liveSync = new TsgHubLiveSync(this, okHttpClient, gson, serviceUrl, executor);
 		TsgHubSocket socket = liveSync.socket();
 		signals = new TsgHubSignals(socket, this::api, chat::reply);
-		reports = new TsgHubReports(socket::send, (path, token, body) -> api().request("POST", path, token, body));
+		reports = new TsgHubReports(socket::send, (method, path, token, body) -> api().request(method, path, token, body));
 		executor.execute(this::loadCachedRules);
 		every(liveSync::tick, 2, 5, TimeUnit.SECONDS);
 		every(liveSync.unlessLive(() -> sessions.autoRefreshBoard(sidebar)), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);

@@ -23,8 +23,12 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import net.runelite.client.ui.components.ProgressBar;
 import net.runelite.client.ui.components.materialtabs.MaterialTab;
 import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
@@ -36,6 +40,7 @@ final class TsgHubBoardView
 
 	private static final int CARD_TITLE_W = 150;
 	private static final int CARD_CONTRIBUTORS = 2;
+	private static final int CARD_CLAIMS = 3;
 	private final JPanel boardSummary = stack();
 	private final WidthTrackingPanel tasksTab = new WidthTrackingPanel();
 	private final WidthTrackingPanel scoreboardTab = new WidthTrackingPanel();
@@ -248,11 +253,78 @@ final class TsgHubBoardView
 			String amounts = contributorsHtml(progress, " · ", CARD_CONTRIBUTORS, boardDisplayName);
 			if (!amounts.isEmpty()) body.add(TsgHubSidebarPanel.cardNoteHtml(amounts));
 		}
+		List<JsonObject> claims = completed ? new ArrayList<>() : TsgHubTileClaims.forTask(boardEvent, taskId);
+		if (!claims.isEmpty()) body.add(TsgHubSidebarPanel.cardNoteHtml("Claimed: " + claimNames(claims, CARD_CLAIMS)));
 		addLineSpacing(body);
 		addScopeIcon(body, solo, individual);
 		card.add(body, BorderLayout.CENTER);
+		JsonObject myClaim = completed ? null : TsgHubTileClaims.mine(boardEvent, taskId);
+		if (myClaim != null) highlightSelf(card);
+		if (TsgHubTileClaims.claimable(boardEvent, ownTeamId(), progress)) addClaimMenu(card, taskId, str(task, "title"), myClaim);
 		lazyTooltip(card, () -> taskTooltip(task, progress, truncated(name)));
 		return fitHeight(card);
+	}
+
+	private String claimName(JsonObject claim)
+	{
+		String name = escape(str(claim, "displayName"));
+		return bool(claim, "mine") ? selfName(name) : nameHtml(str(claim, "displayName"), boardDisplayName);
+	}
+
+	private String claimNames(List<JsonObject> claims, int max)
+	{
+		List<String> names = new ArrayList<>();
+		for (int i = 0; i < Math.min(max, claims.size()); i++) names.add(claimName(claims.get(i)));
+		if (claims.size() > max) names.add("+" + (claims.size() - max));
+		return String.join(", ", names);
+	}
+
+	private void addClaimMenu(JPanel card, String taskId, String title, JsonObject myClaim)
+	{
+		JPopupMenu menu = new JPopupMenu();
+		if (myClaim == null)
+		{
+			JMenuItem claim = new JMenuItem("Claim tile");
+			claim.addActionListener(e -> promptClaim(taskId, title, null));
+			menu.add(claim);
+		}
+		else
+		{
+			JMenuItem note = new JMenuItem("Change note");
+			note.addActionListener(e -> promptClaim(taskId, title, myClaim));
+			menu.add(note);
+			JMenuItem drop = new JMenuItem("Drop claim");
+			drop.addActionListener(e -> sendClaim(taskId, null));
+			menu.add(drop);
+		}
+		card.setComponentPopupMenu(menu);
+		eachDeep(card, c -> { if (c != card && c instanceof JComponent) ((JComponent) c).setInheritsPopupMenu(true); });
+	}
+
+	private void promptClaim(String taskId, String title, JsonObject current)
+	{
+		String previous = current == null ? "" : str(current, "note");
+		Object input = JOptionPane.showInputDialog(shell, "Note for your team (optional, up to " + TsgHubTileClaims.MAX_NOTE_LENGTH + " characters)",
+			current == null ? "Claim " + title : "Change note", JOptionPane.PLAIN_MESSAGE, null, null, previous);
+		if (input == null) return;
+		String note = TsgHubTileClaims.cleanNote(input.toString());
+		if (note == null)
+		{
+			shell.setStatus("Keep the note to " + TsgHubTileClaims.MAX_NOTE_LENGTH + " characters.", Tone.ERROR);
+			return;
+		}
+		if (current != null && note.equals(previous)) return;
+		sendClaim(taskId, note);
+	}
+
+	private void sendClaim(String taskId, String note)
+	{
+		if (boardEvent == null) return;
+		String eventId = str(boardEvent, "id");
+		boolean sent = note == null ? plugin.sessions().dropTileClaim(eventId, taskId) : plugin.sessions().claimTile(eventId, taskId, note);
+		if (!sent) return;
+		boardEvent = TsgHubTileClaims.withClaim(boardEvent, taskId, ownTeamId(), boardDisplayName, note);
+		renderTasks();
 	}
 
 	private static void addScopeIcon(JPanel body, boolean solo, boolean individual)
@@ -329,8 +401,22 @@ final class TsgHubBoardView
 		{
 			sections += tipSection(head.isEmpty(), tipLine(MUTED, "<b>CONTRIBUTORS</b>")) + tipCard(CARD_HOVER, contributorsHtml(progress, "<br>", 50, boardDisplayName));
 		}
+		if (!completed) sections += claimSection(str(task, "id"), head.isEmpty() && sections.isEmpty());
 		if (head.isEmpty() && sections.isEmpty()) return null;
 		return html("<div style='padding:2px'>" + head + sections + "</div>", 240);
+	}
+
+	private String claimSection(String taskId, boolean first)
+	{
+		List<JsonObject> claims = TsgHubTileClaims.forTask(boardEvent, taskId);
+		if (claims.isEmpty()) return "";
+		List<String> lines = new ArrayList<>();
+		for (JsonObject claim : claims)
+		{
+			String note = str(claim, "note");
+			lines.add(claimName(claim) + (note.isEmpty() ? "" : "<br>" + tipLine(MUTED, escape(note))));
+		}
+		return tipSection(first, tipLine(MUTED, "<b>CLAIMED</b> " + claims.size())) + tipCard(ACCENT, String.join("<br>", lines));
 	}
 
 	private String setSections(JsonObject progress, boolean first)
