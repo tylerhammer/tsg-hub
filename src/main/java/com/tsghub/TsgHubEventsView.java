@@ -378,7 +378,8 @@ final class TsgHubEventsView
 		signupError.setVisible(false);
 		signupButton.setEnabled(false);
 		signupButton.setText("Sign up".equals(signupLabel) ? "Signing up..." : "Saving...");
-		plugin.sessions().signup(str(previewEvent, "id"), note);
+		if (shell.view == View.SIGNUP) plugin.sessions().editNote(str(previewEvent, "id"), note);
+		else plugin.sessions().signup(str(previewEvent, "id"), note);
 	}
 
 	private void submitJoin()

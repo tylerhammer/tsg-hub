@@ -114,7 +114,6 @@ final class TsgHubSessions
 		payload.addProperty("note", note.trim());
 		api().call("POST", "/v1/events/" + eventId + "/signup", null, payload).whenCompleteAsync(TsgHubApi.handle(result ->
 		{
-			boolean editing = eventId.equals(session().get(EVENT_ID)) && !session().memberToken(eventId).isEmpty();
 			JsonObject member = result.getAsJsonObject("member");
 			String memberToken = result.get("token").getAsString();
 			String memberName = member.get("displayName").getAsString();
@@ -122,9 +121,27 @@ final class TsgHubSessions
 			session().set(MEMBER_NAME + eventId, memberName);
 			session().set(SIGNUP_NOTE + eventId, TsgHubJson.str(member, "note"));
 			setActiveEvent(eventId, memberToken, memberName);
-			plugin.memberStatus(editing ? "Note saved." : "Signed up! An admin will put you on a team.", Tone.SUCCESS);
+			plugin.memberStatus("Signed up! An admin will put you on a team.", Tone.SUCCESS);
 			applyBoard(eventId, memberToken, result.getAsJsonObject("event"), true);
 		}, e -> signupFailed(TsgHubFormat.friendlyError(e))), executor);
+	}
+
+	void editNote(String eventId, String note)
+	{
+		String token = session().memberToken(eventId);
+		if (token.isEmpty()) return;
+		JsonObject payload = new JsonObject();
+		payload.addProperty("note", note.trim());
+		api().call("PATCH", "/v1/events/" + eventId + "/signup", token, payload).whenCompleteAsync(TsgHubApi.handle(result ->
+		{
+			session().set(SIGNUP_NOTE + eventId, TsgHubJson.str(result.getAsJsonObject("member"), "note"));
+			plugin.memberStatus("Note saved.", Tone.SUCCESS);
+			applyBoard(eventId, token, result.getAsJsonObject("event"), true);
+		}, e ->
+		{
+			signupFailed(TsgHubFormat.friendlyError(e));
+			refreshBoard();
+		}), executor);
 	}
 
 	private void signupFailed(String message)
