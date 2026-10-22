@@ -3,7 +3,6 @@ package com.tsghub;
 import static com.tsghub.TsgHubFormat.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-import static net.runelite.client.util.ColorUtil.toHexColor;
 
 import com.tsghub.TsgHubSidebarPanel.View;
 import java.util.List;

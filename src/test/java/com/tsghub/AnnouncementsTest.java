@@ -48,21 +48,6 @@ public class AnnouncementsTest
 	}
 
 	@Test
-	public void pollLinesTrimAndDropDuplicates()
-	{
-		assertEquals(Arrays.asList("Fri", "Sat"), TsgHubNewsEditor.pollLines(" Fri \n\nSat\nfri\n"));
-	}
-
-	@Test
-	public void draftExpiryReadsHoursOrDays()
-	{
-		assertEquals(6, TsgHubNewsEditor.draftHours(new JsonParser().parse("{\"expiresInHours\":6}").getAsJsonObject()));
-		assertEquals(72, TsgHubNewsEditor.draftHours(new JsonParser().parse("{\"expiresInDays\":3}").getAsJsonObject()));
-		assertEquals("6 hours", TsgHubNewsEditor.hours(6));
-		assertEquals("3 days", TsgHubNewsEditor.hours(72));
-	}
-
-	@Test
 	public void publishedDropsDraftsAndExpired()
 	{
 		JsonArray published = TsgHubAnnouncements.published(list("[{\"id\":\"d\",\"draft\":true},{\"id\":\"a\"},{\"id\":\"x\",\"expired\":true}]"));

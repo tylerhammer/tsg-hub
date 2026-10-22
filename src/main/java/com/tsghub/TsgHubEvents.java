@@ -159,23 +159,6 @@ final class TsgHubEvents
 		return object(event, "config");
 	}
 
-	static String taskTypeLabel(JsonObject task)
-	{
-		String type = str(task, "type");
-		JsonObject config = eventConfig(task);
-		switch (type)
-		{
-			case "kill": return "Boss KC";
-			case "raid": return "Raid";
-			case "xp": return "XP";
-			case "drop":
-				if (bool(config, "requireAllItems") || array(config, "itemGroups").size() > 0) return "Item set";
-				String group = str(config, "itemGroup");
-				return "jar".equals(group) ? "Any jar" : "pet".equals(group) ? "Any pet" : "Drop";
-			default: return type.isEmpty() ? "Task" : Character.toUpperCase(type.charAt(0)) + type.substring(1);
-		}
-	}
-
 	static JsonObject scoreFor(JsonArray scores, String teamId)
 	{
 		for (JsonObject score : objects(scores)) if (str(score, "teamId").equals(teamId)) return score;

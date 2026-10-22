@@ -1,6 +1,5 @@
 package com.tsghub;
 
-import java.math.BigDecimal;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
@@ -81,12 +80,6 @@ final class TsgHubFormat
 		return time.format(ZONE);
 	}
 
-	static String zoneLabel(ZoneId zone, Instant now)
-	{
-		String name = zoneName(now.atZone(zone));
-		return name.equals(zone.getId()) ? name : name + " (" + zone.getId() + ")";
-	}
-
 	static String shortDate(String iso, Instant now, ZoneId zone)
 	{
 		Instant at = TsgHubJson.instant(iso);
@@ -163,27 +156,6 @@ final class TsgHubFormat
 			case 3: return place + "rd";
 			default: return place + "th";
 		}
-	}
-
-	static long parseMillions(String text)
-	{
-		String value = text.trim().replace(",", "");
-		if (value.isEmpty()) return 0;
-		try
-		{
-			BigDecimal amount = new BigDecimal(value).multiply(BigDecimal.valueOf(1_000_000L));
-			if (amount.signum() <= 0 || amount.stripTrailingZeros().scale() > 0) return -1;
-			return amount.longValueExact();
-		}
-		catch (NumberFormatException | ArithmeticException e)
-		{
-			return -1;
-		}
-	}
-
-	static String millions(long gp)
-	{
-		return BigDecimal.valueOf(gp).divide(BigDecimal.valueOf(1_000_000L)).stripTrailingZeros().toPlainString();
 	}
 
 	static String formatGp(long value)

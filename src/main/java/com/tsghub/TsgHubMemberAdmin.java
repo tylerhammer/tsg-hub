@@ -123,12 +123,6 @@ final class TsgHubMemberAdmin
 		after(presence.saveNote(name, nextMain, nextNote), "Saved " + name + ".", feedback);
 	}
 
-	static void removeNote(Component parent, TsgHubPresence presence, String name, String altOf, Feedback feedback)
-	{
-		if (!confirm(parent, "Remove note", "Remove the admin note for " + name + "?", "Remove", true)) return;
-		after(presence.saveNote(name, altOf, ""), "Removed the note for " + name + ".", feedback);
-	}
-
 	static void addWarning(Component parent, TsgHubPresence presence, String name, int active, Feedback feedback)
 	{
 		JTextArea reason = new JTextArea(3, 22);

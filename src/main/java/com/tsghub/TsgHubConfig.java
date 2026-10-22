@@ -5,8 +5,6 @@ import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigSection;
-import net.runelite.client.config.Range;
-import net.runelite.client.config.Units;
 
 @ConfigGroup("tsghub")
 public interface TsgHubConfig extends Config
@@ -23,7 +21,7 @@ public interface TsgHubConfig extends Config
 	@ConfigSection(name = "Party", description = "How clan parties look in the TSG Hub sidebar.", position = 10)
 	String partySection = "party";
 
-	@ConfigSection(name = "Discord", description = "Link your Discord account and unlock admin tools.", position = 20)
+	@ConfigSection(name = "Discord", description = "Link your Discord account and unlock the admin site.", position = 20)
 	String discordSection = "admin";
 
 	@ConfigItem(keyName = "dataSharingOptIn", position = 0, section = sharingSection, name = "Share game and clan progress", description = "Opt in to send your RuneScape name, detected clan and rank, PvM progress, loot received during events you join, submitted claims, raid, boss and minigame completions with clanmates nearby (including those clanmates' names), and clan chat presence and world (so clanmates see you as online in the Members list), and clan drop, pet and collection log broadcasts to the TSG Hub service. Progress and tile-completion notices are local to your chatbox; no other game chat is sent.")
@@ -92,17 +90,9 @@ public interface TsgHubConfig extends Config
 		return true;
 	}
 
-	@ConfigItem(keyName = "hubKey", position = 0, section = discordSection, secret = true, name = "Hub key", description = "Your key from /hub link in the clan Discord. Links your Discord account to this RuneScape account and unlocks the admin tools if you're a Discord admin.")
+	@ConfigItem(keyName = "hubKey", position = 0, section = discordSection, secret = true, name = "Hub key", description = "Your key from /hub link in the clan Discord. Links your Discord account to this RuneScape account and unlocks the admin site button if you're a Discord admin.")
 	default String hubKey()
 	{
 		return "";
-	}
-
-	@Range(min = 1, max = 365)
-	@Units(" days")
-	@ConfigItem(keyName = "inactivityDays", position = 1, section = discordSection, name = "Inactive after", description = "Admin tools only. In the admin Members tab, clan members not seen on TSG Hub for this many days count as inactive.")
-	default int inactivityDays()
-	{
-		return 14;
 	}
 }

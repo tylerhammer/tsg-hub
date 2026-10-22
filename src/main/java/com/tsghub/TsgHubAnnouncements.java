@@ -3,16 +3,13 @@ package com.tsghub;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.tsghub.TsgHubUi.Tone;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import javax.swing.SwingUtilities;
 
@@ -23,17 +20,15 @@ final class TsgHubAnnouncements
 	private final TsgHubPlugin plugin;
 	private final ScheduledExecutorService executor;
 	private final Supplier<TsgHubApi> api;
-	private final Supplier<TsgHubNewsEditor> panel;
 	private final Consumer<String> chat;
 	private final TsgHubNewsPoll polls;
 	private volatile JsonArray list;
 
-	TsgHubAnnouncements(TsgHubPlugin plugin, ScheduledExecutorService executor, Supplier<TsgHubApi> api, Supplier<TsgHubNewsEditor> panel, Consumer<String> chat)
+	TsgHubAnnouncements(TsgHubPlugin plugin, ScheduledExecutorService executor, Supplier<TsgHubApi> api, Consumer<String> chat)
 	{
 		this.plugin = plugin;
 		this.executor = executor;
 		this.api = api;
-		this.panel = panel;
 		this.chat = chat;
 		this.polls = new TsgHubNewsPoll(plugin, this, () -> plugin.windows().news(TsgHubNewsWindow::render));
 	}
@@ -52,10 +47,9 @@ final class TsgHubAnnouncements
 	{
 		if (!plugin.canUseHub() || executor.isShutdown()) return;
 		String clan = TsgHubApi.encode(plugin.clan().name());
-		String token = plugin.keys().adminKey();
 		String hash = plugin.clan().accountHash();
 		String query = "/v1/announcements?clanName=" + clan + (hash.isEmpty() ? "" : "&accountHash=" + hash);
-		api.get().call("GET", query, token.isEmpty() ? null : token, null)
+		api.get().call("GET", query, null, null)
 			.thenAcceptAsync(result -> apply(TsgHubJson.array(result, "announcements")), executor);
 	}
 
@@ -67,10 +61,6 @@ final class TsgHubAnnouncements
 		SwingUtilities.invokeLater(() -> polls.reset(announcements));
 		plugin.ui(s -> s.newsView.setAnnouncements(announcements));
 		plugin.windows().news(w -> w.setAnnouncements(announcements));
-		SwingUtilities.invokeLater(() -> {
-			TsgHubNewsEditor admin = panel.get();
-			if (admin != null) admin.setAnnouncements(all);
-		});
 		alert(announcements);
 	}
 
@@ -172,7 +162,7 @@ final class TsgHubAnnouncements
 			failed.accept("Log in to vote.");
 			return;
 		}
-		JsonObject request = adminBody();
+		JsonObject request = clanBody();
 		request.addProperty("accountHash", hash);
 		JsonArray picks = new JsonArray();
 		for (int option : options) picks.add(option);
@@ -191,89 +181,15 @@ final class TsgHubAnnouncements
 		}, executor);
 	}
 
-	void save(String id, String title, String body, boolean pinned, Integer expiresInHours, JsonElement poll, boolean publish)
-	{
-		JsonObject request = adminBody();
-		request.addProperty("title", title);
-		request.addProperty("body", body);
-		request.addProperty("pinned", pinned);
-		if (expiresInHours != null) request.addProperty("expiresInHours", expiresInHours);
-		if (poll != null) request.add("poll", poll);
-		String success = publish ? "Announcement published." : "Saved.";
-		if (id.isEmpty())
-		{
-			request.addProperty("draft", !publish);
-			submit(success, true, token -> api.get().call("POST", "/v1/announcements", token, request).thenApply(TsgHubAnnouncements::announcementId));
-			return;
-		}
-		submit(success, true, token -> api.get().call("PATCH", path(id), token, request)
-			.thenCompose(saved -> publish ? api.get().call("POST", path(id) + "/publish", token, adminBody()) : CompletableFuture.completedFuture(saved))
-			.thenApply(done -> id));
-	}
-
-	void publish(String id)
-	{
-		submit("Announcement published.", false, token -> api.get().call("POST", path(id) + "/publish", token, adminBody()).thenApply(TsgHubAnnouncements::announcementId));
-	}
-
-	void setPinned(String id, boolean pinned)
-	{
-		JsonObject request = adminBody();
-		request.addProperty("pinned", pinned);
-		submit(pinned ? "Pinned." : "Unpinned.", false, token -> api.get().call("PATCH", path(id), token, request).thenApply(TsgHubAnnouncements::announcementId));
-	}
-
-	void delete(String id)
-	{
-		String clan = TsgHubApi.encode(plugin.clan().name());
-		submit("Announcement deleted.", false, token -> api.get().call("DELETE", path(id) + "?clanName=" + clan, token, null).thenApply(done -> ""));
-	}
-
 	private static String path(String id)
 	{
 		return "/v1/announcements/" + TsgHubApi.encode(id);
 	}
 
-	private static String announcementId(JsonObject result)
-	{
-		return TsgHubJson.str(TsgHubJson.object(result, "announcement"), "id");
-	}
-
-	private JsonObject adminBody()
+	private JsonObject clanBody()
 	{
 		JsonObject body = new JsonObject();
 		body.addProperty("clanName", plugin.clan().name());
 		return body;
-	}
-
-	private void submit(String success, boolean form, Function<String, CompletableFuture<String>> write)
-	{
-		String token = plugin.keys().adminKey();
-		if (token.isEmpty() || executor.isShutdown())
-		{
-			status("Announcements need a hub key with admin access.", Tone.ERROR);
-			if (form) SwingUtilities.invokeLater(() -> panel.get().failed());
-			return;
-		}
-		status("Saving...", Tone.INFO);
-		write.apply(token).whenCompleteAsync((id, error) -> {
-			if (error != null)
-			{
-				status("Couldn't save. " + TsgHubFormat.friendlyError(error), Tone.ERROR);
-				if (form) SwingUtilities.invokeLater(() -> panel.get().failed());
-				return;
-			}
-			status(success, Tone.SUCCESS);
-			if (form) SwingUtilities.invokeLater(() -> panel.get().showAnnouncement(id));
-			if (!plugin.live()) load();
-		}, executor);
-	}
-
-	private void status(String message, Tone tone)
-	{
-		SwingUtilities.invokeLater(() -> {
-			TsgHubNewsEditor admin = panel.get();
-			if (admin != null) admin.setStatus(message, tone);
-		});
 	}
 }

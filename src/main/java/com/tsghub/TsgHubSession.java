@@ -11,11 +11,8 @@ class TsgHubSession
 	static final String EVENT_ID = "eventId";
 	static final String TOKEN = "token";
 	static final String DISPLAY_NAME = "displayName";
-	static final String ORGANIZER_EVENT_ID = "organizerEventId";
 	static final String MEMBER_TOKEN = "memberToken:";
 	static final String MEMBER_NAME = "memberName:";
-	static final String ORGANIZER_TOKEN = "organizerToken:";
-	static final String ORGANIZER_NAME = "organizerName:";
 	static final String GROUP_TOKEN = "groupToken";
 	static final String GROUP_PASSPHRASE = "groupPassphrase";
 	static final String GROUP_PLAYER = "groupPlayer";

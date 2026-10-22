@@ -18,7 +18,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.runelite.api.Actor;
 import net.runelite.api.Client;
@@ -63,7 +62,6 @@ final class TsgHubPresence
 	private final Supplier<TsgHubSidebarPanel> sidebar;
 	private final TsgHubSocket socket;
 	private final Supplier<String> key;
-	private final Consumer<JsonArray> onNotes;
 	private final ActivityDetector activity = new ActivityDetector();
 	private volatile JsonObject listed;
 	private volatile JsonArray online;
@@ -73,10 +71,9 @@ final class TsgHubPresence
 	private boolean slayerDirty = true;
 
 	TsgHubPresence(TsgHubPlugin plugin, Client client, ClientThread clientThread, TsgHubRankIcons rankIcons, SpriteManager sprites, ScheduledExecutorService executor,
-		Supplier<TsgHubApi> api, Supplier<TsgHubSidebarPanel> sidebar, TsgHubSocket socket, Supplier<String> key, Consumer<JsonArray> onNotes)
+		Supplier<TsgHubApi> api, Supplier<TsgHubSidebarPanel> sidebar, TsgHubSocket socket, Supplier<String> key)
 	{
 		this.key = key;
-		this.onNotes = onNotes;
 		this.socket = socket;
 		this.plugin = plugin;
 		this.client = client;
@@ -162,7 +159,6 @@ final class TsgHubPresence
 		if (loaded != null)
 		{
 			notes = loaded;
-			onNotes.accept(loaded);
 		}
 		JsonArray known = notes;
 		JsonArray rows = members.deepCopy();

@@ -16,24 +16,9 @@ import net.runelite.api.Client;
 final class TsgHubWindows
 {
 	private final Client client;
-	private final Supplier<TsgHubAdminWindow> admin;
 	private final Supplier<TsgHubAnnouncements> announcements;
-	private volatile JDialog adminDialog;
 	private volatile JDialog newsDialog;
 	private TsgHubNewsWindow newsWindow;
-
-	void openAdmin(Runnable opened)
-	{
-		SwingUtilities.invokeLater(() -> {
-			if (adminDialog == null || !adminDialog.isDisplayable())
-			{
-				adminDialog = dialog("TSG Hub · Admin", admin.get(), new Dimension(680, 480), new Dimension(860, 640));
-			}
-			adminDialog.setVisible(true);
-			adminDialog.toFront();
-			opened.run();
-		});
-	}
 
 	void openNews(String id)
 	{
@@ -56,33 +41,16 @@ final class TsgHubWindows
 		SwingUtilities.invokeLater(() -> { if (newsWindow != null) action.accept(newsWindow); });
 	}
 
-	boolean adminOpen()
-	{
-		JDialog window = adminDialog;
-		return window != null && window.isVisible();
-	}
-
-	void hideAdmin()
-	{
-		SwingUtilities.invokeLater(() -> { if (adminDialog != null) adminDialog.setVisible(false); });
-	}
-
 	void hideAll()
 	{
-		SwingUtilities.invokeLater(() -> {
-			if (adminDialog != null) adminDialog.setVisible(false);
-			if (newsDialog != null) newsDialog.setVisible(false);
-		});
+		SwingUtilities.invokeLater(() -> { if (newsDialog != null) newsDialog.setVisible(false); });
 	}
 
 	void dispose()
 	{
-		JDialog adminWindow = adminDialog;
 		JDialog newsWindowDialog = newsDialog;
-		adminDialog = null;
 		newsDialog = null;
 		SwingUtilities.invokeLater(() -> {
-			if (adminWindow != null) adminWindow.dispose();
 			if (newsWindowDialog != null) newsWindowDialog.dispose();
 			newsWindow = null;
 		});
