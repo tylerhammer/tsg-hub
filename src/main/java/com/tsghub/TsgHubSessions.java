@@ -19,7 +19,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
+import lombok.RequiredArgsConstructor;
 
+@RequiredArgsConstructor
 final class TsgHubSessions
 {
 	private final TsgHubPlugin plugin;
@@ -27,12 +29,6 @@ final class TsgHubSessions
 	private final Map<String, Integer> syncedClanRanks = new ConcurrentHashMap<>();
 	private volatile List<String> joinedCompetitions = Collections.emptyList();
 	private volatile String syncedIdentity = "";
-
-	TsgHubSessions(TsgHubPlugin plugin, ScheduledExecutorService executor)
-	{
-		this.plugin = plugin;
-		this.executor = executor;
-	}
 
 	private TsgHubSession session()
 	{
@@ -91,21 +87,17 @@ final class TsgHubSessions
 		JsonObject payload = clan.memberBody(clan.playerName());
 		payload.addProperty("code", code.trim());
 		if (expectedEventId != null && !expectedEventId.trim().isEmpty()) payload.addProperty("eventId", expectedEventId.trim());
-		api().call("POST", "/v1/join", plugin.keys().adminKey(), payload).whenCompleteAsync((response, error) -> {
-			try
-			{
-				JsonObject result = TsgHubApi.result(response, error);
-				String joinedEventId = result.getAsJsonObject("member").get("eventId").getAsString();
-				String memberToken = result.get("token").getAsString();
-				String memberName = result.getAsJsonObject("member").get("displayName").getAsString();
-				session().set(MEMBER_TOKEN + joinedEventId, memberToken);
-				session().set(MEMBER_NAME + joinedEventId, memberName);
-				setActiveEvent(joinedEventId, memberToken, memberName);
-				plugin.memberStatus("You're in! Progress now counts for your team.", Tone.SUCCESS);
-				refreshBoard(true);
-			}
-			catch (Exception e) { joinFailed(TsgHubFormat.friendlyError(e)); }
-		}, executor);
+		api().call("POST", "/v1/join", plugin.keys().adminKey(), payload).whenCompleteAsync(TsgHubApi.handle(result ->
+		{
+			String joinedEventId = result.getAsJsonObject("member").get("eventId").getAsString();
+			String memberToken = result.get("token").getAsString();
+			String memberName = result.getAsJsonObject("member").get("displayName").getAsString();
+			session().set(MEMBER_TOKEN + joinedEventId, memberToken);
+			session().set(MEMBER_NAME + joinedEventId, memberName);
+			setActiveEvent(joinedEventId, memberToken, memberName);
+			plugin.memberStatus("You're in! Progress now counts for your team.", Tone.SUCCESS);
+			refreshBoard(true);
+		}, e -> joinFailed(TsgHubFormat.friendlyError(e))), executor);
 	}
 
 	private void joinFailed(String message)
@@ -170,15 +162,11 @@ final class TsgHubSessions
 		String token = session().get(TOKEN);
 		if (eventId.isEmpty() || token.isEmpty()) return;
 		plugin.sidebarBusy(true);
-		api().call("GET", "/v1/events/" + eventId, token, null).whenCompleteAsync((response, error) -> {
-			try
-			{
-				JsonObject event = TsgHubApi.result(response, error).getAsJsonObject("event");
-				applyBoard(eventId, token, event, open);
-			}
-			catch (Exception e) { eventLoadFailed(eventId, e, "Couldn't update the board. "); }
-			finally { plugin.sidebarBusy(false); }
-		}, executor);
+		api().call("GET", "/v1/events/" + eventId, token, null).whenCompleteAsync(TsgHubApi.handle(response ->
+		{
+			JsonObject event = response.getAsJsonObject("event");
+			applyBoard(eventId, token, event, open);
+		}, e -> eventLoadFailed(eventId, e, "Couldn't update the board. "), () -> plugin.sidebarBusy(false)), executor);
 	}
 
 	void applyBoard(String eventId, String token, JsonObject event, boolean open)
@@ -214,20 +202,15 @@ final class TsgHubSessions
 		if (!plugin.sharingInClan() || clan.playerName().isEmpty()) return;
 		JsonObject body = clan.memberBody(clan.playerName());
 		plugin.sidebarBusy(true);
-		api().call("POST", "/v1/events/" + eventId + "/participate", plugin.keys().adminKey(), body).whenCompleteAsync((response, error) -> {
-			try
-			{
-				JsonObject result = TsgHubApi.result(response, error);
-				session().set(MEMBER_TOKEN + eventId, result.get("token").getAsString());
-				session().set(MEMBER_NAME + eventId, result.getAsJsonObject("member").get("displayName").getAsString());
-				plugin.liveSync().syncNow();
-				plugin.memberStatus("You're in! Your progress counts from now.", Tone.SUCCESS);
-				loadClanEvents();
-				openCompetition(eventId, true);
-			}
-			catch (Exception e) { plugin.ui(s -> s.competitionView.competitionJoinFailed(TsgHubFormat.friendlyError(e))); }
-			finally { plugin.sidebarBusy(false); }
-		}, executor);
+		api().call("POST", "/v1/events/" + eventId + "/participate", plugin.keys().adminKey(), body).whenCompleteAsync(TsgHubApi.handle(result ->
+		{
+			session().set(MEMBER_TOKEN + eventId, result.get("token").getAsString());
+			session().set(MEMBER_NAME + eventId, result.getAsJsonObject("member").get("displayName").getAsString());
+			plugin.liveSync().syncNow();
+			plugin.memberStatus("You're in! Your progress counts from now.", Tone.SUCCESS);
+			loadClanEvents();
+			openCompetition(eventId, true);
+		}, e -> plugin.ui(s -> s.competitionView.competitionJoinFailed(TsgHubFormat.friendlyError(e))), () -> plugin.sidebarBusy(false)), executor);
 	}
 
 	void openCompetition(String eventId)
@@ -241,15 +224,11 @@ final class TsgHubSessions
 		if (token.isEmpty()) return;
 		String name = session().get(MEMBER_NAME + eventId);
 		plugin.sidebarBusy(true);
-		api().call("GET", "/v1/events/" + eventId, token, null).whenCompleteAsync((response, error) -> {
-			try
-			{
-				JsonObject event = TsgHubApi.result(response, error).getAsJsonObject("event");
-				plugin.ui(s -> s.competitionView.showCompetition(event, name, open));
-			}
-			catch (Exception e) { eventLoadFailed(eventId, e, "Couldn't load the leaderboard. "); }
-			finally { plugin.sidebarBusy(false); }
-		}, executor);
+		api().call("GET", "/v1/events/" + eventId, token, null).whenCompleteAsync(TsgHubApi.handle(response ->
+		{
+			JsonObject event = response.getAsJsonObject("event");
+			plugin.ui(s -> s.competitionView.showCompetition(event, name, open));
+		}, e -> eventLoadFailed(eventId, e, "Couldn't load the leaderboard. "), () -> plugin.sidebarBusy(false)), executor);
 	}
 
 	void syncIdentity()
@@ -276,14 +255,10 @@ final class TsgHubSessions
 		body.addProperty("accountHash", hash);
 		body.add("memberTokens", memberTokens);
 		body.add("organizerTokens", organizerTokens);
-		api().call("POST", "/v1/identity", null, body).whenCompleteAsync((response, error) -> {
-			try
-			{
-				JsonObject result = TsgHubApi.result(response, error);
-				if (TsgHubJson.bool(result, "updated") && !session().get(EVENT_ID).isEmpty() && !plugin.live()) refreshBoard();
-			}
-			catch (Exception e) { syncedIdentity = ""; }
-		}, executor);
+		api().call("POST", "/v1/identity", null, body).whenCompleteAsync(TsgHubApi.handle(result ->
+		{
+			if (TsgHubJson.bool(result, "updated") && !session().get(EVENT_ID).isEmpty() && !plugin.live()) refreshBoard();
+		}, e -> syncedIdentity = ""), executor);
 	}
 
 	private void renameStored(String key, String name)
@@ -302,14 +277,10 @@ final class TsgHubSessions
 			return;
 		}
 		plugin.sidebarBusy(true);
-		api().call("GET", "/v1/events?clanName=" + TsgHubApi.encode(clanName), plugin.keys().adminKey(), null).whenCompleteAsync((response, error) -> {
-			try
-			{
-				applyClanEvents(TsgHubApi.result(response, error).getAsJsonArray("events"));
-			}
-			catch (Exception e) { plugin.memberError("Couldn't load events. ", e); }
-			finally { plugin.sidebarBusy(false); }
-		}, executor);
+		api().call("GET", "/v1/events?clanName=" + TsgHubApi.encode(clanName), plugin.keys().adminKey(), null).whenCompleteAsync(TsgHubApi.handle(response ->
+		{
+			applyClanEvents(response.getAsJsonArray("events"));
+		}, e -> plugin.memberError("Couldn't load events. ", e), () -> plugin.sidebarBusy(false)), executor);
 	}
 
 	void applyClanEvents(JsonArray events)
@@ -319,17 +290,7 @@ final class TsgHubSessions
 		for (JsonObject event : TsgHubJson.objects(events))
 		{
 			String eventId = event.get("id").getAsString();
-			String savedToken = session.get(MEMBER_TOKEN + eventId);
-			if (savedToken.isEmpty() && eventId.equals(session.get(EVENT_ID)))
-			{
-				savedToken = session.get(TOKEN);
-				if (!savedToken.isEmpty())
-				{
-					session.set(MEMBER_TOKEN + eventId, savedToken);
-					session.set(MEMBER_NAME + eventId, session.get(DISPLAY_NAME));
-				}
-			}
-			event.addProperty("joined", !savedToken.isEmpty());
+			event.addProperty("joined", !session.memberToken(eventId).isEmpty());
 		}
 		joinedCompetitions = joinedCompetitionIds(events);
 		plugin.ui(s -> s.eventsView.setEvents(events));

@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.UnaryOperator;
+import lombok.RequiredArgsConstructor;
 
 final class TsgHubBingo
 {
@@ -45,6 +46,7 @@ final class TsgHubBingo
 		return ids;
 	}
 
+	@RequiredArgsConstructor
 	static final class SetLine
 	{
 		final String name;
@@ -53,13 +55,6 @@ final class TsgHubBingo
 		final List<String> found = new ArrayList<>();
 		final List<String> finders = new ArrayList<>();
 		final List<String> needed = new ArrayList<>();
-
-		SetLine(String name, int have, int target)
-		{
-			this.name = name;
-			this.have = have;
-			this.target = target;
-		}
 
 		String foundText()
 		{

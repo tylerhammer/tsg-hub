@@ -11,9 +11,11 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@RequiredArgsConstructor
 final class TsgHubSignals
 {
 	private static final long RETRY_MILLIS = 10_000;
@@ -37,13 +39,6 @@ final class TsgHubSignals
 	private final Consumer<JsonObject> receiver;
 	private final TsgHubOutbox<Pending> pending = new TsgHubOutbox<>();
 	private final Map<String, Integer> offlineXp = new HashMap<>();
-
-	TsgHubSignals(TsgHubSocket socket, Supplier<TsgHubApi> api, Consumer<JsonObject> receiver)
-	{
-		this.socket = socket;
-		this.api = api;
-		this.receiver = receiver;
-	}
 
 	boolean wantsChat(String message)
 	{
@@ -110,7 +105,7 @@ final class TsgHubSignals
 		synchronized (this)
 		{
 			pending.expire(now);
-			if (socket.signaling())
+			if (socket.isLive())
 			{
 				offlineXp.clear();
 				for (Pending entry : pending.values())

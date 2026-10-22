@@ -29,9 +29,11 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
+import lombok.RequiredArgsConstructor;
 import net.runelite.api.Skill;
 import net.runelite.api.clan.ClanRank;
 
+@RequiredArgsConstructor
 final class TsgHubEventForm
 {
 	private final TsgHubPlugin plugin;
@@ -69,12 +71,6 @@ final class TsgHubEventForm
 	private final JLabel eventFormError = label("", TsgHubTheme.ERROR, smallFont());
 	private final JButton eventFormSave = primaryButton("Create event");
 	private boolean editingEvent;
-
-	TsgHubEventForm(TsgHubPlugin plugin, TsgHubPanel shell)
-	{
-		this.plugin = plugin;
-		this.shell = shell;
-	}
 
 	JComponent buildEventForm()
 	{

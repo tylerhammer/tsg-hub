@@ -5,15 +5,15 @@ import static com.tsghub.TsgHubHtml.*;
 import static com.tsghub.TsgHubJson.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-import com.tsghub.TsgHubMembers.Member;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.tsghub.TsgHubMembers.Member;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.FontMetrics;
-import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Graphics;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
@@ -41,6 +41,7 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.ToolTipManager;
+import lombok.RequiredArgsConstructor;
 import net.runelite.client.util.QuantityFormatter;
 
 final class TsgHubMemberDetail extends JPanel
@@ -273,20 +274,13 @@ final class TsgHubMemberDetail extends JPanel
 		return tracked;
 	}
 
+	@RequiredArgsConstructor
 	static final class ChartStats
 	{
 		final boolean weekly;
 		final String average;
 		final String active;
 		final String activeTip;
-
-		ChartStats(boolean weekly, String average, String active, String activeTip)
-		{
-			this.weekly = weekly;
-			this.average = average;
-			this.active = active;
-			this.activeTip = activeTip;
-		}
 	}
 
 	static ChartStats chartStats(Map<LocalDate, Integer> minutes, int total, LocalDate last, LocalDate windowStart, LocalDate tracked, int size)

@@ -29,6 +29,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import lombok.RequiredArgsConstructor;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.ItemComposition;
@@ -36,6 +37,7 @@ import net.runelite.api.events.ChatMessage;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.util.Text;
 
+@RequiredArgsConstructor
 final class TsgHubDrops
 {
 	static final int REFRESH_SECONDS = 60;
@@ -52,16 +54,6 @@ final class TsgHubDrops
 	private int indexedItems;
 	private final Recent<JsonObject> lootSources = new Recent<>();
 	private final Recent<String> countMessages = new Recent<>();
-
-	TsgHubDrops(TsgHubPlugin plugin, Client client, ClientThread clientThread, ScheduledExecutorService executor, Supplier<TsgHubApi> api, Supplier<TsgHubSidebarPanel> sidebar)
-	{
-		this.plugin = plugin;
-		this.client = client;
-		this.clientThread = clientThread;
-		this.executor = executor;
-		this.api = api;
-		this.sidebar = sidebar;
-	}
 
 	void onLoot(String source, List<String> items)
 	{

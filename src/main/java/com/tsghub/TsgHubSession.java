@@ -2,8 +2,10 @@ package com.tsghub;
 
 import java.util.ArrayList;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import net.runelite.client.config.ConfigManager;
 
+@RequiredArgsConstructor
 class TsgHubSession
 {
 	static final String EVENT_ID = "eventId";
@@ -28,31 +30,7 @@ class TsgHubSession
 	static final String ANNOUNCEMENTS_ALERTED = "announcementsAlerted";
 
 	private static final String GROUP = "tsghubsession";
-	private static final String PROFILE_PREFIX = GROUP + "." + ConfigManager.RSPROFILE_GROUP + ".";
 	private final ConfigManager configManager;
-
-	TsgHubSession(ConfigManager configManager)
-	{
-		this.configManager = configManager;
-		if (configManager != null) clearLegacyKeys(configManager);
-	}
-
-	private static void clearLegacyKeys(ConfigManager manager)
-	{
-		for (String key : manager.getConfigurationKeys(GROUP + "."))
-		{
-			if (!key.startsWith(PROFILE_PREFIX))
-			{
-				manager.unsetConfiguration(GROUP, key.substring(GROUP.length() + 1));
-				continue;
-			}
-			int split = key.indexOf('.', PROFILE_PREFIX.length());
-			if (split < 0) continue;
-			String name = key.substring(split + 1);
-			if (name.startsWith(encode("clanAdminToken:")) || name.startsWith(encode("clanAdminExpiresAt:")))
-				manager.unsetConfiguration(GROUP, key.substring(GROUP.length() + 1, split), name);
-		}
-	}
 
 	// ConfigManager rejects ':' in keys, so ':' is stored as '_'.
 	// Event IDs, clan keys and prefixes never contain '_'.

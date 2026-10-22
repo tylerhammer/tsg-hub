@@ -9,8 +9,10 @@ import java.util.function.Supplier;
 import javax.swing.JDialog;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
+import lombok.RequiredArgsConstructor;
 import net.runelite.api.Client;
 
+@RequiredArgsConstructor
 final class TsgHubWindows
 {
 	private final Client client;
@@ -19,13 +21,6 @@ final class TsgHubWindows
 	private volatile JDialog adminDialog;
 	private volatile JDialog newsDialog;
 	private TsgHubNewsWindow newsWindow;
-
-	TsgHubWindows(Client client, Supplier<TsgHubAdminWindow> admin, Supplier<TsgHubAnnouncements> announcements)
-	{
-		this.client = client;
-		this.admin = admin;
-		this.announcements = announcements;
-	}
 
 	void openAdmin(Runnable opened)
 	{

@@ -20,8 +20,10 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
+import lombok.RequiredArgsConstructor;
 import net.runelite.client.ui.components.ProgressBar;
 
+@RequiredArgsConstructor
 final class TsgHubNewsPoll
 {
 	private final TsgHubPlugin plugin;
@@ -30,13 +32,6 @@ final class TsgHubNewsPoll
 	private final Map<String, Set<Integer>> picks = new HashMap<>();
 	private final Map<String, String> errors = new HashMap<>();
 	private final Set<String> voting = new HashSet<>();
-
-	TsgHubNewsPoll(TsgHubPlugin plugin, TsgHubAnnouncements announcements, Runnable changed)
-	{
-		this.plugin = plugin;
-		this.announcements = announcements;
-		this.changed = changed;
-	}
 
 	void reset(JsonArray announcements)
 	{

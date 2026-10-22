@@ -8,10 +8,12 @@ import static net.runelite.client.util.ColorUtil.toHexColor;
 import com.tsghub.TsgHubSidebarPanel.View;
 import java.util.List;
 import javax.swing.SwingUtilities;
+import lombok.RequiredArgsConstructor;
 import net.runelite.client.hiscore.HiscoreResult;
 import net.runelite.client.hiscore.HiscoreSkill;
 import net.runelite.client.hiscore.HiscoreSkillType;
 
+@RequiredArgsConstructor
 final class TsgHubLookupView
 {
 	private final TsgHubPlugin plugin;
@@ -23,12 +25,6 @@ final class TsgHubLookupView
 	private HiscoreResult lookupResult;
 	private String lookupError = "";
 	private int lookupSeq;
-
-	TsgHubLookupView(TsgHubPlugin plugin, TsgHubSidebarPanel shell)
-	{
-		this.plugin = plugin;
-		this.shell = shell;
-	}
 
 	void showLookup(String name, int accountType)
 	{

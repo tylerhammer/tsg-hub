@@ -39,8 +39,8 @@ final class TsgHubPanel extends JPanel
 	final TsgHubTaskEditor taskEditor;
 	final TsgHubTeamsTab teamsView;
 	final TsgHubTasksTab tasksView;
-	final TsgHubLeaderboardTab leaderboardView;
-	final TsgHubDetailsTab detailsView;
+	final WidthTrackingPanel leaderboardTab = new WidthTrackingPanel();
+	final WidthTrackingPanel detailsTab = new WidthTrackingPanel();
 
 	final CardLayout detailLayout = new CardLayout();
 	final JPanel detail = new JPanel(detailLayout);
@@ -66,8 +66,6 @@ final class TsgHubPanel extends JPanel
 		taskEditor = new TsgHubTaskEditor(plugin, this);
 		teamsView = new TsgHubTeamsTab(plugin, this);
 		tasksView = new TsgHubTasksTab(plugin, this);
-		leaderboardView = new TsgHubLeaderboardTab(plugin, this);
-		detailsView = new TsgHubDetailsTab(plugin, this);
 		setLayout(new BorderLayout());
 		setBackground(BACKGROUND);
 
@@ -121,8 +119,8 @@ final class TsgHubPanel extends JPanel
 		tabs.setOpaque(false);
 		teamsTabButton = tab("Teams", teamsView.teamsTab);
 		tasksTabButton = tab("Tasks", tasksView.tasksTab);
-		leaderboardTabButton = tab("Leaderboard", leaderboardView.leaderboardTab);
-		detailsTabButton = tab("Details", detailsView.detailsTab);
+		leaderboardTabButton = tab("Leaderboard", leaderboardTab);
+		detailsTabButton = tab("Details", detailsTab);
 		tabs.select(teamsTabButton);
 
 		JPanel north = stack();
@@ -202,8 +200,8 @@ final class TsgHubPanel extends JPanel
 		detailsTabButton.setVisible("drop-party".equals(type));
 		teamsView.renderTeams();
 		tasksView.renderTasks();
-		leaderboardView.renderLeaderboard();
-		detailsView.renderDetails();
+		renderLeaderboard();
+		renderDetails();
 	}
 
 	void eventCreated(JsonObject event)
@@ -291,5 +289,60 @@ final class TsgHubPanel extends JPanel
 				+ (options > 1 ? " (closest of " + options + ")" : "") + (missing.isEmpty() ? "" : " · need " + String.join(", ", missing));
 		}
 		return integer(progress, "progress", 0) + "/" + integer(progress, "target", 1);
+	}
+
+	void renderLeaderboard()
+	{
+		leaderboardTab.removeAll();
+		String type = str(currentEvent, "type");
+		if (!"skill".equals(type) && !"boss".equals(type)) return;
+		JsonObject config = eventConfig(currentEvent);
+		String unit = "skill".equals(type) ? "XP" : "kills";
+		boolean started = !"scheduled".equals(str(currentEvent, "status"));
+		int participants = integer(currentEvent, "participants", 0);
+		String what = "skill".equals(type) ? skillName(str(config, "skill")) + " XP gained" : str(config, "npcName") + " kills";
+		leaderboardTab.add(caption(started ? what + " · " + participants + " taking part"
+			: participants + " signed up · counting starts " + eventStartWhen(currentEvent)));
+		leaderboardTab.add(gap(GAP_M));
+		JsonArray rows = array(currentEvent, "leaderboard");
+		if (rows.size() == 0) leaderboardTab.add(wrapped("Nobody has joined yet. Players join with one click from the TSG Hub sidebar.", MUTED, plainFont(), DETAIL_TEXT_W));
+		for (int i = 0; i < rows.size(); i++)
+		{
+			JsonObject row = rows.get(i).getAsJsonObject();
+			int rank = integer(row, "rank", i + 1);
+			JPanel card = card();
+			card.setLayout(new BorderLayout(10, 0));
+			if (started)
+			{
+				card.add(rankLabel(rank, boldFont(), 28), BorderLayout.WEST);
+			}
+			card.add(boldLabel(str(row, "displayName")), BorderLayout.CENTER);
+			if (started)
+			{
+				boolean tracking = bool(row, "tracking");
+				String gained = tracking ? "+" + TsgHubFormat.number(integer(row, "gained", 0)) + " " + unit : "Waiting for first " + ("XP".equals(unit) ? "XP" : "kill");
+				card.add(label(gained, !tracking ? MUTED : rank == 1 ? ACCENT : TEXT, tracking ? boldFont() : smallFont()), BorderLayout.EAST);
+			}
+			addCard(leaderboardTab, fitHeight(card));
+		}
+		refresh(leaderboardTab);
+	}
+
+	void renderDetails()
+	{
+		detailsTab.removeAll();
+		if (!"drop-party".equals(str(currentEvent, "type"))) return;
+		JsonObject config = eventConfig(currentEvent);
+		String countdown = capitalize(eventRelative(currentEvent));
+		if (!countdown.isEmpty()) detailsTab.add(label(countdown, "Ended".equals(countdown) ? MUTED : SUCCESS, boldFont()));
+		detailsTab.add(gap(GAP_S));
+		detailsTab.add(wrapped("When: " + eventWhen(currentEvent), TEXT, plainFont(), DETAIL_TEXT_W));
+		if (integer(config, "world", 0) > 0) detailsTab.add(label("World: " + integer(config, "world", 0), TEXT, plainFont()));
+		if (!str(config, "location").isEmpty()) detailsTab.add(label("Where: " + str(config, "location"), TEXT, plainFont()));
+		if (!str(config, "host").isEmpty()) detailsTab.add(label("Host: " + str(config, "host"), TEXT, plainFont()));
+		if (!str(config, "notes").isEmpty()) detailsTab.add(wrapped("Notes: " + str(config, "notes"), MUTED, plainFont(), DETAIL_TEXT_W));
+		detailsTab.add(gap(GAP_M));
+		detailsTab.add(caption("Players see this in the TSG Hub sidebar. Use Edit event to change it."));
+		refresh(detailsTab);
 	}
 }

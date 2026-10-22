@@ -18,6 +18,7 @@ import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import lombok.RequiredArgsConstructor;
 import net.runelite.api.Client;
 import net.runelite.api.Point;
 import net.runelite.api.coords.WorldPoint;
@@ -204,20 +205,13 @@ final class TsgHubMemberMap
 		});
 	}
 
+	@RequiredArgsConstructor
 	static final class Member
 	{
 		final String name;
 		final String key;
 		final int world;
 		final WorldPoint at;
-
-		Member(String name, String key, int world, WorldPoint at)
-		{
-			this.name = name;
-			this.key = key;
-			this.world = world;
-			this.at = at;
-		}
 	}
 
 	static BufferedImage marker(String name)
