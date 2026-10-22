@@ -13,6 +13,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.tsghub.TsgHubSidebarPanel.View;
 import java.awt.BorderLayout;
+import java.awt.GridLayout;
+import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -31,6 +33,13 @@ final class TsgHubEventsView
 	private final JTextField codeField = new JTextField();
 	private final JButton joinButton = primaryButton("Join event");
 	final JLabel joinError = label("", TsgHubTheme.ERROR, smallFont());
+	private final JTextField noteField = new JTextField();
+	private final JButton signupButton = primaryButton("Sign up");
+	private final JLabel signupError = label("", TsgHubTheme.ERROR, smallFont());
+	private String signupLabel = "Sign up";
+	private JsonObject signedUpEvent;
+	private String signedUpNote = "";
+	private boolean editingNote;
 
 	private JsonArray events;
 	private JsonObject previewEvent;
@@ -44,6 +53,11 @@ final class TsgHubEventsView
 		codeField.addActionListener(e -> submitJoin());
 		joinButton.addActionListener(e -> submitJoin());
 		joinError.setVisible(false);
+		noteField.setToolTipText("Optional, up to " + MAX_SIGNUP_NOTE + " characters");
+		placeholder(noteField, "Note, e.g. free weekends");
+		noteField.addActionListener(e -> submitSignup());
+		signupButton.addActionListener(e -> submitSignup());
+		signupError.setVisible(false);
 	}
 
 	void setEvents(JsonArray events)
@@ -230,8 +244,21 @@ final class TsgHubEventsView
 		shell.setEventHeader(event, true, false);
 		shell.page.removeAll();
 		shell.page.add(eventSummaryCard(event, "Bingo", "Complete tasks with your team for points. Most points wins."));
+		boolean signups = signupsOpen(event);
+		if (signups)
+		{
+			shell.page.add(gap(GAP_L));
+			shell.page.add(label("Sign up for a team", TEXT, smallFont()));
+			shell.page.add(gap(GAP_XS));
+			shell.page.add(TsgHubSidebarPanel.hint(signupSummary(event, ZoneId.systemDefault())));
+			shell.page.add(gap(GAP_S));
+			resetNoteForm("", "Sign up");
+			addNoteForm();
+			shell.page.add(gap(GAP_S));
+			shell.page.add(TsgHubSidebarPanel.hint("No team yet? Sign up and an admin will put you on one. Your board opens here when they do."));
+		}
 		shell.page.add(gap(GAP_L));
-		shell.page.add(label("Team code", TEXT, smallFont()));
+		shell.page.add(label(signups ? "Have a team code?" : "Team code", TEXT, smallFont()));
 		shell.page.add(gap(GAP_S));
 		codeField.setText("");
 		shell.page.add(fitHeight(codeField));
@@ -244,7 +271,114 @@ final class TsgHubEventsView
 		shell.page.add(gap(GAP_S));
 		shell.page.add(TsgHubSidebarPanel.hint("Ask an admin for your team's code. Your team can't be changed after you join."));
 		shell.refreshPage();
-		SwingUtilities.invokeLater(codeField::requestFocusInWindow);
+		SwingUtilities.invokeLater((signups ? noteField : codeField)::requestFocusInWindow);
+	}
+
+	private void resetNoteForm(String note, String action)
+	{
+		noteField.setText(note);
+		signupError.setVisible(false);
+		signupLabel = action;
+		signupButton.setEnabled(true);
+		signupButton.setText(action);
+	}
+
+	private void addNoteForm()
+	{
+		shell.page.add(fitHeight(noteField));
+		shell.page.add(signupError);
+		shell.page.add(gap(GAP_S));
+		shell.page.add(fitHeight(signupButton));
+	}
+
+	void showSignedUp(JsonObject event, String note, boolean open)
+	{
+		if (!open && shell.view != View.SIGNUP) return;
+		boolean same = signedUpEvent != null && str(signedUpEvent, "id").equals(str(event, "id"));
+		if (!open && same && event.equals(signedUpEvent) && note.equals(signedUpNote)) return;
+		if (!same || open) editingNote = false;
+		signedUpEvent = event;
+		signedUpNote = note;
+		previewEvent = event;
+		shell.setView(View.SIGNUP);
+		renderSignedUp();
+	}
+
+	private void renderSignedUp()
+	{
+		JsonObject event = signedUpEvent;
+		boolean open = signupsOpen(event);
+		shell.setEventHeader(event, true, true);
+		shell.page.removeAll();
+		JPanel card = card();
+		highlightSelf(card);
+		JPanel lines = stack();
+		lines.add(label("Signed up, waiting for a team", SUCCESS, boldFont()));
+		lines.add(gap(GAP_XS));
+		lines.add(TsgHubSidebarPanel.cardNote(signedUpNote.isEmpty() ? "No note" : "Note: " + signedUpNote));
+		lines.add(gap(GAP_XS));
+		lines.add(TsgHubSidebarPanel.cardNote(signupSummary(event, ZoneId.systemDefault())));
+		card.add(lines, BorderLayout.CENTER);
+		shell.page.add(fitHeight(card));
+		shell.page.add(gap(GAP_M));
+		if (editingNote && open)
+		{
+			shell.page.add(label("Note", TEXT, smallFont()));
+			shell.page.add(gap(GAP_S));
+			addNoteForm();
+			shell.page.add(gap(GAP_S));
+			shell.page.add(fitHeight(onClick(button("Cancel"), () -> {
+				editingNote = false;
+				renderSignedUp();
+			})));
+		}
+		else
+		{
+			signupError.setVisible(false);
+			shell.page.add(signupError);
+			JPanel actions = panel(new GridLayout(1, open ? 2 : 1, 4, 0));
+			if (open) actions.add(onClick(button("Edit note"), () -> {
+				editingNote = true;
+				resetNoteForm(signedUpNote, "Save note");
+				renderSignedUp();
+				SwingUtilities.invokeLater(noteField::requestFocusInWindow);
+			}));
+			actions.add(onClick(dangerButton("Withdraw"), this::confirmWithdraw));
+			shell.page.add(fitHeight(actions));
+		}
+		shell.page.add(gap(GAP_S));
+		shell.page.add(TsgHubSidebarPanel.hint(open
+			? "An admin will put you on a team. Your team's board opens here when they do."
+			: "Sign-ups are closed. An admin will put you on a team, and your board opens here when they do."));
+		shell.refreshPage();
+	}
+
+	private void confirmWithdraw()
+	{
+		if (signedUpEvent == null) return;
+		if (confirm(shell, "Withdraw", "Leave the sign-ups for \"" + eventName(signedUpEvent) + "\"?", "Withdraw", true))
+			plugin.sessions().withdraw(str(signedUpEvent, "id"));
+	}
+
+	void signupFailed(String message)
+	{
+		signupButton.setEnabled(true);
+		signupButton.setText(signupLabel);
+		showError(signupError, message, TsgHubSidebarPanel.TEXT_W);
+	}
+
+	private void submitSignup()
+	{
+		String note = noteField.getText().trim();
+		if (note.length() > MAX_SIGNUP_NOTE)
+		{
+			signupFailed("Keep the note to " + MAX_SIGNUP_NOTE + " characters.");
+			return;
+		}
+		signupError.setVisible(false);
+		signupButton.setEnabled(false);
+		signupButton.setText("Sign up".equals(signupLabel) ? "Signing up..." : "Saving...");
+		plugin.sessions().signup(str(previewEvent, "id"), note);
 	}
 
 	private void submitJoin()

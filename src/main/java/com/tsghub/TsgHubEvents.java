@@ -20,6 +20,7 @@ import java.util.List;
 final class TsgHubEvents
 {
 	private static final ZoneId CLAN_ZONE = ZoneId.of("Australia/Sydney");
+	static final int MAX_SIGNUP_NOTE = 200;
 
 	private TsgHubEvents()
 	{
@@ -194,5 +195,34 @@ final class TsgHubEvents
 			if (samePlayer(str(member, "displayName"), displayName) && !str(member, "teamId").isEmpty()) return str(member, "teamId");
 		}
 		return "";
+	}
+
+	static boolean awaitingTeam(JsonObject event, String displayName)
+	{
+		for (JsonObject member : objects(array(event, "members")))
+		{
+			if (samePlayer(str(member, "displayName"), displayName)) return str(member, "teamId").isEmpty();
+		}
+		return false;
+	}
+
+	static boolean signupsOpen(JsonObject event)
+	{
+		JsonObject signups = object(event, "signups");
+		if (!"bingo".equals(str(event, "type")) || !bool(signups, "open")) return false;
+		Instant closes = instant(str(signups, "closesAt"));
+		return closes == null || clock.instant().isBefore(closes);
+	}
+
+	static String signupSummary(JsonObject event, ZoneId zone)
+	{
+		JsonObject signups = object(event, "signups");
+		int count = integer(signups, "count", 0);
+		String waiting = count == 0 ? "No one waiting yet" : count + " waiting for a team";
+		Instant closes = instant(str(signups, "closesAt"));
+		if (closes == null) return waiting;
+		ZonedDateTime at = closes.atZone(zone);
+		String verb = clock.instant().isBefore(closes) ? "Closes " : "Closed ";
+		return waiting + " · " + verb + when(at, clock.instant()) + " " + zoneName(at);
 	}
 }

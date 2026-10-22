@@ -19,7 +19,7 @@ Join a bingo team, climb the Skill of the Week leaderboard, find a raid party, a
 1. Install **TSG Hub** from the Plugin Hub.
 2. Log in to a character in the TSGaming clan and open the TSG Hub sidebar.
 3. Click **Enable sharing**. Nothing is sent until you do.
-4. Pick an event. For bingo, enter the team code an admin gave you. Your team is fixed once you join.
+4. Pick an event. For bingo, enter the team code an admin gave you, or [sign up](#sign-up-without-a-team) if the bingo takes sign-ups. Your team is fixed once you join.
 
 <table align="center"><tr><td align="center" valign="top"><img src="docs/images/home.png" width="260" alt="TSG Hub home with Events, Parties, Members and Drops tiles"><br><sub>Home</sub></td><td align="center" valign="top"><img src="docs/images/events.png" width="260" alt="Live and upcoming events"><br><sub>Events</sub></td></tr></table>
 
@@ -52,6 +52,10 @@ Your team's board opens straight from the sidebar. The header shows your team's 
 When you make progress, a message appears in **your own chatbox only**. When your team finishes a tile, teammates who are online in clan chat get a local alert too. TSG Hub never posts to public or clan chat.
 
 <table align="center"><tr><td align="center" valign="top"><img src="docs/images/board-tasks.png" width="240" alt="A team's bingo board with progress on each task"><br><sub>Tasks</sub></td><td align="center" valign="top"><img src="docs/images/board-scores.png" width="240" alt="Team scoreboard"><br><sub>Scores</sub></td><td align="center" valign="top"><img src="docs/images/board-team.png" width="240" alt="Team tab listing teammates"><br><sub>Team</sub></td></tr></table>
+
+### Sign up without a team
+
+If an admin turns on sign-ups for a bingo, its page shows **Sign up for a team** with how many members are waiting and when sign-ups close. Add an optional note, such as when you can play (up to 200 characters), and click **Sign up**. While you wait, the bingo shows **Signed up, waiting for a team** with your note; **Edit note** changes it while sign-ups are open, and **Withdraw** takes you out of the pool. When an admin puts you on a team from the admin site, the bingo switches to your team's board, live if you have it open. No team code is needed, and progress only counts once you're on a team. Team codes keep working alongside sign-ups.
 
 ### What gets tracked
 
@@ -162,6 +166,7 @@ Once you opt in, it sends the following to the TSG Hub service:
 
 - Your RuneScape display name, and the clan name and rank your client detects
 - If you've set a hub key, the key with your display name and RuneLite account hash when the plugin checks it, to link your Discord account to this character and follow name changes
+- Your sign-up note, if you sign up for a bingo's team pool. Admins see it on the admin site while picking teams
 - Progress for events you've joined: kill counts, drops, raid completions, collection log unlocks and skill XP
 - Loot you receive while a bingo event you've joined is active, so admins can reconcile a task from earlier drops if its item list changes
 - Your boss kill count messages and the loot you receive, even outside events, so the clan Discord can post a summary of each boss session. The service keeps only the running session, not a history
