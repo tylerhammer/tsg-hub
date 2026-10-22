@@ -108,7 +108,7 @@ final class TsgHubDrops
 
 	private void post(JsonObject body)
 	{
-		plugin.tracker().report("drop", "/v1/drops", body);
+		plugin.tracker().report("broadcast", "/v1/broadcasts", body);
 	}
 
 	static boolean fromSelf(String message, String self)
@@ -122,7 +122,7 @@ final class TsgHubDrops
 		if (raw == null) return null;
 		String message = Text.removeTags(raw).replace(' ', ' ').trim();
 		String lower = message.toLowerCase(Locale.ROOT);
-		for (String keyword : TsgHubRules.get().dropKeywords) if (lower.contains(keyword)) return message;
+		for (String keyword : TsgHubRules.get().broadcastKeywords) if (lower.contains(keyword)) return message;
 		return null;
 	}
 
