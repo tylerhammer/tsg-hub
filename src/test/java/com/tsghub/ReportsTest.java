@@ -48,9 +48,9 @@ public class ReportsTest
 	public void ackRemovesPending()
 	{
 		TsgHubReports reports = reports();
-		assertTrue(reports.send("drop", "/v1/drops", drop()));
+		assertTrue(reports.send("broadcast", "/v1/broadcasts", drop()));
 		String id = socketSent.get(0).get("id").getAsString();
-		assertEquals("drop", socketSent.get(0).get("type").getAsString());
+		assertEquals("broadcast", socketSent.get(0).get("type").getAsString());
 		reports.acked(id);
 		assertEquals(0, reports.size());
 		now += TsgHubReports.RETRY_MILLIS;
@@ -62,7 +62,7 @@ public class ReportsTest
 	public void unackedFallsBackToRestWithSameId()
 	{
 		TsgHubReports reports = reports();
-		reports.send("drop", "/v1/drops", drop());
+		reports.send("broadcast", "/v1/broadcasts", drop());
 		String id = socketSent.get(0).get("id").getAsString();
 		reports.flush();
 		assertTrue(posted.isEmpty());
@@ -90,13 +90,13 @@ public class ReportsTest
 	public void finalErrorDrops()
 	{
 		TsgHubReports reports = reports();
-		reports.send("drop", "/v1/drops", drop());
+		reports.send("broadcast", "/v1/broadcasts", drop());
 		reports.failed(socketSent.get(0).get("id").getAsString(), 400);
 		assertEquals(0, reports.size());
 
 		live = false;
 		status = 403;
-		reports.send("drop", "/v1/drops", drop());
+		reports.send("broadcast", "/v1/broadcasts", drop());
 		reports.flush();
 		assertEquals(0, reports.size());
 	}
@@ -105,7 +105,7 @@ public class ReportsTest
 	public void rateLimitAndServerErrorsRetry()
 	{
 		TsgHubReports reports = reports();
-		reports.send("drop", "/v1/drops", drop());
+		reports.send("broadcast", "/v1/broadcasts", drop());
 		String id = socketSent.get(0).get("id").getAsString();
 		reports.failed(id, 429);
 		assertEquals(1, reports.size());
@@ -138,8 +138,8 @@ public class ReportsTest
 		live = false;
 		status = -1;
 		TsgHubReports reports = reports();
-		reports.send("drop", "/v1/drops", drop());
-		reports.send("drop", "/v1/drops", drop());
+		reports.send("broadcast", "/v1/broadcasts", drop());
+		reports.send("broadcast", "/v1/broadcasts", drop());
 		reports.flush();
 		assertEquals(1, posted.size());
 		assertEquals(2, reports.size());
@@ -151,7 +151,7 @@ public class ReportsTest
 		live = false;
 		status = 500;
 		TsgHubReports reports = reports();
-		reports.send("drop", "/v1/drops", drop());
+		reports.send("broadcast", "/v1/broadcasts", drop());
 		reports.flush();
 		live = true;
 		reports.resend();
@@ -165,7 +165,7 @@ public class ReportsTest
 		live = false;
 		status = 500;
 		TsgHubReports reports = reports();
-		reports.send("drop", "/v1/drops", drop());
+		reports.send("broadcast", "/v1/broadcasts", drop());
 		now += TsgHubOutbox.MAX_AGE_MILLIS + 1;
 		reports.flush();
 		assertEquals(0, reports.size());
@@ -176,7 +176,7 @@ public class ReportsTest
 	public void capsPending()
 	{
 		TsgHubReports reports = reports();
-		for (int i = 0; i < TsgHubOutbox.MAX_PENDING + 5; i++) reports.send("drop", "/v1/drops", drop());
+		for (int i = 0; i < TsgHubOutbox.MAX_PENDING + 5; i++) reports.send("broadcast", "/v1/broadcasts", drop());
 		assertEquals(TsgHubOutbox.MAX_PENDING, reports.size());
 		reports.acked(socketSent.get(0).get("id").getAsString());
 		assertEquals(TsgHubOutbox.MAX_PENDING, reports.size());
@@ -196,7 +196,7 @@ public class ReportsTest
 		assertEquals("member-token", tokens.get(0));
 		assertEquals(0, reports.size());
 
-		reports.send("drop", "/v1/drops", drop());
+		reports.send("broadcast", "/v1/broadcasts", drop());
 		reports.failed(socketSent.get(1).get("id").getAsString(), 401);
 		assertEquals(0, reports.size());
 	}

@@ -99,7 +99,7 @@ public class SignalsTest
 		TsgHubSocket socket = new TsgHubSocket(new OkHttpClient(), new Gson(), "https://hub.test", executor, null);
 		JsonObject body = new JsonObject();
 		body.addProperty("message", "Bob received a drop: Abyssal whip");
-		assertFalse(socket.send("drop", body));
+		assertFalse(socket.send("broadcast", body));
 		assertFalse(body.has("type"));
 	}
 
