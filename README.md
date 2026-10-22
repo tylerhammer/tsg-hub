@@ -137,16 +137,16 @@ Click the pin icon on **Members**, **Parties** or **Drops** to dock it below the
 
 Every clan member can link their RuneScape account to the clan Discord:
 
-1. Run `/hub key` in the clan Discord. The bot replies with a key that starts with `tsghub_`.
+1. Run `/hub link` in the clan Discord. The bot replies with a key that starts with `tsghub_`.
 2. Paste it into **Hub key** under **Discord** in the TSG Hub plugin settings, with sharing on.
 
-The plugin confirms the key in the sidebar and links your Discord account to the character you're logged in as. Using the same key on your alts links them too. A name change carries over automatically next time you log in. The key renews itself while you use it. If it stops working, or you lose it, run `/hub key` again for a new one; `/hub revoke` disables it and unlinks your account.
+The plugin confirms the key in the sidebar and links your Discord account to the character you're logged in as. Using the same key on your alts links them too. A name change carries over automatically next time you log in. The key renews itself while you use it. If it stops working, or you lose it, run `/hub link` again for a new one; `/hub unlink` disables it and unlinks your account.
 
 ## For admins
 
 <img src="docs/images/admin-tasks.png" alt="Admin window: events on the left, the selected event's tasks on the right">
 
-Admin tools use the same hub key. If you're a Discord admin (the server owner, a member with an admin role, or anyone with Manage Server), `/hub key` gives you a key with admin access. Keys from before hub keys existed, starting with `tsgadm_`, keep working and move into the **Hub key** setting by themselves.
+Admin tools use the same hub key. If you're a Discord admin (the server owner, a member with an admin role, or anyone with Manage Server), `/hub link` gives you a key with admin access. Keys from before hub keys existed, starting with `tsgadm_`, keep working and move into the **Hub key** setting by themselves.
 
 Once the key checks out, an admin button appears in the sidebar header. It opens a separate window with **Events** and **Announcements** tabs. Events lists your clan's events on the left and the selected event on the right. Admins also see and can join hidden events. If you lose your Discord admin role, your key keeps linking your account but the admin tools disappear.
 

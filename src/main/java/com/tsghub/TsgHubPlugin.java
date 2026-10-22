@@ -247,7 +247,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		if (!canManageOrganizerUi())
 		{
-			memberStatus("Admin tools need a hub key with admin access. Run /hub key in the clan Discord and paste it in the plugin settings.", Tone.ERROR);
+			memberStatus("Admin tools need a hub key with admin access. Run /hub link in the clan Discord and paste it in the plugin settings.", Tone.ERROR);
 			return;
 		}
 		windows.openAdmin(() -> {

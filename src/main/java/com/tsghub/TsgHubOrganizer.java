@@ -91,7 +91,7 @@ final class TsgHubOrganizer
 		String credential = plugin.keys().adminKey();
 		if (credential.isEmpty())
 		{
-			eventFormFailed("Creating events needs a hub key with admin access from /hub key in the clan Discord.");
+			eventFormFailed("Creating events needs a hub key with admin access from /hub link in the clan Discord.");
 			return;
 		}
 		if (plugin.clan().name().isEmpty()) { eventFormFailed("No clan detected. Log in to a character in your clan first."); return; }
