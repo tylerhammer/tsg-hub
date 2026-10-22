@@ -1,11 +1,14 @@
 package com.tsghub;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import org.junit.After;
 import org.junit.Before;
@@ -58,5 +61,35 @@ public class EventsPanelTest
 		assertEquals(0, TsgHubEvents.eventPrizes(event("{}")).size());
 		assertEquals("11th", TsgHubFormat.place(11));
 		assertEquals("22nd", TsgHubFormat.place(22));
+	}
+
+	@Test
+	public void signupsOpen()
+	{
+		assertTrue(TsgHubEvents.signupsOpen(event("{\"type\":\"bingo\",\"signups\":{\"enabled\":true,\"open\":true,\"count\":0}}")));
+		assertTrue(TsgHubEvents.signupsOpen(event("{\"type\":\"bingo\",\"signups\":{\"open\":true,\"closesAt\":\"2026-10-04T03:00:00Z\"}}")));
+		assertFalse(TsgHubEvents.signupsOpen(event("{\"type\":\"bingo\",\"signups\":{\"open\":true,\"closesAt\":\"2026-10-04T01:00:00Z\"}}")));
+		assertFalse(TsgHubEvents.signupsOpen(event("{\"type\":\"bingo\",\"signups\":{\"enabled\":true,\"open\":false}}")));
+		assertFalse(TsgHubEvents.signupsOpen(event("{\"type\":\"bingo\"}")));
+		assertFalse(TsgHubEvents.signupsOpen(event("{\"type\":\"skill\",\"signups\":{\"open\":true}}")));
+	}
+
+	@Test
+	public void signupSummary()
+	{
+		ZoneId sydney = ZoneId.of("Australia/Sydney");
+		assertEquals("No one waiting yet", TsgHubEvents.signupSummary(event("{\"signups\":{\"open\":true,\"count\":0}}"), sydney));
+		assertEquals("3 waiting for a team · Closes Mon 5 Oct, 7pm AEDT", TsgHubEvents.signupSummary(event("{\"signups\":{\"open\":true,\"count\":3,\"closesAt\":\"2026-10-05T08:00:00Z\"}}"), sydney));
+		assertEquals("1 waiting for a team · Closed Sun 4 Oct, 12pm AEDT", TsgHubEvents.signupSummary(event("{\"signups\":{\"open\":false,\"count\":1,\"closesAt\":\"2026-10-04T01:00:00Z\"}}"), sydney));
+	}
+
+	@Test
+	public void awaitingTeam()
+	{
+		JsonObject signedUp = event("{\"members\":[{\"displayName\":\"Zezima\",\"teamId\":\"\"}]}");
+		assertTrue(TsgHubEvents.awaitingTeam(signedUp, "zezima"));
+		assertFalse(TsgHubEvents.awaitingTeam(event("{\"members\":[{\"displayName\":\"Zezima\",\"teamId\":\"t1\"}]}"), "Zezima"));
+		assertFalse(TsgHubEvents.awaitingTeam(signedUp, "Lynx Titan"));
+		assertFalse(TsgHubEvents.awaitingTeam(event("{}"), "Zezima"));
 	}
 }

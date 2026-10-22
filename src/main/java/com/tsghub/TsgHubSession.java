@@ -13,6 +13,7 @@ class TsgHubSession
 	static final String DISPLAY_NAME = "displayName";
 	static final String MEMBER_TOKEN = "memberToken:";
 	static final String MEMBER_NAME = "memberName:";
+	static final String SIGNUP_NOTE = "signupNote:";
 	static final String GROUP_TOKEN = "groupToken";
 	static final String GROUP_PASSPHRASE = "groupPassphrase";
 	static final String GROUP_PLAYER = "groupPlayer";

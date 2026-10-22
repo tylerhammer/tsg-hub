@@ -33,7 +33,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	static final int CARD_TEXT_W = 185;
 	static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("h:mm a");
 
-	enum View { LOGGED_OUT, NOT_IN_CLAN, SHARING_OFF, HOME, EVENTS, PREVIEW, BOARD, COMPETITION_PREVIEW, COMPETITION, DROP_PARTY, GROUPS, MEMBERS, LOOKUP, DROPS, NEWS }
+	enum View { LOGGED_OUT, NOT_IN_CLAN, SHARING_OFF, HOME, EVENTS, PREVIEW, SIGNUP, BOARD, COMPETITION_PREVIEW, COMPETITION, DROP_PARTY, GROUPS, MEMBERS, LOOKUP, DROPS, NEWS }
 
 	private final TsgHubPlugin plugin;
 	final TsgHubHomeView homeView;
@@ -165,7 +165,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			else if (view == View.MEMBERS) plugin.presence().loadMembers(false);
 			else if (view == View.LOOKUP) lookupView.loadLookup();
 			else if (view == View.DROPS) plugin.drops().load(false);
-			else if (view == View.BOARD) plugin.sessions().refreshBoard();
+			else if (view == View.BOARD || view == View.SIGNUP) plugin.sessions().refreshBoard();
 			else if (view == View.COMPETITION && competitionView.competitionEvent != null) plugin.sessions().openCompetition(str(competitionView.competitionEvent, "id"));
 			else plugin.sessions().loadClanEvents();
 		});
@@ -321,7 +321,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		view = next;
 		homeView.homeBuilt = false;
-		boardShowing = next == View.BOARD;
+		boardShowing = next == View.BOARD || next == View.SIGNUP;
 		boolean docked = pinned != null && !gated(next);
 		membersWanted = next == View.MEMBERS || next == View.HOME || docked && pinned == View.MEMBERS;
 		groupsWanted = next == View.GROUPS || next == View.HOME || docked && pinned == View.GROUPS;

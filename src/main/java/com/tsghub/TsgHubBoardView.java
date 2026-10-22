@@ -85,13 +85,13 @@ final class TsgHubBoardView
 
 	void closeBoard()
 	{
-		if (shell.view == View.BOARD) shell.eventsView.showEventList();
+		if (shell.view == View.BOARD || shell.view == View.SIGNUP) shell.eventsView.showEventList();
 	}
 
 	void showBoard(JsonObject event, String displayName, boolean open)
 	{
 		// Background refreshes must not pull the user off another screen.
-		if (!open && shell.view != View.BOARD) return;
+		if (!open && shell.view != View.BOARD && shell.view != View.SIGNUP) return;
 		String name = displayName == null ? "" : displayName;
 		shell.refresh.setToolTipText("Refresh (updated " + LocalTime.now().format(TsgHubSidebarPanel.TIME) + ")");
 		if (!open && event.equals(boardEvent) && name.equals(boardDisplayName)) return;
