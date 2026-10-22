@@ -35,7 +35,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.function.Supplier;
 import javax.swing.BorderFactory;
-import javax.swing.Box;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComponent;
@@ -87,10 +86,10 @@ final class TsgHubMemberDetail extends JPanel
 		header.add(name, BorderLayout.WEST);
 		header.add(badgeWrap, BorderLayout.CENTER);
 		content.add(fitHeight(header));
-		content.add(Box.createVerticalStrut(GAP_XS));
+		content.add(gap(GAP_XS));
 		content.add(previously);
 		content.add(alts);
-		content.add(Box.createVerticalStrut(GAP_M));
+		content.add(gap(GAP_M));
 		JPanel tiles = panel(new GridLayout(1, 4, GAP_S, 0));
 		tiles.add(statCard(caption("JOINED CLAN"), joinedValue, null));
 		tiles.add(statCard(caption("LAST SEEN"), seenValue, null));
@@ -98,7 +97,7 @@ final class TsgHubMemberDetail extends JPanel
 		tiles.add(statCard(caption("ACTIVE"), activeValue, null));
 		content.add(fitHeight(tiles));
 		content.add(admin);
-		content.add(Box.createVerticalStrut(GAP_M));
+		content.add(gap(GAP_M));
 		content.add(message);
 
 		body.add(chartTitle);
@@ -161,8 +160,7 @@ final class TsgHubMemberDetail extends JPanel
 		edit.setToolTipText(member.alt() ? "Edit the admin note and main character" : "Edit the admin note");
 		edit.addActionListener(e -> TsgHubMemberAdmin.editNote(this, members.presence(), member.hubName(), member.alt(), member.altOf(), note,
 			members.mainCandidates(member.hubName(), roster.get()), feedback));
-		JButton remove = dangerButton("Remove");
-		remove.addActionListener(e -> TsgHubMemberAdmin.removeNote(this, members.presence(), member.hubName(), member.altOf(), feedback));
+		JButton remove = onClick(dangerButton("Remove"), () -> TsgHubMemberAdmin.removeNote(this, members.presence(), member.hubName(), member.altOf(), feedback));
 		remove.setVisible(!note.isEmpty());
 		admin.add(sectionHeader("Admin note", edit, remove));
 		admin.add(note.isEmpty() ? caption("No admin note.") : listCard(wrapped(note, TEXT, plainFont(), DETAIL_W - 40)));
@@ -172,8 +170,7 @@ final class TsgHubMemberDetail extends JPanel
 	{
 		List<JsonObject> history = objects(member.warnings());
 		List<JsonObject> active = member.activeWarnings();
-		JButton warn = button("Add warning");
-		warn.addActionListener(e -> TsgHubMemberAdmin.addWarning(this, members.presence(), member.hubName(), active.size(), feedback));
+		JButton warn = onClick(button("Add warning"), () -> TsgHubMemberAdmin.addWarning(this, members.presence(), member.hubName(), active.size(), feedback));
 		String title = history.isEmpty() ? "Warnings" : "Warnings · " + TsgHubRoster.warningSummary(history);
 		admin.add(sectionHeader(title, warn));
 		if (history.isEmpty()) admin.add(caption("No warnings."));

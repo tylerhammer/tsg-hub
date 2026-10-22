@@ -21,7 +21,6 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.time.format.DateTimeFormatter;
 import javax.swing.BorderFactory;
-import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComponent;
@@ -261,18 +260,17 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	void showSharingOff()
 	{
-		JButton enable = primaryButton("Enable sharing");
-		enable.addActionListener(e -> plugin.enableSharing());
+		JButton enable = onClick(primaryButton("Enable sharing"), () -> plugin.enableSharing());
 		showMessage(View.SHARING_OFF,
 			boldLabel("Share your progress"),
-			Box.createVerticalStrut(GAP_S),
+			gap(GAP_S),
 			hint("TSG Hub tracks your boss kills, drops and raids for clan events. "
 				+ "To do that it sends your RuneScape name, clan and rank, and that progress to your clan's event service."),
-			Box.createVerticalStrut(GAP_S),
+			gap(GAP_S),
 			hint("Nothing is ever posted in game chat."),
-			Box.createVerticalStrut(GAP_L),
+			gap(GAP_L),
 			fitHeight(enable),
-			Box.createVerticalStrut(GAP_S),
+			gap(GAP_S),
 			hint("You can turn this off anytime in the TSG Hub plugin settings."));
 	}
 
@@ -475,7 +473,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		footer.setLayout(new BoxLayout(footer, BoxLayout.Y_AXIS));
 		footer.setOpaque(false);
 		footer.add(discord);
-		footer.add(Box.createVerticalStrut(6));
+		footer.add(gap(6));
 		footer.add(status);
 		discord.setVisible(false);
 		return footer;

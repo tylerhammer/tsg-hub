@@ -21,7 +21,6 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Map;
 import java.util.Objects;
-import javax.swing.Box;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -167,8 +166,7 @@ final class TsgHubDropsView
 					dropsPage.add(listHeading(nextDay, i == 0));
 					day = nextDay;
 				}
-				dropsPage.add(dropCard(drop, now, zone));
-				dropsPage.add(Box.createVerticalStrut(LIST_GAP));
+				addCard(dropsPage, dropCard(drop, now, zone));
 			}
 		}
 		refresh(dropsPage);

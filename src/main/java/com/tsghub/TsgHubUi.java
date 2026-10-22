@@ -184,7 +184,7 @@ final class TsgHubUi
 		text.setAlignmentX(Component.CENTER_ALIGNMENT);
 		text.setHorizontalAlignment(JLabel.CENTER);
 		panel.add(title);
-		panel.add(Box.createVerticalStrut(GAP_M));
+		panel.add(gap(GAP_M));
 		panel.add(text);
 		panel.setAlignmentX(Component.LEFT_ALIGNMENT);
 		panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, panel.getPreferredSize().height));
@@ -205,10 +205,10 @@ final class TsgHubUi
 		card.setBackground(CARD);
 		card.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(BORDER), BorderFactory.createEmptyBorder(8, 10, 8, 10)));
 		card.add(title);
-		card.add(Box.createVerticalStrut(GAP_XS));
+		card.add(gap(GAP_XS));
 		card.add(value);
 		if (detail == null) return card;
-		card.add(Box.createVerticalStrut(GAP_XS));
+		card.add(gap(GAP_XS));
 		card.add(detail);
 		return card;
 	}
@@ -220,6 +220,17 @@ final class TsgHubUi
 			BorderFactory.createLineBorder(color.darker()),
 			BorderFactory.createEmptyBorder(0, 4, 0, 4)));
 		return label;
+	}
+
+	static Component gap(int height)
+	{
+		return Box.createVerticalStrut(height);
+	}
+
+	static void addCard(Container list, Component card)
+	{
+		list.add(card);
+		list.add(gap(LIST_GAP));
 	}
 
 	static JPanel stack()
@@ -270,7 +281,7 @@ final class TsgHubUi
 	{
 		JPanel text = stack();
 		text.add(top);
-		text.add(Box.createVerticalStrut(GAP_XS));
+		text.add(gap(GAP_XS));
 		text.add(bottom);
 		return text;
 	}
@@ -460,6 +471,23 @@ final class TsgHubUi
 		return scroll;
 	}
 
+	static JComponent listColumn(String title, String refreshTip, Runnable onRefresh, String createText, Runnable onCreate, JComponent list)
+	{
+		JPanel column = new JPanel(new BorderLayout(0, 8));
+		column.setBackground(CARD);
+		column.setPreferredSize(new Dimension(TsgHubPanel.LIST_W, 100));
+		column.setBorder(BorderFactory.createEmptyBorder(12, 10, 10, 10));
+		JPanel top = stack();
+		top.add(fitHeight(row(boldLabel(title), onClick(iconButton(TsgHubIcons.hover("refresh"), refreshTip), onRefresh))));
+		top.add(gap(GAP_M));
+		top.add(fitHeight(onClick(primaryButton(createText), onCreate)));
+		column.add(top, BorderLayout.NORTH);
+		WidthTrackingPanel listWrap = new WidthTrackingPanel();
+		listWrap.add(list);
+		column.add(scroll(listWrap), BorderLayout.CENTER);
+		return column;
+	}
+
 	static final class WidthTrackingPanel extends JPanel implements Scrollable
 	{
 		WidthTrackingPanel()
@@ -480,6 +508,12 @@ final class TsgHubUi
 		@Override public int getScrollableBlockIncrement(Rectangle visible, int orientation, int direction) { return Math.max(visible.height - 16, 16); }
 		@Override public boolean getScrollableTracksViewportWidth() { return true; }
 		@Override public boolean getScrollableTracksViewportHeight() { return false; }
+	}
+
+	static <T extends AbstractButton> T onClick(T button, Runnable action)
+	{
+		button.addActionListener(e -> action.run());
+		return button;
 	}
 
 	static <T extends AbstractButton> T plain(T button, Color color)

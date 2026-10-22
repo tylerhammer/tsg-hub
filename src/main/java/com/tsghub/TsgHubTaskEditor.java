@@ -170,9 +170,8 @@ final class TsgHubTaskEditor
 
 		taskFormError.setVisible(false);
 		form.add(taskFormError);
-		form.add(Box.createVerticalStrut(GAP_L));
-		JButton cancel = button("Cancel");
-		cancel.addActionListener(e -> closeTaskEditor());
+		form.add(gap(GAP_L));
+		JButton cancel = onClick(button("Cancel"), () -> closeTaskEditor());
 		taskSave.addActionListener(e -> submitTask());
 		form.add(TsgHubPanel.footer(cancel, taskSave));
 
@@ -242,7 +241,7 @@ final class TsgHubTaskEditor
 		picker.add(field("Raid", raidChoice));
 		picker.add(field("Mode", raidModeChoices));
 		picker.add(caption("Only raids with clan members count."));
-		picker.add(Box.createVerticalStrut(GAP_M));
+		picker.add(gap(GAP_M));
 		JButton greenLog = button("Make a green log task for this raid instead");
 		greenLog.setToolTipText("Switches to Complete a set with every unique from this raid");
 		greenLog.addActionListener(e -> switchToGreenLog());
@@ -305,7 +304,7 @@ final class TsgHubTaskEditor
 	{
 		JPanel picker = stack();
 		picker.add(caption("Items"));
-		picker.add(Box.createVerticalStrut(GAP_XS));
+		picker.add(gap(GAP_XS));
 		itemSearch.setToolTipText("Type at least 2 letters to search RuneLite's item catalog");
 		onTextChange(itemSearch, searchDebounce::restart);
 		searchDebounce.setRepeats(false);
@@ -336,7 +335,7 @@ final class TsgHubTaskEditor
 		resultsScroll.setVisible(false);
 		resultsScroll.setName("results");
 		picker.add(resultsScroll);
-		picker.add(Box.createVerticalStrut(GAP_S));
+		picker.add(gap(GAP_S));
 		picker.add(selectedItemsPanel);
 		picker.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
 		return picker;

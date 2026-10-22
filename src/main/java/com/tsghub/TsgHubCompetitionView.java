@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.JPanel;
 
@@ -58,7 +57,7 @@ final class TsgHubCompetitionView
 		boolean skill = "skill".equals(str(event, "type"));
 		String subject = skill ? skillName(str(config, "skill")) : str(config, "npcName");
 		shell.page.add(shell.eventsView.eventSummaryCard(event, subject, skill ? "Most " + subject + " XP gained wins." : "Most " + subject + " kills wins."));
-		shell.page.add(Box.createVerticalStrut(GAP_L));
+		shell.page.add(gap(GAP_L));
 		competitionJoinButton.setEnabled(true);
 		competitionJoinButton.setText("Join");
 		for (ActionListener l : competitionJoinButton.getActionListeners()) competitionJoinButton.removeActionListener(l);
@@ -71,7 +70,7 @@ final class TsgHubCompetitionView
 		shell.page.add(fitHeight(competitionJoinButton));
 		shell.eventsView.joinError.setVisible(false);
 		shell.page.add(shell.eventsView.joinError);
-		shell.page.add(Box.createVerticalStrut(GAP_S));
+		shell.page.add(gap(GAP_S));
 		shell.page.add(TsgHubSidebarPanel.hint(skill
 			? "Your XP counts from the first time TSG Hub sees you after joining. Gains on other devices count the next time you log in with it."
 			: !"loot".equals(str(config, "signal"))
@@ -117,7 +116,7 @@ final class TsgHubCompetitionView
 		}
 		JPanel lines = stack();
 		lines.add(top);
-		lines.add(Box.createVerticalStrut(GAP_XS));
+		lines.add(gap(GAP_XS));
 		if (!started)
 		{
 			String start = eventStartWhen(event);
@@ -128,19 +127,19 @@ final class TsgHubCompetitionView
 			lines.add(label("+" + TsgHubFormat.number(mine == null ? 0 : integer(mine, "gained", 0)) + " " + unit(), SUCCESS, boldFont()));
 			if (!tracking)
 			{
-				lines.add(Box.createVerticalStrut(GAP_XS));
+				lines.add(gap(GAP_XS));
 				lines.add(TsgHubSidebarPanel.cardNote(skill ? "Starts counting the next time you gain XP." : "Starts counting at your next kill."));
 			}
 		}
 		JPanel prizes = prizeRow(event, smallFont());
 		if (prizes != null)
 		{
-			lines.add(Box.createVerticalStrut(GAP_S));
+			lines.add(gap(GAP_S));
 			lines.add(prizes);
 		}
 		summary.add(lines, BorderLayout.CENTER);
 		shell.page.add(fitHeight(summary));
-		shell.page.add(Box.createVerticalStrut(GAP_M));
+		shell.page.add(gap(GAP_M));
 
 		if (hidden)
 		{
@@ -149,7 +148,7 @@ final class TsgHubCompetitionView
 		else
 		{
 			shell.page.add(caption(integer(event, "participants", rows.size()) + (started ? " taking part" : " signed up")));
-			shell.page.add(Box.createVerticalStrut(GAP_S));
+			shell.page.add(gap(GAP_S));
 			for (int i = 0; i < rows.size(); i++)
 			{
 				JsonObject row = rows.get(i).getAsJsonObject();
@@ -162,11 +161,10 @@ final class TsgHubCompetitionView
 				card.add(wrapped(str(row, "displayName"), TEXT, plainFont(), 110), BorderLayout.CENTER);
 				String gained = bool(row, "tracking") ? TsgHubFormat.number(integer(row, "gained", 0)) : "-";
 				if (started) card.add(label(gained, rank == 1 ? ACCENT : TEXT, boldFont()), BorderLayout.EAST);
-				shell.page.add(fitHeight(card));
-				shell.page.add(Box.createVerticalStrut(LIST_GAP));
+				addCard(shell.page, fitHeight(card));
 			}
 		}
-		shell.page.add(Box.createVerticalStrut(GAP_L));
+		shell.page.add(gap(GAP_L));
 		JButton leave = dangerButton("Leave competition");
 		leave.addActionListener(e -> {
 			if (confirm(shell, "Leave competition", "Leave \"" + eventName(event) + "\"?\nYou'll drop off the leaderboard on this device. You can rejoin while it's running.", "Leave", true))

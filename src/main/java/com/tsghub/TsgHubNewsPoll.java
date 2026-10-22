@@ -15,7 +15,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import javax.swing.AbstractButton;
-import javax.swing.Box;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -65,7 +64,7 @@ final class TsgHubNewsPoll
 		JButton vote = primaryButton(mine.isEmpty() ? "Vote" : "Change vote");
 		Runnable sync = () -> vote.setEnabled(canVote && !chosen.isEmpty() && !chosen.equals(mine) && !voting.contains(id));
 		ButtonGroup group = new ButtonGroup();
-		block.add(Box.createVerticalStrut(GAP_S));
+		block.add(gap(GAP_S));
 		block.add(wrapped(summary(poll), MUTED, smallFont(), widthPx));
 		List<JsonObject> options = objects(array(poll, "options"));
 		for (int i = 0; i < options.size(); i++)
@@ -92,7 +91,7 @@ final class TsgHubNewsPoll
 			bar.setForeground(ACCENT.darker().darker());
 			bar.setCenterLabel(voters == 0 ? "0" : votes + " · " + Math.round(votes * 100f / voters) + "%");
 			block.add(bar);
-			block.add(Box.createVerticalStrut(GAP_XS));
+			block.add(gap(GAP_XS));
 		}
 		String error = errors.get(id);
 		if (error != null) block.add(label(html(escape(error), widthPx), TsgHubTheme.ERROR, smallFont()));
@@ -108,7 +107,7 @@ final class TsgHubNewsPoll
 		});
 		sync.run();
 		String note = !canVote ? "Log in to vote." : mine.isEmpty() ? "" : "You voted.";
-		block.add(Box.createVerticalStrut(GAP_XS));
+		block.add(gap(GAP_XS));
 		block.add(fitHeight(row(label(note, MUTED, smallFont()), vote)));
 		return block;
 	}

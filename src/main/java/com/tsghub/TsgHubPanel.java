@@ -95,17 +95,15 @@ final class TsgHubPanel extends JPanel
 		JPanel header = panel(new BorderLayout(10, 0));
 		JPanel titles = stack();
 		titles.add(eventTitle);
-		titles.add(Box.createVerticalStrut(GAP_XS));
+		titles.add(gap(GAP_XS));
 		titles.add(eventMeta);
-		titles.add(Box.createVerticalStrut(GAP_XS));
+		titles.add(gap(GAP_XS));
 		titles.add(eventSchedule);
-		titles.add(Box.createVerticalStrut(GAP_XS));
+		titles.add(gap(GAP_XS));
 		titles.add(eventPrizePool);
 		header.add(titles, BorderLayout.CENTER);
-		JButton edit = button("Edit event");
-		edit.addActionListener(e -> eventForm.beginEditEvent());
-		JButton deleteEvent = iconButton(hover("trash", TsgHubTheme.ERROR), "Delete event");
-		deleteEvent.addActionListener(e -> confirmDeleteEvent());
+		JButton edit = onClick(button("Edit event"), () -> eventForm.beginEditEvent());
+		JButton deleteEvent = onClick(iconButton(hover("trash", TsgHubTheme.ERROR), "Delete event"), () -> confirmDeleteEvent());
 		publishEvent.setToolTipText("Let players see and join this event");
 		publishEvent.addActionListener(e -> { if (currentEvent != null) plugin.organizer().publishEvent(currentEvent); });
 		JPanel editButtons = panel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
@@ -129,7 +127,7 @@ final class TsgHubPanel extends JPanel
 
 		JPanel north = stack();
 		north.add(fitHeight(header));
-		north.add(Box.createVerticalStrut(GAP_M));
+		north.add(gap(GAP_M));
 		JPanel tabRow = panel(new BorderLayout());
 		tabRow.setBorder(bottomRule());
 		tabRow.add(tabs, BorderLayout.WEST);
