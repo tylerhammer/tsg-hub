@@ -169,6 +169,7 @@ Once you opt in, it sends the following to the TSG Hub service:
 - Whether you're currently in the clan chat channel and your world, so teammates' completion alerts reach you and clanmates see you as online
 - With **Share location and activity** on, your area name, current activity and world map position (except inside instances)
 - Clan chat broadcasts for drops, raid loot, pets and collection log items, for the clan's **Drops** history. For your own broadcasts, also the monster or activity it came from and your kill count from the game message
+- When you open the Clan Coffer, its coin total, and each change while it stays open: deposit or withdrawal, the balance before and after, and whether a coffer chat message showed you made it. Only clan admins can see this, on the admin site. The plugin doesn't show it
 
 In a clan party, your stats, gear and inventory go to the other members through **RuneLite's party service**, not the TSG Hub service. The TSG Hub service only learns your display name, party and world, plus your area name and position if location sharing is on.
 
