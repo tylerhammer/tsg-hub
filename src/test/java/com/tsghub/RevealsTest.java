@@ -1,6 +1,7 @@
 package com.tsghub;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -85,6 +86,83 @@ public class RevealsTest
 		everyone(waiting, "t5", true, false);
 		early.update(waiting, "red", "Crab Legs");
 		assertNull(early.update(after, "red", "Crab Legs"));
+	}
+
+	@Test
+	public void linesAlreadyCompleteNeverReplay()
+	{
+		TsgHubReveals reveals = new TsgHubReveals();
+		reveals.update(event("red", "t0", "t1", "t2"), "red", "Crab Legs");
+		TsgHubReveals.Moment moment = reveals.update(event("red", "t0", "t1", "t2", "t4"), "red", "Crab Legs");
+		assertEquals(Collections.singletonList("t4"), moment.tiles);
+		assertTrue(moment.lines.isEmpty());
+	}
+
+	@Test
+	public void resetSeedsTheNextUpdateSilently()
+	{
+		TsgHubReveals reveals = new TsgHubReveals();
+		reveals.update(event("red", "t0"), "red", "Crab Legs");
+		reveals.reset();
+		assertNull(reveals.update(event("red", "t0", "t1", "t2"), "red", "Crab Legs"));
+		assertEquals(Collections.singletonList("t4"), reveals.update(event("red", "t0", "t1", "t2", "t4"), "red", "Crab Legs").tiles);
+	}
+
+	@Test
+	public void queuedMomentsForTheSameTeamMerge()
+	{
+		TsgHubReveals reveals = new TsgHubReveals();
+		reveals.update(event("red"), "red", "Crab Legs");
+		TsgHubReveals.Moment first = reveals.update(event("red", "t0", "t1"), "red", "Crab Legs");
+		TsgHubReveals.Moment second = reveals.update(event("red", "t0", "t1", "t2", "t5"), "red", "Crab Legs");
+		assertTrue(first.mergesWith(second));
+		TsgHubReveals.Moment merged = TsgHubReveals.Moment.merge(first, second);
+		assertEquals(Arrays.asList("t0", "t1", "t2", "t5"), merged.tiles);
+		assertTrue(merged.before.isEmpty());
+		assertEquals(1, merged.lineCount());
+		assertEquals("ROW:0", merged.lines.get(0).key());
+		assertFalse(TsgHubReveals.Moment.preview(event("red")).mergesWith(TsgHubReveals.Moment.preview(event("red"))));
+		TsgHubReveals other = new TsgHubReveals();
+		other.update(event("blue"), "blue", "Crab Legs");
+		assertFalse(first.mergesWith(other.update(event("blue", "t0"), "blue", "Crab Legs")));
+	}
+
+	@Test
+	public void cappedRevealsDaubLineTilesFirst()
+	{
+		TsgHubReveals reveals = new TsgHubReveals();
+		reveals.update(event("red"), "red", "Crab Legs");
+		TsgHubReveals.Moment moment = reveals.update(event("red", "t0", "t1", "t2", "t7", "t8"), "red", "Crab Legs");
+		TsgHubReveals.Moment capped = moment.capped();
+		assertEquals(Arrays.asList("t0", "t1", "t2"), capped.tiles);
+		assertEquals(Arrays.asList("t7", "t8"), capped.hiddenTiles);
+		assertTrue(capped.before.containsAll(Arrays.asList("t7", "t8")));
+		assertEquals(8 + 9, capped.hiddenPoints());
+		assertEquals(1, capped.lineCount());
+		assertTrue(moment.capped().tiles.size() <= TsgHubReveals.MAX_DAUBERS);
+	}
+
+	@Test
+	public void cappedRevealsKeepEveryLineInTheBonus()
+	{
+		TsgHubReveals reveals = new TsgHubReveals();
+		reveals.update(event("red", "t0", "t1", "t3", "t5", "t6", "t7", "t8"), "red", "Crab Legs");
+		TsgHubReveals.Moment moment = reveals.update(event("red", "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8"), "red", "Crab Legs");
+		assertTrue(moment.lines.size() > TsgHubReveals.MAX_WAVES);
+		TsgHubReveals.Moment capped = moment.capped();
+		assertEquals(TsgHubReveals.MAX_WAVES, capped.lines.size());
+		assertEquals(moment.lines.size(), capped.lineCount());
+		assertEquals(moment.bonus(), capped.bonus());
+		assertEquals(Arrays.asList("t2", "t4"), capped.tiles);
+	}
+
+	@Test
+	public void smallRevealsAreNotCapped()
+	{
+		TsgHubReveals reveals = new TsgHubReveals();
+		reveals.update(event("red", "t0", "t1"), "red", "Crab Legs");
+		TsgHubReveals.Moment moment = reveals.update(event("red", "t0", "t1", "t2"), "red", "Crab Legs");
+		assertTrue(moment.capped() == moment);
 	}
 
 	@Test

@@ -493,6 +493,7 @@ public class TsgHubPlugin extends Plugin
 		}
 		// Loading screens and world hops aren't logouts.
 		if (state != GameState.LOGIN_SCREEN && state != GameState.LOGIN_SCREEN_AUTHENTICATOR) return;
+		resetRevealBaseline();
 		if (presence != null) presence.onLoggedOut();
 		if (ranks != null) ranks.reset();
 		detectedPlayerName = "";
@@ -542,7 +543,11 @@ public class TsgHubPlugin extends Plugin
 			SwingUtilities.invokeLater(() -> sidebar.boardOverlayChanged());
 			return;
 		}
-		if ("bingoReveal".equals(event.getKey())) return;
+		if ("bingoReveal".equals(event.getKey()))
+		{
+			resetRevealBaseline();
+			return;
+		}
 		if ("partyShowSelf".equals(event.getKey()))
 		{
 			if (config.partyShowSelf()) groupTracker.refreshSelf();
@@ -763,9 +768,14 @@ public class TsgHubPlugin extends Plugin
 
 	private void clearBoardOverlays()
 	{
-		primedBoardEventId = "";
-		reveals.update(null, null, "");
+		resetRevealBaseline();
 		if (boardOverlay != null) boardOverlay.clear();
+	}
+
+	private void resetRevealBaseline()
+	{
+		primedBoardEventId = "";
+		reveals.reset();
 		if (revealOverlay != null) revealOverlay.clear();
 	}
 

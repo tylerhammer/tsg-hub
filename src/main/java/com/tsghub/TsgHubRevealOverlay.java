@@ -19,17 +19,17 @@ import java.awt.geom.Line2D;
 import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.WorldType;
@@ -61,6 +61,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	static final int HOLD_MS = 900;
 	static final int EXIT_MS = 350;
 	static final int POINTS_SOUND_MS = 100;
+	static final int MORE_CAPTION_MS = 700;
 	static final int STAMP_SOUND_LEAD_MS = 27;
 	private static final int[] SCALE = {0, 2, 4, 5, 7, 9, 11, 12, 14};
 	private static final int MAX_QUEUED = 6;
@@ -106,8 +107,9 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	private final TsgHubSounds sounds;
 	private volatile List<Cue> cues = Collections.emptyList();
 	private volatile long heard = -1;
-	private final Queue<Held> queue = new ConcurrentLinkedQueue<>();
+	private final Deque<Held> queue = new ArrayDeque<>();
 	private volatile TsgHubReveals.Moment current;
+	private volatile TsgHubReveals.Moment source;
 	private volatile long startedAt;
 	private volatile long pausedAt;
 	private volatile Rectangle panelBounds = new Rectangle();
@@ -126,13 +128,59 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 
 	void reveal(TsgHubReveals.Moment moment)
 	{
-		if (moment != null && queue.size() < MAX_QUEUED) queue.add(new Held(moment, System.currentTimeMillis()));
+		if (moment == null) return;
+		synchronized (queue)
+		{
+			Held last = queue.peekLast();
+			if (last != null && last.moment.mergesWith(moment))
+			{
+				queue.pollLast();
+				queue.addLast(new Held(TsgHubReveals.Moment.merge(last.moment, moment), last.at));
+			}
+			else if (queue.size() < MAX_QUEUED) queue.addLast(new Held(moment, System.currentTimeMillis()));
+		}
 	}
 
 	void clear()
 	{
-		queue.clear();
-		current = null;
+		synchronized (queue)
+		{
+			queue.clear();
+			current = null;
+			source = null;
+		}
+	}
+
+	private boolean idle()
+	{
+		synchronized (queue)
+		{
+			return current == null && queue.isEmpty();
+		}
+	}
+
+	private Held next(long now)
+	{
+		synchronized (queue)
+		{
+			Held next = queue.pollFirst();
+			while (next != null && now - next.at > MAX_HELD_MS) next = queue.pollFirst();
+			return next;
+		}
+	}
+
+	private void hold(TsgHubReveals.Moment playing, long now)
+	{
+		synchronized (queue)
+		{
+			Held first = queue.peekFirst();
+			if (first != null && playing.mergesWith(first.moment))
+			{
+				queue.pollFirst();
+				queue.addFirst(new Held(TsgHubReveals.Moment.merge(playing, first.moment), now));
+			}
+			else queue.addFirst(new Held(playing, now));
+		}
 	}
 
 	static int strikesAt(TsgHubReveals.Moment moment)
@@ -173,7 +221,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	@Override
 	public Dimension render(Graphics2D graphics)
 	{
-		if (current == null && queue.isEmpty()) return null;
+		if (idle()) return null;
 		long now = System.currentTimeMillis();
 		if (paused(now)) return null;
 		if (pausedAt != 0)
@@ -184,9 +232,9 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 		TsgHubReveals.Moment moment = current;
 		if (moment == null || now - startedAt >= duration(moment))
 		{
-			Held next = queue.poll();
-			while (next != null && now - next.at > MAX_HELD_MS) next = queue.poll();
-			moment = next == null ? null : next.moment;
+			Held next = next(now);
+			source = next == null ? null : next.moment;
+			moment = source == null ? null : source.capped();
 			current = moment;
 			dots.clear();
 			startedAt = now;
@@ -213,9 +261,10 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 			return true;
 		}
 		if (state == GameState.LOGGED_IN && !dangerous()) return false;
-		TsgHubReveals.Moment playing = current;
-		if (playing != null) queue.add(new Held(playing, now));
+		TsgHubReveals.Moment playing = source;
+		if (playing != null) hold(playing, now);
 		current = null;
+		source = null;
 		pausedAt = 0;
 		return true;
 	}
@@ -613,10 +662,17 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	{
 		for (int i = moment.tiles.size() - 1; i >= 0; i--)
 		{
-			if (t < FIRST_TILE_MS + (long) i * TILE_MS + DROP_MS) continue;
+			long impact = FIRST_TILE_MS + (long) i * TILE_MS + DROP_MS;
+			if (t < impact) continue;
 			JsonObject task = moment.tasks.get(moment.tiles.get(i));
 			int points = TsgHubUi.integer(task, "points", 1);
 			String text = TsgHubUi.str(task, "title") + "  +" + points + (points == 1 ? " pt" : " pts");
+			int more = moment.hiddenTiles.size();
+			if (more > 0 && i == moment.tiles.size() - 1 && t >= impact + MORE_CAPTION_MS)
+			{
+				int extra = moment.hiddenPoints();
+				text = "+" + more + (more == 1 ? " more tile" : " more tiles") + "  +" + extra + (extra == 1 ? " pt" : " pts");
+			}
 			Font font = FontManager.getRunescapeBoldFont().deriveFont(16f);
 			centered(g, fit(g, text, font, panelW - PAD * 2), font, TsgHubUi.TEXT, panelW / 2.0, panelH - PAD - 6);
 			return;
@@ -634,7 +690,8 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 		Font big = FontManager.getRunescapeBoldFont().deriveFont((float) Math.max(26, cell * 0.62));
 		Font subFont = FontManager.getRunescapeBoldFont().deriveFont((float) Math.max(15, cell * 0.28));
 		int bonus = moment.bonus();
-		String sub = bonus > 0 ? "+" + bonus + " bonus pts" : moment.lines.size() == 1 ? "Line complete" : moment.lines.size() + " lines";
+		int count = moment.lineCount();
+		String sub = bonus > 0 ? (count > 1 ? count + " lines · +" : "+") + bonus + " bonus pts" : count == 1 ? "Line complete" : count + " lines";
 		FontMetrics bigMetrics = s.getFontMetrics(big);
 		FontMetrics subMetrics = s.getFontMetrics(subFont);
 		double w = Math.max(bigMetrics.stringWidth("BINGO!"), subMetrics.stringWidth(sub)) + 36;
