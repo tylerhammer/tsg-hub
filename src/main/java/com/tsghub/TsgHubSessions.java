@@ -159,6 +159,25 @@ final class TsgHubSessions
 		}, e -> eventLoadFailed(eventId, e, "Couldn't update the board. "), () -> plugin.sidebarBusy(false)), executor);
 	}
 
+	boolean claimTile(String eventId, String taskId, String note)
+	{
+		return sendTileClaim("tile.claim", "POST", eventId, taskId, note);
+	}
+
+	boolean dropTileClaim(String eventId, String taskId)
+	{
+		return sendTileClaim("tile.unclaim", "DELETE", eventId, taskId, null);
+	}
+
+	private boolean sendTileClaim(String type, String method, String eventId, String taskId, String note)
+	{
+		String token = session().get(TOKEN);
+		if (!plugin.sharingInClan() || token.isEmpty() || !eventId.equals(session().get(EVENT_ID)) || executor.isShutdown()) return false;
+		JsonObject body = TsgHubTileClaims.body(eventId, taskId, note);
+		executor.execute(() -> plugin.tracker().report(type, method, TsgHubTileClaims.path(eventId, taskId), token, body));
+		return true;
+	}
+
 	void applyBoard(String eventId, String token, JsonObject event, boolean open)
 	{
 		syncClanRank(eventId, token, event);

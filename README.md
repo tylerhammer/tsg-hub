@@ -49,6 +49,8 @@ Your team's board opens straight from the sidebar. The header shows your team's 
 
 **Scores** ranks every team, and **Team** lists your teammates. The board updates live while it's open.
 
+**Claim a tile** to tell your team you're going for it: right-click an open task and pick **Claim tile**, with an optional note such as "doing it tonight" (up to 100 characters). Each task shows who on your team has claimed it, and hovering it shows their notes. Tiles you've claimed are highlighted. Right-click again to **Change note** or **Drop claim**. Several teammates can claim the same tile, and only your team sees your claims. Claims clear when your team completes the tile or you disconnect from the event.
+
 When you make progress, a message appears in **your own chatbox only**. When your team finishes a tile, teammates who are online in clan chat get a local alert too. TSG Hub never posts to public or clan chat.
 
 <table align="center"><tr><td align="center" valign="top"><img src="docs/images/board-tasks.png" width="240" alt="A team's bingo board with progress on each task"><br><sub>Tasks</sub></td><td align="center" valign="top"><img src="docs/images/board-scores.png" width="240" alt="Team scoreboard"><br><sub>Scores</sub></td><td align="center" valign="top"><img src="docs/images/board-team.png" width="240" alt="Team tab listing teammates"><br><sub>Team</sub></td></tr></table>

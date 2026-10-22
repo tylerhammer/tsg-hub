@@ -15,6 +15,7 @@ public class ReportsTest
 	private final List<JsonObject> socketSent = new ArrayList<>();
 	private final List<JsonObject> posted = new ArrayList<>();
 	private final List<String> tokens = new ArrayList<>();
+	private final List<String> methods = new ArrayList<>();
 	private boolean live = true;
 	private int status = 200;
 	private long now = 1_000;
@@ -27,7 +28,8 @@ public class ReportsTest
 			message.addProperty("type", type);
 			socketSent.add(message);
 			return true;
-		}, (path, token, body) -> {
+		}, (method, path, token, body) -> {
+			methods.add(method);
 			posted.add(body.deepCopy());
 			tokens.add(token);
 			if (status == -1) throw new IOException("offline");
@@ -196,6 +198,20 @@ public class ReportsTest
 
 		reports.send("drop", "/v1/drops", drop());
 		reports.failed(socketSent.get(1).get("id").getAsString(), 401);
+		assertEquals(0, reports.size());
+	}
+
+	@Test
+	public void restFallbackUsesReportMethod()
+	{
+		live = false;
+		TsgHubReports reports = reports();
+		reports.send("tile.claim", "/v1/events/e1/tasks/t1/claim", "member-token", drop());
+		reports.send("tile.unclaim", "DELETE", "/v1/events/e1/tasks/t1/claim", "member-token", drop());
+		reports.flush();
+		assertEquals(2, posted.size());
+		assertEquals("POST", methods.get(0));
+		assertEquals("DELETE", methods.get(1));
 		assertEquals(0, reports.size());
 	}
 }
