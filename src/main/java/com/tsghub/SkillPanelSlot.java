@@ -1,0 +1,86 @@
+/*
+ * Copyright (c) 2020, TheStonedTurtle <https://github.com/TheStonedTurtle>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+package com.tsghub;
+
+import static com.tsghub.TsgHubTheme.*;
+import static com.tsghub.TsgHubUi.*;
+
+import java.awt.image.BufferedImage;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.border.EmptyBorder;
+import net.runelite.client.util.ImageUtil;
+
+class SkillPanelSlot extends JPanel
+{
+	private final String name;
+	private final JLabel levelLabel = label("", TEXT, plainFont());
+	private final JLabel baseLabel = label("", MUTED, smallFont());
+	private int boosted = -1;
+	private int base = -1;
+
+	SkillPanelSlot(String name)
+	{
+		this.name = name;
+		setOpaque(true);
+		setBackground(SLOT);
+		setBorder(new EmptyBorder(3, 3, 3, 1));
+		setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
+		levelLabel.setIconTextGap(3);
+		add(levelLabel);
+		add(baseLabel);
+		add(Box.createHorizontalGlue());
+		setToolTipText(name);
+	}
+
+	void setSkillIcon(BufferedImage icon)
+	{
+		levelLabel.setIcon(new ImageIcon(ImageUtil.resizeImage(icon, 16, 16)));
+	}
+
+	void clear()
+	{
+		boosted = -1;
+		base = -1;
+		levelLabel.setText("");
+		baseLabel.setText("");
+		setToolTipText(name);
+	}
+
+	void setLevels(int boostedLevel, int baseLevel)
+	{
+		if (boostedLevel == boosted && baseLevel == base) return;
+		boosted = boostedLevel;
+		base = baseLevel;
+		boolean changed = boostedLevel != baseLevel;
+		levelLabel.setText(String.valueOf(boostedLevel));
+		levelLabel.setForeground(!changed ? TEXT : boostedLevel > baseLevel ? SUCCESS : LOW);
+		baseLabel.setText(changed ? "/" + baseLevel : "");
+		setToolTipText(name + " " + boostedLevel + "/" + baseLevel);
+	}
+}

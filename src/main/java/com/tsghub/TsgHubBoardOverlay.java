@@ -104,21 +104,21 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 			clear();
 			return;
 		}
-		JsonArray taskList = TsgHubUi.array(event, "tasks");
-		JsonObject score = TsgHubUi.scoreFor(TsgHubUi.array(event, "teamScores"), teamId);
-		JsonArray rows = TsgHubUi.array(score, "tasks");
+		JsonArray taskList = TsgHubJson.array(event, "tasks");
+		JsonObject score = TsgHubEvents.scoreFor(TsgHubJson.array(event, "teamScores"), teamId);
+		JsonArray rows = TsgHubJson.array(score, "tasks");
 		Map<String, JsonObject> tasks = new HashMap<>();
-		for (int i = 0; i < taskList.size(); i++) tasks.put(TsgHubUi.str(taskList.get(i).getAsJsonObject(), "id"), taskList.get(i).getAsJsonObject());
+		for (int i = 0; i < taskList.size(); i++) tasks.put(TsgHubJson.str(taskList.get(i).getAsJsonObject(), "id"), taskList.get(i).getAsJsonObject());
 		Map<String, JsonObject> progress = new HashMap<>();
 		Set<String> done = new HashSet<>();
 		for (int i = 0; i < rows.size(); i++)
 		{
 			JsonObject row = rows.get(i).getAsJsonObject();
-			progress.put(TsgHubUi.str(row, "taskId"), row);
-			if (TsgHubUi.bool(row, "completed")) done.add(TsgHubUi.str(row, "taskId"));
+			progress.put(TsgHubJson.str(row, "taskId"), row);
+			if (TsgHubJson.bool(row, "completed")) done.add(TsgHubJson.str(row, "taskId"));
 		}
 		TsgHubBingoBoard board = TsgHubBingoBoard.of(event);
-		String key = TsgHubUi.str(event, "id") + ":" + teamId;
+		String key = TsgHubJson.str(event, "id") + ":" + teamId;
 		Snapshot previous = snapshot;
 		if (previous == null || !previous.key.equals(key)) flips.clear();
 		else
@@ -135,7 +135,7 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 				}
 			}
 		}
-		snapshot = new Snapshot(key, TsgHubUi.str(event, "name"), board, tasks, progress, Collections.unmodifiableSet(done), board.completedLines(done), TsgHubUi.integer(score, "points", 0));
+		snapshot = new Snapshot(key, TsgHubJson.str(event, "name"), board, tasks, progress, Collections.unmodifiableSet(done), board.completedLines(done), TsgHubJson.integer(score, "points", 0));
 	}
 
 	@Override
@@ -181,7 +181,7 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 				String id = board.taskAt(row, col);
 				if (id == null)
 				{
-					TsgHubBoardGrid.paintEmpty(g, x, y, cell, false, false);
+					TsgHubBoardGrid.paintEmpty(g, x, y, cell);
 					continue;
 				}
 				JsonObject task = data.tasks.get(id);
@@ -219,10 +219,10 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 		metrics = g.getFontMetrics();
 		int left = data.tasks.size() - data.done.size();
 		String status = left + " left · " + data.lines.size() + (data.lines.size() == 1 ? " line" : " lines");
-		g.setColor(TsgHubUi.MUTED);
+		g.setColor(TsgHubTheme.MUTED);
 		g.drawString(status, PAD, height - PAD - 2);
 		String points = data.points + " pts";
-		g.setColor(TsgHubUi.TEXT);
+		g.setColor(TsgHubTheme.TEXT);
 		g.drawString(points, width - PAD - metrics.stringWidth(points), height - PAD - 2);
 		g.dispose();
 		return new Dimension(width, height);
@@ -289,7 +289,7 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 		g.setColor(new Color(34, 34, 34));
 		g.fill(shape);
 		g.setStroke(new BasicStroke(1.5f));
-		g.setColor(done ? TsgHubUi.SUCCESS : TsgHubBoardGrid.GOLD);
+		g.setColor(done ? TsgHubTheme.SUCCESS : TsgHubBoardGrid.GOLD);
 		g.draw(shape);
 		Graphics2D text = (Graphics2D) g.create();
 		text.clip(shape);
@@ -301,33 +301,31 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 		Font small = FontManager.getRunescapeSmallFont();
 		text.setFont(bold);
 		FontMetrics metrics = text.getFontMetrics();
-		for (String line : TsgHubBoardGrid.wrapLines(metrics, TsgHubUi.str(task, "title"), width, 3))
+		for (String line : TsgHubBoardGrid.wrapLines(metrics, TsgHubJson.str(task, "title"), width, 3))
 		{
 			y += metrics.getAscent();
-			text.setColor(TsgHubUi.TEXT);
+			text.setColor(TsgHubTheme.TEXT);
 			text.drawString(line, x, y);
 			y += metrics.getDescent() - 2;
 		}
 		text.setFont(small);
 		metrics = text.getFontMetrics();
-		y += metrics.getAscent() + 2;
-		text.setColor(TsgHubUi.MUTED);
-		text.drawString(TsgHubBoardGrid.wrapLines(metrics, TsgHubUi.taskTypeLabel(task), width, 1).get(0), x, y);
-		int value = TsgHubUi.integer(progress, "progress", 0);
-		int target = Math.max(1, TsgHubUi.integer(progress, "target", 1));
-		String status = done ? "Done" : TsgHubUi.bool(progress, "pending") ? "Awaiting review" : target > 1 ? value + " / " + target : "Not done yet";
+		y += 2;
+		int value = TsgHubJson.integer(progress, "progress", 0);
+		int target = Math.max(1, TsgHubJson.integer(progress, "target", 1));
+		String status = done ? "Done" : TsgHubJson.bool(progress, "pending") ? "Awaiting review" : target > 1 ? value + " / " + target : "Not done yet";
 		y += metrics.getHeight();
-		text.setColor(done ? TsgHubUi.SUCCESS : TsgHubUi.bool(progress, "pending") ? TsgHubUi.WARNING : TsgHubUi.TEXT);
+		text.setColor(done ? TsgHubTheme.SUCCESS : TsgHubJson.bool(progress, "pending") ? TsgHubTheme.WARNING : TsgHubTheme.TEXT);
 		text.drawString(status, x, y);
 		if (!done && target > 1)
 		{
 			int barY = y + 4;
 			text.setColor(new Color(0, 0, 0, 140));
 			text.fillRoundRect(x, barY, width, 4, 4, 4);
-			text.setColor(TsgHubUi.ACCENT);
+			text.setColor(TsgHubTheme.ACCENT);
 			text.fillRoundRect(x, barY, (int) Math.round(width * Math.min(1.0, value / (double) target)), 4, 4, 4);
 		}
-		String points = TsgHubUi.integer(task, "points", 1) + " pts";
+		String points = TsgHubJson.integer(task, "points", 1) + " pts";
 		text.setColor(TsgHubBoardGrid.GOLD);
 		text.drawString(points, (int) (rect.x + rect.width) - inset - metrics.stringWidth(points), (int) (rect.y + rect.height) - inset);
 		text.dispose();

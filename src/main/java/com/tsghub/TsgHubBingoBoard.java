@@ -45,17 +45,6 @@ final class TsgHubBingoBoard
 			return direction + ":" + index;
 		}
 
-		String label()
-		{
-			switch (direction)
-			{
-				case ROW: return "Row " + (index + 1);
-				case COLUMN: return "Column " + (index + 1);
-				case DIAGONAL: return "Diagonal";
-				default: return "Anti-diagonal";
-			}
-		}
-
 		@Override public boolean equals(Object other)
 		{
 			return other instanceof Line && ((Line) other).key().equals(key());
@@ -72,11 +61,7 @@ final class TsgHubBingoBoard
 		}
 	}
 
-	final String type;
 	final int size;
-	final String mode;
-	final boolean auto;
-	final boolean locked;
 	private final String[][] cells;
 	final List<String> unplaced;
 	final int lineBonus;
@@ -84,17 +69,13 @@ final class TsgHubBingoBoard
 	final int randomMax;
 	private final Map<String, Integer> bonuses;
 
-	private TsgHubBingoBoard(String type, int size, String mode, boolean auto, boolean locked, String[][] cells, List<String> unplaced, int lineBonus, int randomMin, int randomMax, Map<String, Integer> bonuses)
+	private TsgHubBingoBoard(int size, String[][] cells, List<String> unplaced, int lineBonus, int randomMin, int randomMax, Map<String, Integer> bonuses)
 	{
 		this.lineBonus = lineBonus;
 		this.randomMin = randomMin;
 		this.randomMax = randomMax;
 		this.bonuses = bonuses;
-		this.type = type;
 		this.size = size;
-		this.mode = mode;
-		this.auto = auto;
-		this.locked = locked;
 		this.cells = cells;
 		this.unplaced = Collections.unmodifiableList(unplaced);
 	}
@@ -112,30 +93,17 @@ final class TsgHubBingoBoard
 
 	static TsgHubBingoBoard of(JsonObject event)
 	{
-		return of(event, "");
-	}
-
-	static TsgHubBingoBoard of(JsonObject event, String teamId)
-	{
 		List<String> taskIds = new ArrayList<>();
-		JsonArray tasks = TsgHubUi.array(event, "tasks");
-		for (int i = 0; i < tasks.size(); i++) taskIds.add(TsgHubUi.str(tasks.get(i).getAsJsonObject(), "id"));
+		JsonArray tasks = TsgHubJson.array(event, "tasks");
+		for (int i = 0; i < tasks.size(); i++) taskIds.add(TsgHubJson.str(tasks.get(i).getAsJsonObject(), "id"));
 		JsonObject board = event != null && event.has("board") && event.get("board").isJsonObject() ? event.getAsJsonObject("board") : null;
-		if (board == null) return resolve("grid", defaultSize(taskIds.size()), "shared", true, false, new JsonArray(), taskIds, new JsonObject());
-		int size = TsgHubUi.integer(board, "size", 0);
+		if (board == null) return resolve(defaultSize(taskIds.size()), new JsonArray(), taskIds, new JsonObject());
+		int size = TsgHubJson.integer(board, "size", 0);
 		if (size < MIN_SIZE || size > MAX_SIZE) size = defaultSize(taskIds.size());
-		JsonArray tiles = TsgHubUi.array(board, "tiles");
-		if (!teamId.isEmpty() && board.has("teams") && board.get("teams").isJsonObject())
-		{
-			JsonElement own = board.getAsJsonObject("teams").get(teamId);
-			if (own != null && own.isJsonArray()) tiles = own.getAsJsonArray();
-		}
-		String type = TsgHubUi.str(board, "type");
-		return resolve(type.isEmpty() ? "grid" : type, size, "team".equals(TsgHubUi.str(board, "mode")) ? "team" : "shared",
-			TsgHubUi.bool(board, "auto"), TsgHubUi.bool(board, "locked"), tiles, taskIds, board);
+		return resolve(size, TsgHubJson.array(board, "tiles"), taskIds, board);
 	}
 
-	private static TsgHubBingoBoard resolve(String type, int size, String mode, boolean auto, boolean locked, JsonArray tiles, List<String> taskIds, JsonObject board)
+	private static TsgHubBingoBoard resolve(int size, JsonArray tiles, List<String> taskIds, JsonObject board)
 	{
 		Map<String, Integer> bonuses = new HashMap<>();
 		if (board.has("bonuses") && board.get("bonuses").isJsonObject())
@@ -152,9 +120,9 @@ final class TsgHubBingoBoard
 		{
 			if (!tiles.get(i).isJsonObject()) continue;
 			JsonObject tile = tiles.get(i).getAsJsonObject();
-			String id = TsgHubUi.str(tile, "taskId");
-			int row = TsgHubUi.integer(tile, "row", -1);
-			int col = TsgHubUi.integer(tile, "col", -1);
+			String id = TsgHubJson.str(tile, "taskId");
+			int row = TsgHubJson.integer(tile, "row", -1);
+			int col = TsgHubJson.integer(tile, "col", -1);
 			if (!known.contains(id) || placed.contains(id) || row < 0 || col < 0 || row >= size || col >= size || cells[row][col] != null) continue;
 			cells[row][col] = id;
 			placed.add(id);
@@ -173,18 +141,13 @@ final class TsgHubBingoBoard
 			cells[next / size][next % size] = id;
 			placed.add(id);
 		}
-		return new TsgHubBingoBoard(type, size, mode, auto, locked, cells, unplaced,
-			Math.max(0, TsgHubUi.integer(board, "lineBonus", 0)), Math.max(0, TsgHubUi.integer(board, "randomMin", 0)), Math.max(0, TsgHubUi.integer(board, "randomMax", 0)), bonuses);
+		return new TsgHubBingoBoard(size, cells, unplaced,
+			Math.max(0, TsgHubJson.integer(board, "lineBonus", 0)), Math.max(0, TsgHubJson.integer(board, "randomMin", 0)), Math.max(0, TsgHubJson.integer(board, "randomMax", 0)), bonuses);
 	}
 
 	boolean hasBonus()
 	{
 		return lineBonus > 0 || randomMax > 0;
-	}
-
-	Integer rolledBonus(Line line)
-	{
-		return bonuses.get(line.key());
 	}
 
 	int bonusFor(Line line)
@@ -225,13 +188,6 @@ final class TsgHubBingoBoard
 		return cells[row][col];
 	}
 
-	int emptyCells()
-	{
-		int empty = 0;
-		for (String[] row : cells) for (String id : row) if (id == null) empty++;
-		return empty;
-	}
-
 	List<Line> completedLines(Set<String> done)
 	{
 		List<Line> complete = new ArrayList<>();
@@ -250,31 +206,4 @@ final class TsgHubBingoBoard
 		return true;
 	}
 
-	TsgHubBingoBoard swap(int row, int col, int otherRow, int otherCol)
-	{
-		String[][] copy = new String[size][];
-		for (int i = 0; i < size; i++) copy[i] = cells[i].clone();
-		String moving = copy[row][col];
-		copy[row][col] = copy[otherRow][otherCol];
-		copy[otherRow][otherCol] = moving;
-		return new TsgHubBingoBoard(type, size, mode, false, locked, copy, new ArrayList<>(unplaced), lineBonus, randomMin, randomMax, bonuses);
-	}
-
-	JsonArray tiles()
-	{
-		JsonArray tiles = new JsonArray();
-		for (int row = 0; row < size; row++)
-		{
-			for (int col = 0; col < size; col++)
-			{
-				if (cells[row][col] == null) continue;
-				JsonObject tile = new JsonObject();
-				tile.addProperty("taskId", cells[row][col]);
-				tile.addProperty("row", row);
-				tile.addProperty("col", col);
-				tiles.add(tile);
-			}
-		}
-		return tiles;
-	}
 }

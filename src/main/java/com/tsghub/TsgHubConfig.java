@@ -1,5 +1,6 @@
 package com.tsghub;
 
+import java.awt.Color;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
@@ -18,19 +19,22 @@ public interface TsgHubConfig extends Config
 	@ConfigSection(name = "Chat", description = "TSG Hub messages in your chatbox.", position = 5)
 	String chatSection = "chat";
 
+	@ConfigSection(name = "World map", description = "Clanmates on your world map.", position = 7)
+	String mapSection = "map";
+
 	@ConfigSection(name = "Party", description = "How clan parties look in the TSG Hub sidebar.", position = 10)
 	String partySection = "party";
 
-	@ConfigSection(name = "Discord", description = "Link your Discord account and unlock admin tools.", position = 20)
+	@ConfigSection(name = "Discord", description = "Link your Discord account and unlock the admin site.", position = 20)
 	String discordSection = "admin";
 
-	@ConfigItem(keyName = "dataSharingOptIn", position = 0, section = sharingSection, name = "Share game and clan progress", description = "Opt in to send your RuneScape name, detected clan and rank, PvM progress, loot received during events you join, submitted claims, and clan chat presence and world (so clanmates see you as online in the Members list), clan drop, pet and collection log broadcasts, and, for the Owner and Deputy Owners with an admin hub key, clan members' ranks to the TSG Hub service. Progress and tile-completion notices are local to your chatbox; no other game chat is sent.")
+	@ConfigItem(keyName = "dataSharingOptIn", position = 0, section = sharingSection, name = "Share game and clan progress", description = "Opt in to send your RuneScape name, detected clan and rank, PvM progress, loot received during events you join, submitted claims, raid, boss and minigame completions with clanmates nearby (including those clanmates' names), and clan chat presence and world (so clanmates see you as online in the Members list), and clan drop, pet and collection log broadcasts to the TSG Hub service. Progress and tile-completion notices are local to your chatbox; no other game chat is sent.")
 	default boolean dataSharingOptIn()
 	{
 		return false;
 	}
 
-	@ConfigItem(keyName = "shareLocation", position = 1, section = sharingSection, name = "Share location and activity", description = "Show clanmates your area name and what you're doing (for example Skilling - Mining) in the Members list. When off, you still appear while in clan chat, with just Online and your world. Your exact tile is never sent.")
+	@ConfigItem(keyName = "shareLocation", position = 1, section = sharingSection, name = "Share location and activity", description = "Show clanmates your area name and what you're doing (for example Skilling - Mining) in the Members list, and your position on their world map. Your position isn't shared inside instances. When off, you still appear while in clan chat, with just Online and your world, and your position is never sent.")
 	default boolean shareLocation()
 	{
 		return false;
@@ -61,8 +65,32 @@ public interface TsgHubConfig extends Config
 		return false;
 	}
 
+	@ConfigItem(keyName = "mapNoticeShown", name = "", description = "", hidden = true)
+	default boolean mapNoticeShown()
+	{
+		return false;
+	}
+
 	@ConfigItem(keyName = "eventAnnouncements", position = 0, section = chatSection, name = "Event announcements", description = "Show clan event announcements in your chatbox, such as a custom event starting soon, or an event starting or ending.")
 	default boolean eventAnnouncements()
+	{
+		return true;
+	}
+
+	@ConfigItem(keyName = "clanAnnouncements", position = 1, section = chatSection, name = "Clan announcements", description = "Show new clan announcements from the admins in your chatbox when you log in or when they're posted. They're always listed under News in the sidebar.")
+	default boolean clanAnnouncements()
+	{
+		return true;
+	}
+
+	@ConfigItem(keyName = "chatColor", position = 2, section = chatSection, name = "Message color", description = "Color of the TSG Hub tag and highlighted text in TSG Hub chat messages.")
+	default Color chatColor()
+	{
+		return TsgHubTheme.CHAT;
+	}
+
+	@ConfigItem(keyName = "showClanMap", position = 0, section = mapSection, name = "Show clanmates", description = "Show clanmates who share their location as named markers on your world map. Turn off if they get in the way. This only hides them for you; it doesn't change what you share.")
+	default boolean showClanMap()
 	{
 		return true;
 	}
@@ -91,7 +119,7 @@ public interface TsgHubConfig extends Config
 		return true;
 	}
 
-	@ConfigItem(keyName = "hubKey", position = 0, section = discordSection, secret = true, name = "Hub key", description = "Your key from /hub key in the clan Discord. Links your Discord account to this RuneScape account so your Discord roles follow your clan rank, and unlocks the admin tools if you're a Discord admin.")
+	@ConfigItem(keyName = "hubKey", position = 0, section = discordSection, secret = true, name = "Hub key", description = "Filled in by Link Discord on the home screen, or paste your key from /plugin link in the clan Discord. Links your Discord account to this RuneScape account and unlocks the admin site button if you're a Discord admin.")
 	default String hubKey()
 	{
 		return "";

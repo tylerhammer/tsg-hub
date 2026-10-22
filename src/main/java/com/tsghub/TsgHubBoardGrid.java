@@ -35,7 +35,6 @@ import net.runelite.client.ui.FontManager;
 final class TsgHubBoardGrid extends JComponent
 {
 	interface SelectListener { void selected(String taskId, int row, int col); }
-	interface SwapListener { void swapped(int row, int col, int otherRow, int otherCol); }
 
 	static final Color GOLD = new Color(232, 183, 91);
 	private static final int GAP = 3;
@@ -47,7 +46,6 @@ final class TsgHubBoardGrid extends JComponent
 	private static final int BONUS_MS = 1100;
 
 	private final TsgHubTileIcons images;
-	private int fixedCell;
 	private final Timer timer = new Timer(16, e -> tick());
 	private final Map<String, Long> flips = new HashMap<>();
 	private final Map<String, Long> lineStarts = new HashMap<>();
@@ -60,15 +58,12 @@ final class TsgHubBoardGrid extends JComponent
 	private Set<String> lastDone;
 	private Set<String> lastLines;
 	private String selectedTask = "";
-	private int[] picked;
 	private int[] hover;
 	private SelectListener selectListener;
-	private SwapListener swapListener;
 
-	TsgHubBoardGrid(TsgHubTileIcons images, int fixedCell)
+	TsgHubBoardGrid(TsgHubTileIcons images)
 	{
 		this.images = images;
-		this.fixedCell = fixedCell;
 		if (images != null) images.onLoaded(this::repaint);
 		setOpaque(false);
 		setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -87,20 +82,9 @@ final class TsgHubBoardGrid extends JComponent
 		addMouseMotionListener(mouse);
 	}
 
-	void setCellSize(int cell)
-	{
-		fixedCell = cell;
-		revalidate();
-	}
-
 	void onSelect(SelectListener listener)
 	{
 		selectListener = listener;
-	}
-
-	void onSwap(SwapListener listener)
-	{
-		swapListener = listener;
 	}
 
 	void setSelectedTask(String taskId)
@@ -114,11 +98,6 @@ final class TsgHubBoardGrid extends JComponent
 		return selectedTask;
 	}
 
-	TsgHubBingoBoard board()
-	{
-		return board;
-	}
-
 	void setData(String key, TsgHubBingoBoard board, JsonArray taskList, JsonArray progressRows)
 	{
 		this.board = board;
@@ -126,15 +105,15 @@ final class TsgHubBoardGrid extends JComponent
 		for (int i = 0; i < taskList.size(); i++)
 		{
 			JsonObject task = taskList.get(i).getAsJsonObject();
-			byId.put(TsgHubUi.str(task, "id"), task);
+			byId.put(TsgHubJson.str(task, "id"), task);
 		}
 		Map<String, JsonObject> rows = new HashMap<>();
 		Set<String> nowDone = new HashSet<>();
 		for (int i = 0; i < progressRows.size(); i++)
 		{
 			JsonObject row = progressRows.get(i).getAsJsonObject();
-			rows.put(TsgHubUi.str(row, "taskId"), row);
-			if (TsgHubUi.bool(row, "completed")) nowDone.add(TsgHubUi.str(row, "taskId"));
+			rows.put(TsgHubJson.str(row, "taskId"), row);
+			if (TsgHubJson.bool(row, "completed")) nowDone.add(TsgHubJson.str(row, "taskId"));
 		}
 		tasks = byId;
 		progress = rows;
@@ -146,7 +125,6 @@ final class TsgHubBoardGrid extends JComponent
 		{
 			flips.clear();
 			lineStarts.clear();
-			picked = null;
 		}
 		else if (lastDone != null)
 		{
@@ -164,12 +142,6 @@ final class TsgHubBoardGrid extends JComponent
 		lastLines = lineKeys;
 		if (!flips.isEmpty() || !lineStarts.isEmpty()) timer.start();
 		revalidate();
-		repaint();
-	}
-
-	void clearPick()
-	{
-		picked = null;
 		repaint();
 	}
 
@@ -194,22 +166,6 @@ final class TsgHubBoardGrid extends JComponent
 	private void click(int[] at)
 	{
 		String id = board.taskAt(at[0], at[1]);
-		if (swapListener != null)
-		{
-			if (picked == null)
-			{
-				if (id == null) return;
-				picked = at;
-			}
-			else
-			{
-				int[] from = picked;
-				picked = null;
-				if (from[0] != at[0] || from[1] != at[1]) swapListener.swapped(from[0], from[1], at[0], at[1]);
-			}
-			repaint();
-			return;
-		}
 		if (id == null) return;
 		selectedTask = id.equals(selectedTask) ? "" : id;
 		repaint();
@@ -226,7 +182,6 @@ final class TsgHubBoardGrid extends JComponent
 
 	private int cell()
 	{
-		if (fixedCell > 0) return fixedCell;
 		int n = board == null ? TsgHubBingoBoard.MIN_SIZE : board.size;
 		return Math.max(12, (getWidth() - GAP * (n - 1)) / n);
 	}
@@ -253,11 +208,6 @@ final class TsgHubBoardGrid extends JComponent
 	public Dimension getPreferredSize()
 	{
 		int n = board == null ? TsgHubBingoBoard.MIN_SIZE : board.size;
-		if (fixedCell > 0)
-		{
-			int side = fixedCell * n + GAP * (n - 1);
-			return new Dimension(side, side);
-		}
 		int width = 205;
 		if (getParent() != null && getParent().getWidth() > 0)
 		{
@@ -271,7 +221,7 @@ final class TsgHubBoardGrid extends JComponent
 	@Override
 	public Dimension getMaximumSize()
 	{
-		return fixedCell > 0 ? getPreferredSize() : new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+		return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
 	}
 
 	@Override
@@ -280,24 +230,19 @@ final class TsgHubBoardGrid extends JComponent
 		int[] at = cellAt(event.getPoint());
 		if (at == null) return null;
 		String id = board.taskAt(at[0], at[1]);
-		if (id == null) return swapListener != null ? "Empty cell" : null;
+		if (id == null) return null;
 		JsonObject task = tasks.get(id);
 		if (task == null) return null;
 		JsonObject row = progress.get(id);
-		StringBuilder text = new StringBuilder("<html><b>").append(TsgHubUi.escape(TsgHubUi.str(task, "title"))).append("</b>");
-		text.append("<br>").append(TsgHubUi.integer(task, "points", 1)).append(" pts · ").append(TsgHubUi.escape(TsgHubUi.taskTypeLabel(task)));
-		if (row != null && !swapListener())
+		StringBuilder text = new StringBuilder("<html><b>").append(TsgHubHtml.escape(TsgHubJson.str(task, "title"))).append("</b>");
+		text.append("<br>").append(TsgHubJson.integer(task, "points", 1)).append(" pts");
+		if (row != null)
 		{
-			if (TsgHubUi.bool(row, "completed")) text.append("<br>Done");
-			else if (TsgHubUi.integer(row, "target", 1) > 1) text.append("<br>").append(TsgHubUi.integer(row, "progress", 0)).append(" / ").append(TsgHubUi.integer(row, "target", 1));
-			if (TsgHubUi.bool(row, "pending") && !TsgHubUi.bool(row, "completed")) text.append("<br>Awaiting admin review");
+			if (TsgHubJson.bool(row, "completed")) text.append("<br>Done");
+			else if (TsgHubJson.integer(row, "target", 1) > 1) text.append("<br>").append(TsgHubJson.integer(row, "progress", 0)).append(" / ").append(TsgHubJson.integer(row, "target", 1));
+			if (TsgHubJson.bool(row, "pending") && !TsgHubJson.bool(row, "completed")) text.append("<br>Awaiting admin review");
 		}
 		return text.append("</html>").toString();
-	}
-
-	private boolean swapListener()
-	{
-		return swapListener != null;
 	}
 
 	@Override
@@ -321,16 +266,15 @@ final class TsgHubBoardGrid extends JComponent
 				int y = row * (cell + GAP);
 				String id = board.taskAt(row, col);
 				boolean hovered = hover != null && hover[0] == row && hover[1] == col;
-				boolean isPicked = picked != null && picked[0] == row && picked[1] == col;
 				if (id == null)
 				{
-					paintEmpty(g, x, y, cell, hovered && swapListener != null, isPicked);
+					paintEmpty(g, x, y, cell);
 					continue;
 				}
 				JsonObject task = tasks.get(id);
 				JsonObject taskProgress = progress.get(id);
 				boolean complete = done.contains(id);
-				Tile tile = new Tile(task, taskProgress, complete, inLines.contains(row * board.size + col), id.equals(selectedTask) || isPicked, hovered, icon(task));
+				Tile tile = new Tile(task, taskProgress, complete, inLines.contains(row * board.size + col), id.equals(selectedTask), hovered, icon(task));
 				Long flip = flips.get(id);
 				if (flip == null || now < flip)
 				{
@@ -418,12 +362,12 @@ final class TsgHubBoardGrid extends JComponent
 		return cells;
 	}
 
-	static void paintEmpty(Graphics2D g, int x, int y, int cell, boolean hovered, boolean picked)
+	static void paintEmpty(Graphics2D g, int x, int y, int cell)
 	{
 		Shape shape = new RoundRectangle2D.Double(x + 0.5, y + 0.5, cell - 1, cell - 1, 6, 6);
-		g.setColor(hovered ? TsgHubUi.CARD_HOVER : new Color(0, 0, 0, 40));
+		g.setColor(new Color(0, 0, 0, 40));
 		g.fill(shape);
-		g.setColor(picked ? Color.WHITE : TsgHubUi.BORDER);
+		g.setColor(TsgHubTheme.BORDER);
 		g.setStroke(new BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND, 1f, new float[]{3f, 3f}, 0f));
 		g.draw(shape);
 	}
@@ -431,19 +375,19 @@ final class TsgHubBoardGrid extends JComponent
 	static void paintTile(Graphics2D g, int x, int y, int cell, Tile tile, Font font, boolean names)
 	{
 		Shape shape = new RoundRectangle2D.Double(x + 0.5, y + 0.5, cell - 1, cell - 1, 6, 6);
-		Color base = tile.hovered ? TsgHubUi.CARD_HOVER : TsgHubUi.CARD;
-		g.setColor(tile.complete ? blend(base, TsgHubUi.SUCCESS, 0.32) : base);
+		Color base = tile.hovered ? TsgHubTheme.CARD_HOVER : TsgHubTheme.CARD;
+		g.setColor(tile.complete ? blend(base, TsgHubTheme.SUCCESS, 0.32) : base);
 		g.fill(shape);
 
-		int value = TsgHubUi.integer(tile.progress, "progress", 0);
-		int target = Math.max(1, TsgHubUi.integer(tile.progress, "target", 1));
-		boolean pending = TsgHubUi.bool(tile.progress, "pending");
+		int value = TsgHubJson.integer(tile.progress, "progress", 0);
+		int target = Math.max(1, TsgHubJson.integer(tile.progress, "target", 1));
+		boolean pending = TsgHubJson.bool(tile.progress, "pending");
 		Graphics2D content = (Graphics2D) g.create();
 		content.clip(shape);
 		if (tile.complete) content.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.75f));
 		int areaTop = y + 3;
 		int areaBottom = y + cell - 7;
-		String title = TsgHubUi.str(tile.task, "title");
+		String title = TsgHubJson.str(tile.task, "title");
 		content.setFont(font);
 		FontMetrics metrics = content.getFontMetrics();
 		int lineHeight = metrics.getHeight() - 2;
@@ -474,7 +418,7 @@ final class TsgHubBoardGrid extends JComponent
 			int block = h + gap + textHeight;
 			int top = areaTop + Math.max(0, (areaBottom - areaTop - block) / 2);
 			if (h > 0) content.drawImage(tile.image, x + (cell - w) / 2, top, w, h, null);
-			content.setColor(tile.complete ? TsgHubUi.MUTED : TsgHubUi.TEXT);
+			content.setColor(tile.complete ? TsgHubTheme.MUTED : TsgHubTheme.TEXT);
 			int baseline = top + h + gap + metrics.getAscent();
 			for (String line : lines)
 			{
@@ -491,26 +435,26 @@ final class TsgHubBoardGrid extends JComponent
 			int barW = (int) Math.round(track * Math.min(1.0, value / (double) target));
 			g.setColor(new Color(0, 0, 0, 120));
 			g.fillRoundRect(x + 4, y + cell - 6, track, 3, 3, 3);
-			g.setColor(TsgHubUi.ACCENT);
+			g.setColor(TsgHubTheme.ACCENT);
 			g.fillRoundRect(x + 4, y + cell - 6, barW, 3, 3, 3);
 		}
 		if (flagged)
 		{
-			g.setColor(TsgHubUi.WARNING);
+			g.setColor(TsgHubTheme.WARNING);
 			g.fillOval(x + cell - 10, y + cell - 8, 6, 6);
 		}
 		if (tile.complete) paintCheck(g, x + cell - 13, y + cell - 13, 10);
 
 		g.setStroke(new BasicStroke(tile.selected || tile.inLine ? 2f : 1f));
-		g.setColor(tile.selected ? Color.WHITE : tile.inLine ? GOLD : tile.complete ? TsgHubUi.SUCCESS.darker() : TsgHubUi.BORDER);
+		g.setColor(tile.selected ? Color.WHITE : tile.inLine ? GOLD : tile.complete ? TsgHubTheme.SUCCESS.darker() : TsgHubTheme.BORDER);
 		g.draw(new RoundRectangle2D.Double(x + 1, y + 1, cell - 2, cell - 2, 6, 6));
 	}
 
 	private static void paintCheck(Graphics2D g, int x, int y, int size)
 	{
-		g.setColor(TsgHubUi.SUCCESS);
+		g.setColor(TsgHubTheme.SUCCESS);
 		g.fillOval(x, y, size, size);
-		g.setColor(TsgHubUi.CARD);
+		g.setColor(TsgHubTheme.CARD);
 		g.setStroke(new BasicStroke(1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
 		Path2D tick = new Path2D.Double();
 		tick.moveTo(x + size * 0.25, y + size * 0.53);

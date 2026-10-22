@@ -84,14 +84,14 @@ final class TsgHubTileIcons
 
 	static int itemFor(JsonObject task)
 	{
-		if (task == null || !"drop".equals(TsgHubUi.str(task, "type"))) return 0;
+		if (task == null || !"drop".equals(TsgHubJson.str(task, "type"))) return 0;
 		JsonObject config = config(task);
-		JsonArray groups = TsgHubUi.array(config, "itemGroups");
+		JsonArray groups = TsgHubJson.array(config, "itemGroups");
 		if (groups.size() > 0 && groups.get(0).isJsonArray() && groups.get(0).getAsJsonArray().size() > 0)
-			return TsgHubUi.integer(groups.get(0).getAsJsonArray().get(0).getAsJsonObject(), "id", 0);
-		if ("pet".equals(TsgHubUi.str(config, "itemGroup"))) return ItemID.MOLEPET;
-		if ("jar".equals(TsgHubUi.str(config, "itemGroup"))) return ItemID.JAR_OF_SWAMP;
-		JsonArray ids = TsgHubUi.array(config, "itemIds");
+			return TsgHubJson.integer(groups.get(0).getAsJsonArray().get(0).getAsJsonObject(), "id", 0);
+		if ("pet".equals(TsgHubJson.str(config, "itemGroup"))) return ItemID.MOLEPET;
+		if ("jar".equals(TsgHubJson.str(config, "itemGroup"))) return ItemID.JAR_OF_SWAMP;
+		JsonArray ids = TsgHubJson.array(config, "itemIds");
 		for (int i = 0; i < ids.size(); i++) if (ids.get(i).isJsonPrimitive() && ids.get(i).getAsInt() > 0) return ids.get(i).getAsInt();
 		return 0;
 	}
@@ -100,20 +100,20 @@ final class TsgHubTileIcons
 	{
 		if (task == null) return 0;
 		JsonObject config = config(task);
-		switch (TsgHubUi.str(task, "type"))
+		switch (TsgHubJson.str(task, "type"))
 		{
 			case "kill":
-				String npc = TsgHubUi.str(config, "npcName");
+				String npc = TsgHubJson.str(config, "npcName");
 				Integer sprite = SPRITES.get(key(npc));
 				if (sprite == null) sprite = SPRITES.get(key(ActivityDetector.bossFor(npc)));
 				return sprite == null ? 0 : sprite;
 			case "raid":
-				JsonArray modes = TsgHubUi.array(config, "modes");
+				JsonArray modes = TsgHubJson.array(config, "modes");
 				String mode = modes.size() > 0 && modes.get(0).isJsonPrimitive() ? modes.get(0).getAsString() : "";
 				Integer raid = SPRITES.get(key(raidName(mode)));
 				return raid == null ? 0 : raid;
 			case "xp":
-				Integer skill = SPRITES.get(key(TsgHubUi.str(config, "skill")));
+				Integer skill = SPRITES.get(key(TsgHubJson.str(config, "skill")));
 				return skill == null ? 0 : skill;
 			default:
 				return 0;

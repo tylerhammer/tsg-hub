@@ -1,20 +1,30 @@
 package com.tsghub;
 
+import static com.tsghub.TsgHubJson.*;
+import static com.tsghub.TsgHubSession.GROUP_PASSPHRASE;
+import static com.tsghub.TsgHubSession.GROUP_PLAYER;
+import static com.tsghub.TsgHubSession.GROUP_TOKEN;
+import static com.tsghub.TsgHubUi.*;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.tsghub.TsgHubUi.Tone;
-import com.tsghub.group.GroupTracker;
-import com.tsghub.group.data.PartyPlayer;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
-import javax.swing.SwingUtilities;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.client.party.PartyService;
 
 final class TsgHubGroups implements GroupTracker.Listener
 {
+	private static final String WILDERNESS = "Wilderness lvl ";
 	// The service drops members after 3 minutes without a check-in.
 	static final int HEARTBEAT_SECONDS = 60;
 	static final int REFRESH_SECONDS = 30;
@@ -25,13 +35,16 @@ final class TsgHubGroups implements GroupTracker.Listener
 	private final ScheduledExecutorService executor;
 	private final Supplier<TsgHubApi> api;
 	private final Supplier<TsgHubSidebarPanel> sidebar;
+	private final TsgHubSocket socket;
 	private volatile GroupTracker tracker;
 	private volatile JsonObject group;
+	private volatile boolean awaitingBeat;
 
 	TsgHubGroups(TsgHubPlugin plugin, Client client, PartyService partyService, ScheduledExecutorService executor,
-		Supplier<TsgHubApi> api, Supplier<TsgHubSidebarPanel> sidebar)
+		Supplier<TsgHubApi> api, Supplier<TsgHubSidebarPanel> sidebar, TsgHubSocket socket)
 	{
 		this.plugin = plugin;
+		this.socket = socket;
 		this.client = client;
 		this.partyService = partyService;
 		this.executor = executor;
@@ -46,13 +59,13 @@ final class TsgHubGroups implements GroupTracker.Listener
 
 	boolean isGroupParty(String passphrase)
 	{
-		String saved = TsgHubSession.get("groupPassphrase");
+		String saved = plugin.session().get(GROUP_PASSPHRASE);
 		return plugin.sharingEnabled() && passphrase != null && !saved.isEmpty() && saved.equals(passphrase);
 	}
 
 	boolean inGroup()
 	{
-		return !TsgHubSession.get("groupToken").isEmpty();
+		return !plugin.session().get(GROUP_TOKEN).isEmpty();
 	}
 
 	JsonObject currentGroup()
@@ -63,7 +76,7 @@ final class TsgHubGroups implements GroupTracker.Listener
 	boolean isLeader()
 	{
 		JsonObject current = group;
-		return inGroup() && current != null && TsgHubUi.samePlayer(TsgHubUi.str(current, "leaderName"), TsgHubSession.get("groupPlayer"));
+		return inGroup() && current != null && PlayerNames.samePlayer(TsgHubJson.str(current, "leaderName"), plugin.session().get(GROUP_PLAYER));
 	}
 
 	boolean inOtherParty()
@@ -78,22 +91,32 @@ final class TsgHubGroups implements GroupTracker.Listener
 
 	private void loadGroups(boolean quiet)
 	{
-		if (!canUse() || executor.isShutdown()) return;
-		String clan = encode(plugin.getDetectedClanName());
+		if (!plugin.canUseHub() || executor.isShutdown()) return;
+		String clan = TsgHubApi.encode(plugin.clan().name());
 		if (!quiet) busy(true);
-		executor.submit(() -> {
-			try
-			{
-				JsonArray groups = api.get().request("GET", "/v1/groups?clanName=" + clan, null, null).getAsJsonArray("groups");
-				JsonObject current = group;
-				if (current != null && inGroup())
-					for (int i = 0; i < groups.size(); i++)
-						if (TsgHubUi.str(groups.get(i).getAsJsonObject(), "id").equals(TsgHubUi.str(current, "id"))) group = groups.get(i).getAsJsonObject();
-				ui(s -> s.setGroups(groups));
-			}
-			catch (Exception e) { if (!quiet) status("Couldn't load parties. " + TsgHubUi.friendlyError(e), Tone.ERROR); }
-			finally { if (!quiet) busy(false); }
-		});
+		api.get().call("GET", "/v1/groups?clanName=" + clan, null, null).whenCompleteAsync(TsgHubApi.handle(response ->
+		{
+			apply(response.getAsJsonArray("groups"));
+		}, e -> { if (!quiet) status("Couldn't load parties. " + TsgHubFormat.friendlyError(e), Tone.ERROR); }, () -> { if (!quiet) busy(false); }), executor);
+	}
+
+	void apply(JsonArray groups)
+	{
+		if (groups == null) return;
+		JsonObject current = group;
+		if (current != null && inGroup())
+		{
+			JsonObject next = TsgHubJson.byId(groups, TsgHubJson.str(current, "id"));
+			if (next != null) group = next;
+			if ((next == null || !memberNames(next).equals(memberNames(current))) && !executor.isShutdown()) executor.submit(this::heartbeat);
+		}
+		plugin.ui(s -> s.partiesView.setGroups(groups));
+	}
+
+	void open()
+	{
+		if (socket.isLive()) plugin.liveSync().syncNow();
+		else refresh();
 	}
 
 	void refresh()
@@ -104,7 +127,7 @@ final class TsgHubGroups implements GroupTracker.Listener
 
 	void create()
 	{
-		if (!canUse()) { ui(s -> s.groupActionFailed("Log in to a " + plugin.getHubClanName() + " character first.")); return; }
+		if (!plugin.canUseHub()) { plugin.ui(s -> s.partiesView.groupActionFailed("Log in to a " + plugin.clan().hubName() + " character first.")); return; }
 		enter("POST", "/v1/groups", identity(), true);
 	}
 
@@ -113,6 +136,14 @@ final class TsgHubGroups implements GroupTracker.Listener
 		JsonObject payload = new JsonObject();
 		payload.addProperty("activity", title.trim());
 		update("/v1/groups/title", payload);
+	}
+
+	void kick(String name)
+	{
+		JsonObject payload = new JsonObject();
+		payload.addProperty("displayName", name);
+		update("/v1/groups/kick", payload);
+		if (!executor.isShutdown()) executor.submit(this::heartbeat);
 	}
 
 	void setLocked(boolean locked)
@@ -124,105 +155,130 @@ final class TsgHubGroups implements GroupTracker.Listener
 
 	private void update(String path, JsonObject payload)
 	{
-		String token = TsgHubSession.get("groupToken");
+		String token = plugin.session().get(GROUP_TOKEN);
 		if (token.isEmpty() || executor.isShutdown()) return;
-		executor.submit(() -> {
+		api.get().call("POST", path, token, payload).whenCompleteAsync((response, error) -> {
 			try
 			{
-				JsonObject joined = api.get().request("POST", path, token, payload).getAsJsonObject("group");
+				JsonObject joined = TsgHubApi.result(response, error).getAsJsonObject("group");
 				group = joined;
-				ui(s -> s.groupRefreshed(joined));
-				loadGroups(true);
+				plugin.ui(s -> s.partiesView.groupRefreshed(joined));
+				refreshUnlessLive();
 			}
 			catch (TsgHubApi.HttpError e) { when404(e); }
-			catch (Exception e) { ui(s -> s.groupActionFailed(TsgHubUi.friendlyError(e))); }
-		});
+			catch (Exception e) { plugin.ui(s -> s.partiesView.groupActionFailed(TsgHubFormat.friendlyError(e))); }
+		}, executor);
 	}
 
 	void join(String groupId)
 	{
-		if (!canUse()) { ui(s -> s.groupActionFailed("Log in to a " + plugin.getHubClanName() + " character first.")); return; }
+		if (!plugin.canUseHub()) { plugin.ui(s -> s.partiesView.groupActionFailed("Log in to a " + plugin.clan().hubName() + " character first.")); return; }
 		enter("POST", "/v1/groups/" + groupId + "/join", identity(), false);
 	}
 
 	private void enter(String method, String path, JsonObject payload, boolean created)
 	{
-		String previousToken = TsgHubSession.get("groupToken");
-		executor.submit(() -> {
+		String previousToken = plugin.session().get(GROUP_TOKEN);
+		api.get().call(method, path, null, payload).whenCompleteAsync((response, error) -> {
 			try
 			{
-				JsonObject result = api.get().request(method, path, null, payload);
+				JsonObject result = TsgHubApi.result(response, error);
 				JsonObject joined = result.getAsJsonObject("group");
 				String passphrase = result.get("passphrase").getAsString();
 				// The service already removed us from the previous group.
 				if (!previousToken.isEmpty()) forget();
 				// Save before switching so the tracker recognises the new party.
-				TsgHubSession.set("groupToken", result.get("token").getAsString());
-				TsgHubSession.set("groupPassphrase", passphrase);
-				TsgHubSession.set("groupPlayer", plugin.getDetectedPlayerName());
+				plugin.session().set(GROUP_TOKEN, result.get("token").getAsString());
+				plugin.session().set(GROUP_PASSPHRASE, passphrase);
+				plugin.session().set(GROUP_PLAYER, plugin.clan().playerName());
 				group = joined;
 				partyService.changeParty(passphrase);
-				status(created ? "Started a party." : "Joined " + TsgHubSidebarPanel.partyTitle(joined) + ".", Tone.SUCCESS);
-				ui(s -> s.showGroup(joined));
-				loadGroups(true);
+				status(created ? "Started a party." : "Joined " + partyTitle(joined) + ".", Tone.SUCCESS);
+				plugin.ui(s -> s.partiesView.showGroup(joined));
+				refreshUnlessLive();
 			}
 			catch (TsgHubApi.HttpError e) { when404(e); }
-			catch (Exception e) { ui(s -> s.groupActionFailed(TsgHubUi.friendlyError(e))); }
-		});
+			catch (Exception e) { plugin.ui(s -> s.partiesView.groupActionFailed(TsgHubFormat.friendlyError(e))); }
+		}, executor);
 	}
 
 	void leave()
 	{
-		String token = TsgHubSession.get("groupToken");
+		String token = plugin.session().get(GROUP_TOKEN);
 		// Compare passphrases directly: sharing may already be off.
-		String passphrase = TsgHubSession.get("groupPassphrase");
+		String passphrase = plugin.session().get(GROUP_PASSPHRASE);
 		boolean ours = partyService.isInParty() && !passphrase.isEmpty() && passphrase.equals(partyService.getPartyPassphrase());
 		forget();
 		if (ours) partyService.changeParty(null);
-		ui(TsgHubSidebarPanel::showGroupList);
+		plugin.ui(s -> s.partiesView.showGroupList());
 		if (token.isEmpty() || executor.isShutdown()) return;
-		executor.submit(() -> {
-			try { api.get().request("POST", "/v1/groups/leave", token, null); }
-			catch (Exception ignored) { /* The service drops idle members on its own. */ }
-			loadGroups();
-		});
+		// The service drops idle members on its own if this fails.
+		api.get().call("POST", "/v1/groups/leave", token, null).whenCompleteAsync((response, error) -> refreshUnlessLive(), executor);
 	}
 
 	void heartbeat()
 	{
-		String token = TsgHubSession.get("groupToken");
+		String token = plugin.session().get(GROUP_TOKEN);
 		if (token.isEmpty()) return;
 		if (!plugin.sharingEnabled()) { leave(); return; }
 		GroupTracker t = tracker;
 		if (t != null && t.idleTooLong()) { status("Left your party after 30 minutes logged out.", Tone.INFO); leave(); return; }
-		String name = plugin.getDetectedPlayerName();
-		if (!name.isEmpty() && !TsgHubUi.samePlayer(name, TsgHubSession.get("groupPlayer"))) { leave(); return; }
+		String name = plugin.clan().playerName();
+		if (!name.isEmpty() && !PlayerNames.samePlayer(name, plugin.session().get(GROUP_PLAYER))) { leave(); return; }
 		JsonObject payload = new JsonObject();
 		if (client.getGameState() == GameState.LOGGED_IN) payload.addProperty("world", client.getWorld());
 		payload.addProperty("area", plugin.currentArea());
-		try
+		if (!awaitingBeat && socket.groupHeartbeat(token, payload))
 		{
-			JsonObject joined = api.get().request("POST", "/v1/groups/heartbeat", token, payload).getAsJsonObject("group");
-			group = joined;
-			// Still listed after a client restart but not connected.
-			String passphrase = TsgHubSession.get("groupPassphrase");
-			if (!passphrase.equals(partyService.getPartyPassphrase())) partyService.changeParty(passphrase);
-			ui(s -> s.groupRefreshed(joined));
-			loadGroups(true);
+			awaitingBeat = true;
+			return;
 		}
-		catch (TsgHubApi.HttpError e)
-		{
-			if (e.status != 404) return;
-			status("Your party has closed.", Tone.INFO);
-			leave();
-		}
-		catch (Exception ignored) { /* Try again next beat. */ }
+		awaitingBeat = false;
+		api.get().call("POST", "/v1/groups/heartbeat", token, payload).whenCompleteAsync((response, error) -> {
+			try { beaten(TsgHubApi.result(response, error)); }
+			catch (TsgHubApi.HttpError e) { beatRejected(e.status); }
+			catch (Exception ignored) { /* Try again next beat. */ }
+		}, executor);
+	}
+
+	void beaten(JsonObject result)
+	{
+		awaitingBeat = false;
+		if (!inGroup() || !result.has("group") || !result.get("group").isJsonObject()) return;
+		JsonObject joined = result.getAsJsonObject("group");
+		group = joined;
+		String rotated = str(result, "passphrase");
+		if (!rotated.isEmpty()) plugin.session().set(GROUP_PASSPHRASE, rotated);
+		// Still listed after a client restart but not connected.
+		String passphrase = plugin.session().get(GROUP_PASSPHRASE);
+		if (!passphrase.equals(partyService.getPartyPassphrase())) partyService.changeParty(passphrase);
+		plugin.ui(s -> s.partiesView.groupRefreshed(joined));
+	}
+
+	void beatRejected(int status)
+	{
+		awaitingBeat = false;
+		if (status != 404 || !inGroup()) return;
+		status("Your party has closed.", Tone.INFO);
+		leave();
+	}
+
+	private void refreshUnlessLive()
+	{
+		if (!socket.isLive()) loadGroups(true);
+	}
+
+	private static List<String> memberNames(JsonObject group)
+	{
+		List<String> names = new ArrayList<>();
+		for (JsonObject member : objects(array(group, "members"))) names.add(PlayerNames.key(str(member, "displayName")));
+		return names;
 	}
 
 	private void when404(TsgHubApi.HttpError e)
 	{
 		if (e.status == 404) loadGroups();
-		ui(s -> s.groupActionFailed(TsgHubUi.friendlyError(e)));
+		plugin.ui(s -> s.partiesView.groupActionFailed(TsgHubFormat.friendlyError(e)));
 	}
 
 	void onSharingDisabled()
@@ -233,24 +289,14 @@ final class TsgHubGroups implements GroupTracker.Listener
 	private void forget()
 	{
 		group = null;
-		TsgHubSession.set("groupToken", "");
-		TsgHubSession.set("groupPassphrase", "");
-		TsgHubSession.set("groupPlayer", "");
+		plugin.session().set(GROUP_TOKEN, "");
+		plugin.session().set(GROUP_PASSPHRASE, "");
+		plugin.session().set(GROUP_PLAYER, "");
 	}
 
-	@Override
-	public void memberUpdated(PartyPlayer player, boolean bannerChanged, boolean self)
-	{
-		TsgHubSidebarPanel s = sidebar.get();
-		if (s != null) s.groupMemberUpdated(player, bannerChanged, self);
-	}
+	@Override public void memberUpdated(PartyPlayer player, boolean self) { parties(v -> v.groupMemberUpdated(player, self)); }
 
-	@Override
-	public void memberRemoved(PartyPlayer player)
-	{
-		TsgHubSidebarPanel s = sidebar.get();
-		if (s != null) s.groupMemberRemoved(player);
-	}
+	@Override public void memberRemoved(PartyPlayer player) { parties(v -> v.groupMemberRemoved(player)); }
 
 	List<String> liveAreas()
 	{
@@ -264,18 +310,14 @@ final class TsgHubGroups implements GroupTracker.Listener
 		if (s != null && s.wantsGroups()) loadGroups(true);
 	}
 
-	@Override
-	public void areasChanged()
-	{
-		TsgHubSidebarPanel s = sidebar.get();
-		if (s != null) s.partyAreasChanged();
-	}
+	@Override public void areasChanged() { parties(v -> v.partyAreasChanged()); }
 
-	@Override
-	public void membersCleared()
+	@Override public void membersCleared() { parties(v -> v.groupMembersCleared()); }
+
+	private void parties(Consumer<TsgHubPartiesView> action)
 	{
 		TsgHubSidebarPanel s = sidebar.get();
-		if (s != null) s.groupMembersCleared();
+		if (s != null) action.accept(s.partiesView);
 	}
 
 	@Override
@@ -285,42 +327,68 @@ final class TsgHubGroups implements GroupTracker.Listener
 		if (inGroup() && !isGroupParty(passphrase)) executor.submit(this::leave);
 	}
 
-	private boolean canUse()
-	{
-		return plugin.isInHubClan() && plugin.sharingEnabled() && !plugin.getDetectedPlayerName().isEmpty();
-	}
-
 	private JsonObject identity()
 	{
 		JsonObject payload = new JsonObject();
-		payload.addProperty("displayName", plugin.getDetectedPlayerName());
-		payload.addProperty("clanName", plugin.getDetectedClanName());
+		payload.addProperty("displayName", plugin.clan().playerName());
+		payload.addProperty("clanName", plugin.clan().name());
 		payload.addProperty("world", client.getWorld());
 		payload.addProperty("area", plugin.currentArea());
 		return payload;
 	}
 
-	private static String encode(String value)
-	{
-		try { return java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8.name()); }
-		catch (java.io.UnsupportedEncodingException e) { return ""; }
-	}
-
-	private void ui(java.util.function.Consumer<TsgHubSidebarPanel> action)
-	{
-		SwingUtilities.invokeLater(() -> {
-			TsgHubSidebarPanel s = sidebar.get();
-			if (s != null) action.accept(s);
-		});
-	}
-
 	private void status(String message, Tone tone)
 	{
-		ui(s -> s.setStatus(message, tone));
+		plugin.ui(s -> s.setStatus(message, tone));
 	}
 
 	private void busy(boolean isBusy)
 	{
-		ui(s -> s.setBusy(isBusy));
+		plugin.ui(s -> s.setBusy(isBusy));
+	}
+
+	static String partyTitle(JsonObject group)
+	{
+		String title = str(group, "activity");
+		if (!title.isEmpty()) return title;
+		Map.Entry<String, Integer> area = areaSummary(array(group, "members"));
+		if (area != null) return area.getKey();
+		String leader = str(group, "leaderName");
+		return leader.isEmpty() ? "Party" : leader + "'s party";
+	}
+
+	static Map.Entry<String, Integer> areaSummary(JsonArray members)
+	{
+		List<String> areas = new ArrayList<>();
+		for (JsonObject member : objects(members)) areas.add(str(member, "area"));
+		return areaSummary(areas);
+	}
+
+	static Map.Entry<String, Integer> areaSummary(List<String> areas)
+	{
+		Map<String, Integer> counts = new LinkedHashMap<>();
+		int low = Integer.MAX_VALUE;
+		int high = 0;
+		for (String area : areas)
+		{
+			if (area == null || area.isEmpty()) continue;
+			if (area.startsWith(WILDERNESS))
+			{
+				try
+				{
+					int level = Integer.parseInt(area.substring(WILDERNESS.length()).trim());
+					low = Math.min(low, level);
+					high = Math.max(high, level);
+					area = "Wilderness";
+				}
+				catch (NumberFormatException ignored) { }
+			}
+			counts.merge(area, 1, Integer::sum);
+		}
+		if (counts.isEmpty()) return null;
+		Map.Entry<String, Integer> top = Collections.max(counts.entrySet(), Map.Entry.comparingByValue());
+		String name = top.getKey();
+		if (name.equals("Wilderness") && high > 0) name += " lvl " + (low == high ? String.valueOf(low) : low + "-" + high);
+		return new AbstractMap.SimpleImmutableEntry<>(name, top.getValue());
 	}
 }

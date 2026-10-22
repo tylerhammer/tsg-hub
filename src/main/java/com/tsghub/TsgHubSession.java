@@ -2,40 +2,34 @@ package com.tsghub;
 
 import java.util.ArrayList;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import net.runelite.client.config.ConfigManager;
 
-final class TsgHubSession
+@RequiredArgsConstructor
+class TsgHubSession
 {
+	static final String EVENT_ID = "eventId";
+	static final String TOKEN = "token";
+	static final String DISPLAY_NAME = "displayName";
+	static final String MEMBER_TOKEN = "memberToken:";
+	static final String MEMBER_NAME = "memberName:";
+	static final String SIGNUP_NOTE = "signupNote:";
+	static final String GROUP_TOKEN = "groupToken";
+	static final String GROUP_PASSPHRASE = "groupPassphrase";
+	static final String GROUP_PLAYER = "groupPlayer";
+	static final String HIDE_COMPLETED = "hideCompleted";
+	static final String BOARD_VIEW = "boardView";
+	static final String SHOW_OFFLINE = "showOffline";
+	static final String DOCK_VIEW = "dockView";
+	static final String DOCK_SPLIT = "dockSplit";
+	static final String DOCK_COLLAPSED = "dockCollapsed";
+	static final String DROP_TYPE = "dropType";
+	static final String DROP_VALUE = "dropValue";
+	static final String ANNOUNCEMENTS_READ = "announcementsRead";
+	static final String ANNOUNCEMENTS_ALERTED = "announcementsAlerted";
+
 	private static final String GROUP = "tsghubsession";
-	private static final String PROFILE_PREFIX = GROUP + "." + ConfigManager.RSPROFILE_GROUP + ".";
-	private static volatile ConfigManager configManager;
-
-	private TsgHubSession()
-	{
-	}
-
-	static void init(ConfigManager manager)
-	{
-		configManager = manager;
-		clearLegacyKeys(manager);
-	}
-
-	private static void clearLegacyKeys(ConfigManager manager)
-	{
-		for (String key : manager.getConfigurationKeys(GROUP + "."))
-		{
-			if (!key.startsWith(PROFILE_PREFIX))
-			{
-				manager.unsetConfiguration(GROUP, key.substring(GROUP.length() + 1));
-				continue;
-			}
-			int split = key.indexOf('.', PROFILE_PREFIX.length());
-			if (split < 0) continue;
-			String name = key.substring(split + 1);
-			if (name.startsWith(encode("clanAdminToken:")) || name.startsWith(encode("clanAdminExpiresAt:")))
-				manager.unsetConfiguration(GROUP, key.substring(GROUP.length() + 1, split), name);
-		}
-	}
+	private final ConfigManager configManager;
 
 	// ConfigManager rejects ':' in keys, so ':' is stored as '_'.
 	// Event IDs, clan keys and prefixes never contain '_'.
@@ -49,7 +43,7 @@ final class TsgHubSession
 		return key.replace('_', ':');
 	}
 
-	static String get(String key)
+	String get(String key)
 	{
 		ConfigManager manager = configManager;
 		if (manager == null) return "";
@@ -57,7 +51,7 @@ final class TsgHubSession
 		return value == null ? "" : value;
 	}
 
-	static void set(String key, String value)
+	void set(String key, String value)
 	{
 		ConfigManager manager = configManager;
 		if (manager == null) return;
@@ -65,7 +59,7 @@ final class TsgHubSession
 		else manager.setRSProfileConfiguration(GROUP, encode(key), value);
 	}
 
-	static List<String> keysWithPrefix(String prefix)
+	List<String> keysWithPrefix(String prefix)
 	{
 		ConfigManager manager = configManager;
 		List<String> keys = new ArrayList<>();
@@ -76,7 +70,28 @@ final class TsgHubSession
 		return keys;
 	}
 
-	static void removePrefix(String prefix)
+	String memberToken(String eventId)
+	{
+		return eventValue(MEMBER_TOKEN, eventId, TOKEN);
+	}
+
+	String memberName(String eventId)
+	{
+		return eventValue(MEMBER_NAME, eventId, DISPLAY_NAME);
+	}
+
+	private String eventValue(String prefix, String eventId, String activeKey)
+	{
+		String value = get(prefix + eventId);
+		return value.isEmpty() && eventId.equals(get(EVENT_ID)) ? get(activeKey) : value;
+	}
+
+	void clear(String... keys)
+	{
+		for (String key : keys) set(key, "");
+	}
+
+	void removePrefix(String prefix)
 	{
 		for (String key : keysWithPrefix(prefix)) set(key, "");
 	}

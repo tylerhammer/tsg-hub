@@ -20,13 +20,11 @@ public class BingoBoardTest
 	public void oldEventWithoutBoardFillsTasksInOrder()
 	{
 		TsgHubBingoBoard board = TsgHubBingoBoard.of(event(5));
-		assertTrue(board.auto);
 		assertEquals(3, board.size);
 		assertEquals("t0", board.taskAt(0, 0));
 		assertEquals("t3", board.taskAt(1, 0));
 		assertEquals("t4", board.taskAt(1, 1));
 		assertNull(board.taskAt(2, 2));
-		assertEquals(4, board.emptyCells());
 		assertTrue(board.unplaced.isEmpty());
 	}
 
@@ -62,8 +60,6 @@ public class BingoBoardTest
 		board.add("tiles", tiles(tile("t0", 2, 2), tile("gone", 0, 0), tile("t1", 2, 2), tile("t2", 7, 0)));
 		event.add("board", board);
 		TsgHubBingoBoard resolved = TsgHubBingoBoard.of(event);
-		assertFalse(resolved.auto);
-		assertTrue(resolved.locked);
 		assertEquals("t0", resolved.taskAt(2, 2));
 		assertEquals("t1", resolved.taskAt(0, 0));
 		assertEquals("t2", resolved.taskAt(0, 1));
@@ -78,23 +74,6 @@ public class BingoBoardTest
 		board.addProperty("size", 3);
 		event.add("board", board);
 		assertEquals(Arrays.asList("t9", "t10"), TsgHubBingoBoard.of(event).unplaced);
-	}
-
-	@Test
-	public void teamLayoutWinsForThatTeam()
-	{
-		JsonObject event = event(2);
-		JsonObject board = new JsonObject();
-		board.addProperty("size", 3);
-		board.addProperty("mode", "team");
-		board.add("tiles", tiles(tile("t0", 0, 0), tile("t1", 0, 1)));
-		JsonObject teams = new JsonObject();
-		teams.add("red", tiles(tile("t0", 2, 2), tile("t1", 1, 1)));
-		board.add("teams", teams);
-		event.add("board", board);
-		assertEquals("t0", TsgHubBingoBoard.of(event, "red").taskAt(2, 2));
-		assertEquals("t0", TsgHubBingoBoard.of(event, "blue").taskAt(0, 0));
-		assertEquals("team", TsgHubBingoBoard.of(event).mode);
 	}
 
 	@Test
@@ -120,21 +99,6 @@ public class BingoBoardTest
 	}
 
 	@Test
-	public void swapMovesTilesAndKeepsJsonInSync()
-	{
-		TsgHubBingoBoard board = TsgHubBingoBoard.of(event(4)).swap(0, 0, 2, 2);
-		assertEquals("t0", board.taskAt(2, 2));
-		assertNull(board.taskAt(0, 0));
-		assertFalse(board.auto);
-		JsonArray tiles = board.tiles();
-		assertEquals(4, tiles.size());
-		JsonObject last = tiles.get(3).getAsJsonObject();
-		assertEquals("t0", last.get("taskId").getAsString());
-		assertEquals(2, last.get("row").getAsInt());
-		assertEquals(2, last.get("col").getAsInt());
-	}
-
-	@Test
 	public void lineBonusesAddStaticAndRevealedRandom()
 	{
 		JsonObject event = event(9);
@@ -152,11 +116,7 @@ public class BingoBoardTest
 		assertEquals(2, lines.size());
 		assertEquals(17, resolved.bonusFor(lines));
 		assertEquals("Each line: +5, plus a hidden 1 to 9 pts", resolved.bonusRule());
-		assertEquals(Integer.valueOf(7), resolved.rolledBonus(new TsgHubBingoBoard.Line(TsgHubBingoBoard.Direction.ROW, 0)));
-		assertNull(resolved.rolledBonus(new TsgHubBingoBoard.Line(TsgHubBingoBoard.Direction.COLUMN, 0)));
 		assertEquals(8, resolved.allLines().size());
-		assertEquals("Row 1", resolved.allLines().get(0).label());
-		assertEquals(17, resolved.swap(0, 0, 1, 1).bonusFor(lines));
 	}
 
 	@Test

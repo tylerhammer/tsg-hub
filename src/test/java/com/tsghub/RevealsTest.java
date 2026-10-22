@@ -121,7 +121,6 @@ public class RevealsTest
 		assertTrue(merged.before.isEmpty());
 		assertEquals(1, merged.lineCount());
 		assertEquals("ROW:0", merged.lines.get(0).key());
-		assertFalse(TsgHubReveals.Moment.preview(event("red")).mergesWith(TsgHubReveals.Moment.preview(event("red"))));
 		TsgHubReveals other = new TsgHubReveals();
 		other.update(event("blue"), "blue", "Crab Legs");
 		assertFalse(first.mergesWith(other.update(event("blue", "t0"), "blue", "Crab Legs")));
@@ -207,11 +206,11 @@ public class RevealsTest
 	}
 
 	@Test
-	public void previewStampsAFirstRowTile()
+	public void lineClearTimingIsInOrder()
 	{
-		TsgHubReveals.Moment moment = TsgHubReveals.Moment.preview(event("red"));
-		assertEquals(Collections.singletonList("t0"), moment.tiles);
-		assertEquals(new HashSet<>(Arrays.asList("t1", "t2")), moment.before);
+		TsgHubReveals reveals = new TsgHubReveals();
+		reveals.update(event("red", "t1", "t2"), "red", "Crab Legs");
+		TsgHubReveals.Moment moment = reveals.update(event("red", "t0", "t1", "t2"), "red", "Crab Legs");
 		assertEquals("ROW:0", moment.lines.get(0).key());
 		assertTrue(TsgHubRevealOverlay.lineAt(moment, 0) >= TsgHubRevealOverlay.strikesAt(moment));
 		assertTrue(TsgHubRevealOverlay.strikeAt(moment, 0) > TsgHubRevealOverlay.lineAt(moment, 0));

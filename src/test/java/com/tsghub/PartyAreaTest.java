@@ -4,14 +4,22 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import net.runelite.api.Skill;
 import net.runelite.api.coords.WorldPoint;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class PartyAreaTest
 {
+	@BeforeClass
+	public static void rules()
+	{
+		TsgHubRules.loadBundled(new Gson());
+	}
+
 	@Test
 	public void wildernessLevel()
 	{
@@ -85,12 +93,12 @@ public class PartyAreaTest
 	@Test
 	public void partyTitle()
 	{
-		assertEquals("Alice's party", TsgHubSidebarPanel.partyTitle(group("", "", "")));
-		assertEquals("Black drags", TsgHubSidebarPanel.partyTitle(group("Black drags", "Edgeville")));
-		assertEquals("Wilderness lvl 40", TsgHubSidebarPanel.partyTitle(group("", "Wilderness lvl 40", "Wilderness lvl 40")));
-		assertEquals("Wilderness lvl 40-42", TsgHubSidebarPanel.partyTitle(group("", "Wilderness lvl 42", "Wilderness lvl 40")));
-		assertEquals("Wilderness lvl 40", TsgHubSidebarPanel.partyTitle(group("", "Wilderness lvl 40", "Wilderness lvl 40", "Edgeville")));
-		assertEquals(2, (int) TsgHubSidebarPanel.areaSummary(members("Wilderness lvl 40", "Wilderness lvl 40", "Edgeville")).getValue());
+		assertEquals("Alice's party", TsgHubGroups.partyTitle(group("", "", "")));
+		assertEquals("Black drags", TsgHubGroups.partyTitle(group("Black drags", "Edgeville")));
+		assertEquals("Wilderness lvl 40", TsgHubGroups.partyTitle(group("", "Wilderness lvl 40", "Wilderness lvl 40")));
+		assertEquals("Wilderness lvl 40-42", TsgHubGroups.partyTitle(group("", "Wilderness lvl 42", "Wilderness lvl 40")));
+		assertEquals("Wilderness lvl 40", TsgHubGroups.partyTitle(group("", "Wilderness lvl 40", "Wilderness lvl 40", "Edgeville")));
+		assertEquals(2, (int) TsgHubGroups.areaSummary(members("Wilderness lvl 40", "Wilderness lvl 40", "Edgeville")).getValue());
 	}
 
 	private static JsonObject group(String title, String... areas)

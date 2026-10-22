@@ -1,28 +1,53 @@
+<div align="center">
+
 # TSG Hub
 
-Clan events for **Type Shiii Gaming** (TSG), right in your RuneLite sidebar. Join a bingo team, climb the Skill of the Week leaderboard, find a raid party, and let the plugin track your progress while you play.
+**Clan events for TypeShii Gaming, right in your RuneLite sidebar.**
 
-![TSG Hub sidebar: clan events, a live bingo board, and clan parties](docs/images/hero.png)
+Join a bingo team, climb the Skill of the Week leaderboard, find a raid party, and let the plugin track your progress while you play.
 
-> TSG Hub only works for characters in the **TSGaming** clan. Anyone else sees a members-only message, and nothing is sent.
+[Getting started](#getting-started) · [Features](#features) · [Discord](#link-your-discord) · [Admins](#for-admins) · [Privacy](#privacy)
+
+<img src="docs/images/hero.png" width="820" alt="TSG Hub sidebar: clan events, a live bingo board, and clan parties">
+
+</div>
+
+> **Members only.** TSG Hub only works for members of the **TSGaming** clan. Anyone else sees a members-only message, and nothing is sent.
+
+## Getting started
+
+1. Install **TSG Hub** from the Plugin Hub.
+2. Log in to a character in the TSGaming clan and open the TSG Hub sidebar.
+3. Click **Enable sharing**. Nothing is sent until you do.
+4. Pick an event. For bingo, enter the team code an admin gave you, or [sign up](#sign-up-without-a-team) if the bingo takes sign-ups. Your team is fixed once you join.
+
+<table align="center"><tr><td align="center" valign="top"><img src="docs/images/home.png" width="260" alt="TSG Hub home with Events, Parties, Members and Drops tiles"><br><sub>Home</sub></td><td align="center" valign="top"><img src="docs/images/events.png" width="260" alt="Live and upcoming events"><br><sub>Events</sub></td></tr></table>
+
+**Disconnect from event** on the **Team** tab stops tracking on this device. Your team keeps its progress, and you can rejoin with the same code.
 
 ## Features
 
-- **Bingo boards** with team tasks on a real bingo card that update automatically from kills, drops, raids and collection log unlocks.
-- **Skill of the Week** and **Boss of the Week** leaderboards you join with one click.
-- **Custom** events (drop parties, clan trips, anything else) announced with the time, world and location.
-- **Prizes**: events can list GP prizes for 1st, 2nd and 3rd place.
-- **Clan parties** for raids, bossing and skilling. Join with one click, no passphrase to type, and see your party's health, prayer, gear, inventory and skills live.
-- **Members** list showing which clanmates are online, their world, area and what they're doing.
-- **Drops** history of the clan's big drops, raid loot, pets and collection log items, so you can catch up on what you missed.
-- **Discord linking**: link your RuneScape account to the clan Discord, and your Discord roles follow your in-game clan rank.
-- **Admin tools** for clan admins: create events, teams and tasks, and review proof, all without leaving the game.
+| Feature | What it does |
+|---|---|
+| 🎯 **[Bingo](#bingo)** | Team boards on a bingo card that update automatically from kills, drops, raids and collection log unlocks, with a dauber stamp when you finish a tile |
+| 🏆 **[Competitions](#competitions-and-custom-events)** | Skill of the Week and Boss of the Week leaderboards you join with one click |
+| 📣 **[Custom events](#competitions-and-custom-events)** | Drop parties, clan trips and more, announced with the time, world and location |
+| 💰 **Prizes** | Optional GP prizes for 1st, 2nd and 3rd place |
+| ⚔️ **[Clan parties](#clan-parties)** | Raids, bossing and skilling. One-click join, no passphrase, live health, prayer, gear, inventory and skills |
+| 👥 **[Members](#members)** | Which clanmates are online, their world, area and what they're doing |
+| 💎 **[Drops](#drops)** | The clan's big drops, raid loot, pets and collection log items, so you can catch up |
+| 📰 **[News](#news)** | Announcements from the admins, in the sidebar and your chatbox |
+| 📌 **[Split view](#split-view)** | Pin Members, Parties or Drops below the main view |
+| 🔗 **[Discord linking](#link-your-discord)** | Link your RuneScape account to the clan Discord |
+| 🛠️ **[Admin tools](#for-admins)** | One click to the admin site, plus member notes and warnings in the sidebar |
+
+---
 
 ## Bingo
 
 Your team's board opens straight from the sidebar. The header shows your team's rank, points and tasks done, plus the prize for each place. Board bingos show your tasks as a bingo card: each tile shows the task's item icon, boss or raid icon, or name, a progress strip, and a tick once it's done. Finished rows, columns and diagonals light up gold, and the line count shows above the card. If the admins set line bonuses, each finished line also adds bonus points to your team's score: a fixed bonus, a hidden random one revealed when you finish the line, or both. The rule shows under the card. Click a tile to see its task details, submit proof, or check who contributed.
 
-When you complete a tile, your board pops up in the middle of the game screen and a bingo dauber slams a red ink dot onto the tile, with a splash, a flash and its points floating up. If that tile finishes a line, a gold wave ripples across the line tile by tile, a gold strike runs through it, and a **BINGO!** stamp lands with the line bonus. Only the player who completed the tile sees it, so teammates aren't interrupted mid-fight. It never plays in the Wilderness, a PvP area or a PvP world; it waits until you're back somewhere safe. It comes with sound: the dauber thunk, a rising note for each tile in the line, and a slam for the BINGO! stamp. Click the board to skip it. Under **Bingo** in the plugin settings, turn it off with **Tile reveal animation**, mute it with **Reveal sounds**, or set **Reveal volume**.
+When you complete a tile, your board pops up in the middle of the game screen and a bingo dauber slams a red ink dot onto the tile, with a splash, a flash and its points floating up. If that tile finishes a line, a gold wave ripples across the line tile by tile, a gold strike runs through it, and a **BINGO!** stamp lands with the line bonus. Only the player who completed the tile sees it, so teammates aren't interrupted mid-fight. It never plays in the Wilderness, a PvP area or a PvP world; it waits until you're back somewhere safe. It comes with sound: the dauber thunk, a rising note for each tile in the line, and a slam for the BINGO! stamp. If you finish several tiles at once, it stamps up to three, favouring ones that finish a line, and counts the rest. Click the board to skip it. Under **Bingo** in the plugin settings, turn it off with **Tile reveal animation**, mute it with **Reveal sounds**, or set **Reveal volume**.
 
 **Show board on screen** puts your team's board in the game view (hold Alt and drag to move it). Click a tile to flip it over and see its task, progress and points; it flips back after a few seconds, or when you click it again. Tiles there flip over as they complete too.
 
@@ -32,15 +57,17 @@ Some bingos are task lists instead of boards. They show just the list, with no c
 
 **Scores** ranks every team and shows completed lines and bonus points, and **Team** lists your teammates. The board updates live while it's open.
 
+**Claim a tile** to tell your team you're going for it: right-click an open task and pick **Claim tile**, with an optional note such as "doing it tonight" (up to 100 characters). Each task shows who on your team has claimed it, and hovering it shows their notes. Tiles you've claimed are highlighted. Right-click again to **Change note** or **Drop claim**. Several teammates can claim the same tile, and only your team sees your claims. Claims clear when your team completes the tile or you disconnect from the event.
+
 When you make progress, a message appears in **your own chatbox only**. When your team finishes a tile, teammates who are online in clan chat get a local alert too. TSG Hub never posts to public or clan chat.
 
 ![Daubed tiles and a BINGO! stamp on the board](docs/images/reveal.png)
 
-<p>
-<img src="docs/images/board-grid.png" width="320" alt="A team's bingo card with a completed row and a selected tile">
-<img src="docs/images/board-tasks.png" width="320" alt="A team's bingo tasks as a list with progress on each task">
-<img src="docs/images/board-scores.png" width="320" alt="Team scoreboard">
-</p>
+<table align="center"><tr><td align="center" valign="top"><img src="docs/images/board-tasks.png" width="240" alt="A team's bingo board with progress on each task"><br><sub>Tasks</sub></td><td align="center" valign="top"><img src="docs/images/board-scores.png" width="240" alt="Team scoreboard"><br><sub>Scores</sub></td><td align="center" valign="top"><img src="docs/images/board-team.png" width="240" alt="Team tab listing teammates"><br><sub>Team</sub></td></tr></table>
+
+### Sign up without a team
+
+If an admin turns on sign-ups for a bingo, its page shows **Sign up for a team** with how many members are waiting and when sign-ups close. Add an optional note, such as when you can play (up to 200 characters), and click **Sign up**. While you wait, the bingo shows **Signed up, waiting for a team** with your note; **Edit note** changes it while sign-ups are open, and **Withdraw** takes you out of the pool. When an admin puts you on a team from the admin site, the bingo switches to your team's board, live if you have it open. No team code is needed, and progress only counts once you're on a team. Team codes keep working alongside sign-ups.
 
 ### What gets tracked
 
@@ -50,9 +77,8 @@ When you make progress, a message appears in **your own chatbox only**. When you
 | **Item drops** | Any listed item from NPC loot, matched by RuneLite item ID |
 | **Item sets** | Every piece of a set, such as Barrows or Bandos. Teammates can each find different pieces |
 | **Any jar / Any boss pet** | Built-in groups, so admins don't have to list every item |
-| **Raids** | Chambers of Xeric, Theatre of Blood and Tombs of Amascut completions, per mode. Optionally clan-only |
+| **Raids** | Chambers of Xeric, Theatre of Blood and Tombs of Amascut completions, per mode. Optionally clan-only; a clan-only completion where the plugin can't see who was in the raid doesn't count |
 | **Collection log** | New collection log unlocks count toward set tasks |
-| **Manual** | Submit a screenshot link or note; an admin reviews it |
 
 Tasks can be **Team** (everyone's progress pools together), **Everyone** (each member reaches the target), or **Solo** (one member does it alone).
 
@@ -66,9 +92,7 @@ The **Events** list splits live and upcoming events, with each one's prize pool.
 
 Every event shows its start and end in your own time zone, with the zone name (for example "Mon 5 Oct, 7pm AEDT") and how long until it starts or ends. Competitions count gains made between those exact times, wherever you are.
 
-<p>
-<img src="docs/images/competition.png" width="320" alt="Skill of the Week leaderboard">
-</p>
+<p align="center"><img src="docs/images/competition.png" width="280" alt="Skill of the Week leaderboard"></p>
 
 ## Clan parties
 
@@ -78,21 +102,32 @@ There's no passphrase to share. Once you're in, each member's panel shows their 
 
 A party closes when its last member leaves. Members drop out after 3 minutes without checking in, or after 30 minutes at the login screen.
 
-<p>
-<img src="docs/images/parties.png" width="320" alt="Clan party list">
-</p>
+<p align="center"><img src="docs/images/parties.png" width="280" alt="Clan party list"></p>
 
 ## Members
 
 The **Members** section lists clanmates who are in clan chat with sharing on. Each row shows their world, area and what they're doing, such as `Mining · Motherlode Mine`, `Vorkath` or `Chambers of Xeric`. Clanmates on your world have their world shown in green.
 
-Activity is detected automatically from where you are and the XP you gain. Only the area name is sent, never your exact tile.
+Activity is detected automatically from where you are and the XP you gain.
 
 Anyone in clan chat with sharing on appears in the list. Your area and activity are only shown if you turn on **Share location and activity** under **Sharing** in the plugin settings; otherwise clanmates just see **Online** and your world, the same as clan chat shows. Leave clan chat to hide yourself, and you also drop off the list when you log out.
 
-<p>
-<img src="docs/images/members.png" width="320" alt="Online clan members with their world, area and activity">
-</p>
+Online clanmates are listed first, including those in clan chat without TSG Hub, who show just their world. The rest of the clan is listed under **Offline**; tick **Show offline** to expand it. Offline members who use TSG Hub show how long ago they were last online.
+
+<p align="center"><img src="docs/images/members.png" width="280" alt="Online clan members with their world, area and activity"></p>
+
+### World map
+
+Clanmates who share their location show on your world map with their name. Members close enough to overlap merge into one marker such as `Alice +2`, which splits apart as you zoom in. Hover a marker to see everyone in it and their worlds. Positions update every few seconds while the map is open. Your own position is shared only with **Share location and activity** on, and never from inside an instance such as a raid, boss room or player-owned house. To hide the markers, turn off **Show clanmates** under **World map** in the plugin settings; that doesn't change what you share.
+
+<details>
+<summary><b>Admin tools: notes, alts and warnings</b></summary>
+
+Admins with a hub key can right-click any member to edit their admin note. On Gnome Child characters it also sets whose alt they are; type part of a name to search the clan for their main. Alt links, notes and last seen times follow TSG Hub users through name changes. Hover anywhere on a member to see their rank, whose alt they are or a main's alts, and for admins their admin note. Members with a note also show a note icon.
+
+Admins can also right-click a member to **Add warning** with a reason and an expiry (30 days by default, 90 days, or never). Members with an active warning show a red warning icon, and the hover lists each warning with its date, who issued it and when it expires. Expired warnings stay in the history, greyed out. The admin site's **Members** page shows the same notes and warnings. Only admins see warnings.
+
+</details>
 
 ## Drops
 
@@ -100,59 +135,40 @@ The **Drops** section keeps a history of the clan's big drops, so you can see wh
 
 It's built from the clan chat broadcasts your clan already has turned on: drops over the clan's value threshold, raid loot, pets and new collection log items. Anyone online with sharing on records them, so drops from clanmates who don't use TSG Hub show up too. If several people see the same broadcast, it's only recorded once.
 
-<p>
-<img src="docs/images/drops.png" width="320" alt="Recent clan drops with item, player, value and time">
-</p>
+<p align="center"><img src="docs/images/drops.png" width="280" alt="Recent clan drops with item, player, value and time"></p>
 
-## Getting started
+## News
 
-1. Install **TSG Hub** from the Plugin Hub.
-2. Log in to a character in the TSGaming clan and open the TSG Hub sidebar.
-3. Click **Enable sharing**. Nothing is sent until you do.
-4. Pick an event. For bingo, enter the team code an admin gave you. Your team is fixed once you join.
+The **News** section lists announcements from the clan admins, pinned ones first. A pin marks pinned posts, a green dot marks ones you haven't read, and the **News** tile on the home screen shows how many are new. Each new announcement appears in your chatbox once, when you log in or when it's posted. Links in an announcement show the full address and ask before opening in your browser. Turn that off with **Clan announcements** under **Chat** in the plugin settings.
 
-<p>
-<img src="docs/images/home.png" width="320" alt="TSG Hub home with Events, Parties, Members and Drops tiles">
-</p>
+## Split view
 
-**Disconnect from event** on the **Team** tab stops tracking on this device. Your team keeps its progress, and you can rejoin with the same code.
+Click the pin icon on **Members**, **Parties** or **Drops** to dock it below the main view, then open an event or anything else above it. Drag the divider to resize, click the dock's bar or arrow to collapse it to a single row, and click **✕** to unpin. One section can be pinned at a time, and the dock remembers its size and what's pinned.
+
+<p align="center"><img src="docs/images/dock.png" width="280" alt="A bingo board with the Members list pinned below it"></p>
+
+---
 
 ## Link your Discord
 
 Every clan member can link their RuneScape account to the clan Discord:
 
-1. Run `/hub key` in the clan Discord. The bot replies with a key that starts with `tsghub_`.
-2. Paste it into **Hub key** under **Discord** in the TSG Hub plugin settings, with sharing on.
+1. Click **Link Discord** at the bottom of the TSG Hub home screen, with sharing on. It copies a `/plugin link code:...` command and opens the clan Discord.
+2. Paste the command in the clan Discord. The plugin fills in **Hub key** under **Discord** in its settings by itself within a few seconds.
 
-The plugin confirms the key in the sidebar and links your Discord account to the character you're logged in as. Using the same key on your alts links them too, and your Discord role follows your highest-ranked character. A name change carries over automatically next time you log in. The key renews itself while you use it. If it stops working, or you lose it, run `/hub key` again for a new one; `/hub revoke` disables it and unlinks your account.
+You can also run `/plugin link` without a code. The bot replies with a key that starts with `tsghub_` for you to paste into **Hub key** yourself.
 
-### Discord rank sync
-
-Once you're linked, your Discord rank role follows your in-game clan rank. When the Owner or a Deputy Owner changes your rank in game, their plugin tells the TSG Hub service, and the bot swaps your Discord role within a few seconds. If your rank changed before you linked, you get the right role as soon as you link.
-
-Only rank changes reported by the Owner or a Deputy Owner who is also a Discord admin are applied. Reports from anyone else are ignored.
+The plugin confirms the key in the sidebar and links your Discord account to the character you're logged in as. Using the same key on your alts links them too. A name change carries over automatically next time you log in. The key renews itself while you use it. If it stops working, or you lose it, click **Link Discord** again (it shows whenever your key is missing or rejected); `/plugin unlink` disables it and unlinks your account.
 
 ## For admins
 
-![Admin window: events on the left, the selected event's tasks on the right](docs/images/admin-tasks.png)
+Admin tools use the same hub key. If you're a Discord admin (the server owner, a member with an admin role, or anyone with Manage Server), linking gives you a key with admin access. Keys from before hub keys existed, starting with `tsgadm_`, keep working and move into the **Hub key** setting by themselves.
 
-Admin tools use the same hub key. If you're a Discord admin (the server owner, a member with an admin role, or anyone with Manage Server), `/hub key` gives you a key with admin access. Keys from before hub keys existed, starting with `tsgadm_`, keep working and move into the **Hub key** setting by themselves.
+Once the key checks out, an admin button appears in the sidebar header. It opens the TSG Hub admin site in your browser, already signed in. That's where you create and edit events, teams and tasks, review results, post announcements, and manage members. `/admin login` in the clan Discord gives you the same one-time link. If you lose your Discord admin role, your key keeps linking your account but the admin button disappears.
 
-Once the key checks out, an admin button appears in the sidebar header. It opens a separate window with your clan's events on the left and the selected event on the right. Admins also see and can join hidden events. If you lose your Discord admin role, your key keeps linking your account but the admin tools disappear.
+Your in-game clan rank doesn't grant admin access. Owners and Deputy Owners keep admin access through their Discord admin role.
 
-Your in-game clan rank doesn't grant admin access. Owners and Deputy Owners keep admin tools through their Discord admin role, and their plugin keeps Discord rank roles in sync while they're logged in with sharing on.
-
-1. **New event**: pick bingo, Skill of the Week, Boss of the Week or a custom event, then set its name and its start and end date and time. Times are entered in your computer's time zone, shown next to the fields, and players see them converted to theirs. Custom events can leave the end time empty. For bingo, choose **Bingo board** (a card with lines, line bonuses and the dauber stamp) or **Task list** (a plain list); you can switch until a published event starts. You can add optional prizes for 1st, 2nd and 3rd place, in millions of GP, and hide scores from players until the end.
-2. **Teams**: add teams. Each gets a permanent invite code; use **Copy code** to share it.
-3. **Tasks**: add tasks shared by every team. Item tasks have type-ahead search with icons and ready-made sets, and raid tasks let you choose each raid and mode.
-4. **Board** (board bingos only): pick a size from 3 x 3 to 9 x 9 and **Shuffle** to place tasks on random tiles. **Same for every team** (the default) gives every team the same card, so lines are equally hard; **Different per team** shuffles each team's card separately. Click a tile, then another tile or empty cell, to swap them. **Reset** goes back to task order. The preview shows each team's progress and lines. Set a **Line bonus** for points per completed line, and a **Random bonus** range to give every line its own hidden bonus from that range (**Reroll** rolls new ones). Players see a random bonus only once they finish that line, and the rolls are listed under the preview for you. The line bonus can change any time; the random bonuses lock with the board. Fill every cell if you want every line to be winnable: a line through an empty cell can't be completed. The board locks once a published event starts. **Preview reveal** plays the dauber stamp players see.
-5. **Claims**: approve or reject manual submissions. The tab shows how many are waiting.
-
-![Board tab: size, layout, shuffle and a preview of the card](docs/images/admin-board.png)
-
-![Pending manual claims awaiting review](docs/images/admin-claims.png)
-
-You can edit a task after the event starts. Progress the service already recorded is recalculated against the new requirements. To credit something the plugin couldn't see, open a team's **Details** and use **Mark complete** with a short note.
+---
 
 ## Privacy
 
@@ -162,19 +178,21 @@ Once you opt in, it sends the following to the TSG Hub service:
 
 - Your RuneScape display name, and the clan name and rank your client detects
 - If you've set a hub key, the key with your display name and RuneLite account hash when the plugin checks it, to link your Discord account to this character and follow name changes
-- If you're the Owner or a Deputy Owner with an admin hub key, every clan member's name, rank number and rank title from your clan settings, once after you log in and again whenever a rank changes, so Discord roles follow in-game ranks
+- Your sign-up note, if you sign up for a bingo's team pool. Admins see it on the admin site while picking teams
 - Progress for events you've joined: kill counts, drops, raid completions, collection log unlocks and skill XP
 - Loot you receive while a bingo event you've joined is active, so admins can reconcile a task from earlier drops if its item list changes
-- Manual proof you submit
+- Your boss kill count messages and the loot you receive, even outside events, so the clan Discord can post a summary of each boss session. The service keeps only the running session, not a history
+- Your skill XP totals as they change, even outside events. The service keeps the XP you gain per skill per day for a year, for clan XP leaderboards
 - Whether you're currently in the clan chat channel and your world, so teammates' completion alerts reach you and clanmates see you as online
-- With **Share location and activity** on, your area name and current activity (never your exact tile)
-- Clan chat broadcasts for drops, raid loot, pets and collection log items, for the clan's **Drops** history
+- With **Share location and activity** on, your area name, current activity and world map position (except inside instances)
+- Clan chat broadcasts for drops, raid loot, pets and collection log items, for the clan's **Drops** history. For your own broadcasts, also the monster or activity it came from and your kill count from the game message
+- When you open the Clan Coffer, its coin total, and each change while it stays open: deposit or withdrawal, the balance before and after, and whether a coffer chat message showed you made it. Only clan admins can see this, on the admin site. The plugin doesn't show it
 
-In a clan party, your stats, gear and inventory go to the other members through **RuneLite's party service**, not the TSG Hub service. The TSG Hub service only learns your display name, party and world, plus your area name if location sharing is on.
+In a clan party, your stats, gear and inventory go to the other members through **RuneLite's party service**, not the TSG Hub service. The TSG Hub service only learns your display name, party and world, plus your area name and position if location sharing is on.
 
 Turning sharing off, or disconnecting from an event, deletes your local token and asks the service to revoke it. Progress your team already earned stays with the clan.
 
-Clan membership, rank and progress are reported by each player's client. They're useful for convenience checks, but a modified client can fake them, so admins should double-check high-stakes results. Admin access comes only from Discord-issued hub keys whose holder is a Discord admin, never from the reported rank. Rank changes only update Discord roles when they come from an Owner or Deputy Owner who is also a Discord admin.
+Clan membership, rank and progress are reported by each player's client. They're useful for convenience checks, but a modified client can fake them, so admins should double-check high-stakes results. Admin access comes only from Discord-issued hub keys whose holder is a Discord admin, never from the reported rank.
 
 ## Credits
 

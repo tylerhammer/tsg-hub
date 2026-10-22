@@ -334,7 +334,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 				String id = board.taskAt(row, col);
 				if (id == null)
 				{
-					TsgHubBoardGrid.paintEmpty(g, x, y, cell, false, false);
+					TsgHubBoardGrid.paintEmpty(g, x, y, cell);
 					continue;
 				}
 				JsonObject task = moment.tasks.get(id);
@@ -374,14 +374,14 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 			if (since < 0) continue;
 			if (at == null)
 			{
-				if (since < FLOAT_MS) paintFloat(g, panelW / 2.0, panelH - PAD - 6, cell, since / (double) FLOAT_MS, TsgHubUi.integer(moment.tasks.get(moment.tiles.get(i)), "points", 1));
+				if (since < FLOAT_MS) paintFloat(g, panelW / 2.0, panelH - PAD - 6, cell, since / (double) FLOAT_MS, TsgHubJson.integer(moment.tasks.get(moment.tiles.get(i)), "points", 1));
 				continue;
 			}
 			double cx = left + at[1] * (cell + GAP) + cell / 2.0;
 			double cy = top + at[0] * (cell + GAP) + cell / 2.0;
 			paintSpray(g, cx, cy, cell, since, moment.tiles.get(i).hashCode());
 			if (since < RING_MS) paintRing(g, cx, cy, cell, since / (double) RING_MS);
-			if (since < FLOAT_MS) paintFloat(g, cx, cy, cell, since / (double) FLOAT_MS, TsgHubUi.integer(moment.tasks.get(moment.tiles.get(i)), "points", 1));
+			if (since < FLOAT_MS) paintFloat(g, cx, cy, cell, since / (double) FLOAT_MS, TsgHubJson.integer(moment.tasks.get(moment.tiles.get(i)), "points", 1));
 		}
 
 		for (int i = 0; i < moment.lines.size(); i++)
@@ -665,8 +665,8 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 			long impact = FIRST_TILE_MS + (long) i * TILE_MS + DROP_MS;
 			if (t < impact) continue;
 			JsonObject task = moment.tasks.get(moment.tiles.get(i));
-			int points = TsgHubUi.integer(task, "points", 1);
-			String text = TsgHubUi.str(task, "title") + "  +" + points + (points == 1 ? " pt" : " pts");
+			int points = TsgHubJson.integer(task, "points", 1);
+			String text = TsgHubJson.str(task, "title") + "  +" + points + (points == 1 ? " pt" : " pts");
 			int more = moment.hiddenTiles.size();
 			if (more > 0 && i == moment.tiles.size() - 1 && t >= impact + MORE_CAPTION_MS)
 			{
@@ -674,7 +674,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 				text = "+" + more + (more == 1 ? " more tile" : " more tiles") + "  +" + extra + (extra == 1 ? " pt" : " pts");
 			}
 			Font font = FontManager.getRunescapeBoldFont().deriveFont(16f);
-			centered(g, fit(g, text, font, panelW - PAD * 2), font, TsgHubUi.TEXT, panelW / 2.0, panelH - PAD - 6);
+			centered(g, fit(g, text, font, panelW - PAD * 2), font, TsgHubTheme.TEXT, panelW / 2.0, panelH - PAD - 6);
 			return;
 		}
 	}
