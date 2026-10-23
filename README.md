@@ -29,7 +29,7 @@ Join a bingo team, climb the Skill of the Week leaderboard, find a raid party, a
 
 | Feature | What it does |
 |---|---|
-| 🎯 **[Bingo](#bingo)** | Team boards that update automatically from kills, drops, raids and collection log unlocks |
+| 🎯 **[Bingo](#bingo)** | Team boards on a bingo card that update automatically from kills, drops, raids and collection log unlocks, with a dauber stamp when you finish a tile |
 | 🏆 **[Competitions](#competitions-and-custom-events)** | Skill of the Week and Boss of the Week leaderboards you join with one click |
 | 📣 **[Custom events](#competitions-and-custom-events)** | Drop parties, clan trips and more, announced with the time, world and location |
 | 💰 **Prizes** | Optional GP prizes for 1st, 2nd and 3rd place |
@@ -45,13 +45,23 @@ Join a bingo team, climb the Skill of the Week leaderboard, find a raid party, a
 
 ## Bingo
 
-Your team's board opens straight from the sidebar. The header shows your team's rank, points and tasks done, plus the prize for each place. Every task shows its points, a progress bar, and who contributed what. Open tasks sort first; tick **Hide completed** to focus on what's left.
+Your team's board opens straight from the sidebar. The header shows your team's rank, points and tasks done, plus the prize for each place. Board bingos show your tasks as a bingo card: each tile shows the task's item icon, boss or raid icon, or name, a progress strip, and a tick once it's done. Finished rows, columns and diagonals light up gold, and the line count shows above the card. If the admins set line bonuses, each finished line also adds bonus points to your team's score: a fixed bonus, a hidden random one revealed when you finish the line, or both. The rule shows under the card. Click a tile to see its task details, submit proof, or check who contributed.
 
-**Scores** ranks every team, and **Team** lists your teammates. The board updates live while it's open.
+When you complete a tile, your board pops up in the middle of the game screen and a bingo dauber slams a red ink dot onto the tile, with a splash, a flash and its points floating up. If that tile finishes a line, a gold wave ripples across the line tile by tile, a gold strike runs through it, and a **BINGO!** stamp lands with the line bonus. Only the player who completed the tile sees it, so teammates aren't interrupted mid-fight. It never plays in the Wilderness, a PvP area or a PvP world; it waits until you're back somewhere safe. It comes with sound: the dauber thunk, a rising note for each tile in the line, and a slam for the BINGO! stamp. If you finish several tiles at once, it stamps up to three, favouring ones that finish a line, and counts the rest. Click the board to skip it. Under **Bingo** in the plugin settings, turn it off with **Tile reveal animation**, mute it with **Reveal sounds**, or set **Reveal volume**.
+
+**Show board on screen** puts your team's board in the game view (hold Alt and drag to move it). Click a tile to flip it over and see its task, progress and points; it flips back after a few seconds, or when you click it again. Tiles there flip over as they complete too.
+
+Switch to **List** to see every task as a card instead, with its points, a progress bar, and who contributed what. Open tasks sort first; tick **Hide completed** to focus on what's left.
+
+Some bingos are task lists instead of boards. They show just the list, with no card, lines or dauber stamp; completing a task posts the usual chat message.
+
+**Scores** ranks every team and shows completed lines and bonus points, and **Team** lists your teammates. The board updates live while it's open.
 
 **Claim a tile** to tell your team you're going for it: right-click an open task and pick **Claim tile**, with an optional note such as "doing it tonight" (up to 100 characters). Each task shows who on your team has claimed it, and hovering it shows their notes. Tiles you've claimed are highlighted. Right-click again to **Change note** or **Drop claim**. Several teammates can claim the same tile, and only your team sees your claims. Claims clear when your team completes the tile or you disconnect from the event.
 
 When you make progress, a message appears in **your own chatbox only**. When your team finishes a tile, teammates who are online in clan chat get a local alert too. TSG Hub never posts to public or clan chat.
+
+![Daubed tiles and a BINGO! stamp on the board](docs/images/reveal.png)
 
 <table align="center"><tr><td align="center" valign="top"><img src="docs/images/board-tasks.png" width="240" alt="A team's bingo board with progress on each task"><br><sub>Tasks</sub></td><td align="center" valign="top"><img src="docs/images/board-scores.png" width="240" alt="Team scoreboard"><br><sub>Scores</sub></td><td align="center" valign="top"><img src="docs/images/board-team.png" width="240" alt="Team tab listing teammates"><br><sub>Team</sub></td></tr></table>
 

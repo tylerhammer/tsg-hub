@@ -187,6 +187,7 @@ final class TsgHubSessions
 		session.removePrefix(MEMBER_NAME);
 		session.removePrefix(SIGNUP_NOTE);
 		syncedClanRanks.clear();
+		plugin.bingo().clear();
 	}
 
 	private void revokeRemote()
@@ -264,6 +265,7 @@ final class TsgHubSessions
 			boolean placed = s.view == TsgHubSidebarPanel.View.SIGNUP;
 			if (placed) s.setStatus("You're on a team! Progress now counts for your team.", Tone.SUCCESS);
 			s.boardView.showBoard(event, name, open || placed);
+			if (eventId.equals(session().get(EVENT_ID))) plugin.bingo().apply(event, name);
 		});
 	}
 
@@ -283,7 +285,7 @@ final class TsgHubSessions
 	void autoRefreshBoard(TsgHubSidebarPanel sidebar)
 	{
 		if (sidebar == null) return;
-		if (sidebar.wantsAutoRefresh()) refreshBoard();
+		if (sidebar.wantsAutoRefresh() || plugin.bingo().wantsBoard()) refreshBoard();
 		String competitionId = sidebar.competitionView.openCompetitionId();
 		if (competitionId != null) openCompetition(competitionId);
 	}
@@ -450,6 +452,7 @@ final class TsgHubSessions
 		if (eventId.equals(session.get(EVENT_ID)))
 		{
 			session.clear(TOKEN, EVENT_ID);
+			plugin.bingo().clear();
 			plugin.ui(s -> s.boardView.closeBoard());
 		}
 	}

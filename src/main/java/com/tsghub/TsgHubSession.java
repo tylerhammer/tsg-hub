@@ -18,6 +18,7 @@ class TsgHubSession
 	static final String GROUP_PASSPHRASE = "groupPassphrase";
 	static final String GROUP_PLAYER = "groupPlayer";
 	static final String HIDE_COMPLETED = "hideCompleted";
+	static final String BOARD_VIEW = "boardView";
 	static final String SHOW_OFFLINE = "showOffline";
 	static final String DOCK_VIEW = "dockView";
 	static final String DOCK_SPLIT = "dockSplit";

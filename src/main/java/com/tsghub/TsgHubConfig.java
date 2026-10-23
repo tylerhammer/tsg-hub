@@ -5,12 +5,16 @@ import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigSection;
+import net.runelite.client.config.Range;
 
 @ConfigGroup("tsghub")
 public interface TsgHubConfig extends Config
 {
 	@ConfigSection(name = "Sharing", description = "What TSG Hub sends to the clan's event service.", position = 0)
 	String sharingSection = "sharing";
+
+	@ConfigSection(name = "Bingo", description = "How your team's bingo board shows in game.", position = 3)
+	String bingoSection = "bingo";
 
 	@ConfigSection(name = "Chat", description = "TSG Hub messages in your chatbox.", position = 5)
 	String chatSection = "chat";
@@ -32,6 +36,31 @@ public interface TsgHubConfig extends Config
 
 	@ConfigItem(keyName = "shareLocation", position = 1, section = sharingSection, name = "Share location and activity", description = "Show clanmates your area name and what you're doing (for example Skilling - Mining) in the Members list, and your position on their world map. Your position isn't shared inside instances. When off, you still appear while in clan chat, with just Online and your world, and your position is never sent.")
 	default boolean shareLocation()
+	{
+		return false;
+	}
+
+	@ConfigItem(keyName = "bingoReveal", position = 0, section = bingoSection, name = "Tile reveal animation", description = "When you complete a bingo tile, show your board in the middle of the screen and daub the tile with a bingo dauber, with a BINGO! stamp when it finishes a line. Never plays in the Wilderness or PvP areas. Click the board to skip it.")
+	default boolean bingoReveal()
+	{
+		return true;
+	}
+
+	@ConfigItem(keyName = "bingoSounds", position = 1, section = bingoSection, name = "Reveal sounds", description = "Play sounds with the tile reveal: the dauber stamp, the line wave and the BINGO! stamp.")
+	default boolean bingoSounds()
+	{
+		return true;
+	}
+
+	@Range(max = 100)
+	@ConfigItem(keyName = "bingoVolume", position = 2, section = bingoSection, name = "Reveal volume", description = "How loud the reveal sounds play, from 0 to 100.")
+	default int bingoVolume()
+	{
+		return 60;
+	}
+
+	@ConfigItem(keyName = "bingoOverlay", position = 3, section = bingoSection, name = "Show board on screen", description = "Show your team's bingo board as an on-screen overlay. Click a tile to flip it over and see its task. Hold Alt and drag it to move it.")
+	default boolean bingoOverlay()
 	{
 		return false;
 	}

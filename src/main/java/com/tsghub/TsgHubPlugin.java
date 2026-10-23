@@ -57,6 +57,7 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.Overlay;
+import net.runelite.client.input.MouseManager;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.ui.overlay.OverlayMenuEntry;
 import net.runelite.client.ui.overlay.worldmap.WorldMapOverlay;
@@ -90,6 +91,7 @@ public class TsgHubPlugin extends Plugin
 	@Inject private WorldMapPointManager worldMapPointManager;
 	@Inject private WorldMapOverlay worldMapOverlay;
 	@Inject private OverlayManager overlayManager;
+	@Inject private MouseManager mouseManager;
 	@Inject @Named("developerMode") private boolean developerMode;
 	private TsgHubSession session;
 	private TsgHubClan clan;
@@ -101,6 +103,7 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubGameTracker tracker;
 	private TsgHubCoffer coffer;
 	private TsgHubSidebarPanel sidebar;
+	private TsgHubBingo bingo;
 	private NavigationButton navigationButton;
 	private ScheduledExecutorService executor;
 	private final List<ScheduledFuture<?>> tasks = new ArrayList<>();
@@ -144,6 +147,8 @@ public class TsgHubPlugin extends Plugin
 		announcements = new TsgHubAnnouncements(this, executor, this::api, chat::clanAnnouncement);
 		TsgHubRankIcons rankIcons = new TsgHubRankIcons(chatIconManager);
 		windows = new TsgHubWindows(client, () -> announcements);
+		bingo = new TsgHubBingo(client, config, configManager, overlayManager, mouseManager, new TsgHubTileIcons(this::getItemImage, spriteManager));
+		bingo.start();
 		GroupMembersPanel groupMembers = new GroupMembersPanel(config, spriteManager, itemManager);
 		sidebar = new TsgHubSidebarPanel(this, groupMembers);
 		groups = new TsgHubGroups(this, client, partyService, executor, this::api, () -> sidebar, socket);
@@ -209,6 +214,7 @@ public class TsgHubPlugin extends Plugin
 		if (presence != null) presence.shutDown();
 		if (memberMap != null) memberMap.setOpen(false);
 		if (mapOverlay != null) overlayManager.remove(mapOverlay);
+		if (bingo != null) bingo.stop();
 		if (liveSync != null) liveSync.socket().disconnect();
 		tasks.forEach(task -> task.cancel(false));
 		tasks.clear();
@@ -276,6 +282,7 @@ public class TsgHubPlugin extends Plugin
 	TsgHubReports reports() { return reports; }
 	TsgHubApi api() { return api; }
 	TsgHubSidebarPanel sidebar() { return sidebar; }
+	TsgHubBingo bingo() { return bingo; }
 	TsgHubGroups groups() { return groups; }
 	TsgHubPresence presence() { return presence; }
 	TsgHubMemberMap memberMap() { return memberMap; }
@@ -332,6 +339,7 @@ public class TsgHubPlugin extends Plugin
 		}
 		// Loading screens and world hops aren't logouts.
 		if (state != GameState.LOGIN_SCREEN && state != GameState.LOGIN_SCREEN_AUTHENTICATOR) return;
+		bingo.resetReveals();
 		if (presence != null) presence.onLoggedOut();
 		if (memberMap != null) memberMap.setOpen(false);
 		worldMapOpen = false;
@@ -376,6 +384,17 @@ public class TsgHubPlugin extends Plugin
 		{
 			boolean expand = "partyExpandMembers".equals(event.getKey());
 			ui(s -> s.partiesView.groupSettingsChanged(expand));
+			return;
+		}
+		if (event.getKey().startsWith("bingo"))
+		{
+			bingo.configChanged(event.getKey());
+			liveSync.syncNow();
+			if ("bingoOverlay".equals(event.getKey()))
+			{
+				if (config.bingoOverlay()) sessions.refreshBoard();
+				ui(s -> s.boardView.boardOverlayChanged());
+			}
 			return;
 		}
 		if ("showClanMap".equals(event.getKey()))
@@ -430,6 +449,7 @@ public class TsgHubPlugin extends Plugin
 	public void onRuneScapeProfileChanged(RuneScapeProfileChanged event)
 	{
 		sessions.profileChanged();
+		bingo.clear();
 		if (signals != null) signals.clear();
 		liveSync.syncNow();
 		if (clan.playerName().isEmpty()) return;
