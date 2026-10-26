@@ -67,7 +67,7 @@ If an admin turns on sign-ups for a bingo, its page shows **Sign up for a team**
 | **Item drops** | Any listed item from NPC loot, matched by RuneLite item ID |
 | **Item sets** | Every piece of a set, such as Barrows or Bandos. Teammates can each find different pieces |
 | **Any jar / Any boss pet** | Built-in groups, so admins don't have to list every item |
-| **Raids** | Chambers of Xeric, Theatre of Blood and Tombs of Amascut completions, per mode. Optionally clan-only; a clan-only completion where the plugin can't see who was in the raid doesn't count |
+| **Raids** | Chambers of Xeric, Theatre of Blood, Tombs of Amascut and The Fractured Archive completions, per mode. Optionally clan-only; a clan-only completion where the plugin can't see who was in the raid doesn't count |
 | **Collection log** | New collection log unlocks count toward set tasks |
 
 Tasks can be **Team** (everyone's progress pools together), **Everyone** (each member reaches the target), or **Solo** (one member does it alone).
@@ -121,7 +121,7 @@ Admins can also right-click a member to **Add warning** with a reason and an exp
 
 ## Drops
 
-The **Drops** section keeps a history of the clan's big drops, so you can see what clanmates got while you were offline. Drops are grouped by day, and each row shows the item, who got it, its value and how long ago. Tags mark raid loot (`CoX`, `ToB`, `ToA`), pets and new collection log items.
+The **Drops** section keeps a history of the clan's big drops, so you can see what clanmates got while you were offline. Drops are grouped by day, and each row shows the item, who got it, its value and how long ago. Tags mark raid loot (`CoX`, `ToB`, `ToA`, `TFA`), pets and new collection log items.
 
 It's built from the clan chat broadcasts your clan already has turned on: drops over the clan's value threshold, raid loot, pets and new collection log items. Anyone online with sharing on records them, so drops from clanmates who don't use TSG Hub show up too. If several people see the same broadcast, it's only recorded once.
 
