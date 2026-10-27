@@ -42,6 +42,12 @@ public interface TsgHubConfig extends Config
 		return false;
 	}
 
+	@ConfigItem(keyName = "hideScreenshotPms", position = 3, section = sharingSection, name = "Hide private messages", description = "Black out private messages and friends' login notices in drop screenshots before they're sent, both in the chatbox and in split private chat. The rest of your chat stays visible.")
+	default boolean hideScreenshotPms()
+	{
+		return true;
+	}
+
 	@ConfigItem(keyName = "mapNoticeShown", name = "", description = "", hidden = true)
 	default boolean mapNoticeShown()
 	{

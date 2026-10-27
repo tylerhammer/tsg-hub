@@ -288,6 +288,7 @@ public class TsgHubPlugin extends Plugin
 	boolean live() { return liveSync != null && liveSync.live(); }
 	boolean sharingEnabled() { return config.dataSharingOptIn(); }
 	boolean screenshotsEnabled() { return config.dataSharingOptIn() && config.shareDropScreenshots(); }
+	boolean hidePrivateChat() { return config.hideScreenshotPms(); }
 	boolean locationSharingEnabled() { return config.dataSharingOptIn() && config.shareLocation(); }
 	CompletableFuture<HiscoreResult> lookupHiscores(String name, int accountType) { return hiscoreClient.lookupAsync(name, TsgHubHiscores.endpoint(accountType)); }
 	String currentArea() { return presence == null ? "" : presence.area(); }
