@@ -374,12 +374,6 @@ final class TsgHubSessions
 	void applyClanEvents(JsonArray events)
 	{
 		if (events == null) return;
-		TsgHubSession session = session();
-		for (JsonObject event : TsgHubJson.objects(events))
-		{
-			String eventId = event.get("id").getAsString();
-			event.addProperty("joined", !session.memberToken(eventId).isEmpty());
-		}
 		joinedCompetitions = joinedCompetitionIds(events);
 		plugin.ui(s -> s.eventsView.setEvents(events));
 	}
