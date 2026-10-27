@@ -76,7 +76,7 @@ Tasks can be **Team** (everyone's progress pools together), **Everyone** (each m
 
 **Skill of the Week** tracks the XP you gain in one skill. **Boss of the Week** counts kills of one boss. Click the event, press join, and play: your gain and rank update as you go.
 
-**Custom events**, like drop parties, show when and where they happen, along with the host and any notes.
+**Custom events**, like drop parties, show when and where they happen, along with the host and any notes. When an admin sets the event's spot, you count as attending once you've spent enough time near it on the event's world (10 minutes within 15 tiles unless the admin changes them), and the event shows **You attended**. Attendance comes from the world map position your own client shares, so it only counts with **Share location and activity** on.
 
 The **Events** list splits live and upcoming events, with each one's prize pool. Open an event to see the prize for each place.
 

@@ -111,6 +111,7 @@ final class TsgHubEventsView
 		JPanel lines = stack();
 		String countdown = capitalize(eventRelative(event));
 		if (!countdown.isEmpty()) lines.add(label(countdown, "Ended".equals(countdown) ? MUTED : SUCCESS, boldFont()));
+		if (attended(event, plugin.clan().playerName())) lines.add(label("You attended", SUCCESS, smallFont()));
 		lines.add(gap(GAP_S));
 		lines.add(detail("When", eventWhen(event)));
 		if (integer(config, "world", 0) > 0) lines.add(detail("World", String.valueOf(integer(config, "world", 0))));
@@ -193,7 +194,7 @@ final class TsgHubEventsView
 	{
 		boolean joined = joined(event);
 		JPanel card = card();
-		if (joined) highlightSelf(card);
+		if (joined || attended(event, plugin.clan().playerName())) highlightSelf(card);
 		card.add(eventLines(event, plugin::getCoinImage), BorderLayout.CENTER);
 
 		String type = str(event, "type");

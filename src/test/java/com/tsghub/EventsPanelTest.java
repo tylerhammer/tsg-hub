@@ -92,4 +92,13 @@ public class EventsPanelTest
 		assertFalse(TsgHubEvents.awaitingTeam(signedUp, "Lynx Titan"));
 		assertFalse(TsgHubEvents.awaitingTeam(event("{}"), "Zezima"));
 	}
+
+	@Test
+	public void attended()
+	{
+		JsonObject party = event("{\"type\":\"drop-party\",\"attended\":[\"Lynx Titan\",\"Zezima\"]}");
+		assertTrue(TsgHubEvents.attended(party, "zezima"));
+		assertFalse(TsgHubEvents.attended(party, "Woox"));
+		assertFalse(TsgHubEvents.attended(event("{\"type\":\"drop-party\"}"), "Zezima"));
+	}
 }
