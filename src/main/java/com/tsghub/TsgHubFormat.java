@@ -3,6 +3,7 @@ package com.tsghub;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.time.DateTimeException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -78,6 +79,22 @@ final class TsgHubFormat
 	static String zoneName(ZonedDateTime time)
 	{
 		return time.format(ZONE);
+	}
+
+	static String localTime(String zone, Instant now, ZoneId viewer)
+	{
+		ZoneId theirs;
+		try
+		{
+			theirs = ZoneId.of(zone);
+		}
+		catch (DateTimeException e)
+		{
+			return "";
+		}
+		if (theirs.getRules().getOffset(now).equals(viewer.getRules().getOffset(now))) return "";
+		ZonedDateTime time = now.atZone(theirs);
+		return clock(time, true) + " " + zoneName(time);
 	}
 
 	static String shortDate(String iso, Instant now, ZoneId zone)

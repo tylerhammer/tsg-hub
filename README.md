@@ -104,6 +104,8 @@ Anyone in clan chat with sharing on appears in the list. Your area and activity 
 
 Online clanmates are listed first, including those in clan chat without TSG Hub, who show just their world. The rest of the clan is listed under **Offline**; tick **Show offline** to expand it. Offline members who use TSG Hub show how long ago they were last online.
 
+Clanmates whose clock is on a different time from yours show their local time and zone, such as `9pm KST`, at the end of their row; hover an offline member to see theirs. It comes from their computer's time zone, so members on the same time as you show nothing extra.
+
 <p align="center"><img src="docs/images/members.png" width="280" alt="Online clan members with their world, area and activity"></p>
 
 ### World map
@@ -176,6 +178,7 @@ Once you opt in, it sends the following to the TSG Hub service:
 - Your boss kill count messages and the loot you receive, even outside events, so the clan Discord can post a summary of each boss session. The service keeps only the running session, not a history
 - Your skill XP totals as they change, even outside events. The service keeps the XP you gain per skill per day for a year, for clan XP leaderboards
 - Whether you're currently in the clan chat channel and your world, so teammates' completion alerts reach you and clanmates see you as online
+- Your computer's time zone (such as `Australia/Sydney`), so clanmates can see your local time. The service keeps your last one, and admins see it on the admin site
 - With **Share location and activity** on, your area name, current activity and world map position (except inside instances)
 - With **Share drop screenshots** on, a screenshot of your game when you get a drop the clan Discord announces (such as a pet or raid unique), posted with the announcement. The plugin takes one for each of your own drop broadcasts and sends it only if the service asks for it; the rest are discarded after 30 seconds
 - All clan and personal broadcast messages

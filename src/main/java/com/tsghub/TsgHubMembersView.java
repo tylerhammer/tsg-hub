@@ -40,6 +40,7 @@ final class TsgHubMembersView
 	JsonArray members;
 	JsonArray offlineMembers = new JsonArray();
 	private boolean notesLoaded;
+	private boolean clocks;
 	private final JCheckBox showOffline = new JCheckBox("Show offline");
 	TsgHubMembersView(TsgHubPlugin plugin, TsgHubSidebarPanel shell)
 	{
@@ -99,8 +100,14 @@ final class TsgHubMembersView
 		plugin.presence().open(false);
 	}
 
+	void clockTick()
+	{
+		if (clocks && shell.shows(View.MEMBERS)) renderMembers();
+	}
+
 	void renderMembers()
 	{
+		clocks = false;
 		shell.viewHeader(View.MEMBERS, "Members", "", membersSummary());
 		membersPage.removeAll();
 		if (members == null)
@@ -150,8 +157,14 @@ final class TsgHubMembersView
 
 	private void setMemberTip(JComponent card, JsonObject member, String note, JLabel detail)
 	{
-		fullTextTooltip(card, () -> TsgHubRoster.rosterTooltip(detail != null && truncated(detail) ? TsgHubRoster.locationTip(str(member, "activity"), str(member, "area")) : "",
+		fullTextTooltip(card, () -> TsgHubRoster.rosterTooltip(detail == null ? localTimeTip(member) : truncated(detail) ? TsgHubRoster.locationTip(str(member, "activity"), str(member, "area")) : "",
 			array(member, "previousNames"), str(member, "altOf"), array(member, "alts"), note, visibleWarnings(member), clock.instant(), ZoneId.systemDefault()));
+	}
+
+	private static String localTimeTip(JsonObject member)
+	{
+		String local = localTime(str(member, "timeZone"), clock.instant(), ZoneId.systemDefault());
+		return local.isEmpty() ? "" : TsgHubHtml.tipLine(MUTED, "Local time " + TsgHubHtml.escape(local));
 	}
 
 	private void addMemberBadges(JPanel badges, JsonObject member, String note, boolean more)
@@ -201,6 +214,12 @@ final class TsgHubMembersView
 			detailLabel = noFullText(shrinkable(label(detail, active ? SUCCESS : MUTED, small)));
 			JPanel bottom = row();
 			bottom.add(detailLabel, BorderLayout.CENTER);
+			String local = localTime(str(member, "timeZone"), clock.instant(), ZoneId.systemDefault());
+			if (!local.isEmpty())
+			{
+				clocks = true;
+				bottom.add(label(local, MUTED, small), BorderLayout.EAST);
+			}
 			text.add(gap(GAP_XS));
 			text.add(bottom);
 		}
