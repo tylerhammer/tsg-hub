@@ -34,6 +34,8 @@ final class TsgHubSocket
 
 		void onReady(String rulesVersion);
 
+		void onRulesChanged(String version);
+
 		void onChanged(String topic, String eventId);
 
 		void onAdminRevoked(String token);
@@ -370,6 +372,10 @@ final class TsgHubSocket
 				case "changed":
 					String topic = TsgHubJson.str(message, "topic");
 					dispatch(ws, () -> listener.onChanged(topic, eventId));
+					break;
+				case "rules":
+					String rules = TsgHubJson.str(message, "rules");
+					if (!rules.isEmpty()) dispatch(ws, () -> listener.onRulesChanged(rules));
 					break;
 				case "subscribed":
 					subscribed(ws, eventId);

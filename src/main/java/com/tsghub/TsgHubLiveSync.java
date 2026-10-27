@@ -47,6 +47,7 @@ final class TsgHubLiveSync
 				plugin.signals().resend();
 				plugin.reports().resend();
 			}
+			@Override public void onRulesChanged(String version) { refreshRules(version); }
 			@Override public void onChanged(String topic, String eventId) { changed(topic, eventId); }
 			@Override public void onAdminRevoked(String token) { plugin.keys().recheck(token); }
 			@Override public void onAnnouncement(String text) { plugin.chat().announce(text); }
