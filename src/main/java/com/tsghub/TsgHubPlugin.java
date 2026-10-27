@@ -116,6 +116,7 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubPresence presence;
 	private TsgHubMemberMap memberMap;
 	private TsgHubMapOverlay mapOverlay;
+	private TsgHubCountdown countdown;
 	private boolean worldMapOpen;
 	private TsgHubDrops drops;
 	private TsgHubAnnouncements announcements;
@@ -161,6 +162,8 @@ public class TsgHubPlugin extends Plugin
 		memberMap = new TsgHubMemberMap(this, client, clientThread, worldMapPointManager, executor, this::api);
 		mapOverlay = new TsgHubMapOverlay(client, worldMapOverlay, memberMap);
 		overlayManager.add(mapOverlay);
+		countdown = new TsgHubCountdown(client, config, sessions::clanEvents, id -> !session.memberToken(id).isEmpty());
+		overlayManager.add(countdown);
 		every(liveSync.unlessLive(memberMap::autoRefresh), TsgHubMemberMap.REFRESH_SECONDS, TsgHubMemberMap.REFRESH_SECONDS, TimeUnit.SECONDS);
 		drops = new TsgHubDrops(this, client, drawManager, executor, this::api, () -> sidebar);
 		every(liveSync.unlessLive(drops::autoRefresh), TsgHubDrops.REFRESH_SECONDS, TsgHubDrops.REFRESH_SECONDS, TimeUnit.SECONDS);
@@ -211,6 +214,7 @@ public class TsgHubPlugin extends Plugin
 		if (presence != null) presence.shutDown();
 		if (memberMap != null) memberMap.setOpen(false);
 		if (mapOverlay != null) overlayManager.remove(mapOverlay);
+		if (countdown != null) overlayManager.remove(countdown);
 		if (liveSync != null) liveSync.socket().disconnect();
 		tasks.forEach(task -> task.cancel(false));
 		tasks.clear();
@@ -568,6 +572,7 @@ public class TsgHubPlugin extends Plugin
 	public void onGameTick(GameTick tick)
 	{
 		if (presence != null) presence.onGameTick();
+		if (countdown != null) countdown.onGameTick(sharingInClan() && config.eventCountdown());
 		if (sharingInClan()) chat.mapNotice();
 		if (clan.tick()) refreshDetectedClan();
 	}

@@ -26,6 +26,7 @@ final class TsgHubSessions
 	private final ScheduledExecutorService executor;
 	private final Map<String, Integer> syncedClanRanks = new ConcurrentHashMap<>();
 	private volatile List<String> joinedCompetitions = Collections.emptyList();
+	private volatile JsonArray clanEvents;
 	private volatile String syncedIdentity = "";
 
 	private TsgHubSession session()
@@ -43,6 +44,11 @@ final class TsgHubSessions
 		return joinedCompetitions;
 	}
 
+	JsonArray clanEvents()
+	{
+		return clanEvents;
+	}
+
 	void profileChanged()
 	{
 		syncedClanRanks.clear();
@@ -53,6 +59,7 @@ final class TsgHubSessions
 	void loggedOut()
 	{
 		joinedCompetitions = Collections.emptyList();
+		clanEvents = null;
 	}
 
 	void reset()
@@ -374,6 +381,7 @@ final class TsgHubSessions
 	void applyClanEvents(JsonArray events)
 	{
 		if (events == null) return;
+		clanEvents = events;
 		joinedCompetitions = joinedCompetitionIds(events);
 		plugin.ui(s -> s.eventsView.setEvents(events));
 	}

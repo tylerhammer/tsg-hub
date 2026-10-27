@@ -82,6 +82,15 @@ The **Events** list splits live and upcoming events, with each one's prize pool.
 
 Every event shows its start and end in your own time zone, with the zone name (for example "Mon 5 Oct, 7pm AEDT") and how long until it starts or ends. Competitions count gains made between those exact times, wherever you are.
 
+### Event countdown
+
+A small countdown appears on screen when an event is close:
+
+- **Custom events** from 30 minutes before they start until they end (or for 30 minutes after the start if they have no end time), with the world and location.
+- **Competitions and bingos you've joined** in the 30 minutes before they start and in their last 24 hours.
+
+It shows the time left and the start or end time in your own time zone. If a custom event is on another world, the card turns amber and shows the world you're on. When several events qualify, custom events come first, then whichever is soonest. Right-click the countdown and pick **Dismiss** to hide that event until you restart RuneLite, and hold Alt and drag to move it. Turn it off or change how early it appears under **Event countdown** in the plugin settings.
+
 <p align="center"><img src="docs/images/competition.png" width="280" alt="Skill of the Week leaderboard"></p>
 
 ## Clan parties
