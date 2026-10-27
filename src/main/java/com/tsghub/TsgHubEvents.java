@@ -197,6 +197,15 @@ final class TsgHubEvents
 		return "";
 	}
 
+	static boolean attended(JsonObject event, String displayName)
+	{
+		for (JsonElement name : array(event, "attended"))
+		{
+			if (name.isJsonPrimitive() && samePlayer(name.getAsString(), displayName)) return true;
+		}
+		return false;
+	}
+
 	static boolean awaitingTeam(JsonObject event, String displayName)
 	{
 		for (JsonObject member : objects(array(event, "members")))
