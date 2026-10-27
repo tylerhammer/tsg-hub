@@ -55,6 +55,7 @@ import net.runelite.client.party.WSClient;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.DrawManager;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayManager;
@@ -90,6 +91,7 @@ public class TsgHubPlugin extends Plugin
 	@Inject private WorldMapPointManager worldMapPointManager;
 	@Inject private WorldMapOverlay worldMapOverlay;
 	@Inject private OverlayManager overlayManager;
+	@Inject private DrawManager drawManager;
 	@Inject @Named("developerMode") private boolean developerMode;
 	private TsgHubSession session;
 	private TsgHubClan clan;
@@ -160,7 +162,7 @@ public class TsgHubPlugin extends Plugin
 		mapOverlay = new TsgHubMapOverlay(client, worldMapOverlay, memberMap);
 		overlayManager.add(mapOverlay);
 		every(liveSync.unlessLive(memberMap::autoRefresh), TsgHubMemberMap.REFRESH_SECONDS, TsgHubMemberMap.REFRESH_SECONDS, TimeUnit.SECONDS);
-		drops = new TsgHubDrops(this, client, executor, this::api, () -> sidebar);
+		drops = new TsgHubDrops(this, client, drawManager, executor, this::api, () -> sidebar);
 		every(liveSync.unlessLive(drops::autoRefresh), TsgHubDrops.REFRESH_SECONDS, TsgHubDrops.REFRESH_SECONDS, TimeUnit.SECONDS);
 		tracker = new TsgHubGameTracker(this, client, clientThread, itemManager, executor);
 		eventBus.register(tracker);
@@ -285,6 +287,7 @@ public class TsgHubPlugin extends Plugin
 
 	boolean live() { return liveSync != null && liveSync.live(); }
 	boolean sharingEnabled() { return config.dataSharingOptIn(); }
+	boolean screenshotsEnabled() { return config.dataSharingOptIn() && config.shareDropScreenshots(); }
 	boolean locationSharingEnabled() { return config.dataSharingOptIn() && config.shareLocation(); }
 	CompletableFuture<HiscoreResult> lookupHiscores(String name, int accountType) { return hiscoreClient.lookupAsync(name, TsgHubHiscores.endpoint(accountType)); }
 	String currentArea() { return presence == null ? "" : presence.area(); }

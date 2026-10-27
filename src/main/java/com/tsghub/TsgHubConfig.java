@@ -36,6 +36,12 @@ public interface TsgHubConfig extends Config
 		return false;
 	}
 
+	@ConfigItem(keyName = "shareDropScreenshots", position = 2, section = sharingSection, name = "Share drop screenshots", description = "Take a screenshot when you get a drop the clan Discord announces, such as a pet or raid unique, and send it to post with the announcement. The server picks which drops; screenshots it doesn't ask for are discarded and never leave your computer.")
+	default boolean shareDropScreenshots()
+	{
+		return false;
+	}
+
 	@ConfigItem(keyName = "mapNoticeShown", name = "", description = "", hidden = true)
 	default boolean mapNoticeShown()
 	{

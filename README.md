@@ -125,6 +125,8 @@ The **Drops** section keeps a history of the clan's big drops, so you can see wh
 
 It's built from the clan chat broadcasts your clan already has turned on: drops over the clan's value threshold, raid loot, pets and new collection log items. Anyone online with sharing on records them, so drops from clanmates who don't use TSG Hub show up too. If several people see the same broadcast, it's only recorded once.
 
+The biggest drops (pets, raid uniques, and drops over 25M or spooned) are also posted to the clan Discord. Turn on **Share drop screenshots** under **Sharing** to attach a screenshot of your game to your own posts.
+
 <p align="center"><img src="docs/images/drops.png" width="280" alt="Recent clan drops with item, player, value and time"></p>
 
 ## News
@@ -175,6 +177,7 @@ Once you opt in, it sends the following to the TSG Hub service:
 - Your skill XP totals as they change, even outside events. The service keeps the XP you gain per skill per day for a year, for clan XP leaderboards
 - Whether you're currently in the clan chat channel and your world, so teammates' completion alerts reach you and clanmates see you as online
 - With **Share location and activity** on, your area name, current activity and world map position (except inside instances)
+- With **Share drop screenshots** on, a screenshot of your game when you get a drop the clan Discord announces (such as a pet or raid unique), posted with the announcement. The plugin takes one for each of your own drop broadcasts and sends it only if the service asks for it; the rest are discarded after 30 seconds
 - All clan and personal broadcast messages
 - When you open the Clan Coffer, its coin total, and each change while it stays open: deposit or withdrawal, the balance before and after, and whether a coffer chat message showed you made it. Only clan admins can see this, on the admin site. The plugin doesn't show it
 

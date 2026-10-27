@@ -9,6 +9,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.awt.Color;
+import java.awt.image.BufferedImage;
 import java.time.Instant;
 import java.time.ZoneId;
 import org.junit.BeforeClass;
@@ -101,6 +102,17 @@ public class DropsPanelTest
 		assertFalse(TsgHubDrops.fromSelf("HammerKR2 received a drop: Hydra's fang (1,000,000 coins).", "HammerKR"));
 		assertFalse(TsgHubDrops.fromSelf("Bob received a drop: Hydra's fang (1,000,000 coins).", "HammerKR"));
 		assertFalse(TsgHubDrops.fromSelf("HammerKR received a drop: Hydra's fang (1,000,000 coins).", ""));
+	}
+
+	@Test
+	public void screenshotDropsAlpha()
+	{
+		BufferedImage frame = new BufferedImage(4, 3, BufferedImage.TYPE_INT_ARGB);
+		frame.setRGB(1, 1, 0x80FF0000);
+		BufferedImage image = TsgHubDrops.opaque(frame);
+		assertEquals(BufferedImage.TYPE_INT_RGB, image.getType());
+		assertEquals(4, image.getWidth());
+		assertEquals(3, image.getHeight());
 	}
 
 	@Test

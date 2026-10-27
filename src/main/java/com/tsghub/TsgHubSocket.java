@@ -52,6 +52,8 @@ final class TsgHubSocket
 
 		void onXpRequest(String skills);
 
+		void onScreenshotRequest(String id, String token);
+
 		void onGroupHeartbeat(JsonObject message);
 
 		void onGroupRejected(int status);
@@ -392,6 +394,11 @@ final class TsgHubSocket
 				case "xp.request":
 					String skills = TsgHubJson.str(message, "skills");
 					if (!skills.isEmpty()) dispatch(ws, () -> listener.onXpRequest(skills));
+					break;
+				case "drop.screenshot":
+					String shot = TsgHubJson.str(message, "id");
+					String token = TsgHubJson.str(message, "token");
+					if (!shot.isEmpty() && !token.isEmpty()) dispatch(ws, () -> listener.onScreenshotRequest(shot, token));
 					break;
 				case "admin.revoked":
 					adminRevoked(ws);
