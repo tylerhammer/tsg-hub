@@ -96,7 +96,7 @@ A party closes when its last member leaves. Members drop out after 3 minutes wit
 
 ### Loot split
 
-The leader can click **Start loot split** to share the party's loot. While it runs, each member's drops count automatically, valued at Grand Exchange prices, and are split evenly between whoever was in the party at the time, so members who join or leave partway only share loot from while they were in it. A raid chest reopened with the same loot counts once. Everyone in the party sees what each member looted and their fair share. When the leader clicks **End split**, a short list of who pays whom shows how to settle up, and **Copy split** copies the summary to paste in chat or Discord.
+The leader can click **Start loot split** to share the party's raid purples. While it runs, each tradeable purple a member gets from Chambers of Xeric, Theatre of Blood, Tombs of Amascut or The Fractured Archive counts automatically, valued at Grand Exchange prices, and are split evenly between whoever was in the party at the time, so members who join or leave partway only share loot from while they were in it. A raid chest reopened with the same loot counts once. Everyone in the party sees what each member looted and their fair share. When the leader clicks **End split**, a short list of who pays whom shows how to settle up, and **Copy split** copies the summary to paste in chat or Discord.
 
 ## Members
 

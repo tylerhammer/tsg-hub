@@ -269,7 +269,7 @@ final class TsgHubPartiesView
 		if (plugin.groups().isLeader())
 		{
 			JButton toggle = button(running ? "End split" : split.size() > 0 ? "New split" : "Start loot split");
-			toggle.setToolTipText(running ? "Stop counting loot and settle up" : "Split party loot at GE prices, counting each member's drops from now on");
+			toggle.setToolTipText(running ? "Stop counting loot and settle up" : "Split tradeable raid purples at GE prices, counting each member's from now on");
 			toggle.addActionListener(e -> {
 				if (split.size() > 0 && !confirm(shell, "Loot split", running ? "End the loot split?" : "Start a new split? This clears the last one.", running ? "End" : "Start", false)) return;
 				toggle.setEnabled(false);
