@@ -66,6 +66,12 @@ public interface TsgHubConfig extends Config
 		return TsgHubTheme.CHAT;
 	}
 
+	@ConfigItem(keyName = "teamNameColors", position = 3, section = chatSection, name = "Bingo team colors", description = "During a live bingo, color clanmates' names by their team in clan chat and the clan member list, using the colors the admins picked for each team.")
+	default boolean teamNameColors()
+	{
+		return true;
+	}
+
 	@ConfigItem(keyName = "showClanMap", position = 0, section = mapSection, name = "Show clanmates", description = "Show clanmates who share their location as named markers on your world map. Turn off if they get in the way. This only hides them for you; it doesn't change what you share.")
 	default boolean showClanMap()
 	{

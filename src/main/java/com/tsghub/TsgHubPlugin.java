@@ -102,6 +102,7 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubLiveSync liveSync;
 	private TsgHubGameTracker tracker;
 	private TsgHubCoffer coffer;
+	private TsgHubTeamColors teamColors;
 	private TsgHubSidebarPanel sidebar;
 	private NavigationButton navigationButton;
 	private ScheduledExecutorService executor;
@@ -168,6 +169,8 @@ public class TsgHubPlugin extends Plugin
 		eventBus.register(tracker);
 		coffer = new TsgHubCoffer(this, client, body -> tracker.report("coffer", "/v1/coffer", body));
 		eventBus.register(coffer);
+		teamColors = new TsgHubTeamColors(client, clientThread, config);
+		eventBus.register(teamColors);
 		navigationButton = NavigationButton.builder()
 			.tooltip("TSG Hub")
 			.icon(ImageUtil.loadImageResource(getClass(), "icon.png"))
@@ -200,6 +203,11 @@ public class TsgHubPlugin extends Plugin
 		if (navigationButton != null) clientToolbar.removeNavigation(navigationButton);
 		if (tracker != null) eventBus.unregister(tracker);
 		if (coffer != null) eventBus.unregister(coffer);
+		if (teamColors != null)
+		{
+			eventBus.unregister(teamColors);
+			teamColors.shutDown();
+		}
 		if (groupTracker != null)
 		{
 			groupTracker.stop();
@@ -283,6 +291,7 @@ public class TsgHubPlugin extends Plugin
 	TsgHubMemberMap memberMap() { return memberMap; }
 	TsgHubDrops drops() { return drops; }
 	TsgHubAnnouncements announcements() { return announcements; }
+	TsgHubTeamColors teamColors() { return teamColors; }
 	SpriteManager sprites() { return spriteManager; }
 
 	boolean live() { return liveSync != null && liveSync.live(); }
@@ -340,6 +349,7 @@ public class TsgHubPlugin extends Plugin
 		worldMapOpen = false;
 		chat.onLoggedOut();
 		if (announcements != null) announcements.onLoggedOut();
+		if (teamColors != null) teamColors.apply(null);
 		clan.reset();
 		sidebarRouted = false;
 		keys.loggedOut();
@@ -403,6 +413,7 @@ public class TsgHubPlugin extends Plugin
 			if (groups != null) groups.onSharingDisabled();
 			if (presence != null) presence.leave();
 			if (signals != null) signals.clear();
+			if (teamColors != null) teamColors.apply(null);
 			sessions.clearAll();
 			keys.revoke();
 			windows.hideAll();

@@ -72,7 +72,7 @@ final class TsgHubLiveSync
 		topics.put("positions", new Topic((data, eventId) -> plugin.memberMap().apply(TsgHubJson.array(data, "members")), eventId -> { }));
 		topics.put("drops", new Topic((data, eventId) -> plugin.drops().onSnapshot(TsgHubJson.array(data, "drops")), eventId -> plugin.drops().autoRefresh()));
 		topics.put("announcements", new Topic((data, eventId) -> plugin.announcements().apply(TsgHubJson.array(data, "announcements")), eventId -> plugin.announcements().load()));
-		topics.put("events", new Topic((data, eventId) -> plugin.sessions().applyClanEvents(TsgHubJson.array(data, "events")), eventId -> plugin.sessions().loadClanEvents()));
+		topics.put("events", new Topic((data, eventId) -> plugin.sessions().applyClanEvents(data), eventId -> plugin.sessions().loadClanEvents()));
 		topics.put("notifications", new Topic((data, eventId) -> {
 			if (isActiveEvent(eventId)) plugin.chat().notifications(TsgHubJson.array(data, "notifications"));
 		}, eventId -> {
