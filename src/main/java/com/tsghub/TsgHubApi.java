@@ -37,6 +37,7 @@ final class TsgHubApi
 	}
 
 	private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+	private static final MediaType JPEG = MediaType.parse("image/jpeg");
 	private final String baseUrl;
 	private final OkHttpClient http;
 	private final Gson gson;
@@ -95,10 +96,20 @@ final class TsgHubApi
 		throw new IllegalStateException(cause);
 	}
 
+	CompletableFuture<JsonObject> upload(String path, String token, byte[] jpeg)
+	{
+		return send(build("POST", path, token, null).newBuilder().post(RequestBody.create(JPEG, jpeg)).build());
+	}
+
 	private CompletableFuture<JsonObject> send(String method, String path, String token, JsonObject payload)
 	{
+		return send(build(method, path, token, payload));
+	}
+
+	private CompletableFuture<JsonObject> send(Request request)
+	{
 		CompletableFuture<JsonObject> future = new CompletableFuture<>();
-		http.newCall(build(method, path, token, payload)).enqueue(new Callback()
+		http.newCall(request).enqueue(new Callback()
 		{
 			@Override
 			public void onFailure(Call call, IOException e)

@@ -62,6 +62,7 @@ final class TsgHubLiveSync
 			@Override public void onSubscribed() { plugin.signals().resend(); }
 			@Override public void onReply(JsonObject message) { plugin.chat().reply(message); }
 			@Override public void onXpRequest(String skills) { plugin.tracker().reportXp(skills); }
+			@Override public void onScreenshotRequest(String id, String token) { plugin.drops().sendScreenshot(id, token); }
 			@Override public void onGroupHeartbeat(JsonObject message) { plugin.groups().beaten(message); }
 			@Override public void onGroupRejected(int status) { plugin.groups().beatRejected(status); }
 		});
