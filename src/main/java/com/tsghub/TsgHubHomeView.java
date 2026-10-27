@@ -37,6 +37,7 @@ final class TsgHubHomeView
 			new Section("Parties", icon("party", ACCENT), () -> shell.partiesView.showParties(), () -> shell.partiesView.partiesSummary(), () -> plugin.groups().inGroup()),
 			new Section("Members", icon("members", ACCENT), () -> shell.membersView.showMembers(), () -> shell.membersView.membersSummary(), () -> shell.membersView.onlineCount() > 0),
 			new Section("Drops", icon("drops", ACCENT), () -> shell.dropsView.showDrops(), () -> "", () -> false),
+			new Section("Records", icon("records", ACCENT), () -> shell.recordsView.showRecords(), () -> "PBs, KC and clues", () -> false),
 			new Section("News", icon("news", ACCENT), () -> shell.newsView.showNews(), () -> shell.newsView.newsSummary(), () -> plugin.announcements().unreadCount() > 0));
 	}
 
