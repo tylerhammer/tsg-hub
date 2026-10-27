@@ -4,7 +4,6 @@ import static com.tsghub.TsgHubEvents.*;
 import static com.tsghub.TsgHubFormat.*;
 import static com.tsghub.TsgHubHtml.*;
 import static com.tsghub.TsgHubJson.*;
-import static com.tsghub.TsgHubSession.MEMBER_TOKEN;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 import static net.runelite.client.util.ColorUtil.toHexColor;
@@ -168,7 +167,7 @@ final class TsgHubEventsView
 			List<JsonObject> visible = objects(events);
 			visible.removeIf(event -> "ended".equals(str(event, "status")));
 			visible.sort(Comparator
-				.comparing((JsonObject e) -> !bool(e, "joined"))
+				.comparing((JsonObject e) -> !joined(e))
 				.thenComparing(e -> !"active".equals(str(e, "status")))
 				.thenComparing(TsgHubEvents::eventStart, Comparator.nullsLast(Comparator.naturalOrder())));
 			if (visible.isEmpty())
@@ -192,7 +191,7 @@ final class TsgHubEventsView
 
 	private JPanel eventCard(JsonObject event)
 	{
-		boolean joined = bool(event, "joined");
+		boolean joined = joined(event);
 		JPanel card = card();
 		if (joined) highlightSelf(card);
 		card.add(eventLines(event, plugin::getCoinImage), BorderLayout.CENTER);
@@ -204,12 +203,17 @@ final class TsgHubEventsView
 		clickable(card, () -> {
 			String id = str(event, "id");
 			if (dropParty) showDropParty(event);
-			else if (competition && joined && !plugin.session().get(MEMBER_TOKEN + id).isEmpty()) plugin.sessions().openCompetition(id, true);
+			else if (competition && joined(event)) plugin.sessions().openCompetition(id, true);
 			else if (competition) shell.competitionView.showCompetitionPreview(event);
-			else if (joined) plugin.sessions().activateEvent(id);
+			else if (joined(event)) plugin.sessions().activateEvent(id);
 			else showPreview(event);
 		});
 		return fitHeight(card);
+	}
+
+	private boolean joined(JsonObject event)
+	{
+		return !plugin.session().memberToken(str(event, "id")).isEmpty();
 	}
 
 	JPanel eventSummaryCard(JsonObject event, String subject, String goal)
