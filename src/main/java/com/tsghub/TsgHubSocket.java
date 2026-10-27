@@ -168,11 +168,11 @@ final class TsgHubSocket
 		return emit(type, body.deepCopy());
 	}
 
-	synchronized boolean groupHeartbeat(String token, JsonObject body)
+	synchronized boolean group(String type, String token, JsonObject body)
 	{
 		JsonObject message = body.deepCopy();
 		message.addProperty("token", token);
-		return emit("group.heartbeat", message);
+		return emit(type, message);
 	}
 
 	private boolean emit(String type, JsonObject message)
@@ -391,6 +391,7 @@ final class TsgHubSocket
 					dispatch(ws, () -> listener.onSnapshot(message));
 					break;
 				case "group.heartbeat":
+				case "group.split":
 					dispatch(ws, () -> listener.onGroupHeartbeat(message));
 					break;
 				case "ack":

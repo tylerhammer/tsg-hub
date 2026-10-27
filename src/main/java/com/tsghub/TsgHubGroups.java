@@ -153,6 +153,13 @@ final class TsgHubGroups implements GroupTracker.Listener
 		update("/v1/groups/lock", payload);
 	}
 
+	void setSplit(boolean active)
+	{
+		JsonObject payload = new JsonObject();
+		payload.addProperty("active", active);
+		if (!socket.group("group.split", plugin.session().get(GROUP_TOKEN), payload)) update("/v1/groups/split", payload);
+	}
+
 	private void update(String path, JsonObject payload)
 	{
 		String token = plugin.session().get(GROUP_TOKEN);
@@ -228,7 +235,7 @@ final class TsgHubGroups implements GroupTracker.Listener
 		JsonObject payload = new JsonObject();
 		if (client.getGameState() == GameState.LOGGED_IN) payload.addProperty("world", client.getWorld());
 		payload.addProperty("area", plugin.currentArea());
-		if (!awaitingBeat && socket.groupHeartbeat(token, payload))
+		if (!awaitingBeat && socket.group("group.heartbeat", token, payload))
 		{
 			awaitingBeat = true;
 			return;
