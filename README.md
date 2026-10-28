@@ -95,6 +95,10 @@ A party closes when its last member leaves. Members drop out after 3 minutes wit
 
 <p align="center"><img src="docs/images/parties.png" width="280" alt="Clan party list"></p>
 
+### Loot split
+
+The leader can click **Start loot split** to share the party's raid purples. While it runs, each tradeable purple a member gets from Chambers of Xeric, Theatre of Blood, Tombs of Amascut or The Fractured Archive counts automatically, valued at Grand Exchange prices, and are split evenly between whoever was in the party at the time, so members who join or leave partway only share loot from while they were in it. A raid chest reopened with the same loot counts once. Everyone in the party sees what each member looted and their fair share. When the leader clicks **End split**, a short list of who pays whom shows how to settle up, and **Copy split** copies the summary to paste in chat or Discord.
+
 ## Members
 
 The **Members** section lists clanmates who are in clan chat with sharing on. Each row shows their world, area and what they're doing, such as `Mining · Motherlode Mine`, `Vorkath` or `Chambers of Xeric`. Clanmates on your world have their world shown in green.
@@ -189,7 +193,7 @@ Once you opt in, it sends the following to the TSG Hub service:
 - All clan and personal broadcast messages
 - When you open the Clan Coffer, its coin total, and each change while it stays open: deposit or withdrawal, the balance before and after, and whether a coffer chat message showed you made it. Only clan admins can see this, on the admin site. The plugin doesn't show it
 
-In a clan party, your stats, gear and inventory go to the other members through **RuneLite's party service**, not the TSG Hub service. The TSG Hub service only learns your display name, party and world, plus your area name and position if location sharing is on.
+In a clan party, your stats, gear and inventory go to the other members through **RuneLite's party service**, not the TSG Hub service. The TSG Hub service only learns your display name, party and world, plus your area name and position if location sharing is on, and during a loot split the value of the loot you receive.
 
 Turning sharing off, or disconnecting from an event, deletes your local token and asks the service to revoke it. Progress your team already earned stays with the clan.
 

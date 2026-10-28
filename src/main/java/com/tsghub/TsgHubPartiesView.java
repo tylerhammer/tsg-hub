@@ -188,6 +188,7 @@ final class TsgHubPartiesView
 
 		groupsPage.add(shell.groupMembers);
 		groupsPage.add(gap(GAP_L));
+		addSplit(group);
 
 		JButton title = button("Set title");
 		title.setToolTipText("Name the party. Leave blank to title it by location.");
@@ -232,6 +233,58 @@ final class TsgHubPartiesView
 		actions.add(leave);
 		groupsPage.add(fitHeight(actions));
 		groupsPage.add(groupError);
+	}
+
+	private void addSplit(JsonObject group)
+	{
+		if (group == null || !group.has("split")) return;
+		JsonObject split = object(group, "split");
+		boolean running = bool(split, "active");
+		JPanel buttons = panel(new GridLayout(1, 0, 4, 0));
+		if (split.size() > 0)
+		{
+			JPanel lines = stack();
+			lines.add(row(boldLabel("Loot split"), label(running ? "Running" : "Ended", running ? SUCCESS : MUTED, smallFont())));
+			lines.add(gap(GAP_XS));
+			lines.add(row(caption("Looted / fair share"), caption(splitGp(longValue(split, "total", 0)) + " total")));
+			for (JsonObject member : objects(array(split, "members")))
+			{
+				lines.add(gap(GAP_XS));
+				lines.add(row(shrinkable(label(str(member, "displayName"), TEXT, smallFont())),
+					label(splitGp(longValue(member, "looted", 0)) + " / " + splitGp(longValue(member, "share", 0)), TEXT, smallFont())));
+			}
+			for (JsonObject transfer : objects(array(split, "transfers")))
+			{
+				lines.add(gap(GAP_XS));
+				lines.add(wrapped(str(transfer, "from") + " pays " + str(transfer, "to") + " " + TsgHubFormat.number(longValue(transfer, "amount", 0)) + " gp",
+					WARNING, smallFont(), TsgHubSidebarPanel.CARD_TEXT_W));
+			}
+			JPanel card = card();
+			card.add(lines, BorderLayout.CENTER);
+			addCard(groupsPage, fitHeight(card));
+			JButton copy = button("Copy split");
+			copy.addActionListener(e -> copyToClipboard(str(split, "summary")));
+			buttons.add(copy);
+		}
+		if (plugin.groups().isLeader())
+		{
+			JButton toggle = button(running ? "End split" : split.size() > 0 ? "New split" : "Start loot split");
+			toggle.setToolTipText(running ? "Stop counting loot and settle up" : "Split tradeable raid purples at GE prices, counting each member's from now on");
+			toggle.addActionListener(e -> {
+				if (split.size() > 0 && !confirm(shell, "Loot split", running ? "End the loot split?" : "Start a new split? This clears the last one.", running ? "End" : "Start", false)) return;
+				toggle.setEnabled(false);
+				plugin.groups().setSplit(!running);
+			});
+			buttons.add(toggle);
+		}
+		if (buttons.getComponentCount() == 0) return;
+		groupsPage.add(fitHeight(buttons));
+		groupsPage.add(gap(GAP_L));
+	}
+
+	static String splitGp(long value)
+	{
+		return value > 0 ? TsgHubFormat.formatGp(value) : "0";
 	}
 
 	private void renderGroupList(JsonObject current)
