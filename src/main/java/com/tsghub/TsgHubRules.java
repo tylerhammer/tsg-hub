@@ -28,6 +28,7 @@ final class TsgHubRules
 	final List<String> petMessages;
 	final List<String> dropContext;
 	final List<String> groupContent;
+	final Set<String> raidUniques;
 	final int dropDelayMs;
 	final int dropContextTicks;
 	final int dropContextKeep;
@@ -50,6 +51,7 @@ final class TsgHubRules
 		petMessages = strings(json, "petMessages");
 		dropContext = strings(json, "dropContext");
 		groupContent = strings(json, "groupContent");
+		raidUniques = Collections.unmodifiableSet(new HashSet<>(strings(json, "raidUniques")));
 		dropDelayMs = TsgHubJson.integer(json, "dropDelayMs", 1200);
 		dropContextTicks = TsgHubJson.integer(json, "dropContextTicks", 50);
 		dropContextKeep = TsgHubJson.integer(json, "dropContextKeep", 16);

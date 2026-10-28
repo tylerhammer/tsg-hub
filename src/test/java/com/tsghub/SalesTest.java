@@ -5,13 +5,22 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import net.runelite.api.GrandExchangeOfferState;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class SalesTest
 {
 	private static final int TBOW = 20997;
+
+	@BeforeClass
+	public static void rules()
+	{
+		TsgHubRules.loadBundled(new Gson());
+	}
 
 	@Test
 	public void onlyRaidUniques()
@@ -22,6 +31,20 @@ public class SalesTest
 		assertFalse(TsgHubSales.isRaidUnique("Abyssal whip"));
 		assertFalse(TsgHubSales.isRaidUnique("Olmlet"));
 		assertFalse(TsgHubSales.isRaidUnique(null));
+	}
+
+	@Test
+	public void serverRulesSetRaidUniques()
+	{
+		try
+		{
+			TsgHubRules.apply(new JsonParser().parse("{\"raidUniques\":[\"Abyssal whip\"]}").getAsJsonObject());
+			assertTrue(TsgHubSales.isRaidUnique("Abyssal whip"));
+			assertFalse(TsgHubSales.isRaidUnique("Twisted bow"));
+			TsgHubRules.apply(new JsonObject());
+			assertFalse("older servers without the list send no sales", TsgHubSales.isRaidUnique("Twisted bow"));
+		}
+		finally { TsgHubRules.loadBundled(new Gson()); }
 	}
 
 	@Test

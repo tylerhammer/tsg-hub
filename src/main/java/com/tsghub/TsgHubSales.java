@@ -2,7 +2,6 @@ package com.tsghub;
 
 import com.google.gson.JsonObject;
 import java.util.Locale;
-import java.util.Set;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import net.runelite.api.Client;
@@ -19,16 +18,6 @@ final class TsgHubSales
 {
 	static final long TAX_CAP = 5_000_000;
 	private static final Pattern SUFFIX = Pattern.compile("(\\s*\\([^)]*\\))+$");
-	static final Set<String> RAID_UNIQUES = Set.of(
-		"dexterous prayer scroll", "arcane prayer scroll", "twisted buckler", "dragon hunter crossbow", "dinh's bulwark",
-		"ancestral hat", "ancestral robe top", "ancestral robe bottom", "dragon claws", "elder maul", "kodai insignia",
-		"twisted bow", "twisted ancestral colour kit",
-		"avernic defender hilt", "ghrazi rapier", "sanguinesti staff", "justiciar faceguard", "justiciar chestguard",
-		"justiciar legguards", "scythe of vitur", "sanguine ornament kit", "holy ornament kit",
-		"osmumten's fang", "lightbearer", "elidinis' ward", "masori mask", "masori body", "masori chaps", "tumeken's shadow",
-		"breach of the scarab", "eye of the corruptor", "jewel of the sun", "menaphite ornament kit",
-		"archivist's folio", "horn of bran", "zorya's tome", "rondache", "ascension crossbows", "obligator", "orion");
-
 	static final class Update
 	{
 		final String saved;
@@ -82,7 +71,7 @@ final class TsgHubSales
 
 	static boolean isRaidUnique(String name)
 	{
-		return name != null && RAID_UNIQUES.contains(SUFFIX.matcher(name.trim()).replaceAll("").toLowerCase(Locale.ROOT));
+		return name != null && TsgHubRules.get().raidUniques.contains(SUFFIX.matcher(name.trim()).replaceAll("").toLowerCase(Locale.ROOT));
 	}
 
 	static Update update(String saved, int itemId, GrandExchangeOfferState state, int total, long price, int sold, long spent, String freshId)
