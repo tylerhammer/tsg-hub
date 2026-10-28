@@ -21,6 +21,14 @@ public class PartyAreaTest
 	}
 
 	@Test
+	public void splitGp()
+	{
+		assertEquals("0", TsgHubPartiesView.splitGp(0));
+		assertEquals("950 gp", TsgHubPartiesView.splitGp(950));
+		assertEquals("1.5M", TsgHubPartiesView.splitGp(1_512_345));
+	}
+
+	@Test
 	public void wildernessLevel()
 	{
 		assertEquals(0, AreaNames.wildernessLevel(new WorldPoint(3200, 3519, 0)));

@@ -10,6 +10,11 @@ import static com.tsghub.TsgHubUi.*;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.tsghub.TsgHubUi.Tone;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.Rectangle;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -26,25 +31,33 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import javax.imageio.ImageIO;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.events.ChatMessage;
+import net.runelite.client.ui.DrawManager;
 import net.runelite.client.util.Text;
 
+@Slf4j
 @RequiredArgsConstructor
 final class TsgHubDrops
 {
 	static final int REFRESH_SECONDS = 60;
+	static final String SCREENSHOT_PATH = "/v1/drops/screenshot";
+	static final long SCREENSHOT_KEEP_SECONDS = 30;
 
 	private final TsgHubPlugin plugin;
 	private final Client client;
+	private final DrawManager drawManager;
 	private final ScheduledExecutorService executor;
 	private final Set<ScheduledFuture<?>> pending = ConcurrentHashMap.newKeySet();
 	private final Supplier<TsgHubApi> api;
 	private final Supplier<TsgHubSidebarPanel> sidebar;
 	private final Recent<JsonObject> lootSources = new Recent<>();
 	private final Recent<String> countMessages = new Recent<>();
+	private final Map<String, BufferedImage> screenshots = new ConcurrentHashMap<>();
 
 	void onLoot(String source, List<String> items)
 	{
@@ -79,6 +92,7 @@ final class TsgHubDrops
 		body.addProperty("reporter", self);
 		int tick = client.getTickCount();
 		body.addProperty("tick", tick);
+		if (plugin.screenshotsEnabled() && fromSelf(message, self)) capture(body);
 		pending.removeIf(Future::isDone);
 		pending.add(executor.schedule(() -> {
 			if (!plugin.sharingEnabled()) return;
@@ -104,11 +118,54 @@ final class TsgHubDrops
 	{
 		pending.forEach(task -> task.cancel(false));
 		pending.clear();
+		screenshots.clear();
+	}
+
+	private void capture(JsonObject body)
+	{
+		String id = TsgHubSignals.newId();
+		body.addProperty("id", id);
+		body.addProperty("screenshot", true);
+		drawManager.requestNextFrameListener(frame -> {
+			try
+			{
+				List<Rectangle> hidden = plugin.hidePrivateChat() ? TsgHubRedaction.privateAreas(client) : List.of();
+				screenshots.put(id, TsgHubRedaction.blackOut(opaque(frame), hidden, client.getCanvasWidth(), client.getCanvasHeight()));
+			}
+			catch (Exception e) { log.debug("TSG Hub drop screenshot not redacted", e); }
+		});
+		pending.add(executor.schedule(() -> screenshots.remove(id), SCREENSHOT_KEEP_SECONDS, TimeUnit.SECONDS));
+	}
+
+	void sendScreenshot(String id, String token)
+	{
+		BufferedImage image = screenshots.remove(id);
+		if (image == null || !plugin.screenshotsEnabled() || executor.isShutdown()) return;
+		executor.execute(() -> {
+			try
+			{
+				ByteArrayOutputStream out = new ByteArrayOutputStream();
+				ImageIO.write(image, "jpg", out);
+				api.get().upload(SCREENSHOT_PATH, token, out.toByteArray()).whenComplete((response, error) -> {
+					if (error != null) log.debug("TSG Hub drop screenshot not sent", error);
+				});
+			}
+			catch (Exception e) { log.debug("TSG Hub drop screenshot not encoded", e); }
+		});
+	}
+
+	static BufferedImage opaque(Image frame)
+	{
+		BufferedImage image = new BufferedImage(frame.getWidth(null), frame.getHeight(null), BufferedImage.TYPE_INT_RGB);
+		Graphics2D g = image.createGraphics();
+		g.drawImage(frame, 0, 0, null);
+		g.dispose();
+		return image;
 	}
 
 	private void post(JsonObject body)
 	{
-		plugin.tracker().report("drop", "/v1/drops", body);
+		plugin.tracker().report("broadcast", "/v1/broadcasts", body);
 	}
 
 	static boolean fromSelf(String message, String self)
@@ -122,7 +179,7 @@ final class TsgHubDrops
 		if (raw == null) return null;
 		String message = Text.removeTags(raw).replace(' ', ' ').trim();
 		String lower = message.toLowerCase(Locale.ROOT);
-		for (String keyword : TsgHubRules.get().dropKeywords) if (lower.contains(keyword)) return message;
+		for (String keyword : TsgHubRules.get().broadcastKeywords) if (lower.contains(keyword)) return message;
 		return null;
 	}
 

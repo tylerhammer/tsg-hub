@@ -36,6 +36,7 @@ Join a bingo team, climb the Skill of the Week leaderboard, find a raid party, a
 | ⚔️ **[Clan parties](#clan-parties)** | Raids, bossing and skilling. One-click join, no passphrase, live health, prayer, gear, inventory and skills |
 | 👥 **[Members](#members)** | Which clanmates are online, their world, area and what they're doing |
 | 💎 **[Drops](#drops)** | The clan's big drops, raid loot, pets and collection log items, so you can catch up |
+| 🏅 **[Records](#records)** | The clan's top kill counts and fastest PBs for every boss and raid, plus clue scroll counts |
 | 📰 **[News](#news)** | Announcements from the admins, in the sidebar and your chatbox |
 | 📌 **[Split view](#split-view)** | Pin Members, Parties or Drops below the main view |
 | 🔗 **[Discord linking](#link-your-discord)** | Link your RuneScape account to the clan Discord |
@@ -59,6 +60,8 @@ Some bingos are task lists instead of boards. They show just the list, with no c
 
 **Claim a tile** to tell your team you're going for it: right-click an open task and pick **Claim tile**, with an optional note such as "doing it tonight" (up to 100 characters). Each task shows who on your team has claimed it, and hovering it shows their notes. Tiles you've claimed are highlighted. Right-click again to **Change note** or **Drop claim**. Several teammates can claim the same tile, and only your team sees your claims. Claims clear when your team completes the tile or you disconnect from the event.
 
+If the admins pick a color for each team, clanmates' names show in their team's color in clan chat and in the sidebar's Members list while the bingo is live. This only changes what you see. Turn it off with **Bingo team colors** under **Chat** in the plugin settings.
+
 When you make progress, a message appears in **your own chatbox only**. When your team finishes a tile, teammates who are online in clan chat get a local alert too. TSG Hub never posts to public or clan chat.
 
 ![Daubed tiles and a BINGO! stamp on the board](docs/images/reveal.png)
@@ -77,7 +80,7 @@ If an admin turns on sign-ups for a bingo, its page shows **Sign up for a team**
 | **Item drops** | Any listed item from NPC loot, matched by RuneLite item ID |
 | **Item sets** | Every piece of a set, such as Barrows or Bandos. Teammates can each find different pieces |
 | **Any jar / Any boss pet** | Built-in groups, so admins don't have to list every item |
-| **Raids** | Chambers of Xeric, Theatre of Blood and Tombs of Amascut completions, per mode. Optionally clan-only; a clan-only completion where the plugin can't see who was in the raid doesn't count |
+| **Raids** | Chambers of Xeric, Theatre of Blood, Tombs of Amascut and The Fractured Archive completions, per mode. Optionally clan-only; a clan-only completion where the plugin can't see who was in the raid doesn't count |
 | **Collection log** | New collection log unlocks count toward set tasks |
 
 Tasks can be **Team** (everyone's progress pools together), **Everyone** (each member reaches the target), or **Solo** (one member does it alone).
@@ -86,11 +89,20 @@ Tasks can be **Team** (everyone's progress pools together), **Everyone** (each m
 
 **Skill of the Week** tracks the XP you gain in one skill. **Boss of the Week** counts kills of one boss. Click the event, press join, and play: your gain and rank update as you go.
 
-**Custom events**, like drop parties, show when and where they happen, along with the host and any notes.
+**Custom events**, like drop parties, show when and where they happen, along with the host and any notes. When an admin sets the event's spot, you count as attending once you've spent enough time near it on the event's world (10 minutes within 15 tiles unless the admin changes them), and the event shows **You attended**. Attendance comes from the world map position your own client shares, so it only counts with **Share location and activity** on.
 
 The **Events** list splits live and upcoming events, with each one's prize pool. Open an event to see the prize for each place.
 
 Every event shows its start and end in your own time zone, with the zone name (for example "Mon 5 Oct, 7pm AEDT") and how long until it starts or ends. Competitions count gains made between those exact times, wherever you are.
+
+### Event countdown
+
+A small countdown appears on screen when an event is close:
+
+- **Custom events** from 30 minutes before they start until they end (or for 30 minutes after the start if they have no end time), with the world and location.
+- **Competitions and bingos you've joined** in the 30 minutes before they start and in their last 24 hours.
+
+It shows the time left and the start or end time in your own time zone. If a custom event is on another world, the card turns amber and shows the world you're on. When several events qualify, custom events come first, then whichever is soonest. Right-click the countdown and pick **Dismiss** to hide that event until you restart RuneLite, and hold Alt and drag to move it. Turn it off or change how early it appears under **Event countdown** in the plugin settings.
 
 <p align="center"><img src="docs/images/competition.png" width="280" alt="Skill of the Week leaderboard"></p>
 
@@ -104,6 +116,10 @@ A party closes when its last member leaves. Members drop out after 3 minutes wit
 
 <p align="center"><img src="docs/images/parties.png" width="280" alt="Clan party list"></p>
 
+### Loot split
+
+The leader can click **Start loot split** to share the party's raid purples. While it runs, each tradeable purple a member gets from Chambers of Xeric, Theatre of Blood, Tombs of Amascut or The Fractured Archive counts automatically, valued at Grand Exchange prices, and are split evenly between whoever was in the party at the time, so members who join or leave partway only share loot from while they were in it. A raid chest reopened with the same loot counts once. Everyone in the party sees what each member looted and their fair share. When the leader clicks **End split**, a short list of who pays whom shows how to settle up, and **Copy split** copies the summary to paste in chat or Discord.
+
 ## Members
 
 The **Members** section lists clanmates who are in clan chat with sharing on. Each row shows their world, area and what they're doing, such as `Mining · Motherlode Mine`, `Vorkath` or `Chambers of Xeric`. Clanmates on your world have their world shown in green.
@@ -113,6 +129,8 @@ Activity is detected automatically from where you are and the XP you gain.
 Anyone in clan chat with sharing on appears in the list. Your area and activity are only shown if you turn on **Share location and activity** under **Sharing** in the plugin settings; otherwise clanmates just see **Online** and your world, the same as clan chat shows. Leave clan chat to hide yourself, and you also drop off the list when you log out.
 
 Online clanmates are listed first, including those in clan chat without TSG Hub, who show just their world. The rest of the clan is listed under **Offline**; tick **Show offline** to expand it. Offline members who use TSG Hub show how long ago they were last online.
+
+Hover a clanmate whose clock is on a different time from yours to see their local time and zone, such as `9pm KST`, in the corner of the tooltip. It comes from their computer's time zone, so members on the same time as you show nothing extra.
 
 <p align="center"><img src="docs/images/members.png" width="280" alt="Online clan members with their world, area and activity"></p>
 
@@ -131,11 +149,19 @@ Admins can also right-click a member to **Add warning** with a reason and an exp
 
 ## Drops
 
-The **Drops** section keeps a history of the clan's big drops, so you can see what clanmates got while you were offline. Drops are grouped by day, and each row shows the item, who got it, its value and how long ago. Tags mark raid loot (`CoX`, `ToB`, `ToA`), pets and new collection log items.
+The **Drops** section keeps a history of the clan's big drops, so you can see what clanmates got while you were offline. Drops are grouped by day, and each row shows the item, who got it, its value and how long ago. Tags mark raid loot (`CoX`, `ToB`, `ToA`, `TFA`), pets and new collection log items.
 
 It's built from the clan chat broadcasts your clan already has turned on: drops over the clan's value threshold, raid loot, pets and new collection log items. Anyone online with sharing on records them, so drops from clanmates who don't use TSG Hub show up too. If several people see the same broadcast, it's only recorded once.
 
+The biggest drops (pets, raid uniques, and drops over 25M or spooned) are also posted to the clan Discord. Turn on **Share drop screenshots** under **Sharing** to attach a screenshot of your game to your own posts. Private messages, including split private chat and friends' login notices, are blacked out first unless you turn off **Hide private messages**.
+
 <p align="center"><img src="docs/images/drops.png" width="280" alt="Recent clan drops with item, player, value and time"></p>
+
+## Records
+
+The **Records** section shows, for every boss and raid, who in the clan has the most kills and the fastest personal best, plus who has completed the most clue scrolls of each tier. Hover a row for the top three (top five for clues). Rows you lead are highlighted.
+
+Kill and clue counts come from the official hiscores. The TSG Hub service looks clanmates up itself, about twice a day, so your client never fetches anyone's hiscores. PBs come from RuneLite's built-in **Chat Commands** plugin, which saves each one when you get it: with sharing on, TSG Hub sends your saved PBs when you log in and each new one as you set it. Only the overall time for a boss is shown, not team-size times. Records count clanmates who've used TSG Hub with sharing on in the last 60 days.
 
 ## News
 
@@ -164,7 +190,7 @@ The plugin confirms the key in the sidebar and links your Discord account to the
 
 Admin tools use the same hub key. If you're a Discord admin (the server owner, a member with an admin role, or anyone with Manage Server), linking gives you a key with admin access. Keys from before hub keys existed, starting with `tsgadm_`, keep working and move into the **Hub key** setting by themselves.
 
-Once the key checks out, an admin button appears in the sidebar header. It opens the TSG Hub admin site in your browser, already signed in. That's where you create and edit events, teams and tasks, review results, post announcements, and manage members. `/admin login` in the clan Discord gives you the same one-time link. If you lose your Discord admin role, your key keeps linking your account but the admin button disappears.
+Once the key checks out, an admin button appears in the sidebar header. It opens the TSG Hub admin site in your browser, already signed in. That's where you create and edit events, teams (including each team's name color) and tasks, review results, post announcements, and manage members. `/admin login` in the clan Discord gives you the same one-time link. If you lose your Discord admin role, your key keeps linking your account but the admin button disappears.
 
 Your in-game clan rank doesn't grant admin access. Owners and Deputy Owners keep admin access through their Discord admin role.
 
@@ -182,13 +208,16 @@ Once you opt in, it sends the following to the TSG Hub service:
 - Progress for events you've joined: kill counts, drops, raid completions, collection log unlocks and skill XP
 - Loot you receive while a bingo event you've joined is active, so admins can reconcile a task from earlier drops if its item list changes
 - Your boss kill count messages and the loot you receive, even outside events, so the clan Discord can post a summary of each boss session. The service keeps only the running session, not a history
+- Your personal bests saved by RuneLite's Chat Commands plugin, when you log in and as you set new ones, for the clan records
 - Your skill XP totals as they change, even outside events. The service keeps the XP you gain per skill per day for a year, for clan XP leaderboards
 - Whether you're currently in the clan chat channel and your world, so teammates' completion alerts reach you and clanmates see you as online
+- Your computer's time zone (such as `Australia/Sydney`), so clanmates can see your local time. The service keeps your last one, and admins see it on the admin site
 - With **Share location and activity** on, your area name, current activity and world map position (except inside instances)
-- Clan chat broadcasts for drops, raid loot, pets and collection log items, for the clan's **Drops** history. For your own broadcasts, also the monster or activity it came from and your kill count from the game message
+- With **Share drop screenshots** on, a screenshot of your game when you get a drop the clan Discord announces (such as a pet or raid unique), posted with the announcement. The plugin takes one for each of your own drop broadcasts and sends it only if the service asks for it; the rest are discarded after 30 seconds. Private messages are blacked out of it while **Hide private messages** is on (the default)
+- All clan and personal broadcast messages
 - When you open the Clan Coffer, its coin total, and each change while it stays open: deposit or withdrawal, the balance before and after, and whether a coffer chat message showed you made it. Only clan admins can see this, on the admin site. The plugin doesn't show it
 
-In a clan party, your stats, gear and inventory go to the other members through **RuneLite's party service**, not the TSG Hub service. The TSG Hub service only learns your display name, party and world, plus your area name and position if location sharing is on.
+In a clan party, your stats, gear and inventory go to the other members through **RuneLite's party service**, not the TSG Hub service. The TSG Hub service only learns your display name, party and world, plus your area name and position if location sharing is on, and during a loot split the value of the loot you receive.
 
 Turning sharing off, or disconnecting from an event, deletes your local token and asks the service to revoke it. Progress your team already earned stays with the clan.
 

@@ -4,7 +4,6 @@ import static com.tsghub.TsgHubEvents.*;
 import static com.tsghub.TsgHubFormat.*;
 import static com.tsghub.TsgHubHtml.*;
 import static com.tsghub.TsgHubJson.*;
-import static com.tsghub.TsgHubSession.MEMBER_TOKEN;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 import static net.runelite.client.util.ColorUtil.toHexColor;
@@ -112,6 +111,7 @@ final class TsgHubEventsView
 		JPanel lines = stack();
 		String countdown = capitalize(eventRelative(event));
 		if (!countdown.isEmpty()) lines.add(label(countdown, "Ended".equals(countdown) ? MUTED : SUCCESS, boldFont()));
+		if (attended(event, plugin.clan().playerName())) lines.add(label("You attended", SUCCESS, smallFont()));
 		lines.add(gap(GAP_S));
 		lines.add(detail("When", eventWhen(event)));
 		if (integer(config, "world", 0) > 0) lines.add(detail("World", String.valueOf(integer(config, "world", 0))));
@@ -168,7 +168,7 @@ final class TsgHubEventsView
 			List<JsonObject> visible = objects(events);
 			visible.removeIf(event -> "ended".equals(str(event, "status")));
 			visible.sort(Comparator
-				.comparing((JsonObject e) -> !bool(e, "joined"))
+				.comparing((JsonObject e) -> !joined(e))
 				.thenComparing(e -> !"active".equals(str(e, "status")))
 				.thenComparing(TsgHubEvents::eventStart, Comparator.nullsLast(Comparator.naturalOrder())));
 			if (visible.isEmpty())
@@ -192,9 +192,9 @@ final class TsgHubEventsView
 
 	private JPanel eventCard(JsonObject event)
 	{
-		boolean joined = bool(event, "joined");
+		boolean joined = joined(event);
 		JPanel card = card();
-		if (joined) highlightSelf(card);
+		if (joined || attended(event, plugin.clan().playerName())) highlightSelf(card);
 		card.add(eventLines(event, plugin::getCoinImage), BorderLayout.CENTER);
 
 		String type = str(event, "type");
@@ -204,12 +204,17 @@ final class TsgHubEventsView
 		clickable(card, () -> {
 			String id = str(event, "id");
 			if (dropParty) showDropParty(event);
-			else if (competition && joined && !plugin.session().get(MEMBER_TOKEN + id).isEmpty()) plugin.sessions().openCompetition(id, true);
+			else if (competition && joined(event)) plugin.sessions().openCompetition(id, true);
 			else if (competition) shell.competitionView.showCompetitionPreview(event);
-			else if (joined) plugin.sessions().activateEvent(id);
+			else if (joined(event)) plugin.sessions().activateEvent(id);
 			else showPreview(event);
 		});
 		return fitHeight(card);
+	}
+
+	private boolean joined(JsonObject event)
+	{
+		return !plugin.session().memberToken(str(event, "id")).isEmpty();
 	}
 
 	JPanel eventSummaryCard(JsonObject event, String subject, String goal)

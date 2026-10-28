@@ -3,6 +3,7 @@ package com.tsghub;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.time.DateTimeException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -80,6 +81,22 @@ final class TsgHubFormat
 		return time.format(ZONE);
 	}
 
+	static String localTime(String zone, Instant now, ZoneId viewer)
+	{
+		ZoneId theirs;
+		try
+		{
+			theirs = ZoneId.of(zone);
+		}
+		catch (DateTimeException e)
+		{
+			return "";
+		}
+		if (theirs.getRules().getOffset(now).equals(viewer.getRules().getOffset(now))) return "";
+		ZonedDateTime time = now.atZone(theirs);
+		return clock(time, true) + " " + zoneName(time);
+	}
+
 	static String shortDate(String iso, Instant now, ZoneId zone)
 	{
 		Instant at = TsgHubJson.instant(iso);
@@ -93,7 +110,7 @@ final class TsgHubFormat
 		return when.atZone(zone).format(DATE_WITH_YEAR);
 	}
 
-	private static String clock(ZonedDateTime time, boolean meridiem)
+	static String clock(ZonedDateTime time, boolean meridiem)
 	{
 		String text = time.format(time.getMinute() == 0 ? HOUR : HOUR_MINUTE);
 		return meridiem ? text + (time.getHour() < 12 ? "am" : "pm") : text;

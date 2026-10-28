@@ -6,6 +6,7 @@ import com.google.gson.JsonObject;
 import com.tsghub.TsgHubUi.Tone;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -275,7 +276,7 @@ final class TsgHubPresence
 			JsonObject note = notes.get(PlayerNames.key(TsgHubJson.str(member, "displayName")));
 			if (note != null)
 			{
-				for (String field : new String[] {"altOf", "alts", "note", "lastSeenAt", "warnings", "accountType", "previousNames"})
+				for (String field : new String[] {"altOf", "alts", "note", "lastSeenAt", "warnings", "accountType", "previousNames", "timeZone"})
 				{
 					if (note.has(field)) member.add(field, note.get(field));
 				}
@@ -399,6 +400,7 @@ final class TsgHubPresence
 		payload.addProperty("world", client.getWorld());
 		payload.addProperty("version", TsgHubVersion.VERSION);
 		payload.addProperty("accountType", client.getVarbitValue(VarbitID.IRONMAN));
+		payload.addProperty("timeZone", ZoneId.systemDefault().getId());
 		int clanRank = plugin.clan().rank();
 		if (clanRank >= 0) payload.addProperty("clanRank", clanRank);
 		payload.addProperty("area", area == null ? "" : area.name);

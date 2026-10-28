@@ -71,7 +71,7 @@ final class TsgHubMembersView
 		return members.size() + " online";
 	}
 
-	void locationSharingChanged()
+	void refreshIfShown()
 	{
 		if (shell.shows(View.MEMBERS)) renderMembers();
 	}
@@ -151,7 +151,8 @@ final class TsgHubMembersView
 	private void setMemberTip(JComponent card, JsonObject member, String note, JLabel detail)
 	{
 		fullTextTooltip(card, () -> TsgHubRoster.rosterTooltip(detail != null && truncated(detail) ? TsgHubRoster.locationTip(str(member, "activity"), str(member, "area")) : "",
-			array(member, "previousNames"), str(member, "altOf"), array(member, "alts"), note, visibleWarnings(member), clock.instant(), ZoneId.systemDefault()));
+			array(member, "previousNames"), str(member, "altOf"), array(member, "alts"), note, visibleWarnings(member), clock.instant(), ZoneId.systemDefault()),
+			() -> TsgHubHtml.escape(localTime(str(member, "timeZone"), clock.instant(), ZoneId.systemDefault())));
 	}
 
 	private void addMemberBadges(JPanel badges, JsonObject member, String note, boolean more)
@@ -183,7 +184,8 @@ final class TsgHubMembersView
 		if (self) highlightSelf(card);
 
 		JPanel top = row();
-		top.add(memberName(member, name, TEXT, boldFont()), BorderLayout.CENTER);
+		Color team = plugin.teamColors().colorOf(name);
+		top.add(memberName(member, name, team != null ? team : TEXT, boldFont()), BorderLayout.CENTER);
 		JPanel badges = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
 		badges.setOpaque(false);
 		boolean sameWorld = !self && world > 0 && world == myWorld;

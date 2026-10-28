@@ -34,6 +34,8 @@ final class TsgHubSocket
 
 		void onReady(String rulesVersion);
 
+		void onRulesChanged(String version);
+
 		void onChanged(String topic, String eventId);
 
 		void onAdminRevoked(String token);
@@ -51,6 +53,8 @@ final class TsgHubSocket
 		void onReply(JsonObject message);
 
 		void onXpRequest(String skills);
+
+		void onScreenshotRequest(String id, String token);
 
 		void onGroupHeartbeat(JsonObject message);
 
@@ -164,11 +168,11 @@ final class TsgHubSocket
 		return emit(type, body.deepCopy());
 	}
 
-	synchronized boolean groupHeartbeat(String token, JsonObject body)
+	synchronized boolean group(String type, String token, JsonObject body)
 	{
 		JsonObject message = body.deepCopy();
 		message.addProperty("token", token);
-		return emit("group.heartbeat", message);
+		return emit(type, message);
 	}
 
 	private boolean emit(String type, JsonObject message)
@@ -371,6 +375,10 @@ final class TsgHubSocket
 					String topic = TsgHubJson.str(message, "topic");
 					dispatch(ws, () -> listener.onChanged(topic, eventId));
 					break;
+				case "rules":
+					String rules = TsgHubJson.str(message, "rules");
+					if (!rules.isEmpty()) dispatch(ws, () -> listener.onRulesChanged(rules));
+					break;
 				case "subscribed":
 					subscribed(ws, eventId);
 					break;
@@ -383,6 +391,7 @@ final class TsgHubSocket
 					dispatch(ws, () -> listener.onSnapshot(message));
 					break;
 				case "group.heartbeat":
+				case "group.split":
 					dispatch(ws, () -> listener.onGroupHeartbeat(message));
 					break;
 				case "ack":
@@ -392,6 +401,11 @@ final class TsgHubSocket
 				case "xp.request":
 					String skills = TsgHubJson.str(message, "skills");
 					if (!skills.isEmpty()) dispatch(ws, () -> listener.onXpRequest(skills));
+					break;
+				case "drop.screenshot":
+					String shot = TsgHubJson.str(message, "id");
+					String token = TsgHubJson.str(message, "token");
+					if (!shot.isEmpty() && !token.isEmpty()) dispatch(ws, () -> listener.onScreenshotRequest(shot, token));
 					break;
 				case "admin.revoked":
 					adminRevoked(ws);

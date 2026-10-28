@@ -6,10 +6,14 @@ import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigSection;
 import net.runelite.client.config.Range;
+import net.runelite.client.config.Units;
 
 @ConfigGroup("tsghub")
 public interface TsgHubConfig extends Config
 {
+	String WRAP = "<div style='width:220px'>";
+	String END = "</div>";
+
 	@ConfigSection(name = "Sharing", description = "What TSG Hub sends to the clan's event service.", position = 0)
 	String sharingSection = "sharing";
 
@@ -18,6 +22,9 @@ public interface TsgHubConfig extends Config
 
 	@ConfigSection(name = "Chat", description = "TSG Hub messages in your chatbox.", position = 5)
 	String chatSection = "chat";
+
+	@ConfigSection(name = "Event countdown", description = "An on-screen countdown for clan events.", position = 6)
+	String countdownSection = "countdown";
 
 	@ConfigSection(name = "World map", description = "Clanmates on your world map.", position = 7)
 	String mapSection = "map";
@@ -28,38 +35,50 @@ public interface TsgHubConfig extends Config
 	@ConfigSection(name = "Discord", description = "Link your Discord account and unlock the admin site.", position = 20)
 	String discordSection = "admin";
 
-	@ConfigItem(keyName = "dataSharingOptIn", position = 0, section = sharingSection, name = "Share game and clan progress", description = "Opt in to send your RuneScape name, detected clan and rank, PvM progress, loot received during events you join, submitted claims, raid, boss and minigame completions with clanmates nearby (including those clanmates' names), and clan chat presence and world (so clanmates see you as online in the Members list), and clan drop, pet and collection log broadcasts to the TSG Hub service. Progress and tile-completion notices are local to your chatbox; no other game chat is sent.")
+	@ConfigItem(keyName = "dataSharingOptIn", position = 0, section = sharingSection, name = "Share game and clan progress", description = WRAP + "Opt in to send the TSG Hub service your RuneScape name, clan and rank, PvM progress, event loot, claims, raid, boss and minigame completions (with nearby clanmates' names), clan chat presence and world, and clan drop, pet and collection log broadcasts.<br><br>No other game chat is sent." + END)
 	default boolean dataSharingOptIn()
 	{
 		return false;
 	}
 
-	@ConfigItem(keyName = "shareLocation", position = 1, section = sharingSection, name = "Share location and activity", description = "Show clanmates your area name and what you're doing (for example Skilling - Mining) in the Members list, and your position on their world map. Your position isn't shared inside instances. When off, you still appear while in clan chat, with just Online and your world, and your position is never sent.")
+	@ConfigItem(keyName = "shareLocation", position = 1, section = sharingSection, name = "Share location and activity", description = WRAP + "Show clanmates your area, activity and world map position. Your position isn't shared in instances.<br><br>When off, clanmates only see that you're online and your world." + END)
 	default boolean shareLocation()
 	{
 		return false;
 	}
 
-	@ConfigItem(keyName = "bingoReveal", position = 0, section = bingoSection, name = "Tile reveal animation", description = "When you complete a bingo tile, show your board in the middle of the screen and daub the tile with a bingo dauber, with a BINGO! stamp when it finishes a line. Never plays in the Wilderness or PvP areas. Click the board to skip it.")
+	@ConfigItem(keyName = "shareDropScreenshots", position = 2, section = sharingSection, name = "Share drop screenshots", description = WRAP + "Screenshot drops the clan Discord announces, like pets and raid uniques, to post with the announcement. Screenshots the server doesn't ask for never leave your computer." + END)
+	default boolean shareDropScreenshots()
+	{
+		return false;
+	}
+
+	@ConfigItem(keyName = "hideScreenshotPms", position = 3, section = sharingSection, name = "Hide private messages", description = WRAP + "Black out private messages and login notices in drop screenshots." + END)
+	default boolean hideScreenshotPms()
+	{
+		return true;
+	}
+
+	@ConfigItem(keyName = "bingoReveal", position = 0, section = bingoSection, name = "Tile reveal animation", description = WRAP + "When you complete a bingo tile, show your board in the middle of the screen and daub the tile with a bingo dauber, with a BINGO! stamp when it finishes a line. Never plays in the Wilderness or PvP areas. Click the board to skip it." + END)
 	default boolean bingoReveal()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "bingoSounds", position = 1, section = bingoSection, name = "Reveal sounds", description = "Play sounds with the tile reveal: the dauber stamp, the line wave and the BINGO! stamp.")
+	@ConfigItem(keyName = "bingoSounds", position = 1, section = bingoSection, name = "Reveal sounds", description = WRAP + "Play sounds with the tile reveal: the dauber stamp, the line wave and the BINGO! stamp." + END)
 	default boolean bingoSounds()
 	{
 		return true;
 	}
 
 	@Range(max = 100)
-	@ConfigItem(keyName = "bingoVolume", position = 2, section = bingoSection, name = "Reveal volume", description = "How loud the reveal sounds play, from 0 to 100.")
+	@ConfigItem(keyName = "bingoVolume", position = 2, section = bingoSection, name = "Reveal volume", description = WRAP + "How loud the reveal sounds play, from 0 to 100." + END)
 	default int bingoVolume()
 	{
 		return 60;
 	}
 
-	@ConfigItem(keyName = "bingoOverlay", position = 3, section = bingoSection, name = "Show board on screen", description = "Show your team's bingo board as an on-screen overlay. Click a tile to flip it over and see its task. Hold Alt and drag it to move it.")
+	@ConfigItem(keyName = "bingoOverlay", position = 3, section = bingoSection, name = "Show board on screen", description = WRAP + "Show your team's bingo board as an on-screen overlay. Click a tile to flip it over and see its task. Hold Alt and drag it to move it." + END)
 	default boolean bingoOverlay()
 	{
 		return false;
@@ -71,55 +90,75 @@ public interface TsgHubConfig extends Config
 		return false;
 	}
 
-	@ConfigItem(keyName = "eventAnnouncements", position = 0, section = chatSection, name = "Event announcements", description = "Show clan event announcements in your chatbox, such as a custom event starting soon, or an event starting or ending.")
+	@ConfigItem(keyName = "eventAnnouncements", position = 0, section = chatSection, name = "Event announcements", description = WRAP + "Show clan event announcements in your chatbox, such as a custom event starting soon, or an event starting or ending." + END)
 	default boolean eventAnnouncements()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "clanAnnouncements", position = 1, section = chatSection, name = "Clan announcements", description = "Show new clan announcements from the admins in your chatbox when you log in or when they're posted. They're always listed under News in the sidebar.")
+	@ConfigItem(keyName = "clanAnnouncements", position = 1, section = chatSection, name = "Clan announcements", description = WRAP + "Show new admin announcements in your chatbox. They're always under News in the sidebar." + END)
 	default boolean clanAnnouncements()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "chatColor", position = 2, section = chatSection, name = "Message color", description = "Color of the TSG Hub tag and highlighted text in TSG Hub chat messages.")
+	@ConfigItem(keyName = "chatColor", position = 2, section = chatSection, name = "Message color", description = WRAP + "Color of the TSG Hub tag and highlighted text in TSG Hub chat messages." + END)
 	default Color chatColor()
 	{
 		return TsgHubTheme.CHAT;
 	}
 
-	@ConfigItem(keyName = "showClanMap", position = 0, section = mapSection, name = "Show clanmates", description = "Show clanmates who share their location as named markers on your world map. Turn off if they get in the way. This only hides them for you; it doesn't change what you share.")
+	@ConfigItem(keyName = "teamNameColors", position = 3, section = chatSection, name = "Bingo team colors", description = WRAP + "During a live bingo, color clanmates' names by team in clan chat and the Members list." + END)
+	default boolean teamNameColors()
+	{
+		return true;
+	}
+
+	@ConfigItem(keyName = "eventCountdown", position = 0, section = countdownSection, name = "Show countdown", description = WRAP + "Show an on-screen countdown for upcoming and running clan events you've joined.<br><br>Right-click to dismiss, Alt+drag to move." + END)
+	default boolean eventCountdown()
+	{
+		return true;
+	}
+
+	@Range(min = 1, max = 1440)
+	@Units(Units.MINUTES)
+	@ConfigItem(keyName = "countdownLeadMinutes", position = 1, section = countdownSection, name = "Show before start", description = WRAP + "How long before an event starts the countdown appears." + END)
+	default int countdownLeadMinutes()
+	{
+		return 30;
+	}
+
+	@ConfigItem(keyName = "showClanMap", position = 0, section = mapSection, name = "Show clanmates", description = WRAP + "Show clanmates who share their location on your world map. This only affects what you see." + END)
 	default boolean showClanMap()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "partyShowSelf", name = "Show yourself", description = "Show your own health, gear, inventory and skills at the top of your party, exactly as your party members see them.", section = partySection, position = 0)
+	@ConfigItem(keyName = "partyShowSelf", name = "Show yourself", description = WRAP + "Show your own health, gear, inventory and skills at the top of your party, exactly as your party members see them." + END, section = partySection, position = 0)
 	default boolean partyShowSelf()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "partyExpandMembers", name = "Expand members by default", description = "Open each party member's details (gear, inventory, skills, prayers) instead of showing just their banner.", section = partySection, position = 1)
+	@ConfigItem(keyName = "partyExpandMembers", name = "Expand members by default", description = WRAP + "Open each party member's details (gear, inventory, skills, prayers) instead of showing just their banner." + END, section = partySection, position = 1)
 	default boolean partyExpandMembers()
 	{
 		return false;
 	}
 
-	@ConfigItem(keyName = "partyVirtualLevels", name = "Display virtual levels", description = "Show levels above 99 from experience instead of capping at 99.", section = partySection, position = 2)
+	@ConfigItem(keyName = "partyVirtualLevels", name = "Display virtual levels", description = WRAP + "Show levels above 99 from experience instead of capping at 99." + END, section = partySection, position = 2)
 	default boolean partyVirtualLevels()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "partyShowWorlds", name = "Display player worlds", description = "Show the world each party member is on.", section = partySection, position = 3)
+	@ConfigItem(keyName = "partyShowWorlds", name = "Display player worlds", description = WRAP + "Show the world each party member is on." + END, section = partySection, position = 3)
 	default boolean partyShowWorlds()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "hubKey", position = 0, section = discordSection, secret = true, name = "Hub key", description = "Filled in by Link Discord on the home screen, or paste your key from /plugin link in the clan Discord. Links your Discord account to this RuneScape account and unlocks the admin site button if you're a Discord admin.")
+	@ConfigItem(keyName = "hubKey", position = 0, section = discordSection, secret = true, name = "Hub key", description = WRAP + "Filled in by Link Discord, or paste your key from /plugin link in Discord. Unlocks the admin site button for Discord admins." + END)
 	default String hubKey()
 	{
 		return "";

@@ -26,6 +26,7 @@ final class TsgHubSessions
 	private final ScheduledExecutorService executor;
 	private final Map<String, Integer> syncedClanRanks = new ConcurrentHashMap<>();
 	private volatile List<String> joinedCompetitions = Collections.emptyList();
+	private volatile JsonArray clanEvents;
 	private volatile String syncedIdentity = "";
 
 	private TsgHubSession session()
@@ -43,6 +44,11 @@ final class TsgHubSessions
 		return joinedCompetitions;
 	}
 
+	JsonArray clanEvents()
+	{
+		return clanEvents;
+	}
+
 	void profileChanged()
 	{
 		syncedClanRanks.clear();
@@ -53,6 +59,7 @@ final class TsgHubSessions
 	void loggedOut()
 	{
 		joinedCompetitions = Collections.emptyList();
+		clanEvents = null;
 	}
 
 	void reset()
@@ -369,19 +376,15 @@ final class TsgHubSessions
 		plugin.sidebarBusy(true);
 		api().call("GET", "/v1/events?clanName=" + TsgHubApi.encode(clanName), null, null).whenCompleteAsync(TsgHubApi.handle(response ->
 		{
-			applyClanEvents(response.getAsJsonArray("events"));
+			applyClanEvents(response);
 		}, e -> plugin.memberError("Couldn't load events. ", e), () -> plugin.sidebarBusy(false)), executor);
 	}
 
-	void applyClanEvents(JsonArray events)
+	void applyClanEvents(JsonObject response)
 	{
-		if (events == null) return;
-		TsgHubSession session = session();
-		for (JsonObject event : TsgHubJson.objects(events))
-		{
-			String eventId = event.get("id").getAsString();
-			event.addProperty("joined", !session.memberToken(eventId).isEmpty());
-		}
+		plugin.teamColors().apply(TsgHubJson.object(response, "teamColors"));
+		JsonArray events = TsgHubJson.array(response, "events");
+		clanEvents = events;
 		joinedCompetitions = joinedCompetitionIds(events);
 		plugin.ui(s -> s.eventsView.setEvents(events));
 	}

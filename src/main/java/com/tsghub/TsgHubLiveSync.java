@@ -47,6 +47,7 @@ final class TsgHubLiveSync
 				plugin.signals().resend();
 				plugin.reports().resend();
 			}
+			@Override public void onRulesChanged(String version) { refreshRules(version); }
 			@Override public void onChanged(String topic, String eventId) { changed(topic, eventId); }
 			@Override public void onAdminRevoked(String token) { plugin.keys().recheck(token); }
 			@Override public void onAnnouncement(String text) { plugin.chat().announce(text); }
@@ -62,6 +63,7 @@ final class TsgHubLiveSync
 			@Override public void onSubscribed() { plugin.signals().resend(); }
 			@Override public void onReply(JsonObject message) { plugin.chat().reply(message); }
 			@Override public void onXpRequest(String skills) { plugin.tracker().reportXp(skills); }
+			@Override public void onScreenshotRequest(String id, String token) { plugin.drops().sendScreenshot(id, token); }
 			@Override public void onGroupHeartbeat(JsonObject message) { plugin.groups().beaten(message); }
 			@Override public void onGroupRejected(int status) { plugin.groups().beatRejected(status); }
 		});
@@ -70,7 +72,7 @@ final class TsgHubLiveSync
 		topics.put("positions", new Topic((data, eventId) -> plugin.memberMap().apply(TsgHubJson.array(data, "members")), eventId -> { }));
 		topics.put("drops", new Topic((data, eventId) -> plugin.drops().onSnapshot(TsgHubJson.array(data, "drops")), eventId -> plugin.drops().autoRefresh()));
 		topics.put("announcements", new Topic((data, eventId) -> plugin.announcements().apply(TsgHubJson.array(data, "announcements")), eventId -> plugin.announcements().load()));
-		topics.put("events", new Topic((data, eventId) -> plugin.sessions().applyClanEvents(TsgHubJson.array(data, "events")), eventId -> plugin.sessions().loadClanEvents()));
+		topics.put("events", new Topic((data, eventId) -> plugin.sessions().applyClanEvents(data), eventId -> plugin.sessions().loadClanEvents()));
 		topics.put("notifications", new Topic((data, eventId) -> {
 			if (isActiveEvent(eventId)) plugin.chat().notifications(TsgHubJson.array(data, "notifications"));
 		}, eventId -> {
