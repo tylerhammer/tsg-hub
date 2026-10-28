@@ -17,6 +17,7 @@ import java.awt.RenderingHints;
 import java.awt.Shape;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.geom.Line2D;
 import java.awt.geom.Path2D;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
@@ -38,7 +39,7 @@ final class TsgHubBoardGrid extends JComponent
 	static final Color GOLD = new Color(232, 183, 91);
 	private static final int GAP = 3;
 	private static final int MIN_TEXT_CELL = 36;
-	private static final int FLIP_MS = 520;
+	static final int FLIP_MS = 520;
 	private static final int SHINE_MS = 420;
 	private static final int STAGGER_MS = 140;
 	private static final int LINE_MS = 380;
@@ -115,13 +116,7 @@ final class TsgHubBoardGrid extends JComponent
 		}
 		else if (lastDone != null)
 		{
-			long start = System.currentTimeMillis();
-			for (String id : orderedCells())
-			{
-				if (!nowDone.contains(id) || lastDone.contains(id)) continue;
-				flips.put(id, start);
-				start += STAGGER_MS;
-			}
+			long start = queueFlips(flips, board, lastDone, nowDone);
 			for (String line : lineKeys) if (!lastLines.contains(line)) lineStarts.put(line, start + FLIP_MS);
 		}
 		dataKey = key;
@@ -130,15 +125,6 @@ final class TsgHubBoardGrid extends JComponent
 		if (!flips.isEmpty() || !lineStarts.isEmpty()) timer.start();
 		revalidate();
 		repaint();
-	}
-
-	private List<String> orderedCells()
-	{
-		List<String> ids = new ArrayList<>();
-		for (int row = 0; row < board.size; row++)
-			for (int col = 0; col < board.size; col++)
-				if (board.taskAt(row, col) != null) ids.add(board.taskAt(row, col));
-		return ids;
 	}
 
 	private void tick()
@@ -181,14 +167,23 @@ final class TsgHubBoardGrid extends JComponent
 
 	private int[] cellAt(Point point)
 	{
-		if (board == null) return null;
-		int step = cell() + GAP;
-		int x = point.x - offsetX();
-		if (x < 0 || point.y < 0) return null;
+		return board == null ? null : cellAt(point.x - offsetX(), point.y, cell(), GAP, board.size);
+	}
+
+	static int[] cellAt(int x, int y, int cell, int gap, int n)
+	{
+		int step = cell + gap;
+		if (cell <= 0 || n <= 0 || x < 0 || y < 0 || x % step >= cell || y % step >= cell) return null;
 		int col = x / step;
-		int row = point.y / step;
-		if (row >= board.size || col >= board.size || x % step >= cell() || point.y % step >= cell()) return null;
-		return new int[]{row, col};
+		int row = y / step;
+		return row < n && col < n ? new int[]{row, col} : null;
+	}
+
+	static String status(JsonObject progress, boolean done)
+	{
+		int value = TsgHubJson.integer(progress, "progress", 0);
+		int target = Math.max(1, TsgHubJson.integer(progress, "target", 1));
+		return done ? "Done" : TsgHubJson.bool(progress, "pending") ? "Awaiting review" : target > 1 ? value + " / " + target : "Not done yet";
 	}
 
 	@Override
@@ -223,12 +218,7 @@ final class TsgHubBoardGrid extends JComponent
 		JsonObject row = progress.get(id);
 		StringBuilder text = new StringBuilder("<html><b>").append(TsgHubHtml.escape(TsgHubJson.str(task, "title"))).append("</b>");
 		text.append("<br>").append(TsgHubJson.integer(task, "points", 1)).append(" pts");
-		if (row != null)
-		{
-			if (TsgHubJson.bool(row, "completed")) text.append("<br>Done");
-			else if (TsgHubJson.integer(row, "target", 1) > 1) text.append("<br>").append(TsgHubJson.integer(row, "progress", 0)).append(" / ").append(TsgHubJson.integer(row, "target", 1));
-			if (TsgHubJson.bool(row, "pending") && !TsgHubJson.bool(row, "completed")) text.append("<br>Awaiting admin review");
-		}
+		text.append("<br>").append(status(row, done.contains(id)));
 		return text.append("</html>").toString();
 	}
 
@@ -262,28 +252,7 @@ final class TsgHubBoardGrid extends JComponent
 				JsonObject taskProgress = progress.get(id);
 				boolean complete = done.contains(id);
 				Tile tile = new Tile(task, taskProgress, complete, inLines.contains(row * board.size + col), id.equals(selectedTask), hovered, icon(task));
-				Long flip = flips.get(id);
-				if (flip == null || now < flip)
-				{
-					paintTile(g, x, y, cell, flip == null ? tile : tile.faceDown(), font, names);
-					continue;
-				}
-				double t = Math.min(1, (now - flip) / (double) FLIP_MS);
-				if (t < 1)
-				{
-					Graphics2D flipped = (Graphics2D) g.create();
-					double scale = Math.max(0.04, Math.abs(Math.cos(Math.PI * t)));
-					flipped.translate(x + cell / 2.0, 0);
-					flipped.scale(scale, 1);
-					flipped.translate(-(x + cell / 2.0), 0);
-					paintTile(flipped, x, y, cell, t < 0.5 ? tile.faceDown() : tile, font, names);
-					flipped.dispose();
-				}
-				else
-				{
-					paintTile(g, x, y, cell, tile, font, names);
-					paintShine(g, x, y, cell, (now - flip - FLIP_MS) / (double) SHINE_MS);
-				}
+				paintFlip(g, x, y, cell, tile, font, names, flips.get(id), now);
 			}
 		}
 		for (TsgHubBingoBoard.Line line : lines)
@@ -291,7 +260,7 @@ final class TsgHubBoardGrid extends JComponent
 			Long start = lineStarts.get(line.key());
 			if (start != null && now < start) continue;
 			double fraction = start == null ? 1 : Math.min(1, (now - start) / (double) LINE_MS);
-			paintLine(g, left, 0, cell, GAP, board.size, line, fraction);
+			paintLine(g, left, 0, cell, GAP, board.size, line, fraction, false);
 		}
 		for (TsgHubBingoBoard.Line line : lines)
 		{
@@ -450,6 +419,45 @@ final class TsgHubBoardGrid extends JComponent
 		g.draw(tick);
 	}
 
+	static long queueFlips(Map<String, Long> flips, TsgHubBingoBoard board, Set<String> before, Set<String> after)
+	{
+		long start = System.currentTimeMillis();
+		for (int row = 0; row < board.size; row++)
+		{
+			for (int col = 0; col < board.size; col++)
+			{
+				String id = board.taskAt(row, col);
+				if (id == null || !after.contains(id) || before.contains(id)) continue;
+				flips.put(id, start);
+				start += STAGGER_MS;
+			}
+		}
+		return start;
+	}
+
+	static boolean paintFlip(Graphics2D g, int x, int y, int cell, Tile tile, Font font, boolean names, Long flip, long now)
+	{
+		if (flip == null || now < flip)
+		{
+			paintTile(g, x, y, cell, flip == null ? tile : tile.faceDown(), font, names);
+			return flip != null;
+		}
+		double t = (now - flip) / (double) FLIP_MS;
+		if (t >= 1)
+		{
+			paintTile(g, x, y, cell, tile, font, names);
+			paintShine(g, x, y, cell, (now - flip - FLIP_MS) / (double) SHINE_MS);
+			return now - flip < FLIP_MS + SHINE_MS;
+		}
+		Graphics2D flipped = (Graphics2D) g.create();
+		flipped.translate(x + cell / 2.0, 0);
+		flipped.scale(Math.max(0.04, Math.abs(Math.cos(Math.PI * t))), 1);
+		flipped.translate(-(x + cell / 2.0), 0);
+		paintTile(flipped, x, y, cell, t < 0.5 ? tile.faceDown() : tile, font, names);
+		flipped.dispose();
+		return true;
+	}
+
 	static void paintShine(Graphics2D g, int x, int y, int cell, double t)
 	{
 		if (t < 0 || t >= 1) return;
@@ -463,7 +471,7 @@ final class TsgHubBoardGrid extends JComponent
 		shine.dispose();
 	}
 
-	static void paintLine(Graphics2D g, int left, int top, int cell, int gap, int size, TsgHubBingoBoard.Line line, double fraction)
+	static void paintLine(Graphics2D g, int left, int top, int cell, int gap, int size, TsgHubBingoBoard.Line line, double fraction, boolean glow)
 	{
 		int[] first = line.cell(0, size);
 		int[] last = line.cell(size - 1, size);
@@ -471,10 +479,17 @@ final class TsgHubBoardGrid extends JComponent
 		double y1 = top + first[0] * (cell + gap) + cell / 2.0;
 		double x2 = left + last[1] * (cell + gap) + cell / 2.0;
 		double y2 = top + last[0] * (cell + gap) + cell / 2.0;
+		Line2D path = new Line2D.Double(x1, y1, x1 + (x2 - x1) * fraction, y1 + (y2 - y1) * fraction);
 		Graphics2D stroke = (Graphics2D) g.create();
-		stroke.setColor(new Color(GOLD.getRed(), GOLD.getGreen(), GOLD.getBlue(), 120));
-		stroke.setStroke(new BasicStroke(Math.max(3f, cell / 12f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-		stroke.draw(new java.awt.geom.Line2D.Double(x1, y1, x1 + (x2 - x1) * fraction, y1 + (y2 - y1) * fraction));
+		if (glow)
+		{
+			stroke.setColor(new Color(GOLD.getRed(), GOLD.getGreen(), GOLD.getBlue(), 70));
+			stroke.setStroke(new BasicStroke(cell * 0.3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+			stroke.draw(path);
+		}
+		stroke.setColor(new Color(GOLD.getRed(), GOLD.getGreen(), GOLD.getBlue(), glow ? 230 : 120));
+		stroke.setStroke(new BasicStroke(glow ? cell * 0.12f : Math.max(3f, cell / 12f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+		stroke.draw(path);
 		stroke.dispose();
 	}
 

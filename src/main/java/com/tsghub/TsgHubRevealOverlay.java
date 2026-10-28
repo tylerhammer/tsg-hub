@@ -15,7 +15,6 @@ import java.awt.Shape;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Area;
 import java.awt.geom.Ellipse2D;
-import java.awt.geom.Line2D;
 import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
@@ -389,7 +388,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 		{
 			long start = strikeAt(moment, i);
 			if (t < start) break;
-			paintStrike(g, left, top, cell, n, moment.lines.get(i), Math.min(1, (t - start) / (double) STRIKE_MS));
+			TsgHubBoardGrid.paintLine(g, left, top, cell, GAP, n, moment.lines.get(i), easeOutCubic(Math.min(1, (t - start) / (double) STRIKE_MS)), true);
 		}
 
 		for (int i = 0; i < moment.tiles.size(); i++)
@@ -636,27 +635,6 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 		f.scale(scale, scale);
 		centered(f, "+" + points, FontManager.getRunescapeBoldFont().deriveFont((float) Math.max(18, cell * 0.36)), TsgHubBoardGrid.GOLD, 0, 0);
 		f.dispose();
-	}
-
-	private static void paintStrike(Graphics2D g, int left, int top, int cell, int n, TsgHubBingoBoard.Line line, double p)
-	{
-		int[] first = line.cell(0, n);
-		int[] last = line.cell(n - 1, n);
-		double x1 = left + first[1] * (cell + GAP) + cell / 2.0;
-		double y1 = top + first[0] * (cell + GAP) + cell / 2.0;
-		double x2 = left + last[1] * (cell + GAP) + cell / 2.0;
-		double y2 = top + last[0] * (cell + GAP) + cell / 2.0;
-		double e = easeOutCubic(p);
-		Line2D stroke = new Line2D.Double(x1, y1, x1 + (x2 - x1) * e, y1 + (y2 - y1) * e);
-		Color gold = TsgHubBoardGrid.GOLD;
-		Graphics2D s = (Graphics2D) g.create();
-		s.setColor(new Color(gold.getRed(), gold.getGreen(), gold.getBlue(), 70));
-		s.setStroke(new BasicStroke(cell * 0.3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-		s.draw(stroke);
-		s.setColor(new Color(gold.getRed(), gold.getGreen(), gold.getBlue(), 230));
-		s.setStroke(new BasicStroke(cell * 0.12f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-		s.draw(stroke);
-		s.dispose();
 	}
 
 	private static void paintCaption(Graphics2D g, TsgHubReveals.Moment moment, long t, int panelW, int panelH)

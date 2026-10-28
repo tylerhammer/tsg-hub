@@ -3,9 +3,7 @@ package com.tsghub;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.awt.image.BufferedImage;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,11 +14,12 @@ import javax.swing.SwingUtilities;
 import net.runelite.api.gameval.ItemID;
 import net.runelite.client.game.SpriteManager;
 import net.runelite.client.hiscore.HiscoreSkill;
+import net.runelite.client.hiscore.HiscoreSkillType;
 import net.runelite.client.util.AsyncBufferedImage;
 
 final class TsgHubTileIcons
 {
-	private static final Map<String, Integer> SPRITES = sprites();
+	private static final Map<String, Integer> SPRITES = new ConcurrentHashMap<>();
 
 	private final IntFunction<AsyncBufferedImage> items;
 	private final SpriteManager spriteManager;
@@ -104,17 +103,13 @@ final class TsgHubTileIcons
 		{
 			case "kill":
 				String npc = TsgHubJson.str(config, "npcName");
-				Integer sprite = SPRITES.get(key(npc));
-				if (sprite == null) sprite = SPRITES.get(key(ActivityDetector.bossFor(npc)));
-				return sprite == null ? 0 : sprite;
+				int sprite = sprite(npc, HiscoreSkillType.BOSS);
+				return sprite > 0 ? sprite : sprite(ActivityDetector.bossFor(npc), HiscoreSkillType.BOSS);
 			case "raid":
 				JsonArray modes = TsgHubJson.array(config, "modes");
-				String mode = modes.size() > 0 && modes.get(0).isJsonPrimitive() ? modes.get(0).getAsString() : "";
-				Integer raid = SPRITES.get(key(raidName(mode)));
-				return raid == null ? 0 : raid;
+				return sprite(raidName(modes.size() > 0 && modes.get(0).isJsonPrimitive() ? modes.get(0).getAsString() : ""), HiscoreSkillType.BOSS);
 			case "xp":
-				Integer skill = SPRITES.get(key(TsgHubJson.str(config, "skill")));
-				return skill == null ? 0 : skill;
+				return sprite(TsgHubJson.str(config, "skill"), HiscoreSkillType.SKILL);
 			default:
 				return 0;
 		}
@@ -139,23 +134,12 @@ final class TsgHubTileIcons
 		return task.has("config") && task.get("config").isJsonObject() ? task.getAsJsonObject("config") : new JsonObject();
 	}
 
-	private static String key(String name)
+	private static int sprite(String name, HiscoreSkillType type)
 	{
-		if (name == null) return "";
-		StringBuilder key = new StringBuilder();
-		for (char c : name.toLowerCase(Locale.ROOT).toCharArray()) if (Character.isLetterOrDigit(c)) key.append(c);
-		return key.toString();
-	}
-
-	private static Map<String, Integer> sprites()
-	{
-		Map<String, Integer> sprites = new HashMap<>();
-		for (HiscoreSkill skill : HiscoreSkill.values())
-		{
-			if (skill.getSpriteId() <= 0) continue;
-			sprites.put(key(skill.getName()), skill.getSpriteId());
-			sprites.putIfAbsent(key(skill.name()), skill.getSpriteId());
-		}
-		return sprites;
+		if (name == null || name.isEmpty()) return 0;
+		return SPRITES.computeIfAbsent(type + ":" + name, k -> {
+			HiscoreSkill skill = TsgHubHiscores.named(name, type);
+			return skill == null ? 0 : Math.max(0, skill.getSpriteId());
+		});
 	}
 }

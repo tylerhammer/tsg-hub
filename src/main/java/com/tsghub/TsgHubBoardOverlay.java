@@ -30,8 +30,6 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 	private static final int GAP = 3;
 	private static final int HEADER = 20;
 	private static final int FOOTER = 16;
-	private static final int FLIP_MS = 520;
-	private static final int STAGGER_MS = 140;
 	private static final int PEEK_MS = 280;
 	private static final int PEEK_HOLD_MS = 4000;
 
@@ -78,20 +76,7 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 		}
 		TsgHubBingoView previous = snapshot;
 		if (previous == null || !previous.key.equals(view.key)) flips.clear();
-		else
-		{
-			long start = System.currentTimeMillis();
-			for (int row = 0; row < view.board.size; row++)
-			{
-				for (int col = 0; col < view.board.size; col++)
-				{
-					String id = view.board.taskAt(row, col);
-					if (id == null || !view.done.contains(id) || previous.done.contains(id)) continue;
-					flips.put(id, start);
-					start += STAGGER_MS;
-				}
-			}
-		}
+		else TsgHubBoardGrid.queueFlips(flips, view.board, previous.done, view.done);
 		inLines = TsgHubBoardGrid.cellsInLines(view.board, view.lines);
 		snapshot = view;
 	}
@@ -145,33 +130,11 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 				}
 				JsonObject task = data.tasks.get(id);
 				TsgHubBoardGrid.Tile tile = new TsgHubBoardGrid.Tile(task, data.progress.get(id), data.done.contains(id), lit.contains(row * n + col), false, hovered != null && hovered[0] == row && hovered[1] == col, icons.icon(task));
-				Long flip = flips.get(id);
-				if (flip == null)
-				{
-					TsgHubBoardGrid.paintTile(g, x, y, cell, tile, small, false);
-					continue;
-				}
-				flipping = true;
-				double t = (now - flip) / (double) FLIP_MS;
-				if (t < 0) TsgHubBoardGrid.paintTile(g, x, y, cell, tile.faceDown(), small, false);
-				else if (t >= 1)
-				{
-					TsgHubBoardGrid.paintTile(g, x, y, cell, tile, small, false);
-					TsgHubBoardGrid.paintShine(g, x, y, cell, (t - 1) * FLIP_MS / 420.0);
-					if (t > 1 + 420.0 / FLIP_MS) flips.remove(id);
-				}
-				else
-				{
-					Graphics2D flipped = (Graphics2D) g.create();
-					flipped.translate(x + cell / 2.0, 0);
-					flipped.scale(Math.max(0.04, Math.abs(Math.cos(Math.PI * t))), 1);
-					flipped.translate(-(x + cell / 2.0), 0);
-					TsgHubBoardGrid.paintTile(flipped, x, y, cell, t < 0.5 ? tile.faceDown() : tile, small, false);
-					flipped.dispose();
-				}
+				if (TsgHubBoardGrid.paintFlip(g, x, y, cell, tile, small, false, flips.get(id), now)) flipping = true;
+				else flips.remove(id);
 			}
 		}
-		if (!flipping) for (TsgHubBingoBoard.Line line : data.lines) TsgHubBoardGrid.paintLine(g, PAD, top, cell, GAP, n, line, 1);
+		if (!flipping) for (TsgHubBingoBoard.Line line : data.lines) TsgHubBoardGrid.paintLine(g, PAD, top, cell, GAP, n, line, 1, false);
 		paintPeek(g, data, now, cell, top, gridW, small);
 
 		g.setFont(small);
@@ -272,7 +235,7 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 		y += 2;
 		int value = TsgHubJson.integer(progress, "progress", 0);
 		int target = Math.max(1, TsgHubJson.integer(progress, "target", 1));
-		String status = done ? "Done" : TsgHubJson.bool(progress, "pending") ? "Awaiting review" : target > 1 ? value + " / " + target : "Not done yet";
+		String status = TsgHubBoardGrid.status(progress, done);
 		y += metrics.getHeight();
 		text.setColor(done ? TsgHubTheme.SUCCESS : TsgHubJson.bool(progress, "pending") ? TsgHubTheme.WARNING : TsgHubTheme.TEXT);
 		text.drawString(status, x, y);
@@ -299,16 +262,7 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 
 	private int[] tileAt(Point point)
 	{
-		int cell = layoutCell;
-		int n = layoutSize;
-		if (cell <= 0 || n <= 0) return null;
-		int x = point.x - PAD;
-		int y = point.y - PAD - HEADER;
-		int step = cell + GAP;
-		if (x < 0 || y < 0 || x % step >= cell || y % step >= cell) return null;
-		int col = x / step;
-		int row = y / step;
-		return row < n && col < n ? new int[]{row, col} : null;
+		return TsgHubBoardGrid.cellAt(point.x - PAD, point.y - PAD - HEADER, layoutCell, GAP, layoutSize);
 	}
 
 	private boolean active(MouseEvent event)
