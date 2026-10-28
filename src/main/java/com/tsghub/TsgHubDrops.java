@@ -12,6 +12,7 @@ import com.google.gson.JsonObject;
 import com.tsghub.TsgHubUi.Tone;
 import java.awt.Graphics2D;
 import java.awt.Image;
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.time.Instant;
@@ -125,7 +126,14 @@ final class TsgHubDrops
 		String id = TsgHubSignals.newId();
 		body.addProperty("id", id);
 		body.addProperty("screenshot", true);
-		drawManager.requestNextFrameListener(frame -> screenshots.put(id, opaque(frame)));
+		drawManager.requestNextFrameListener(frame -> {
+			try
+			{
+				List<Rectangle> hidden = plugin.hidePrivateChat() ? TsgHubRedaction.privateAreas(client) : List.of();
+				screenshots.put(id, TsgHubRedaction.blackOut(opaque(frame), hidden, client.getCanvasWidth(), client.getCanvasHeight()));
+			}
+			catch (Exception e) { log.debug("TSG Hub drop screenshot not redacted", e); }
+		});
 		pending.add(executor.schedule(() -> screenshots.remove(id), SCREENSHOT_KEEP_SECONDS, TimeUnit.SECONDS));
 	}
 
