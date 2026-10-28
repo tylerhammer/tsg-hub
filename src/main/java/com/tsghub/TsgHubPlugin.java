@@ -102,6 +102,7 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubLiveSync liveSync;
 	private TsgHubGameTracker tracker;
 	private TsgHubCoffer coffer;
+	private TsgHubSales sales;
 	private TsgHubTeamColors teamColors;
 	private TsgHubSidebarPanel sidebar;
 	private NavigationButton navigationButton;
@@ -174,6 +175,8 @@ public class TsgHubPlugin extends Plugin
 		eventBus.register(tracker);
 		coffer = new TsgHubCoffer(this, client, body -> tracker.report("coffer", "/v1/coffer", body));
 		eventBus.register(coffer);
+		sales = new TsgHubSales(this, client, itemManager);
+		eventBus.register(sales);
 		teamColors = new TsgHubTeamColors(config, () -> ui(s -> s.membersView.refreshIfShown()));
 		eventBus.register(teamColors);
 		navigationButton = NavigationButton.builder()
@@ -208,6 +211,7 @@ public class TsgHubPlugin extends Plugin
 		if (navigationButton != null) clientToolbar.removeNavigation(navigationButton);
 		if (tracker != null) eventBus.unregister(tracker);
 		if (coffer != null) eventBus.unregister(coffer);
+		if (sales != null) eventBus.unregister(sales);
 		if (teamColors != null) eventBus.unregister(teamColors);
 		if (groupTracker != null)
 		{
