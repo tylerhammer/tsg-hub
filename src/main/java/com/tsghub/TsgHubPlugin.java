@@ -37,6 +37,7 @@ import net.runelite.api.events.WidgetClosed;
 import net.runelite.api.events.WidgetLoaded;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.ItemID;
+import net.runelite.client.audio.AudioPlayer;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.config.ConfigManager;
@@ -94,6 +95,7 @@ public class TsgHubPlugin extends Plugin
 	@Inject private OverlayManager overlayManager;
 	@Inject private MouseManager mouseManager;
 	@Inject private DrawManager drawManager;
+	@Inject private AudioPlayer audioPlayer;
 	@Inject @Named("developerMode") private boolean developerMode;
 	private TsgHubSession session;
 	private TsgHubClan clan;
@@ -154,7 +156,7 @@ public class TsgHubPlugin extends Plugin
 		announcements = new TsgHubAnnouncements(this, executor, this::api, chat::clanAnnouncement);
 		TsgHubRankIcons rankIcons = new TsgHubRankIcons(chatIconManager);
 		windows = new TsgHubWindows(client, () -> announcements);
-		bingo = new TsgHubBingo(client, config, configManager, overlayManager, mouseManager, new TsgHubTileIcons(this::getItemImage, spriteManager));
+		bingo = new TsgHubBingo(client, audioPlayer, config, configManager, overlayManager, mouseManager, new TsgHubTileIcons(this::getItemImage, spriteManager));
 		bingo.start();
 		GroupMembersPanel groupMembers = new GroupMembersPanel(config, spriteManager, itemManager);
 		sidebar = new TsgHubSidebarPanel(this, groupMembers);

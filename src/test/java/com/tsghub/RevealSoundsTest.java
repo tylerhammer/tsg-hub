@@ -6,13 +6,18 @@ import static org.junit.Assert.assertTrue;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
 import org.junit.Test;
 
 public class RevealSoundsTest
@@ -77,6 +82,30 @@ public class RevealSoundsTest
 		assertEquals(600, (octave[6] & 0xff) | (octave[7] << 8));
 		byte[] same = TsgHubSounds.repitch(ramp, 1, false, 1.0);
 		assertArrayEquals(ramp, same);
+	}
+
+	@Test
+	public void bundledSoundsParseAndRepitchToPlayableWav() throws Exception
+	{
+		for (TsgHubSounds.Sound sound : TsgHubSounds.Sound.values())
+		{
+			byte[] wav;
+			try (InputStream in = TsgHubSounds.class.getResourceAsStream("sounds/" + sound.name().toLowerCase(Locale.ROOT).replace('_', '-') + ".wav"))
+			{
+				wav = in.readAllBytes();
+			}
+			TsgHubSounds.Sample sample = TsgHubSounds.parse(wav);
+			assertEquals(1, sample.channels);
+			assertEquals(44100, sample.rate);
+			assertEquals(16, sample.bits);
+			byte[] data = Arrays.copyOfRange(wav, sample.dataStart, sample.dataStart + sample.dataLength);
+			byte[] rebuilt = TsgHubSounds.wav(TsgHubSounds.repitch(data, 1, false, 2.0), 1, 44100, 16);
+			try (AudioInputStream audio = AudioSystem.getAudioInputStream(new ByteArrayInputStream(rebuilt)))
+			{
+				assertEquals(44100, audio.getFormat().getSampleRate(), 0);
+				assertEquals(data.length / 4 * 2, audio.readAllBytes().length);
+			}
+		}
 	}
 
 	private static List<TsgHubSounds.Sound> sounds(List<TsgHubRevealOverlay.Cue> cues)

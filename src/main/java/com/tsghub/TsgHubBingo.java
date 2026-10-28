@@ -2,6 +2,7 @@ package com.tsghub;
 
 import com.google.gson.JsonObject;
 import net.runelite.api.Client;
+import net.runelite.client.audio.AudioPlayer;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.input.MouseManager;
 import net.runelite.client.ui.overlay.OverlayManager;
@@ -20,14 +21,14 @@ final class TsgHubBingo
 	private volatile TsgHubBingoView view;
 	private volatile String listEventId = "";
 
-	TsgHubBingo(Client client, TsgHubConfig config, ConfigManager configManager, OverlayManager overlayManager, MouseManager mouseManager, TsgHubTileIcons icons)
+	TsgHubBingo(Client client, AudioPlayer audioPlayer, TsgHubConfig config, ConfigManager configManager, OverlayManager overlayManager, MouseManager mouseManager, TsgHubTileIcons icons)
 	{
 		this.config = config;
 		this.configManager = configManager;
 		this.overlayManager = overlayManager;
 		this.mouseManager = mouseManager;
 		this.icons = icons;
-		sounds = new TsgHubSounds(config::bingoSounds, config::bingoVolume);
+		sounds = new TsgHubSounds(audioPlayer, config::bingoSounds, config::bingoVolume);
 		boardOverlay = new TsgHubBoardOverlay(icons);
 		revealOverlay = new TsgHubRevealOverlay(client, icons, sounds);
 	}
