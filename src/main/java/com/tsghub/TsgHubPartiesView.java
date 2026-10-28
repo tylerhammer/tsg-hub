@@ -300,10 +300,14 @@ final class TsgHubPartiesView
 	private JPanel dropRow(JsonObject drop)
 	{
 		String tag = bool(drop, "agreed") ? " (agreed)" : bool(drop, "estimated") ? " (estimated)" : "";
-		JPanel row = row(shrinkable(label(str(drop, "player") + ": " + str(drop, "name"), TEXT, smallFont())),
-			label(splitGp(longValue(drop, "value", 0)) + tag, bool(drop, "estimated") ? MUTED : TEXT, smallFont()));
+		String title = str(drop, "player") + ": " + str(drop, "name");
+		JLabel name = label(title, TEXT, smallFont());
+		JLabel value = label(splitGp(longValue(drop, "value", 0)) + tag, bool(drop, "estimated") ? MUTED : TEXT, smallFont());
+		JPanel row = row(shrinkable(name), value);
 		List<String> skipped = strings(array(drop, "skipped"));
-		if (!skipped.isEmpty()) row.setToolTipText("Not sharing: " + String.join(", ", skipped));
+		String tip = skipped.isEmpty() ? title : title + " (not sharing: " + String.join(", ", skipped) + ")";
+		name.setToolTipText(tip);
+		value.setToolTipText(tip);
 		JPopupMenu menu = dropMenu(drop, skipped);
 		if (menu.getComponentCount() > 0) row.setComponentPopupMenu(menu);
 		return row;
