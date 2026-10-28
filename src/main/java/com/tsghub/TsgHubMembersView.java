@@ -71,7 +71,7 @@ final class TsgHubMembersView
 		return members.size() + " online";
 	}
 
-	void locationSharingChanged()
+	void refreshIfShown()
 	{
 		if (shell.shows(View.MEMBERS)) renderMembers();
 	}
@@ -183,7 +183,8 @@ final class TsgHubMembersView
 		if (self) highlightSelf(card);
 
 		JPanel top = row();
-		top.add(memberName(member, name, TEXT, boldFont()), BorderLayout.CENTER);
+		Color team = plugin.teamColors().colorOf(name);
+		top.add(memberName(member, name, team != null ? team : TEXT, boldFont()), BorderLayout.CENTER);
 		JPanel badges = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
 		badges.setOpaque(false);
 		boolean sameWorld = !self && world > 0 && world == myWorld;

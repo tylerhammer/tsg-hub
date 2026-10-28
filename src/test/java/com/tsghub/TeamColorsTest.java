@@ -6,7 +6,6 @@ import static org.junit.Assert.assertNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.awt.Color;
-import net.runelite.client.callback.ClientThread;
 import org.junit.Test;
 
 public class TeamColorsTest
@@ -15,14 +14,10 @@ public class TeamColorsTest
 
 	private TsgHubTeamColors colors()
 	{
-		ClientThread clientThread = new ClientThread()
-		{
-			@Override public void invoke(Runnable r) { }
-		};
-		return new TsgHubTeamColors(null, clientThread, new TsgHubConfig()
+		return new TsgHubTeamColors(new TsgHubConfig()
 		{
 			@Override public boolean teamNameColors() { return enabled; }
-		});
+		}, () -> { });
 	}
 
 	private static JsonObject json(String text)

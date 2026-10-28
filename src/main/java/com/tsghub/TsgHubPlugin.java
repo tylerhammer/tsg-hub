@@ -174,7 +174,7 @@ public class TsgHubPlugin extends Plugin
 		eventBus.register(tracker);
 		coffer = new TsgHubCoffer(this, client, body -> tracker.report("coffer", "/v1/coffer", body));
 		eventBus.register(coffer);
-		teamColors = new TsgHubTeamColors(client, clientThread, config);
+		teamColors = new TsgHubTeamColors(config, () -> ui(s -> s.membersView.refreshIfShown()));
 		eventBus.register(teamColors);
 		navigationButton = NavigationButton.builder()
 			.tooltip("TSG Hub")
@@ -208,11 +208,7 @@ public class TsgHubPlugin extends Plugin
 		if (navigationButton != null) clientToolbar.removeNavigation(navigationButton);
 		if (tracker != null) eventBus.unregister(tracker);
 		if (coffer != null) eventBus.unregister(coffer);
-		if (teamColors != null)
-		{
-			eventBus.unregister(teamColors);
-			teamColors.shutDown();
-		}
+		if (teamColors != null) eventBus.unregister(teamColors);
 		if (groupTracker != null)
 		{
 			groupTracker.stop();
@@ -405,9 +401,9 @@ public class TsgHubPlugin extends Plugin
 			clientThread.invokeLater(this::syncMemberMap);
 			return;
 		}
-		if ("shareLocation".equals(event.getKey()))
+		if ("shareLocation".equals(event.getKey()) || "teamNameColors".equals(event.getKey()))
 		{
-			ui(s -> s.membersView.locationSharingChanged());
+			ui(s -> s.membersView.refreshIfShown());
 			return;
 		}
 		if ("hubKey".equals(event.getKey()))
