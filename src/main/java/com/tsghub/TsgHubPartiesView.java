@@ -13,16 +13,22 @@ import com.google.gson.JsonObject;
 import com.tsghub.TsgHubSidebarPanel.View;
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
+import net.runelite.client.util.QuantityFormatter;
 
 final class TsgHubPartiesView
 {
@@ -244,27 +250,86 @@ final class TsgHubPartiesView
 		if (split.size() > 0)
 		{
 			JPanel lines = stack();
-			lines.add(row(boldLabel("Loot split"), label(running ? "Running" : "Ended", running ? SUCCESS : MUTED, smallFont())));
-			lines.add(gap(GAP_XS));
-			lines.add(row(caption("Looted / fair share"), caption(splitGp(longValue(split, "total", 0)) + " total")));
+			String state = running ? "Running" : "Ended";
+			lines.add(row(boldLabel("Loot split"), label(state + " · " + splitGp(longValue(split, "total", 0)), running ? SUCCESS : MUTED, smallFont())));
+			lines.add(gap(GAP_M));
+			lines.add(row(caption("Members"), caption("looted / share")));
 			for (JsonObject member : objects(array(split, "members")))
 			{
 				lines.add(gap(GAP_XS));
 				lines.add(row(shrinkable(label(str(member, "displayName"), TEXT, smallFont())),
 					label(splitGp(longValue(member, "looted", 0)) + " / " + splitGp(longValue(member, "share", 0)), TEXT, smallFont())));
 			}
-			for (JsonObject transfer : objects(array(split, "transfers")))
+			List<JsonObject> drops = objects(array(split, "drops"));
+			if (!drops.isEmpty())
 			{
+				lines.add(gap(GAP_M));
+				lines.add(row(caption("Drops"), caption("right-click to edit")));
+			}
+			for (JsonObject drop : drops)
+			{
+				lines.add(gap(GAP_S));
+				lines.add(dropRow(drop));
+			}
+			List<JsonObject> transfers = objects(array(split, "transfers"));
+			if (!transfers.isEmpty())
+			{
+				lines.add(gap(GAP_M));
+				String heading = "Settle up";
+				String me = plugin.session().get(TsgHubSession.GROUP_PLAYER);
+				boolean canMark = plugin.groups().isLeader() || transfers.stream().anyMatch(t -> samePlayer(str(t, "to"), me));
+				lines.add(canMark ? row(caption(heading), caption("right-click when paid")) : caption(heading));
+			}
+			String payer = null;
+			for (JsonObject transfer : transfers)
+			{
+				String from = str(transfer, "from");
+				if (!from.equals(payer))
+				{
+					payer = from;
+					lines.add(gap(GAP_XS));
+					lines.add(shrinkable(label(from + " pays", TEXT, smallFont())));
+				}
+				JPanel line = row(shrinkable(label(str(transfer, "to"), TEXT, smallFont())), label((bool(split, "estimated") ? "~" : "") + splitGp(longValue(transfer, "amount", 0)), WARNING, smallFont()));
+				line.setBorder(BorderFactory.createEmptyBorder(0, GAP_M, 0, 0));
+				withMenu(line, transferMenu(transfer));
 				lines.add(gap(GAP_XS));
-				lines.add(wrapped(str(transfer, "from") + " pays " + str(transfer, "to") + " " + TsgHubFormat.number(longValue(transfer, "amount", 0)) + " gp",
-					WARNING, smallFont(), TsgHubSidebarPanel.CARD_TEXT_W));
+				lines.add(line);
+			}
+			List<JsonObject> payments = objects(array(split, "payments"));
+			if (!payments.isEmpty())
+			{
+				lines.add(gap(GAP_M));
+				lines.add(caption("Paid"));
+			}
+			for (JsonObject payment : payments)
+			{
+				JPanel line = row(shrinkable(label(str(payment, "from") + " paid " + str(payment, "to"), TEXT, smallFont())), label(splitGp(longValue(payment, "gp", 0)), SUCCESS, smallFont()));
+				withMenu(line, paymentMenu(payment));
+				lines.add(gap(GAP_XS));
+				lines.add(line);
+			}
+			if (!running && transfers.isEmpty() && !payments.isEmpty())
+			{
+				lines.add(gap(GAP_S));
+				lines.add(label("All settled", SUCCESS, smallFont()));
 			}
 			JPanel card = card();
 			card.add(lines, BorderLayout.CENTER);
 			addCard(groupsPage, fitHeight(card));
-			JButton copy = button("Copy split");
-			copy.addActionListener(e -> copyToClipboard(str(split, "summary")));
-			buttons.add(copy);
+			String self = plugin.session().get(TsgHubSession.GROUP_PLAYER);
+			if (objects(array(split, "members")).stream().anyMatch(m -> samePlayer(str(m, "displayName"), self)))
+			{
+				boolean skipping = strings(array(split, "skippers")).stream().anyMatch(n -> samePlayer(n, self));
+				JButton skip = button(skipping ? "Rejoin split" : "Skip split");
+				skip.setToolTipText(skipping ? "Take your share of every drop in this split again" : "Give up your share of every drop in this split, including later ones");
+				skip.addActionListener(e -> {
+					if (!skipping && !confirm(shell, "Loot split", "Skip your share of every drop in this split?", "Skip", false)) return;
+					skip.setEnabled(false);
+					plugin.groups().setSplitSkip(self, !skipping);
+				});
+				buttons.add(skip);
+			}
 		}
 		if (plugin.groups().isLeader())
 		{
@@ -280,6 +345,138 @@ final class TsgHubPartiesView
 		if (buttons.getComponentCount() == 0) return;
 		groupsPage.add(fitHeight(buttons));
 		groupsPage.add(gap(GAP_L));
+	}
+
+	private JPanel dropRow(JsonObject drop)
+	{
+		boolean estimated = bool(drop, "estimated");
+		JLabel name = label(str(drop, "name"), TEXT, smallFont());
+		JLabel value = label((estimated ? "~" : "") + splitGp(longValue(drop, "value", 0)), estimated ? MUTED : TEXT, smallFont());
+		List<String> skipped = strings(array(drop, "skipped"));
+		String status = bool(drop, "agreed") ? "agreed" : estimated ? "estimated" : "sold";
+		JPanel row = stack();
+		row.add(row(shrinkable(name), value));
+		row.add(shrinkable(caption(str(drop, "player") + " · " + status)));
+		if (!skipped.isEmpty()) row.add(shrinkable(caption("Skipped by " + String.join(", ", skipped))));
+		withMenu(row, dropMenu(drop, skipped));
+		return row;
+	}
+
+	private static void withMenu(JPanel row, JPopupMenu menu)
+	{
+		if (menu.getComponentCount() == 0) return;
+		row.setComponentPopupMenu(menu);
+		inheritPopup(row);
+	}
+
+	private JPopupMenu transferMenu(JsonObject transfer)
+	{
+		JPopupMenu menu = new JPopupMenu();
+		String from = str(transfer, "from");
+		String to = str(transfer, "to");
+		if (!plugin.groups().isLeader() && !samePlayer(to, plugin.session().get(TsgHubSession.GROUP_PLAYER))) return menu;
+		JMenuItem paid = new JMenuItem("Mark paid");
+		paid.addActionListener(e -> plugin.groups().markPaid(from, to, 0));
+		menu.add(paid);
+		JMenuItem part = new JMenuItem("Mark part paid");
+		part.addActionListener(e -> promptPaid(from, to));
+		menu.add(part);
+		return menu;
+	}
+
+	private JPopupMenu paymentMenu(JsonObject payment)
+	{
+		JPopupMenu menu = new JPopupMenu();
+		if (!plugin.groups().isLeader() && !samePlayer(str(payment, "to"), plugin.session().get(TsgHubSession.GROUP_PLAYER))) return menu;
+		JMenuItem undo = new JMenuItem("Undo payment");
+		undo.addActionListener(e -> plugin.groups().unpay(str(payment, "id")));
+		menu.add(undo);
+		return menu;
+	}
+
+	private void promptPaid(String from, String to)
+	{
+		Object input = JOptionPane.showInputDialog(shell, "How much did " + from + " pay " + to + "? (e.g. 200m)", "Mark part paid", JOptionPane.PLAIN_MESSAGE);
+		if (input == null) return;
+		long gp = parseGp(input.toString());
+		if (gp <= 0)
+		{
+			groupActionFailed("Enter an amount like 200m or 2500000.");
+			return;
+		}
+		groupError.setVisible(false);
+		plugin.groups().markPaid(from, to, gp);
+	}
+
+	private static void inheritPopup(java.awt.Container parent)
+	{
+		for (java.awt.Component child : parent.getComponents())
+		{
+			if (child instanceof JComponent) ((JComponent) child).setInheritsPopupMenu(true);
+			if (child instanceof java.awt.Container) inheritPopup((java.awt.Container) child);
+		}
+	}
+
+	private JPopupMenu dropMenu(JsonObject drop, List<String> skipped)
+	{
+		JPopupMenu menu = new JPopupMenu();
+		String id = str(drop, "id");
+		if (id.isEmpty()) return menu;
+		TsgHubGroups groups = plugin.groups();
+		boolean leader = groups.isLeader();
+		if (leader)
+		{
+			JMenuItem value = new JMenuItem("Set agreed value");
+			value.addActionListener(e -> promptDropValue(drop));
+			menu.add(value);
+			if (bool(drop, "agreed"))
+			{
+				JMenuItem clear = new JMenuItem("Clear agreed value");
+				clear.addActionListener(e -> groups.setSplitValue(id, 0));
+				menu.add(clear);
+			}
+		}
+		String self = plugin.session().get(TsgHubSession.GROUP_PLAYER);
+		for (String name : dropSharers(drop, skipped))
+		{
+			boolean me = samePlayer(name, self);
+			if (!me && !leader) continue;
+			boolean sharing = skipped.stream().noneMatch(n -> samePlayer(n, name));
+			String who = me ? "my" : name + "'s";
+			JMenuItem share = new JMenuItem(sharing ? "Skip " + who + " share" : "Restore " + who + " share");
+			share.addActionListener(e -> groups.setSplitShare(id, name, !sharing));
+			menu.add(share);
+		}
+		return menu;
+	}
+
+	static List<String> dropSharers(JsonObject drop, List<String> skipped)
+	{
+		List<String> names = new ArrayList<>();
+		for (String name : strings(array(drop, "sharers"))) if (names.stream().noneMatch(n -> samePlayer(n, name))) names.add(name);
+		for (String name : skipped) if (names.stream().noneMatch(n -> samePlayer(n, name))) names.add(name);
+		return names;
+	}
+
+	private void promptDropValue(JsonObject drop)
+	{
+		Object input = JOptionPane.showInputDialog(shell, "Agreed value for " + str(drop, "name") + " (e.g. 1.4b, 350m)", "Set agreed value",
+			JOptionPane.PLAIN_MESSAGE, null, null, splitGp(longValue(drop, "value", 0)));
+		if (input == null) return;
+		long gp = parseGp(input.toString());
+		if (gp <= 0)
+		{
+			groupActionFailed("Enter an amount like 1.4b, 350m or 2500000.");
+			return;
+		}
+		groupError.setVisible(false);
+		plugin.groups().setSplitValue(str(drop, "id"), gp);
+	}
+
+	static long parseGp(String text)
+	{
+		try { return QuantityFormatter.parseQuantity(text.trim().replace(",", "").replace(" ", "")); }
+		catch (ParseException | RuntimeException e) { return -1; }
 	}
 
 	static String splitGp(long value)
