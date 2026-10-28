@@ -26,6 +26,7 @@ final class TsgHubRedaction
 	private static final Pattern LOGIN_NOTICE = Pattern.compile(" has logged (?:in|out)\\.?$");
 	private static final Set<ChatMessageType> PRIVATE = EnumSet.of(ChatMessageType.PRIVATECHAT, ChatMessageType.PRIVATECHATOUT,
 		ChatMessageType.MODPRIVATECHAT, ChatMessageType.LOGINLOGOUTNOTIFICATION);
+	private static final int[] TYPING = { InterfaceID.Chatbox.INPUT, InterfaceID.Chatbox.MES_TEXT, InterfaceID.Chatbox.MES_TEXT2 };
 
 	private TsgHubRedaction()
 	{
@@ -35,6 +36,11 @@ final class TsgHubRedaction
 	{
 		List<Rectangle> out = new ArrayList<>();
 		for (Map.Entry<Rectangle, String> line : lines(client.getWidget(InterfaceID.PmChat.CONTAINER), new ArrayList<>())) out.add(line.getKey());
+		for (int id : TYPING)
+		{
+			Widget typing = client.getWidget(id);
+			if (typing != null && !typing.isHidden()) out.add(typing.getBounds());
+		}
 		Widget chat = client.getWidget(InterfaceID.Chatbox.SCROLLAREA);
 		if (chat == null || chat.isHidden()) return out;
 		List<String> bodies = new ArrayList<>();
@@ -45,7 +51,7 @@ final class TsgHubRedaction
 		Rectangle view = chat.getBounds();
 		for (Rectangle row : privateRows(lines(chat, new ArrayList<>()), bodies))
 		{
-			Rectangle visible = row.intersection(view);
+			Rectangle visible = new Rectangle(view.x, row.y, view.width, row.height).intersection(view);
 			if (!visible.isEmpty()) out.add(visible);
 		}
 		return out;
