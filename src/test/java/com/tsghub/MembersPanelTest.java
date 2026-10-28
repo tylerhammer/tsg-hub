@@ -123,6 +123,17 @@ public class MembersPanelTest
 	}
 
 	@Test
+	public void withCorner()
+	{
+		assertEquals("<b>Bob</b>", TsgHubHtml.withCorner("<b>Bob</b>", ""));
+		assertTrue(TsgHubHtml.withCorner("", "9pm KST").contains("9pm KST"));
+		String tip = TsgHubHtml.withCorner("Alt of Bob<br>Raiding", "9pm KST");
+		assertTrue(tip.contains("<td valign='top'>Alt of Bob</td>"));
+		assertTrue(tip.endsWith("</table>Raiding"));
+		assertTrue(TsgHubHtml.withCorner("<div style='margin-top:0px'>NOTE</div><table></table>", "9pm KST").contains("<td valign='top'><div style='margin-top:0px'>NOTE</div></td>"));
+	}
+
+	@Test
 	public void isAltRank()
 	{
 		assertEquals(true, TsgHubRoster.isAltRank("Gnome Child"));

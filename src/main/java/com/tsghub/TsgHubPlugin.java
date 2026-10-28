@@ -158,7 +158,6 @@ public class TsgHubPlugin extends Plugin
 		every(liveSync.unlessLive(groups::autoRefresh), TsgHubGroups.REFRESH_SECONDS, TsgHubGroups.REFRESH_SECONDS, TimeUnit.SECONDS);
 		presence = new TsgHubPresence(this, client, clientThread, rankIcons, spriteManager, executor, this::api, () -> sidebar, socket, keys::adminKey);
 		every(liveSync.unlessLive(presence::autoRefresh), TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
-		every(() -> ui(s -> s.membersView.clockTick()), 60, 60, TimeUnit.SECONDS);
 		memberMap = new TsgHubMemberMap(this, client, clientThread, worldMapPointManager, executor, this::api);
 		mapOverlay = new TsgHubMapOverlay(client, worldMapOverlay, memberMap);
 		overlayManager.add(mapOverlay);

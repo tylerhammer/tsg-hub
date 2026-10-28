@@ -104,7 +104,7 @@ Anyone in clan chat with sharing on appears in the list. Your area and activity 
 
 Online clanmates are listed first, including those in clan chat without TSG Hub, who show just their world. The rest of the clan is listed under **Offline**; tick **Show offline** to expand it. Offline members who use TSG Hub show how long ago they were last online.
 
-Clanmates whose clock is on a different time from yours show their local time and zone, such as `9pm KST`, at the end of their row; hover an offline member to see theirs. It comes from their computer's time zone, so members on the same time as you show nothing extra.
+Hover a clanmate whose clock is on a different time from yours to see their local time and zone, such as `9pm KST`, in the corner of the tooltip. It comes from their computer's time zone, so members on the same time as you show nothing extra.
 
 <p align="center"><img src="docs/images/members.png" width="280" alt="Online clan members with their world, area and activity"></p>
 
