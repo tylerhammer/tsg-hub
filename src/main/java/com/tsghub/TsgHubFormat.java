@@ -93,7 +93,7 @@ final class TsgHubFormat
 		return when.atZone(zone).format(DATE_WITH_YEAR);
 	}
 
-	private static String clock(ZonedDateTime time, boolean meridiem)
+	static String clock(ZonedDateTime time, boolean meridiem)
 	{
 		String text = time.format(time.getMinute() == 0 ? HOUR : HOUR_MINUTE);
 		return meridiem ? text + (time.getHour() < 12 ? "am" : "pm") : text;
