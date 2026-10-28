@@ -52,6 +52,8 @@ Your team's board opens straight from the sidebar. The header shows your team's 
 
 **Claim a tile** to tell your team you're going for it: right-click an open task and pick **Claim tile**, with an optional note such as "doing it tonight" (up to 100 characters). Each task shows who on your team has claimed it, and hovering it shows their notes. Tiles you've claimed are highlighted. Right-click again to **Change note** or **Drop claim**. Several teammates can claim the same tile, and only your team sees your claims. Claims clear when your team completes the tile or you disconnect from the event.
 
+If the admins pick a color for each team, clanmates' names show in their team's color in clan chat and in the sidebar's Members list while the bingo is live. This only changes what you see. Turn it off with **Bingo team colors** under **Chat** in the plugin settings.
+
 When you make progress, a message appears in **your own chatbox only**. When your team finishes a tile, teammates who are online in clan chat get a local alert too. TSG Hub never posts to public or clan chat.
 
 <table align="center"><tr><td align="center" valign="top"><img src="docs/images/board-tasks.png" width="240" alt="A team's bingo board with progress on each task"><br><sub>Tasks</sub></td><td align="center" valign="top"><img src="docs/images/board-scores.png" width="240" alt="Team scoreboard"><br><sub>Scores</sub></td><td align="center" valign="top"><img src="docs/images/board-team.png" width="240" alt="Team tab listing teammates"><br><sub>Team</sub></td></tr></table>
@@ -176,7 +178,7 @@ The plugin confirms the key in the sidebar and links your Discord account to the
 
 Admin tools use the same hub key. If you're a Discord admin (the server owner, a member with an admin role, or anyone with Manage Server), linking gives you a key with admin access. Keys from before hub keys existed, starting with `tsgadm_`, keep working and move into the **Hub key** setting by themselves.
 
-Once the key checks out, an admin button appears in the sidebar header. It opens the TSG Hub admin site in your browser, already signed in. That's where you create and edit events, teams and tasks, review results, post announcements, and manage members. `/admin login` in the clan Discord gives you the same one-time link. If you lose your Discord admin role, your key keeps linking your account but the admin button disappears.
+Once the key checks out, an admin button appears in the sidebar header. It opens the TSG Hub admin site in your browser, already signed in. That's where you create and edit events, teams (including each team's name color) and tasks, review results, post announcements, and manage members. `/admin login` in the clan Discord gives you the same one-time link. If you lose your Discord admin role, your key keeps linking your account but the admin button disappears.
 
 Your in-game clan rank doesn't grant admin access. Owners and Deputy Owners keep admin access through their Discord admin role.
 

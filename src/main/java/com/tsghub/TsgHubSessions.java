@@ -374,13 +374,14 @@ final class TsgHubSessions
 		plugin.sidebarBusy(true);
 		api().call("GET", "/v1/events?clanName=" + TsgHubApi.encode(clanName), null, null).whenCompleteAsync(TsgHubApi.handle(response ->
 		{
-			applyClanEvents(response.getAsJsonArray("events"));
+			applyClanEvents(response);
 		}, e -> plugin.memberError("Couldn't load events. ", e), () -> plugin.sidebarBusy(false)), executor);
 	}
 
-	void applyClanEvents(JsonArray events)
+	void applyClanEvents(JsonObject response)
 	{
-		if (events == null) return;
+		plugin.teamColors().apply(TsgHubJson.object(response, "teamColors"));
+		JsonArray events = TsgHubJson.array(response, "events");
 		clanEvents = events;
 		joinedCompetitions = joinedCompetitionIds(events);
 		plugin.ui(s -> s.eventsView.setEvents(events));
