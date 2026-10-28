@@ -87,12 +87,12 @@ final class TsgHubTileIcons
 		if (task == null || !"drop".equals(TsgHubJson.str(task, "type"))) return 0;
 		JsonObject config = config(task);
 		JsonArray groups = TsgHubJson.array(config, "itemGroups");
-		if (groups.size() > 0 && groups.get(0).isJsonArray() && groups.get(0).getAsJsonArray().size() > 0)
+		if (groups.size() > 0 && groups.get(0).isJsonArray() && groups.get(0).getAsJsonArray().size() > 0 && groups.get(0).getAsJsonArray().get(0).isJsonObject())
 			return TsgHubJson.integer(groups.get(0).getAsJsonArray().get(0).getAsJsonObject(), "id", 0);
 		if ("pet".equals(TsgHubJson.str(config, "itemGroup"))) return ItemID.MOLEPET;
 		if ("jar".equals(TsgHubJson.str(config, "itemGroup"))) return ItemID.JAR_OF_SWAMP;
 		JsonArray ids = TsgHubJson.array(config, "itemIds");
-		for (int i = 0; i < ids.size(); i++) if (ids.get(i).isJsonPrimitive() && ids.get(i).getAsInt() > 0) return ids.get(i).getAsInt();
+		for (int i = 0; i < ids.size(); i++) if (ids.get(i).isJsonPrimitive() && ids.get(i).getAsJsonPrimitive().isNumber() && ids.get(i).getAsInt() > 0) return ids.get(i).getAsInt();
 		return 0;
 	}
 

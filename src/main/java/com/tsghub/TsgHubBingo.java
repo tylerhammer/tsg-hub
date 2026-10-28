@@ -17,6 +17,8 @@ final class TsgHubBingo
 	private final TsgHubSounds sounds;
 	private final TsgHubBoardOverlay boardOverlay;
 	private final TsgHubRevealOverlay revealOverlay;
+	private volatile TsgHubBingoView view;
+	private volatile String listEventId = "";
 
 	TsgHubBingo(Client client, TsgHubConfig config, ConfigManager configManager, OverlayManager overlayManager, MouseManager mouseManager, TsgHubTileIcons icons)
 	{
@@ -55,9 +57,15 @@ final class TsgHubBingo
 		return icons;
 	}
 
-	boolean wantsBoard()
+	boolean wantsBoard(String eventId)
 	{
-		return config.bingoReveal() || config.bingoOverlay();
+		return (config.bingoReveal() || config.bingoOverlay()) && !eventId.equals(listEventId);
+	}
+
+	TsgHubBingoView viewFor(JsonObject event, String teamId)
+	{
+		TsgHubBingoView current = view;
+		return current != null && current.event == event ? current : TsgHubBingoView.of(event, teamId);
 	}
 
 	boolean overlayEnabled()
@@ -72,9 +80,12 @@ final class TsgHubBingo
 
 	void apply(JsonObject event, String displayName)
 	{
+		listEventId = TsgHubBingoBoard.hasBoard(event) ? "" : TsgHubJson.str(event, "id");
 		String teamId = TsgHubEvents.teamIdFor(event, displayName);
-		boardOverlay.setEvent(event, teamId);
-		TsgHubReveals.Moment moment = reveals.update(event, teamId, displayName == null ? "" : displayName);
+		TsgHubBingoView next = teamId == null || teamId.isEmpty() ? null : TsgHubBingoView.of(event, teamId);
+		view = next;
+		boardOverlay.setView(next);
+		TsgHubReveals.Moment moment = reveals.update(next, displayName == null ? "" : displayName);
 		if (config.bingoReveal()) revealOverlay.reveal(moment);
 	}
 
@@ -86,6 +97,8 @@ final class TsgHubBingo
 
 	void clear()
 	{
+		view = null;
+		listEventId = "";
 		resetReveals();
 		boardOverlay.clear();
 	}

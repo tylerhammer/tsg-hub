@@ -1,10 +1,8 @@
 package com.tsghub;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -145,64 +143,51 @@ final class TsgHubReveals
 		key = null;
 	}
 
-	synchronized Moment update(JsonObject event, String teamId, String playerName)
+	synchronized Moment update(TsgHubBingoView view, String playerName)
 	{
-		if (event == null || teamId == null || teamId.isEmpty() || !TsgHubBingoBoard.hasBoard(event))
+		if (view == null)
 		{
 			key = null;
 			return null;
 		}
-		JsonArray tasks = TsgHubJson.array(event, "tasks");
-		JsonArray progressRows = TsgHubJson.array(TsgHubEvents.scoreFor(TsgHubJson.array(event, "teamScores"), teamId), "tasks");
-		Set<String> nowDone = new HashSet<>();
+		TsgHubBingoBoard board = view.board;
 		Set<String> nowMine = new HashSet<>();
-		Map<String, JsonObject> progress = new HashMap<>();
-		for (int i = 0; i < progressRows.size(); i++)
+		for (JsonObject row : view.progress.values())
 		{
-			JsonObject row = progressRows.get(i).getAsJsonObject();
-			String taskId = TsgHubJson.str(row, "taskId");
-			progress.put(taskId, row);
-			if (TsgHubJson.bool(row, "completed")) nowDone.add(taskId);
-			JsonArray members = TsgHubJson.array(row, "members");
-			for (int m = 0; m < members.size(); m++)
+			for (JsonObject member : TsgHubJson.objects(TsgHubJson.array(row, "members")))
 			{
-				JsonObject member = members.get(m).getAsJsonObject();
-				if (TsgHubJson.bool(member, "completed") && PlayerNames.samePlayer(TsgHubJson.str(member, "displayName"), playerName)) nowMine.add(taskId);
+				if (TsgHubJson.bool(member, "completed") && PlayerNames.samePlayer(TsgHubJson.str(member, "displayName"), playerName)) nowMine.add(TsgHubJson.str(row, "taskId"));
 			}
 		}
-		TsgHubBingoBoard board = TsgHubBingoBoard.of(event);
-		List<TsgHubBingoBoard.Line> complete = board.completedLines(nowDone);
 		Set<String> nowLines = new HashSet<>();
-		for (TsgHubBingoBoard.Line line : complete) nowLines.add(line.key());
-		String nextKey = TsgHubJson.str(event, "id") + ":" + teamId;
+		for (TsgHubBingoBoard.Line line : view.lines) nowLines.add(line.key());
 		Moment moment = null;
-		if (nextKey.equals(key))
+		if (view.key.equals(key))
 		{
-			Map<String, JsonObject> byId = tasks(event);
 			List<String> finished = new ArrayList<>();
 			for (int row = 0; row < board.size; row++)
 			{
 				for (int col = 0; col < board.size; col++)
 				{
 					String id = board.taskAt(row, col);
-					if (id != null && byMe(byId.get(id), progress.get(id), nowDone, nowMine, playerName)) finished.add(id);
+					if (id != null && byMe(view.tasks.get(id), view.progress.get(id), view.done, nowMine, playerName)) finished.add(id);
 				}
 			}
-			for (String id : board.unplaced) if (byMe(byId.get(id), progress.get(id), nowDone, nowMine, playerName)) finished.add(id);
+			for (String id : board.unplaced) if (byMe(view.tasks.get(id), view.progress.get(id), view.done, nowMine, playerName)) finished.add(id);
 			List<TsgHubBingoBoard.Line> newLines = new ArrayList<>();
-			for (TsgHubBingoBoard.Line line : complete)
+			for (TsgHubBingoBoard.Line line : view.lines)
 			{
 				if (!lines.contains(line.key()) && touches(board, line, finished)) newLines.add(line);
 			}
 			if (!finished.isEmpty())
 			{
-				Set<String> before = new HashSet<>(nowDone);
+				Set<String> before = new HashSet<>(view.done);
 				before.removeAll(finished);
-				moment = new Moment(nextKey, TsgHubJson.str(event, "name"), board, byId, progress, before, finished, newLines, Collections.emptyList(), Collections.emptyList());
+				moment = new Moment(view.key, view.name, board, view.tasks, view.progress, before, finished, newLines, Collections.emptyList(), Collections.emptyList());
 			}
 		}
-		key = nextKey;
-		done = nowDone;
+		key = view.key;
+		done = view.done;
 		lines = nowLines;
 		mine = nowMine;
 		return moment;
@@ -214,14 +199,6 @@ final class TsgHubReveals
 		if (task == null || !nowDone.contains(id) || done.contains(id)) return false;
 		if ("individual".equals(TsgHubJson.str(task, "scope"))) return nowMine.contains(id) && !mine.contains(id);
 		return !playerName.isEmpty() && PlayerNames.samePlayer(TsgHubJson.str(progress, "completedBy"), playerName);
-	}
-
-	private static Map<String, JsonObject> tasks(JsonObject event)
-	{
-		Map<String, JsonObject> tasks = new HashMap<>();
-		JsonArray list = TsgHubJson.array(event, "tasks");
-		for (int i = 0; i < list.size(); i++) tasks.put(TsgHubJson.str(list.get(i).getAsJsonObject(), "id"), list.get(i).getAsJsonObject());
-		return tasks;
 	}
 
 	private static boolean touches(TsgHubBingoBoard board, TsgHubBingoBoard.Line line, List<String> tasks)

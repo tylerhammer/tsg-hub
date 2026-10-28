@@ -1,6 +1,5 @@
 package com.tsghub;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -15,9 +14,6 @@ import java.awt.event.MouseEvent;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -39,35 +35,10 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 	private static final int PEEK_MS = 280;
 	private static final int PEEK_HOLD_MS = 4000;
 
-	private static final class Snapshot
-	{
-		final String key;
-		final String name;
-		final TsgHubBingoBoard board;
-		final Map<String, JsonObject> tasks;
-		final Map<String, JsonObject> progress;
-		final Set<String> done;
-		final List<TsgHubBingoBoard.Line> lines;
-		final Set<Integer> inLines;
-		final int points;
-
-		Snapshot(String key, String name, TsgHubBingoBoard board, Map<String, JsonObject> tasks, Map<String, JsonObject> progress, Set<String> done, List<TsgHubBingoBoard.Line> lines, int points)
-		{
-			this.inLines = TsgHubBoardGrid.cellsInLines(board, lines);
-			this.key = key;
-			this.name = name;
-			this.board = board;
-			this.tasks = tasks;
-			this.progress = progress;
-			this.done = done;
-			this.lines = lines;
-			this.points = points;
-		}
-	}
-
 	private final TsgHubTileIcons icons;
 	private final Map<String, Long> flips = new ConcurrentHashMap<>();
-	private volatile Snapshot snapshot;
+	private volatile TsgHubBingoView snapshot;
+	private volatile Set<Integer> inLines = Collections.emptySet();
 	private volatile boolean visible;
 	private volatile int layoutCell;
 	private volatile int layoutSize;
@@ -92,56 +63,44 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 	void clear()
 	{
 		snapshot = null;
+		inLines = Collections.emptySet();
 		flips.clear();
 		peekId = null;
 		hover = null;
 	}
 
-	void setEvent(JsonObject event, String teamId)
+	void setView(TsgHubBingoView view)
 	{
-		if (event == null || teamId == null || teamId.isEmpty() || !TsgHubBingoBoard.hasBoard(event))
+		if (view == null)
 		{
 			clear();
 			return;
 		}
-		JsonArray taskList = TsgHubJson.array(event, "tasks");
-		JsonObject score = TsgHubEvents.scoreFor(TsgHubJson.array(event, "teamScores"), teamId);
-		JsonArray rows = TsgHubJson.array(score, "tasks");
-		Map<String, JsonObject> tasks = new HashMap<>();
-		for (int i = 0; i < taskList.size(); i++) tasks.put(TsgHubJson.str(taskList.get(i).getAsJsonObject(), "id"), taskList.get(i).getAsJsonObject());
-		Map<String, JsonObject> progress = new HashMap<>();
-		Set<String> done = new HashSet<>();
-		for (int i = 0; i < rows.size(); i++)
-		{
-			JsonObject row = rows.get(i).getAsJsonObject();
-			progress.put(TsgHubJson.str(row, "taskId"), row);
-			if (TsgHubJson.bool(row, "completed")) done.add(TsgHubJson.str(row, "taskId"));
-		}
-		TsgHubBingoBoard board = TsgHubBingoBoard.of(event);
-		String key = TsgHubJson.str(event, "id") + ":" + teamId;
-		Snapshot previous = snapshot;
-		if (previous == null || !previous.key.equals(key)) flips.clear();
+		TsgHubBingoView previous = snapshot;
+		if (previous == null || !previous.key.equals(view.key)) flips.clear();
 		else
 		{
 			long start = System.currentTimeMillis();
-			for (int row = 0; row < board.size; row++)
+			for (int row = 0; row < view.board.size; row++)
 			{
-				for (int col = 0; col < board.size; col++)
+				for (int col = 0; col < view.board.size; col++)
 				{
-					String id = board.taskAt(row, col);
-					if (id == null || !done.contains(id) || previous.done.contains(id)) continue;
+					String id = view.board.taskAt(row, col);
+					if (id == null || !view.done.contains(id) || previous.done.contains(id)) continue;
 					flips.put(id, start);
 					start += STAGGER_MS;
 				}
 			}
 		}
-		snapshot = new Snapshot(key, TsgHubJson.str(event, "name"), board, tasks, progress, Collections.unmodifiableSet(done), board.completedLines(done), TsgHubJson.integer(score, "points", 0));
+		inLines = TsgHubBoardGrid.cellsInLines(view.board, view.lines);
+		snapshot = view;
 	}
 
 	@Override
 	public Dimension render(Graphics2D graphics)
 	{
-		Snapshot data = snapshot;
+		TsgHubBingoView data = snapshot;
+		Set<Integer> lit = inLines;
 		if (!visible || data == null || data.tasks.isEmpty()) return null;
 		TsgHubBingoBoard board = data.board;
 		int n = board.size;
@@ -185,7 +144,7 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 					continue;
 				}
 				JsonObject task = data.tasks.get(id);
-				TsgHubBoardGrid.Tile tile = new TsgHubBoardGrid.Tile(task, data.progress.get(id), data.done.contains(id), data.inLines.contains(row * n + col), false, hovered != null && hovered[0] == row && hovered[1] == col, icons.icon(task));
+				TsgHubBoardGrid.Tile tile = new TsgHubBoardGrid.Tile(task, data.progress.get(id), data.done.contains(id), lit.contains(row * n + col), false, hovered != null && hovered[0] == row && hovered[1] == col, icons.icon(task));
 				Long flip = flips.get(id);
 				if (flip == null)
 				{
@@ -217,7 +176,7 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 
 		g.setFont(small);
 		metrics = g.getFontMetrics();
-		int left = data.tasks.size() - data.done.size();
+		int left = data.left();
 		String status = left + " left · " + data.lines.size() + (data.lines.size() == 1 ? " line" : " lines");
 		g.setColor(TsgHubTheme.MUTED);
 		g.drawString(status, PAD, height - PAD - 2);
@@ -240,9 +199,9 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 		return Math.min(1, (now - peekOpened) / (double) PEEK_MS);
 	}
 
-	private Rectangle2D.Double peekRect(String id, TsgHubBingoBoard board, int cell, int top, int gridW, double p)
+	private Rectangle2D.Double peekRect(String id, TsgHubBingoView data, int cell, int top, int gridW, double p)
 	{
-		int[] at = cellOf(board, id);
+		int[] at = data.cellOf(id);
 		if (at == null) return null;
 		double x = PAD + at[1] * (cell + GAP);
 		double y = top + at[0] * (cell + GAP);
@@ -256,12 +215,12 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 		return new Rectangle2D.Double(mx - w / 2, my - w / 2, w, w);
 	}
 
-	private void paintPeek(Graphics2D g, Snapshot data, long now, int cell, int top, int gridW, Font small)
+	private void paintPeek(Graphics2D g, TsgHubBingoView data, long now, int cell, int top, int gridW, Font small)
 	{
 		String id = peekId;
 		if (id == null) return;
 		double p = peekProgress(now);
-		Rectangle2D.Double rect = peekRect(id, data.board, cell, top, gridW, p);
+		Rectangle2D.Double rect = peekRect(id, data, cell, top, gridW, p);
 		if (rect == null || peekId == null) return;
 		JsonObject task = data.tasks.get(id);
 		double turn = Math.max(0.04, Math.abs(Math.cos(Math.PI * p)));
@@ -331,14 +290,6 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 		text.dispose();
 	}
 
-	private static int[] cellOf(TsgHubBingoBoard board, String id)
-	{
-		for (int row = 0; row < board.size; row++)
-			for (int col = 0; col < board.size; col++)
-				if (id.equals(board.taskAt(row, col))) return new int[]{row, col};
-		return null;
-	}
-
 	private Point local(MouseEvent event)
 	{
 		Rectangle bounds = getBounds();
@@ -367,16 +318,16 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 
 	@Override public MouseEvent mousePressed(MouseEvent event)
 	{
-		if (!active(event)) return event;
+		TsgHubBingoView data = snapshot;
+		if (data == null || !active(event)) return event;
 		Point point = local(event);
 		if (point == null) return event;
 		event.consume();
-		Snapshot data = snapshot;
 		long now = System.currentTimeMillis();
 		String open = peekId;
 		if (open != null && peekClosing == 0)
 		{
-			Rectangle2D.Double rect = peekRect(open, data.board, layoutCell, PAD + HEADER, layoutCell * layoutSize + GAP * (layoutSize - 1), 1);
+			Rectangle2D.Double rect = peekRect(open, data, layoutCell, PAD + HEADER, layoutCell * layoutSize + GAP * (layoutSize - 1), 1);
 			if (rect != null && rect.contains(point))
 			{
 				peekClosing = now;

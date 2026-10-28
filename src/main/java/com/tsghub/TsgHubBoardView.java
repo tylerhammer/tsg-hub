@@ -19,9 +19,7 @@ import java.awt.Component;
 import java.awt.GridLayout;
 import java.time.LocalTime;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.JButton;
@@ -187,7 +185,8 @@ final class TsgHubBoardView
 			(completed ? done : open).add(task);
 		}
 
-		boolean hasBoard = TsgHubBingoBoard.hasBoard(boardEvent) && tasks.size() > 0;
+		TsgHubBingoView view = tasks.size() > 0 ? plugin.bingo().viewFor(boardEvent, ownTeamId()) : null;
+		boolean hasBoard = view != null;
 		boolean grid = hasBoard && !"list".equals(gridView);
 		if (hasBoard)
 		{
@@ -196,7 +195,7 @@ final class TsgHubBoardView
 		}
 		if (grid)
 		{
-			renderGrid(TsgHubBingoBoard.of(boardEvent), tasks, progressRows, open.size());
+			renderGrid(view, tasks, progressRows);
 			refresh(tasksTab);
 			return;
 		}
@@ -240,15 +239,13 @@ final class TsgHubBoardView
 		renderTasks();
 	}
 
-	private void renderGrid(TsgHubBingoBoard board, JsonArray tasks, JsonArray progressRows, int left)
+	private void renderGrid(TsgHubBingoView view, JsonArray tasks, JsonArray progressRows)
 	{
-		boardGrid.setData(str(boardEvent, "id") + ":" + ownTeamId(), board, tasks, progressRows);
-		Set<String> done = new HashSet<>();
-		for (JsonObject row : objects(progressRows)) if (bool(row, "completed")) done.add(str(row, "taskId"));
-		List<TsgHubBingoBoard.Line> completed = board.completedLines(done);
-		int lines = completed.size();
-		int bonus = board.bonusFor(completed);
-		JLabel counts = label(left + " left · " + lines + (lines == 1 ? " line" : " lines") + (bonus > 0 ? " (+" + bonus + ")" : ""), lines > 0 ? TsgHubBoardGrid.GOLD : MUTED, smallFont());
+		TsgHubBingoBoard board = view.board;
+		boardGrid.setData(view);
+		int lines = view.lines.size();
+		int bonus = board.bonusFor(view.lines);
+		JLabel counts = label(view.left() + " left · " + lines + (lines == 1 ? " line" : " lines") + (bonus > 0 ? " (+" + bonus + ")" : ""), lines > 0 ? TsgHubBoardGrid.GOLD : MUTED, smallFont());
 		counts.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
 		tasksTab.add(fitHeight(row(caption(board.size + "x" + board.size + " board"), counts)));
 		tasksTab.add(gap(GAP_S));

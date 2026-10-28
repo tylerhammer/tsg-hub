@@ -3,6 +3,7 @@ package com.tsghub;
 import java.io.BufferedInputStream;
 import java.io.InputStream;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -52,6 +53,7 @@ final class TsgHubSounds
 	}
 
 	private final Map<Sound, Sample> samples = new EnumMap<>(Sound.class);
+	private final Map<String, byte[]> pitched = new HashMap<>();
 	private final BooleanSupplier enabled;
 	private final IntSupplier volume;
 	private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
@@ -102,23 +104,26 @@ final class TsgHubSounds
 			sample = samples.get(sound);
 		}
 		if (sample == null) return;
-		byte[] data = pitch == 1 ? sample.data : repitch(sample, pitch);
+		byte[] data = pitch == 1 ? sample.data : pitched.computeIfAbsent(sound + ":" + pitch, k -> repitch(sample, pitch));
+		Clip clip = null;
 		try
 		{
-			Clip clip = AudioSystem.getClip();
+			clip = AudioSystem.getClip();
 			clip.open(sample.format, data, 0, data.length);
 			if (clip.isControlSupported(FloatControl.Type.MASTER_GAIN))
 			{
 				FloatControl gain = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
 				gain.setValue(Math.max(gain.getMinimum(), Math.min(gain.getMaximum(), gain(sound))));
 			}
+			Clip playing = clip;
 			clip.addLineListener(event -> {
-				if (event.getType() == LineEvent.Type.STOP) clip.close();
+				if (event.getType() == LineEvent.Type.STOP) playing.close();
 			});
 			clip.start();
 		}
 		catch (Exception e)
 		{
+			if (clip != null) clip.close();
 			log.debug("TSG Hub could not play sound {}", sound.file, e);
 		}
 	}

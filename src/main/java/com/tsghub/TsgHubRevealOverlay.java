@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import javax.swing.SwingUtilities;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.WorldType;
@@ -743,7 +744,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	@Override public MouseEvent mousePressed(MouseEvent event)
 	{
 		TsgHubReveals.Moment moment = current;
-		if (moment != null && panelBounds.contains(event.getPoint()))
+		if (moment != null && pausedAt == 0 && SwingUtilities.isLeftMouseButton(event) && panelBounds.contains(event.getPoint()))
 		{
 			long now = System.currentTimeMillis();
 			if (now - startedAt < exitAt(moment))

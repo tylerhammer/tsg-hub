@@ -149,7 +149,7 @@ final class TsgHubLiveSync
 		if (sidebar.wantsMembers()) watched.add("presence");
 		if (sidebar.wantsDrops()) watched.add("drops");
 		String eventId = plugin.session().get(EVENT_ID);
-		if ((sidebar.wantsAutoRefresh() || plugin.bingo().wantsBoard()) && !eventId.isEmpty()) watched.add("event:" + eventId);
+		if (!eventId.isEmpty() && plugin.sessions().wantsBoardUpdates(sidebar)) watched.add("event:" + eventId);
 		if (competitionId != null) watched.add("event:" + competitionId);
 		return watched;
 	}
@@ -185,7 +185,7 @@ final class TsgHubLiveSync
 		TsgHubSidebarPanel sidebar = plugin.sidebar();
 		if (sidebar == null) return;
 		TsgHubSession session = plugin.session();
-		if (isActiveEvent(eventId) && (sidebar.wantsAutoRefresh() || plugin.bingo().wantsBoard())) plugin.sessions().applyBoard(eventId, session.get(TOKEN), event, false);
+		if (isActiveEvent(eventId) && plugin.sessions().wantsBoardUpdates(sidebar)) plugin.sessions().applyBoard(eventId, session.get(TOKEN), event, false, true);
 		if (eventId.equals(sidebar.competitionView.openCompetitionId()))
 		{
 			String name = session.get(MEMBER_NAME + eventId);
@@ -197,7 +197,7 @@ final class TsgHubLiveSync
 	{
 		TsgHubSidebarPanel sidebar = plugin.sidebar();
 		if (sidebar == null) return;
-		if (isActiveEvent(eventId) && (sidebar.wantsAutoRefresh() || plugin.bingo().wantsBoard())) plugin.sessions().refreshBoard();
+		if (isActiveEvent(eventId) && plugin.sessions().wantsBoardUpdates(sidebar)) plugin.sessions().refreshBoard();
 		if (eventId.equals(sidebar.competitionView.openCompetitionId())) plugin.sessions().openCompetition(eventId);
 	}
 

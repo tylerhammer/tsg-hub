@@ -1,6 +1,5 @@
 package com.tsghub;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
@@ -98,27 +97,15 @@ final class TsgHubBoardGrid extends JComponent
 		return selectedTask;
 	}
 
-	void setData(String key, TsgHubBingoBoard board, JsonArray taskList, JsonArray progressRows)
+	void setData(TsgHubBingoView view)
 	{
-		this.board = board;
-		Map<String, JsonObject> byId = new HashMap<>();
-		for (int i = 0; i < taskList.size(); i++)
-		{
-			JsonObject task = taskList.get(i).getAsJsonObject();
-			byId.put(TsgHubJson.str(task, "id"), task);
-		}
-		Map<String, JsonObject> rows = new HashMap<>();
-		Set<String> nowDone = new HashSet<>();
-		for (int i = 0; i < progressRows.size(); i++)
-		{
-			JsonObject row = progressRows.get(i).getAsJsonObject();
-			rows.put(TsgHubJson.str(row, "taskId"), row);
-			if (TsgHubJson.bool(row, "completed")) nowDone.add(TsgHubJson.str(row, "taskId"));
-		}
-		tasks = byId;
-		progress = rows;
+		String key = view.key;
+		Set<String> nowDone = view.done;
+		board = view.board;
+		tasks = view.tasks;
+		progress = view.progress;
 		done = nowDone;
-		lines = board.completedLines(nowDone);
+		lines = view.lines;
 		Set<String> lineKeys = new HashSet<>();
 		for (TsgHubBingoBoard.Line line : lines) lineKeys.add(line.key());
 		if (!key.equals(dataKey))
