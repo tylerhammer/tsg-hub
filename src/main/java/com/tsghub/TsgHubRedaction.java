@@ -51,7 +51,7 @@ final class TsgHubRedaction
 		Rectangle view = chat.getBounds();
 		for (Rectangle row : privateRows(lines(chat, new ArrayList<>()), bodies))
 		{
-			Rectangle visible = row.intersection(view);
+			Rectangle visible = new Rectangle(view.x, row.y, view.width, row.height).intersection(view);
 			if (!visible.isEmpty()) out.add(visible);
 		}
 		return out;
