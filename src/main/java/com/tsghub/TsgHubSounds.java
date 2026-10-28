@@ -1,7 +1,11 @@
 package com.tsghub;
 
-import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
@@ -9,13 +13,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.BooleanSupplier;
 import java.util.function.IntSupplier;
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.Clip;
-import javax.sound.sampled.FloatControl;
-import javax.sound.sampled.LineEvent;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.client.audio.AudioPlayer;
 
 @Slf4j
 final class TsgHubSounds
@@ -40,20 +39,29 @@ final class TsgHubSounds
 		}
 	}
 
-	private static final class Sample
+	static final class Sample
 	{
-		final AudioFormat format;
-		final byte[] data;
+		final byte[] wav;
+		final int channels;
+		final int rate;
+		final int bits;
+		final int dataStart;
+		final int dataLength;
 
-		Sample(AudioFormat format, byte[] data)
+		Sample(byte[] wav, int channels, int rate, int bits, int dataStart, int dataLength)
 		{
-			this.format = format;
-			this.data = data;
+			this.wav = wav;
+			this.channels = channels;
+			this.rate = rate;
+			this.bits = bits;
+			this.dataStart = dataStart;
+			this.dataLength = dataLength;
 		}
 	}
 
 	private final Map<Sound, Sample> samples = new EnumMap<>(Sound.class);
 	private final Map<String, byte[]> pitched = new HashMap<>();
+	private final AudioPlayer audioPlayer;
 	private final BooleanSupplier enabled;
 	private final IntSupplier volume;
 	private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
@@ -62,8 +70,9 @@ final class TsgHubSounds
 		return thread;
 	});
 
-	TsgHubSounds(BooleanSupplier enabled, IntSupplier volume)
+	TsgHubSounds(AudioPlayer audioPlayer, BooleanSupplier enabled, IntSupplier volume)
 	{
+		this.audioPlayer = audioPlayer;
 		this.enabled = enabled;
 		this.volume = volume;
 		executor.execute(this::load);
@@ -73,14 +82,14 @@ final class TsgHubSounds
 	{
 		for (Sound sound : Sound.values())
 		{
-			InputStream resource = TsgHubSounds.class.getResourceAsStream("sounds/" + sound.file + ".wav");
-			if (resource == null) continue;
-			try (AudioInputStream in = AudioSystem.getAudioInputStream(new BufferedInputStream(resource)))
+			try (InputStream resource = TsgHubSounds.class.getResourceAsStream("sounds/" + sound.file + ".wav"))
 			{
-				byte[] data = in.readAllBytes();
+				if (resource == null) continue;
+				Sample sample = parse(resource.readAllBytes());
+				if (sample == null) continue;
 				synchronized (samples)
 				{
-					samples.put(sound, new Sample(in.getFormat(), data));
+					samples.put(sound, sample);
 				}
 			}
 			catch (Exception e)
@@ -88,6 +97,46 @@ final class TsgHubSounds
 				log.debug("TSG Hub could not load sound {}", sound.file, e);
 			}
 		}
+	}
+
+	static Sample parse(byte[] wav)
+	{
+		if (wav.length < 12) return null;
+		ByteBuffer buffer = ByteBuffer.wrap(wav).order(ByteOrder.LITTLE_ENDIAN);
+		int channels = 0;
+		int rate = 0;
+		int bits = 0;
+		int at = 12;
+		while (at + 8 <= wav.length)
+		{
+			String id = new String(wav, at, 4, StandardCharsets.US_ASCII);
+			int length = buffer.getInt(at + 4);
+			int body = at + 8;
+			if (length < 0 || body + length > wav.length) length = wav.length - body;
+			if (id.equals("fmt ") && length >= 16)
+			{
+				if (buffer.getShort(body) != 1) return null;
+				channels = buffer.getShort(body + 2);
+				rate = buffer.getInt(body + 4);
+				bits = buffer.getShort(body + 14);
+			}
+			else if (id.equals("data"))
+			{
+				return channels > 0 ? new Sample(wav, channels, rate, bits, body, length) : null;
+			}
+			at = body + length + (length & 1);
+		}
+		return null;
+	}
+
+	static byte[] wav(byte[] data, int channels, int rate, int bits)
+	{
+		int block = channels * bits / 8;
+		ByteBuffer buffer = ByteBuffer.allocate(44 + data.length).order(ByteOrder.LITTLE_ENDIAN);
+		buffer.put(new byte[]{'R', 'I', 'F', 'F'}).putInt(36 + data.length).put(new byte[]{'W', 'A', 'V', 'E'});
+		buffer.put(new byte[]{'f', 'm', 't', ' '}).putInt(16).putShort((short) 1).putShort((short) channels).putInt(rate).putInt(rate * block).putShort((short) block).putShort((short) bits);
+		buffer.put(new byte[]{'d', 'a', 't', 'a'}).putInt(data.length).put(data);
+		return buffer.array();
 	}
 
 	void play(Sound sound, double pitch)
@@ -104,26 +153,13 @@ final class TsgHubSounds
 			sample = samples.get(sound);
 		}
 		if (sample == null) return;
-		byte[] data = pitch == 1 ? sample.data : pitched.computeIfAbsent(sound + ":" + pitch, k -> repitch(sample, pitch));
-		Clip clip = null;
+		byte[] wav = pitch == 1 ? sample.wav : pitched.computeIfAbsent(sound + ":" + pitch, k -> repitch(sample, pitch));
 		try
 		{
-			clip = AudioSystem.getClip();
-			clip.open(sample.format, data, 0, data.length);
-			if (clip.isControlSupported(FloatControl.Type.MASTER_GAIN))
-			{
-				FloatControl gain = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
-				gain.setValue(Math.max(gain.getMinimum(), Math.min(gain.getMaximum(), gain(sound))));
-			}
-			Clip playing = clip;
-			clip.addLineListener(event -> {
-				if (event.getType() == LineEvent.Type.STOP) playing.close();
-			});
-			clip.start();
+			audioPlayer.play(new ByteArrayInputStream(wav), gain(sound));
 		}
 		catch (Exception e)
 		{
-			if (clip != null) clip.close();
 			log.debug("TSG Hub could not play sound {}", sound.file, e);
 		}
 	}
@@ -161,9 +197,9 @@ final class TsgHubSounds
 
 	private static byte[] repitch(Sample sample, double pitch)
 	{
-		AudioFormat format = sample.format;
-		if (format.getEncoding() != AudioFormat.Encoding.PCM_SIGNED || format.getSampleSizeInBits() != 16) return sample.data;
-		return repitch(sample.data, format.getChannels(), format.isBigEndian(), pitch);
+		if (sample.bits != 16) return sample.wav;
+		byte[] data = Arrays.copyOfRange(sample.wav, sample.dataStart, sample.dataStart + sample.dataLength);
+		return wav(repitch(data, sample.channels, false, pitch), sample.channels, sample.rate, 16);
 	}
 
 	private float gain(Sound sound)
