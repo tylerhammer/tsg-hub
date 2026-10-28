@@ -5,6 +5,7 @@ import static com.tsghub.TsgHubEvents.*;
 import static com.tsghub.TsgHubHtml.*;
 import static com.tsghub.TsgHubIcons.*;
 import static com.tsghub.TsgHubJson.*;
+import static com.tsghub.TsgHubSession.BOARD_VIEW;
 import static com.tsghub.TsgHubSession.HIDE_COMPLETED;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
@@ -46,6 +47,8 @@ final class TsgHubBoardView
 	private final WidthTrackingPanel scoreboardTab = new WidthTrackingPanel();
 	private final WidthTrackingPanel teamTab = new WidthTrackingPanel();
 	private final JCheckBox hideCompleted = new JCheckBox("Hide completed");
+	private final TsgHubBoardGrid boardGrid;
+	private String gridView;
 
 	JsonObject boardEvent;
 	String boardDisplayName = "";
@@ -59,6 +62,14 @@ final class TsgHubBoardView
 			plugin.session().set(HIDE_COMPLETED, hideCompleted.isSelected() ? "true" : "");
 			renderTasks();
 		});
+		boardGrid = new TsgHubBoardGrid(plugin.bingo().icons());
+		boardGrid.onSelect((taskId, row, col) -> renderTasks());
+		gridView = plugin.session().get(BOARD_VIEW);
+	}
+
+	void boardOverlayChanged()
+	{
+		if (shell.view == View.BOARD) renderTasks();
 	}
 
 	JPanel buildBoard()
@@ -174,6 +185,21 @@ final class TsgHubBoardView
 			(completed ? done : open).add(task);
 		}
 
+		TsgHubBingoView view = tasks.size() > 0 ? plugin.bingo().viewFor(boardEvent, ownTeamId()) : null;
+		boolean hasBoard = view != null;
+		boolean grid = hasBoard && !"list".equals(gridView);
+		if (hasBoard)
+		{
+			tasksTab.add(fitHeight(viewToggle(grid)));
+			tasksTab.add(gap(GAP_M));
+		}
+		if (grid)
+		{
+			renderGrid(view, tasks, progressRows);
+			refresh(tasksTab);
+			return;
+		}
+
 		JPanel controls = panel(new BorderLayout());
 		controls.add(hideCompleted, BorderLayout.WEST);
 		JLabel left = caption(open.size() + " left");
@@ -196,6 +222,53 @@ final class TsgHubBoardView
 			for (JsonObject task : done) addTaskCard(task, progressFor(progressRows, str(task, "id")));
 		}
 		refresh(tasksTab);
+	}
+
+	private JPanel viewToggle(boolean grid)
+	{
+		JPanel toggle = panel(new GridLayout(1, 2, 4, 0));
+		toggle.add(onClick(grid ? primaryButton("Board") : button("Board"), () -> setGridView("grid")));
+		toggle.add(onClick(grid ? button("List") : primaryButton("List"), () -> setGridView("list")));
+		return toggle;
+	}
+
+	private void setGridView(String view)
+	{
+		gridView = view;
+		plugin.session().set(BOARD_VIEW, view);
+		renderTasks();
+	}
+
+	private void renderGrid(TsgHubBingoView view, JsonArray tasks, JsonArray progressRows)
+	{
+		TsgHubBingoBoard board = view.board;
+		boardGrid.setData(view);
+		int lines = view.lines.size();
+		int bonus = board.bonusFor(view.lines);
+		JLabel counts = label(view.left() + " left · " + lines + (lines == 1 ? " line" : " lines") + (bonus > 0 ? " (+" + bonus + ")" : ""), lines > 0 ? TsgHubBoardGrid.GOLD : MUTED, smallFont());
+		counts.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
+		tasksTab.add(fitHeight(row(caption(board.size + "x" + board.size + " board"), counts)));
+		tasksTab.add(gap(GAP_S));
+		tasksTab.add(boardGrid);
+		tasksTab.add(gap(GAP_S));
+		if (board.hasBonus()) tasksTab.add(wrapped(board.bonusRule() + ".", TsgHubBoardGrid.GOLD, smallFont(), TsgHubSidebarPanel.TEXT_W));
+		boolean onScreen = plugin.bingo().overlayEnabled();
+		tasksTab.add(gap(GAP_S));
+		tasksTab.add(fitHeight(onClick(button(onScreen ? "Hide board from screen" : "Show board on screen"), () -> plugin.bingo().setOverlayEnabled(!onScreen))));
+		tasksTab.add(gap(GAP_M));
+		JsonObject selected = null;
+		for (JsonObject task : objects(tasks)) if (str(task, "id").equals(boardGrid.selectedTask())) selected = task;
+		if (selected == null)
+		{
+			boardGrid.setSelectedTask("");
+			tasksTab.add(caption("Click a tile to see its task."));
+		}
+		else addTaskCard(selected, progressFor(progressRows, str(selected, "id")));
+		if (board.unplaced.isEmpty()) return;
+		tasksTab.add(gap(GAP_M));
+		tasksTab.add(caption("Not on the board"));
+		tasksTab.add(gap(GAP_S));
+		for (JsonObject task : objects(tasks)) if (board.unplaced.contains(str(task, "id"))) addTaskCard(task, progressFor(progressRows, str(task, "id")));
 	}
 
 	private void addTaskCard(JsonObject task, JsonObject progress)
@@ -504,7 +577,9 @@ final class TsgHubBoardView
 			card.add(rankLabel(i + 1, boldFont(), 14), BorderLayout.WEST);
 			JPanel text = stack();
 			text.add(wrapped(str(team, "name"), TEXT, boldFont(), 120));
-			text.add(caption(integer(score, "completedTasks", 0) + "/" + totalTasks + " tasks"));
+			int lines = integer(score, "lines", 0);
+			int bonus = integer(score, "bonusPoints", 0);
+			text.add(caption(integer(score, "completedTasks", 0) + "/" + totalTasks + " tasks" + (lines > 0 ? " · " + lines + (lines == 1 ? " line" : " lines") : "") + (bonus > 0 ? " (+" + bonus + ")" : "")));
 			card.add(text, BorderLayout.CENTER);
 			card.add(label(integer(score, "points", 0) + " pts", i == 0 ? ACCENT : TEXT, boldFont()), BorderLayout.EAST);
 			addCard(scoreboardTab, fitHeight(card));

@@ -194,6 +194,7 @@ final class TsgHubSessions
 		session.removePrefix(MEMBER_NAME);
 		session.removePrefix(SIGNUP_NOTE);
 		syncedClanRanks.clear();
+		plugin.bingo().clear();
 	}
 
 	private void revokeRemote()
@@ -257,17 +258,26 @@ final class TsgHubSessions
 
 	void applyBoard(String eventId, String token, JsonObject event, boolean open)
 	{
+		applyBoard(eventId, token, event, open, false);
+	}
+
+	void applyBoard(String eventId, String token, JsonObject event, boolean open, boolean pushed)
+	{
 		syncClanRank(eventId, token, event);
 		String name = session().get(DISPLAY_NAME);
+		boolean active = eventId.equals(session().get(EVENT_ID));
 		if (TsgHubEvents.awaitingTeam(event, name))
 		{
+			if (active) plugin.bingo().clear();
 			String note = session().get(SIGNUP_NOTE + eventId);
 			plugin.ui(s -> s.eventsView.showSignedUp(event, note, open));
 			return;
 		}
 		session().clear(SIGNUP_NOTE + eventId);
+		boolean reveal = active && (pushed || !plugin.liveSync().live());
 		plugin.ui(s ->
 		{
+			if (reveal) plugin.bingo().apply(event, name);
 			boolean placed = s.view == TsgHubSidebarPanel.View.SIGNUP;
 			if (placed) s.setStatus("You're on a team! Progress now counts for your team.", Tone.SUCCESS);
 			s.boardView.showBoard(event, name, open || placed);
@@ -290,9 +300,14 @@ final class TsgHubSessions
 	void autoRefreshBoard(TsgHubSidebarPanel sidebar)
 	{
 		if (sidebar == null) return;
-		if (sidebar.wantsAutoRefresh()) refreshBoard();
+		if (wantsBoardUpdates(sidebar)) refreshBoard();
 		String competitionId = sidebar.competitionView.openCompetitionId();
 		if (competitionId != null) openCompetition(competitionId);
+	}
+
+	boolean wantsBoardUpdates(TsgHubSidebarPanel sidebar)
+	{
+		return sidebar.wantsAutoRefresh() || plugin.bingo().wantsBoard(session().get(EVENT_ID));
 	}
 
 	void participate(String eventId)
@@ -453,6 +468,7 @@ final class TsgHubSessions
 		if (eventId.equals(session.get(EVENT_ID)))
 		{
 			session.clear(TOKEN, EVENT_ID);
+			plugin.bingo().clear();
 			plugin.ui(s -> s.boardView.closeBoard());
 		}
 	}
