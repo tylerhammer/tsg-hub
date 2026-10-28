@@ -33,7 +33,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	static final int CARD_TEXT_W = 185;
 	static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("h:mm a");
 
-	enum View { LOGGED_OUT, NOT_IN_CLAN, SHARING_OFF, HOME, EVENTS, PREVIEW, SIGNUP, BOARD, COMPETITION_PREVIEW, COMPETITION, DROP_PARTY, GROUPS, MEMBERS, LOOKUP, DROPS, NEWS }
+	enum View { LOGGED_OUT, NOT_IN_CLAN, SHARING_OFF, HOME, EVENTS, PREVIEW, SIGNUP, BOARD, COMPETITION_PREVIEW, COMPETITION, DROP_PARTY, GROUPS, MEMBERS, LOOKUP, DROPS, NEWS, RECORDS }
 
 	private final TsgHubPlugin plugin;
 	final TsgHubHomeView homeView;
@@ -42,6 +42,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	final TsgHubLookupView lookupView;
 	final TsgHubDropsView dropsView;
 	final TsgHubNewsView newsView;
+	final TsgHubRecordsView recordsView;
 	final TsgHubEventsView eventsView;
 	final TsgHubCompetitionView competitionView;
 	final TsgHubPartiesView partiesView;
@@ -90,6 +91,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		lookupView = new TsgHubLookupView(plugin, this);
 		dropsView = new TsgHubDropsView(plugin, this);
 		newsView = new TsgHubNewsView(plugin, this);
+		recordsView = new TsgHubRecordsView(plugin, this);
 		eventsView = new TsgHubEventsView(plugin, this);
 		competitionView = new TsgHubCompetitionView(plugin, this);
 		partiesView = new TsgHubPartiesView(plugin, this);
@@ -131,7 +133,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 				reopen(lookupView.lookupReturn);
 				return;
 			}
-			if (view == View.GROUPS || view == View.EVENTS || view == View.MEMBERS || view == View.DROPS || view == View.NEWS)
+			if (view == View.GROUPS || view == View.EVENTS || view == View.MEMBERS || view == View.DROPS || view == View.NEWS || view == View.RECORDS)
 			{
 				homeView.showHome();
 				return;
@@ -165,6 +167,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 			else if (view == View.MEMBERS) plugin.presence().loadMembers(false);
 			else if (view == View.LOOKUP) lookupView.loadLookup();
 			else if (view == View.DROPS) plugin.drops().load(false);
+			else if (view == View.RECORDS) plugin.records().load();
 			else if (view == View.BOARD || view == View.SIGNUP) plugin.sessions().refreshBoard();
 			else if (view == View.COMPETITION && competitionView.competitionEvent != null) plugin.sessions().openCompetition(str(competitionView.competitionEvent, "id"));
 			else plugin.sessions().loadClanEvents();
@@ -333,7 +336,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		dock.setShown(!gated(next));
 		pin.setVisible(pinnable(next));
 		title.setText(html(escape(titleText), titleWidth()));
-		back.setToolTipText(next == View.LOOKUP ? backLabel(lookupView.lookupReturn) : next == View.EVENTS || next == View.GROUPS || next == View.MEMBERS || next == View.DROPS || next == View.NEWS ? "Home" : "Back to events");
+		back.setToolTipText(next == View.LOOKUP ? backLabel(lookupView.lookupReturn) : next == View.EVENTS || next == View.GROUPS || next == View.MEMBERS || next == View.DROPS || next == View.NEWS || next == View.RECORDS ? "Home" : "Back to events");
 	}
 
 	private static String cardName(View next)

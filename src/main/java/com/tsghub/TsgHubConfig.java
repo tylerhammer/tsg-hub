@@ -5,6 +5,8 @@ import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigSection;
+import net.runelite.client.config.Range;
+import net.runelite.client.config.Units;
 
 @ConfigGroup("tsghub")
 public interface TsgHubConfig extends Config
@@ -14,6 +16,9 @@ public interface TsgHubConfig extends Config
 
 	@ConfigSection(name = "Chat", description = "TSG Hub messages in your chatbox.", position = 5)
 	String chatSection = "chat";
+
+	@ConfigSection(name = "Event countdown", description = "An on-screen countdown for clan events.", position = 6)
+	String countdownSection = "countdown";
 
 	@ConfigSection(name = "World map", description = "Clanmates on your world map.", position = 7)
 	String mapSection = "map";
@@ -70,6 +75,20 @@ public interface TsgHubConfig extends Config
 	default boolean teamNameColors()
 	{
 		return true;
+	}
+
+	@ConfigItem(keyName = "eventCountdown", position = 0, section = countdownSection, name = "Show countdown", description = "Show a countdown on screen when a custom event is about to start or is running, and near the start and end of competitions and bingos you've joined. Right-click it to dismiss that event, or hold Alt and drag to move it.")
+	default boolean eventCountdown()
+	{
+		return true;
+	}
+
+	@Range(min = 1, max = 1440)
+	@Units(Units.MINUTES)
+	@ConfigItem(keyName = "countdownLeadMinutes", position = 1, section = countdownSection, name = "Show before start", description = "How long before an event starts the countdown appears.")
+	default int countdownLeadMinutes()
+	{
+		return 30;
 	}
 
 	@ConfigItem(keyName = "showClanMap", position = 0, section = mapSection, name = "Show clanmates", description = "Show clanmates who share their location as named markers on your world map. Turn off if they get in the way. This only hides them for you; it doesn't change what you share.")

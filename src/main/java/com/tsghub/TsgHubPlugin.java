@@ -117,8 +117,10 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubPresence presence;
 	private TsgHubMemberMap memberMap;
 	private TsgHubMapOverlay mapOverlay;
+	private TsgHubCountdown countdown;
 	private boolean worldMapOpen;
 	private TsgHubDrops drops;
+	private TsgHubRecords records;
 	private TsgHubAnnouncements announcements;
 	private GroupTracker groupTracker;
 
@@ -162,9 +164,12 @@ public class TsgHubPlugin extends Plugin
 		memberMap = new TsgHubMemberMap(this, client, clientThread, worldMapPointManager, executor, this::api);
 		mapOverlay = new TsgHubMapOverlay(client, worldMapOverlay, memberMap);
 		overlayManager.add(mapOverlay);
+		countdown = new TsgHubCountdown(client, config, sessions::clanEvents, id -> !session.memberToken(id).isEmpty());
+		overlayManager.add(countdown);
 		every(liveSync.unlessLive(memberMap::autoRefresh), TsgHubMemberMap.REFRESH_SECONDS, TsgHubMemberMap.REFRESH_SECONDS, TimeUnit.SECONDS);
 		drops = new TsgHubDrops(this, client, drawManager, executor, this::api, () -> sidebar);
 		every(liveSync.unlessLive(drops::autoRefresh), TsgHubDrops.REFRESH_SECONDS, TsgHubDrops.REFRESH_SECONDS, TimeUnit.SECONDS);
+		records = new TsgHubRecords(this, configManager, executor, this::api);
 		tracker = new TsgHubGameTracker(this, client, clientThread, itemManager, executor);
 		eventBus.register(tracker);
 		coffer = new TsgHubCoffer(this, client, body -> tracker.report("coffer", "/v1/coffer", body));
@@ -219,6 +224,7 @@ public class TsgHubPlugin extends Plugin
 		if (presence != null) presence.shutDown();
 		if (memberMap != null) memberMap.setOpen(false);
 		if (mapOverlay != null) overlayManager.remove(mapOverlay);
+		if (countdown != null) overlayManager.remove(countdown);
 		if (liveSync != null) liveSync.socket().disconnect();
 		tasks.forEach(task -> task.cancel(false));
 		tasks.clear();
@@ -290,6 +296,7 @@ public class TsgHubPlugin extends Plugin
 	TsgHubPresence presence() { return presence; }
 	TsgHubMemberMap memberMap() { return memberMap; }
 	TsgHubDrops drops() { return drops; }
+	TsgHubRecords records() { return records; }
 	TsgHubAnnouncements announcements() { return announcements; }
 	TsgHubTeamColors teamColors() { return teamColors; }
 	SpriteManager sprites() { return spriteManager; }
@@ -355,6 +362,7 @@ public class TsgHubPlugin extends Plugin
 		keys.loggedOut();
 		liveSync.syncNow();
 		if (signals != null) signals.clear();
+		if (records != null) records.reset();
 		sessions.loggedOut();
 		SwingUtilities.invokeLater(() -> {
 			if (sidebar != null)
@@ -377,6 +385,7 @@ public class TsgHubPlugin extends Plugin
 	@Subscribe
 	public void onConfigChanged(ConfigChanged event)
 	{
+		if (TsgHubRecords.PB_GROUP.equals(event.getGroup()) && records != null) records.onConfigChanged(event);
 		if (!"tsghub".equals(event.getGroup())) return;
 		if ("dataSharingOptIn".equals(event.getKey()) && !config.dataSharingOptIn() && reports != null) reports.clear();
 		if ("partyShowSelf".equals(event.getKey()))
@@ -464,6 +473,7 @@ public class TsgHubPlugin extends Plugin
 		{
 			sessions.syncIdentity();
 			keys.check();
+			records.syncPbs();
 		}
 		SwingUtilities.invokeLater(() -> {
 			if (!loggedIn) { sidebar.showLoggedOut(); return; }
@@ -579,6 +589,7 @@ public class TsgHubPlugin extends Plugin
 	public void onGameTick(GameTick tick)
 	{
 		if (presence != null) presence.onGameTick();
+		if (countdown != null) countdown.onGameTick(sharingInClan() && config.eventCountdown());
 		if (sharingInClan()) chat.mapNotice();
 		if (clan.tick()) refreshDetectedClan();
 	}
