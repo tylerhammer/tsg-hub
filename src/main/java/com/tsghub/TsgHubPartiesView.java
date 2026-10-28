@@ -324,26 +324,30 @@ final class TsgHubPartiesView
 	private JPanel dropRow(JsonObject drop)
 	{
 		boolean estimated = bool(drop, "estimated");
-		String title = str(drop, "player") + ": " + str(drop, "name");
 		JLabel name = label(str(drop, "name"), TEXT, smallFont());
 		JLabel value = label((estimated ? "~" : "") + splitGp(longValue(drop, "value", 0)), estimated ? MUTED : TEXT, smallFont());
 		List<String> skipped = strings(array(drop, "skipped"));
 		String status = bool(drop, "agreed") ? "agreed" : estimated ? "estimated" : "sold";
-		String detail = str(drop, "player") + " · " + status + (skipped.isEmpty() ? "" : " · " + skipped.size() + " out");
-		JLabel by = caption(detail);
-		String tip = skipped.isEmpty() ? title : title + " (not sharing: " + String.join(", ", skipped) + ")";
-		for (JLabel label : new JLabel[] {name, value, by}) label.setToolTipText(tip);
 		JPanel row = stack();
 		row.add(row(shrinkable(name), value));
-		row.add(by);
+		row.add(shrinkable(caption(str(drop, "player") + " · " + status)));
+		if (!skipped.isEmpty()) row.add(shrinkable(caption("Not sharing: " + String.join(", ", skipped))));
 		JPopupMenu menu = dropMenu(drop, skipped);
 		if (menu.getComponentCount() > 0)
 		{
 			row.setComponentPopupMenu(menu);
-			for (java.awt.Component child : row.getComponents()) if (child instanceof JComponent) ((JComponent) child).setInheritsPopupMenu(true);
-			for (JLabel label : new JLabel[] {name, value, by}) label.setInheritsPopupMenu(true);
+			inheritPopup(row);
 		}
 		return row;
+	}
+
+	private static void inheritPopup(java.awt.Container parent)
+	{
+		for (java.awt.Component child : parent.getComponents())
+		{
+			if (child instanceof JComponent) ((JComponent) child).setInheritsPopupMenu(true);
+			if (child instanceof java.awt.Container) inheritPopup((java.awt.Container) child);
+		}
 	}
 
 	private JPopupMenu dropMenu(JsonObject drop, List<String> skipped)
