@@ -75,11 +75,15 @@ final class TsgHubNewsWindow extends JPanel
 			page.add(wrapped(str(announcement, "title"), TEXT, headingFont(), width));
 			page.add(gap(GAP_XS));
 			page.add(wrapped(str(announcement, "postedBy") + " · " + TsgHubFormat.shortDate(str(announcement, "postedAt"), clock.instant(), ZoneId.systemDefault()), MUTED, smallFont(), width));
+			JsonArray blocks = array(announcement, "blocks");
 			String body = str(announcement, "body");
-			if (!body.isEmpty())
+			if (blocks.size() > 0 || !body.isEmpty()) page.add(gap(GAP_L));
+			if (blocks.size() == 0 && !body.isEmpty()) page.add(linkedHtml(postHtml(body), TEXT, plainFont(), width));
+			for (JsonObject block : objects(blocks))
 			{
-				page.add(gap(GAP_L));
-				page.add(linkedHtml(postHtml(body), TEXT, plainFont(), width));
+				String type = str(block, "type");
+				if (type.equals("text")) page.add(linkedHtml(postHtml(str(block, "text")), TEXT, plainFont(), width));
+				else if (type.equals("divider")) page.add(divider());
 			}
 			JsonObject poll = TsgHubAnnouncements.poll(announcement);
 			if (poll != null)
@@ -92,6 +96,14 @@ final class TsgHubNewsWindow extends JPanel
 		}
 		page.revalidate();
 		page.repaint();
+	}
+
+	private static JPanel divider()
+	{
+		JPanel line = new JPanel();
+		line.setOpaque(false);
+		line.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createEmptyBorder(GAP_L, 0, GAP_L - 1, 0), BorderFactory.createMatteBorder(1, 0, 0, 0, BORDER)));
+		return fitHeight(line);
 	}
 
 	static int textWidth(int viewport)
