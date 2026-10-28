@@ -133,19 +133,44 @@ final class TsgHubHiscores
 		JPanel row = card();
 		row.setBorder(BorderFactory.createEmptyBorder(3, 7, 3, 7));
 		JLabel name = shrinkable(label(skill.getName(), TEXT, smallFont()));
-		JLabel icon = new JLabel();
-		icon.setPreferredSize(new Dimension(ICON, ICON));
-		icon.setHorizontalAlignment(SwingConstants.CENTER);
-		if (skill.getSpriteId() > 0)
-		{
-			sprites.getSpriteAsync(skill.getSpriteId(), 0, sprite -> SwingUtilities.invokeLater(() ->
-				icon.setIcon(new ImageIcon(ImageUtil.resizeImage(ImageUtil.resizeCanvas(sprite, 25, 25), ICON, ICON)))));
-		}
-		row.add(icon, BorderLayout.WEST);
+		row.add(spriteIcon(skill, sprites), BorderLayout.WEST);
 		row.add(name, BorderLayout.CENTER);
 		row.add(label(TsgHubFormat.number(level(result, skill)), ACCENT, smallFont()), BorderLayout.EAST);
 		row.setToolTipText(skillTip(result.getSkill(skill), skill.getName()));
 		return fitHeight(row);
+	}
+
+	static JLabel spriteIcon(HiscoreSkill skill, SpriteManager sprites)
+	{
+		JLabel icon = new JLabel();
+		icon.setPreferredSize(new Dimension(ICON, ICON));
+		icon.setHorizontalAlignment(SwingConstants.CENTER);
+		if (skill != null && skill.getSpriteId() > 0)
+		{
+			sprites.getSpriteAsync(skill.getSpriteId(), 0, sprite -> SwingUtilities.invokeLater(() ->
+				icon.setIcon(new ImageIcon(ImageUtil.resizeImage(ImageUtil.resizeCanvas(sprite, 25, 25), ICON, ICON)))));
+		}
+		return icon;
+	}
+
+	static HiscoreSkill named(String name, HiscoreSkillType type)
+	{
+		String key = recordKey(name);
+		for (HiscoreSkill skill : HiscoreSkill.values())
+		{
+			if (skill.getType() == type && recordKey(skill.getName()).equals(key)) return skill;
+		}
+		return null;
+	}
+
+	static HiscoreSkill clueTier(String tier)
+	{
+		return named("Clue Scrolls (" + tier + ")", HiscoreSkillType.ACTIVITY);
+	}
+
+	private static String recordKey(String name)
+	{
+		return name.toLowerCase().replaceAll("[^a-z0-9]", "").replaceFirst("^the", "");
 	}
 
 	private static String skillTip(Skill skill, String name)

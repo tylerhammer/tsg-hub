@@ -15,6 +15,8 @@ import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.JPanel;
 import lombok.RequiredArgsConstructor;
+import net.runelite.client.hiscore.HiscoreSkill;
+import net.runelite.client.hiscore.HiscoreSkillType;
 
 @RequiredArgsConstructor
 final class TsgHubRecordsView
@@ -86,7 +88,7 @@ final class TsgHubRecordsView
 		JsonArray top = array(clue, "top");
 		JsonObject first = top.size() > 0 ? top.get(0).getAsJsonObject() : null;
 		JPanel card = card();
-		card.add(shrinkable(boldLabel(str(clue, "name"))), BorderLayout.CENTER);
+		card.add(title(TsgHubHiscores.clueTier(str(clue, "name")), str(clue, "name")), BorderLayout.CENTER);
 		card.add(first == null ? caption("--") : label(str(first, "player") + "  " + count(first), ACCENT, smallFont()), BorderLayout.EAST);
 		if (leads(first, self)) highlightSelf(card);
 		fullTextTooltip(card, () -> standings("TOP " + top.size(), top, true, self));
@@ -98,7 +100,7 @@ final class TsgHubRecordsView
 		JsonArray kc = array(boss, "kc");
 		JsonArray pb = array(boss, "pb");
 		JPanel lines = stack();
-		lines.add(shrinkable(boldLabel(str(boss, "name"))));
+		lines.add(title(TsgHubHiscores.named(str(boss, "name"), HiscoreSkillType.BOSS), str(boss, "name")));
 		JsonObject most = kc.size() > 0 ? kc.get(0).getAsJsonObject() : null;
 		JsonObject fastest = pb.size() > 0 ? pb.get(0).getAsJsonObject() : null;
 		if (most != null) lines.add(leader(most, count(most) + " KC"));
@@ -108,6 +110,14 @@ final class TsgHubRecordsView
 		if (leads(most, self) || leads(fastest, self)) highlightSelf(card);
 		fullTextTooltip(card, () -> standings("MOST KC", kc, true, self) + standings("FASTEST", pb, kc.size() == 0, self));
 		return fitHeight(card);
+	}
+
+	private JPanel title(HiscoreSkill skill, String name)
+	{
+		JPanel title = row();
+		title.add(TsgHubHiscores.spriteIcon(skill, plugin.sprites()), BorderLayout.WEST);
+		title.add(shrinkable(boldLabel(name)), BorderLayout.CENTER);
+		return title;
 	}
 
 	private static JPanel leader(JsonObject entry, String value)
