@@ -112,6 +112,11 @@ final class TsgHubChat
 		clan("Announcement", new ChatMessageBuilder().append(ChatColorType.HIGHLIGHT).append(Text.escapeJagex(text)));
 	}
 
+	void splitNotice(String text)
+	{
+		local(new ChatMessageBuilder().append(ChatColorType.HIGHLIGHT).append(Text.escapeJagex(text)));
+	}
+
 	void updateAvailable(String version)
 	{
 		if (version.equals(notifiedUpdate)) return;

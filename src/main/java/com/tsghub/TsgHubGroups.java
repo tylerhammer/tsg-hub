@@ -4,6 +4,7 @@ import static com.tsghub.TsgHubJson.*;
 import static com.tsghub.TsgHubSession.GROUP_PASSPHRASE;
 import static com.tsghub.TsgHubSession.GROUP_PLAYER;
 import static com.tsghub.TsgHubSession.GROUP_TOKEN;
+import static com.tsghub.TsgHubSession.SPLIT_NOTICE;
 import static com.tsghub.TsgHubUi.*;
 
 import com.google.gson.JsonArray;
@@ -107,7 +108,7 @@ final class TsgHubGroups implements GroupTracker.Listener
 		if (current != null && inGroup())
 		{
 			JsonObject next = TsgHubJson.byId(groups, TsgHubJson.str(current, "id"));
-			if (next != null) group = next;
+			if (next != null) adopt(next);
 			if ((next == null || !memberNames(next).equals(memberNames(current))) && !executor.isShutdown()) executor.submit(this::heartbeat);
 		}
 		plugin.ui(s -> s.partiesView.setGroups(groups));
@@ -160,6 +161,52 @@ final class TsgHubGroups implements GroupTracker.Listener
 		if (!socket.group("group.split", plugin.session().get(GROUP_TOKEN), payload)) update("/v1/groups/split", payload);
 	}
 
+	void setSplitValue(String dropId, long gp)
+	{
+		JsonObject payload = new JsonObject();
+		payload.addProperty("dropId", dropId);
+		payload.addProperty("gp", gp);
+		update("/v1/groups/split/value", payload);
+	}
+
+	void setSplitShare(String dropId, String name, boolean share)
+	{
+		JsonObject payload = new JsonObject();
+		payload.addProperty("dropId", dropId);
+		payload.addProperty("displayName", name);
+		payload.addProperty("share", share);
+		update("/v1/groups/split/share", payload);
+	}
+
+	private void adopt(JsonObject next)
+	{
+		group = next;
+		String notice = splitNotice(object(next, "split"), plugin.session().get(GROUP_PLAYER));
+		if (notice.isEmpty()) return;
+		String key = str(object(next, "split"), "startedAt") + "|" + notice;
+		if (key.equals(plugin.session().get(SPLIT_NOTICE))) return;
+		plugin.session().set(SPLIT_NOTICE, key);
+		plugin.chat().splitNotice(notice);
+	}
+
+	static String splitNotice(JsonObject split, String self)
+	{
+		if (split.size() == 0 || bool(split, "active") || self.isEmpty()) return "";
+		boolean member = false;
+		for (JsonObject row : objects(array(split, "members"))) member |= PlayerNames.samePlayer(str(row, "displayName"), self);
+		if (!member) return "";
+		String approx = bool(split, "estimated") ? "~" : "";
+		List<String> parts = new ArrayList<>();
+		for (JsonObject transfer : objects(array(split, "transfers")))
+		{
+			String amount = approx + TsgHubFormat.number(longValue(transfer, "amount", 0)) + " gp";
+			if (PlayerNames.samePlayer(str(transfer, "from"), self)) parts.add("you pay " + str(transfer, "to") + " " + amount);
+			else if (PlayerNames.samePlayer(str(transfer, "to"), self)) parts.add(str(transfer, "from") + " pays you " + amount);
+		}
+		String text = parts.isEmpty() ? "you're square, nothing to pay or collect" : String.join(", ", parts);
+		return "Loot split: " + text + (approx.isEmpty() ? "." : " (estimated until sold).");
+	}
+
 	private void update(String path, JsonObject payload)
 	{
 		String token = plugin.session().get(GROUP_TOKEN);
@@ -168,7 +215,7 @@ final class TsgHubGroups implements GroupTracker.Listener
 			try
 			{
 				JsonObject joined = TsgHubApi.result(response, error).getAsJsonObject("group");
-				group = joined;
+				adopt(joined);
 				plugin.ui(s -> s.partiesView.groupRefreshed(joined));
 				refreshUnlessLive();
 			}
@@ -198,7 +245,7 @@ final class TsgHubGroups implements GroupTracker.Listener
 				plugin.session().set(GROUP_TOKEN, result.get("token").getAsString());
 				plugin.session().set(GROUP_PASSPHRASE, passphrase);
 				plugin.session().set(GROUP_PLAYER, plugin.clan().playerName());
-				group = joined;
+				adopt(joined);
 				partyService.changeParty(passphrase);
 				status(created ? "Started a party." : "Joined " + partyTitle(joined) + ".", Tone.SUCCESS);
 				plugin.ui(s -> s.partiesView.showGroup(joined));
@@ -253,7 +300,7 @@ final class TsgHubGroups implements GroupTracker.Listener
 		awaitingBeat = false;
 		if (!inGroup() || !result.has("group") || !result.get("group").isJsonObject()) return;
 		JsonObject joined = result.getAsJsonObject("group");
-		group = joined;
+		adopt(joined);
 		String rotated = str(result, "passphrase");
 		if (!rotated.isEmpty()) plugin.session().set(GROUP_PASSPHRASE, rotated);
 		// Still listed after a client restart but not connected.

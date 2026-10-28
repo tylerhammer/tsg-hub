@@ -27,6 +27,7 @@ class TsgHubSession
 	static final String ANNOUNCEMENTS_READ = "announcementsRead";
 	static final String ANNOUNCEMENTS_ALERTED = "announcementsAlerted";
 	static final String GE_OFFER = "geOffer:";
+	static final String SPLIT_NOTICE = "splitNotice";
 
 	private static final String GROUP = "tsghubsession";
 	private final ConfigManager configManager;

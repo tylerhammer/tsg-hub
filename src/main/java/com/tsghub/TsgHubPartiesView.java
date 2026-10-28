@@ -13,6 +13,7 @@ import com.google.gson.JsonObject;
 import com.tsghub.TsgHubSidebarPanel.View;
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -20,9 +21,12 @@ import java.util.Map;
 import java.util.Objects;
 import javax.swing.JButton;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
+import net.runelite.client.util.QuantityFormatter;
 
 final class TsgHubPartiesView
 {
@@ -253,6 +257,17 @@ final class TsgHubPartiesView
 				lines.add(row(shrinkable(label(str(member, "displayName"), TEXT, smallFont())),
 					label(splitGp(longValue(member, "looted", 0)) + " / " + splitGp(longValue(member, "share", 0)), TEXT, smallFont())));
 			}
+			List<JsonObject> drops = objects(array(split, "drops"));
+			if (!drops.isEmpty())
+			{
+				lines.add(gap(GAP_S));
+				lines.add(caption("Drops (right-click to edit)"));
+			}
+			for (JsonObject drop : drops)
+			{
+				lines.add(gap(GAP_XS));
+				lines.add(dropRow(drop));
+			}
 			for (JsonObject transfer : objects(array(split, "transfers")))
 			{
 				lines.add(gap(GAP_XS));
@@ -280,6 +295,80 @@ final class TsgHubPartiesView
 		if (buttons.getComponentCount() == 0) return;
 		groupsPage.add(fitHeight(buttons));
 		groupsPage.add(gap(GAP_L));
+	}
+
+	private JPanel dropRow(JsonObject drop)
+	{
+		String tag = bool(drop, "agreed") ? " (agreed)" : bool(drop, "estimated") ? " (estimated)" : "";
+		JPanel row = row(shrinkable(label(str(drop, "player") + ": " + str(drop, "name"), TEXT, smallFont())),
+			label(splitGp(longValue(drop, "value", 0)) + tag, bool(drop, "estimated") ? MUTED : TEXT, smallFont()));
+		List<String> skipped = strings(array(drop, "skipped"));
+		if (!skipped.isEmpty()) row.setToolTipText("Not sharing: " + String.join(", ", skipped));
+		JPopupMenu menu = dropMenu(drop, skipped);
+		if (menu.getComponentCount() > 0) row.setComponentPopupMenu(menu);
+		return row;
+	}
+
+	private JPopupMenu dropMenu(JsonObject drop, List<String> skipped)
+	{
+		JPopupMenu menu = new JPopupMenu();
+		String id = str(drop, "id");
+		if (id.isEmpty()) return menu;
+		TsgHubGroups groups = plugin.groups();
+		boolean leader = groups.isLeader();
+		if (leader)
+		{
+			JMenuItem value = new JMenuItem("Set agreed value");
+			value.addActionListener(e -> promptDropValue(drop));
+			menu.add(value);
+			if (bool(drop, "agreed"))
+			{
+				JMenuItem clear = new JMenuItem("Clear agreed value");
+				clear.addActionListener(e -> groups.setSplitValue(id, 0));
+				menu.add(clear);
+			}
+		}
+		String self = plugin.session().get(TsgHubSession.GROUP_PLAYER);
+		for (String name : dropSharers(drop, skipped))
+		{
+			boolean me = samePlayer(name, self);
+			if (!me && !leader) continue;
+			boolean sharing = skipped.stream().noneMatch(n -> samePlayer(n, name));
+			String who = me ? "my" : name + "'s";
+			JMenuItem share = new JMenuItem(sharing ? "Skip " + who + " share" : "Restore " + who + " share");
+			share.addActionListener(e -> groups.setSplitShare(id, name, !sharing));
+			menu.add(share);
+		}
+		return menu;
+	}
+
+	static List<String> dropSharers(JsonObject drop, List<String> skipped)
+	{
+		List<String> names = new ArrayList<>();
+		for (String name : strings(array(drop, "sharers"))) if (names.stream().noneMatch(n -> samePlayer(n, name))) names.add(name);
+		for (String name : skipped) if (names.stream().noneMatch(n -> samePlayer(n, name))) names.add(name);
+		return names;
+	}
+
+	private void promptDropValue(JsonObject drop)
+	{
+		Object input = JOptionPane.showInputDialog(shell, "Agreed value for " + str(drop, "name") + " (e.g. 1.4b, 350m)", "Set agreed value",
+			JOptionPane.PLAIN_MESSAGE, null, null, splitGp(longValue(drop, "value", 0)));
+		if (input == null) return;
+		long gp = parseGp(input.toString());
+		if (gp <= 0)
+		{
+			groupActionFailed("Enter an amount like 1.4b, 350m or 2500000.");
+			return;
+		}
+		groupError.setVisible(false);
+		plugin.groups().setSplitValue(str(drop, "id"), gp);
+	}
+
+	static long parseGp(String text)
+	{
+		try { return QuantityFormatter.parseQuantity(text.trim().replace(",", "").replace(" ", "")); }
+		catch (ParseException | RuntimeException e) { return -1; }
 	}
 
 	static String splitGp(long value)
