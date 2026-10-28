@@ -178,6 +178,30 @@ final class TsgHubGroups implements GroupTracker.Listener
 		update("/v1/groups/split/share", payload);
 	}
 
+	void setSplitSkip(String name, boolean skip)
+	{
+		JsonObject payload = new JsonObject();
+		payload.addProperty("displayName", name);
+		payload.addProperty("skip", skip);
+		update("/v1/groups/split/skip", payload);
+	}
+
+	void markPaid(String from, String to, long gp)
+	{
+		JsonObject payload = new JsonObject();
+		payload.addProperty("from", from);
+		payload.addProperty("to", to);
+		payload.addProperty("gp", gp);
+		update("/v1/groups/split/paid", payload);
+	}
+
+	void unpay(String paymentId)
+	{
+		JsonObject payload = new JsonObject();
+		payload.addProperty("paymentId", paymentId);
+		update("/v1/groups/split/unpay", payload);
+	}
+
 	private void adopt(JsonObject next)
 	{
 		group = next;
@@ -203,7 +227,8 @@ final class TsgHubGroups implements GroupTracker.Listener
 			if (PlayerNames.samePlayer(str(transfer, "from"), self)) parts.add("you pay " + str(transfer, "to") + " " + amount);
 			else if (PlayerNames.samePlayer(str(transfer, "to"), self)) parts.add(str(transfer, "from") + " pays you " + amount);
 		}
-		String text = parts.isEmpty() ? "you're square, nothing to pay or collect" : String.join(", ", parts);
+		boolean paid = objects(array(split, "payments")).stream().anyMatch(p -> PlayerNames.samePlayer(str(p, "from"), self) || PlayerNames.samePlayer(str(p, "to"), self));
+		String text = !parts.isEmpty() ? String.join(", ", parts) : paid ? "all settled" : "you're square, nothing to pay or collect";
 		return "Loot split: " + text + (approx.isEmpty() ? "." : " (estimated until sold).");
 	}
 

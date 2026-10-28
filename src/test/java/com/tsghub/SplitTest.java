@@ -42,6 +42,25 @@ public class SplitTest
 	}
 
 	@Test
+	public void noticeAfterPayments()
+	{
+		JsonObject split = json("{'active':false,'estimated':false," + MEMBERS + ",'transfers':[{'from':'Alice','to':'Carl','amount':100}],"
+			+ "'payments':[{'from':'Alice','to':'Bob','gp':400}]}");
+		assertEquals("Loot split: all settled.", TsgHubGroups.splitNotice(split, "Bob"));
+		assertEquals("Loot split: you pay Carl 100 gp.", TsgHubGroups.splitNotice(split, "Alice"));
+	}
+
+	@Test
+	public void tradePartnerAndDebt()
+	{
+		assertEquals("Bob Test", TsgHubTrades.partnerName("Trading with:<br>Bob\u00a0Test"));
+		assertEquals("Iron Mo", TsgHubTrades.partnerName("<col=ffffff>Trading with: Iron Mo</col>"));
+		JsonObject split = json("{'transfers':[{'from':'Alice','to':'Bob','amount':300},{'from':'Carl','to':'Bob','amount':5}]}");
+		assertEquals(300, TsgHubTrades.owed(split, "alice", "Bob"));
+		assertEquals(0, TsgHubTrades.owed(split, "Bob", "Alice"));
+	}
+
+	@Test
 	public void parsesGpAmounts()
 	{
 		assertEquals(1_400_000_000L, TsgHubPartiesView.parseGp("1.4b"));
