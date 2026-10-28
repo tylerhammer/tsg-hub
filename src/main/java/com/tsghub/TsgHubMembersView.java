@@ -151,7 +151,8 @@ final class TsgHubMembersView
 	private void setMemberTip(JComponent card, JsonObject member, String note, JLabel detail)
 	{
 		fullTextTooltip(card, () -> TsgHubRoster.rosterTooltip(detail != null && truncated(detail) ? TsgHubRoster.locationTip(str(member, "activity"), str(member, "area")) : "",
-			array(member, "previousNames"), str(member, "altOf"), array(member, "alts"), note, visibleWarnings(member), clock.instant(), ZoneId.systemDefault()));
+			array(member, "previousNames"), str(member, "altOf"), array(member, "alts"), note, visibleWarnings(member), clock.instant(), ZoneId.systemDefault()),
+			() -> TsgHubHtml.escape(localTime(str(member, "timeZone"), clock.instant(), ZoneId.systemDefault())));
 	}
 
 	private void addMemberBadges(JPanel badges, JsonObject member, String note, boolean more)

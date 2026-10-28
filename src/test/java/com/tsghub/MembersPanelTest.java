@@ -110,6 +110,30 @@ public class MembersPanelTest
 	}
 
 	@Test
+	public void localTime()
+	{
+		java.time.ZoneId sydney = java.time.ZoneId.of("Australia/Sydney");
+		assertEquals("9pm KST", TsgHubFormat.localTime("Asia/Seoul", NOW, sydney));
+		assertEquals("1am NZDT", TsgHubFormat.localTime("Pacific/Auckland", NOW, sydney));
+		assertEquals("10pm AEST", TsgHubFormat.localTime("Australia/Brisbane", NOW, sydney));
+		assertEquals("", TsgHubFormat.localTime("Australia/Melbourne", NOW, sydney));
+		assertEquals("", TsgHubFormat.localTime("", NOW, sydney));
+		assertEquals("", TsgHubFormat.localTime("Mars/Olympus", NOW, sydney));
+		assertEquals("10:30pm ACDT", TsgHubFormat.localTime("Australia/Adelaide", NOW, sydney));
+	}
+
+	@Test
+	public void withCorner()
+	{
+		assertEquals("<b>Bob</b>", TsgHubHtml.withCorner("<b>Bob</b>", ""));
+		assertTrue(TsgHubHtml.withCorner("", "9pm KST").contains("9pm KST"));
+		String tip = TsgHubHtml.withCorner("Alt of Bob<br>Raiding", "9pm KST");
+		assertTrue(tip.contains("<td valign='top'>Alt of Bob</td>"));
+		assertTrue(tip.endsWith("</table>Raiding"));
+		assertTrue(TsgHubHtml.withCorner("<div style='margin-top:0px'>NOTE</div><table></table>", "9pm KST").contains("<td valign='top'><div style='margin-top:0px'>NOTE</div></td>"));
+	}
+
+	@Test
 	public void isAltRank()
 	{
 		assertEquals(true, TsgHubRoster.isAltRank("Gnome Child"));
@@ -134,6 +158,7 @@ public class MembersPanelTest
 		note.addProperty("displayName", "iron alt");
 		note.addProperty("altOf", "Bob");
 		note.addProperty("accountType", 2);
+		note.addProperty("timeZone", "Asia/Seoul");
 		notes.add(note);
 
 		JsonArray[] roster = TsgHubPresence.roster(presence, chat, Arrays.asList("Bob", "Zezima", "Iron Alt", "Alice"), notes);
@@ -146,6 +171,7 @@ public class MembersPanelTest
 		assertEquals("Alice", roster[1].get(0).getAsJsonObject().get("displayName").getAsString());
 		assertEquals("Bob", roster[1].get(1).getAsJsonObject().get("altOf").getAsString());
 		assertEquals(2, TsgHubPresence.accountType(roster[1].get(1).getAsJsonObject()));
+		assertEquals("Asia/Seoul", roster[1].get(1).getAsJsonObject().get("timeZone").getAsString());
 		assertEquals(0, TsgHubPresence.accountType(roster[1].get(0).getAsJsonObject()));
 	}
 

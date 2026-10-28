@@ -157,6 +157,30 @@ final class TsgHubHtml
 			+ "<td bgcolor='" + toHexColor(CARD_HOVER) + "' style='padding:3px 6px'>" + inner + "</td></tr></table>";
 	}
 
+	static String withCorner(String body, String corner)
+	{
+		if (corner.isEmpty()) return body;
+		String side = "<span style='font-family:\"" + smallFont().getFamily() + "\"; font-size:" + smallFont().getSize() + "pt; color:" + toHexColor(MUTED) + "'>" + corner + "</span>";
+		if (body.isEmpty()) return side;
+		int end = firstLineEnd(body);
+		String rest = body.substring(end);
+		if (rest.startsWith("<br>")) rest = rest.substring(4);
+		return "<table cellspacing='0' cellpadding='0' width='100%'><tr><td valign='top'>" + body.substring(0, end) + "</td>"
+			+ "<td align='right' valign='top' nowrap>" + side + "</td></tr></table>" + rest;
+	}
+
+	private static int firstLineEnd(String body)
+	{
+		if (body.startsWith("<div")) return body.indexOf("</div>") + 6;
+		int end = body.length();
+		for (String mark : new String[] {"<br>", "<div", "<table"})
+		{
+			int at = body.indexOf(mark);
+			if (at > 0) end = Math.min(end, at);
+		}
+		return end;
+	}
+
 	static String tipLine(Color color, String html)
 	{
 		return "<font color='" + toHexColor(color) + "'>" + html + "</font>";

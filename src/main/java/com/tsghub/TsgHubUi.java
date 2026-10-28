@@ -341,13 +341,19 @@ final class TsgHubUi
 
 	static void fullTextTooltip(JComponent card, Supplier<String> extra)
 	{
+		fullTextTooltip(card, extra, null);
+	}
+
+	static void fullTextTooltip(JComponent card, Supplier<String> extra, Supplier<String> corner)
+	{
 		lazyTooltip(card, () -> {
 			List<String> parts = new ArrayList<>();
 			collectCut(card, parts);
 			String more = extra == null ? null : extra.get();
 			if (more != null && !more.isEmpty()) parts.add(more);
-			if (parts.isEmpty()) return null;
-			String body = String.join("<br>", parts);
+			String side = corner == null ? "" : corner.get();
+			if (parts.isEmpty() && side.isEmpty()) return null;
+			String body = TsgHubHtml.withCorner(String.join("<br>", parts), side);
 			return tooltipHtml(body);
 		});
 	}
