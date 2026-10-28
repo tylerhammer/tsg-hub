@@ -8,6 +8,8 @@ import static com.tsghub.TsgHubUi.*;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.awt.BorderLayout;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.time.ZoneId;
 import javax.swing.BorderFactory;
 import javax.swing.JPanel;
@@ -17,20 +19,34 @@ import javax.swing.SwingUtilities;
 final class TsgHubNewsWindow extends JPanel
 {
 	static final int TEXT_W = 460;
+	static final int MAX_TEXT_W = 760;
+	private static final int PAD_H = GAP_L + 4;
 
 	private final TsgHubNewsPoll polls;
 	private final JPanel page = new WidthTrackingPanel();
 	private final JScrollPane scroll = scroll(page);
 	private JsonArray announcements;
 	private String id = "";
+	private int width = TEXT_W;
 
 	TsgHubNewsWindow(TsgHubNewsPoll polls)
 	{
 		super(new BorderLayout());
 		this.polls = polls;
 		setBackground(BACKGROUND);
-		page.setBorder(BorderFactory.createEmptyBorder(GAP_L, GAP_L + 4, GAP_L, GAP_L + 4));
+		page.setBorder(BorderFactory.createEmptyBorder(GAP_L, PAD_H, GAP_L, PAD_H));
 		add(scroll, BorderLayout.CENTER);
+		scroll.getViewport().addComponentListener(new ComponentAdapter()
+		{
+			@Override
+			public void componentResized(ComponentEvent e)
+			{
+				int next = textWidth(scroll.getViewport().getWidth());
+				if (next == width) return;
+				width = next;
+				render();
+			}
+		});
 	}
 
 	void show(String id)
@@ -52,30 +68,35 @@ final class TsgHubNewsWindow extends JPanel
 		JsonObject announcement = find();
 		if (announcement == null)
 		{
-			page.add(wrapped("This announcement is no longer available.", MUTED, plainFont(), TEXT_W));
+			page.add(wrapped("This announcement is no longer available.", MUTED, plainFont(), width));
 		}
 		else
 		{
-			page.add(wrapped(str(announcement, "title"), TEXT, headingFont(), TEXT_W));
+			page.add(wrapped(str(announcement, "title"), TEXT, headingFont(), width));
 			page.add(gap(GAP_XS));
-			page.add(wrapped(str(announcement, "postedBy") + " · " + TsgHubFormat.shortDate(str(announcement, "postedAt"), clock.instant(), ZoneId.systemDefault()), MUTED, smallFont(), TEXT_W));
+			page.add(wrapped(str(announcement, "postedBy") + " · " + TsgHubFormat.shortDate(str(announcement, "postedAt"), clock.instant(), ZoneId.systemDefault()), MUTED, smallFont(), width));
 			String body = str(announcement, "body");
 			if (!body.isEmpty())
 			{
 				page.add(gap(GAP_L));
-				page.add(linkedHtml(postHtml(body), TEXT, plainFont(), TEXT_W));
+				page.add(linkedHtml(postHtml(body), TEXT, plainFont(), width));
 			}
 			JsonObject poll = TsgHubAnnouncements.poll(announcement);
 			if (poll != null)
 			{
 				JPanel card = card();
-				card.add(polls.block(id, poll, TEXT_W - 2 * CARD_PAD_H), BorderLayout.CENTER);
+				card.add(polls.block(id, poll, width - 2 * CARD_PAD_H), BorderLayout.CENTER);
 				page.add(gap(GAP_L));
 				page.add(fitHeight(card));
 			}
 		}
 		page.revalidate();
 		page.repaint();
+	}
+
+	static int textWidth(int viewport)
+	{
+		return Math.max(TEXT_W, Math.min(MAX_TEXT_W, viewport - 2 * PAD_H));
 	}
 
 	private JsonObject find()
