@@ -36,6 +36,7 @@ Join a bingo team, climb the Skill of the Week leaderboard, find a raid party, a
 | ⚔️ **[Clan parties](#clan-parties)** | Raids, bossing and skilling. One-click join, no passphrase, live health, prayer, gear, inventory and skills |
 | 👥 **[Members](#members)** | Which clanmates are online, their world, area and what they're doing |
 | 💎 **[Drops](#drops)** | The clan's big drops, raid loot, pets and collection log items, so you can catch up |
+| 🏅 **[Records](#records)** | The clan's top kill counts and fastest PBs for every boss and raid, plus clue scroll counts |
 | 📰 **[News](#news)** | Announcements from the admins, in the sidebar and your chatbox |
 | 📌 **[Split view](#split-view)** | Pin Members, Parties or Drops below the main view |
 | 🔗 **[Discord linking](#link-your-discord)** | Link your RuneScape account to the clan Discord |
@@ -129,6 +130,12 @@ The biggest drops (pets, raid uniques, and drops over 25M or spooned) are also p
 
 <p align="center"><img src="docs/images/drops.png" width="280" alt="Recent clan drops with item, player, value and time"></p>
 
+## Records
+
+The **Records** section shows, for every boss and raid, who in the clan has the most kills and the fastest personal best, plus who has completed the most clue scrolls of each tier. Hover a row for the top three (top five for clues). Rows you lead are highlighted.
+
+Kill and clue counts come from the official hiscores. The TSG Hub service looks clanmates up itself, about twice a day, so your client never fetches anyone's hiscores. PBs come from RuneLite's built-in **Chat Commands** plugin, which saves each one when you get it: with sharing on, TSG Hub sends your saved PBs when you log in and each new one as you set it. Only the overall time for a boss is shown, not team-size times. Records count clanmates who've used TSG Hub with sharing on in the last 60 days.
+
 ## News
 
 The **News** section lists announcements from the clan admins, pinned ones first. A pin marks pinned posts, a green dot marks ones you haven't read, and the **News** tile on the home screen shows how many are new. Each new announcement appears in your chatbox once, when you log in or when it's posted. Links in an announcement show the full address and ask before opening in your browser. Turn that off with **Clan announcements** under **Chat** in the plugin settings.
@@ -174,6 +181,7 @@ Once you opt in, it sends the following to the TSG Hub service:
 - Progress for events you've joined: kill counts, drops, raid completions, collection log unlocks and skill XP
 - Loot you receive while a bingo event you've joined is active, so admins can reconcile a task from earlier drops if its item list changes
 - Your boss kill count messages and the loot you receive, even outside events, so the clan Discord can post a summary of each boss session. The service keeps only the running session, not a history
+- Your personal bests saved by RuneLite's Chat Commands plugin, when you log in and as you set new ones, for the clan records
 - Your skill XP totals as they change, even outside events. The service keeps the XP you gain per skill per day for a year, for clan XP leaderboards
 - Whether you're currently in the clan chat channel and your world, so teammates' completion alerts reach you and clanmates see you as online
 - With **Share location and activity** on, your area name, current activity and world map position (except inside instances)
