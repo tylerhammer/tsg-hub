@@ -19,7 +19,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
@@ -248,9 +250,10 @@ final class TsgHubPartiesView
 		if (split.size() > 0)
 		{
 			JPanel lines = stack();
-			lines.add(row(boldLabel("Loot split"), label(running ? "Running" : "Ended", running ? SUCCESS : MUTED, smallFont())));
-			lines.add(gap(GAP_XS));
-			lines.add(row(caption("Looted / fair share"), caption(splitGp(longValue(split, "total", 0)) + " total")));
+			String state = running ? "Running" : "Ended";
+			lines.add(row(boldLabel("Loot split"), label(state + " · " + splitGp(longValue(split, "total", 0)), running ? SUCCESS : MUTED, smallFont())));
+			lines.add(gap(GAP_M));
+			lines.add(row(caption("Members"), caption("looted / share")));
 			for (JsonObject member : objects(array(split, "members")))
 			{
 				lines.add(gap(GAP_XS));
@@ -260,19 +263,40 @@ final class TsgHubPartiesView
 			List<JsonObject> drops = objects(array(split, "drops"));
 			if (!drops.isEmpty())
 			{
-				lines.add(gap(GAP_S));
-				lines.add(caption("Drops (right-click to edit)"));
+				lines.add(gap(GAP_M));
+				lines.add(row(caption("Drops"), caption("right-click to edit")));
 			}
 			for (JsonObject drop : drops)
 			{
-				lines.add(gap(GAP_XS));
+				lines.add(gap(GAP_S));
 				lines.add(dropRow(drop));
 			}
-			for (JsonObject transfer : objects(array(split, "transfers")))
+			List<JsonObject> transfers = objects(array(split, "transfers"));
+			if (!transfers.isEmpty())
 			{
+				lines.add(gap(GAP_M));
+				lines.add(caption(bool(split, "estimated") ? "Settle up (estimated)" : "Settle up"));
+			}
+			String payer = null;
+			for (JsonObject transfer : transfers)
+			{
+				String from = str(transfer, "from");
+				if (!from.equals(payer))
+				{
+					payer = from;
+					lines.add(gap(GAP_XS));
+					lines.add(shrinkable(label(from + " pays", TEXT, smallFont())));
+				}
+				long amount = longValue(transfer, "amount", 0);
+				JLabel to = label(str(transfer, "to"), TEXT, smallFont());
+				JLabel gp = label(splitGp(amount), WARNING, smallFont());
+				String exact = from + " pays " + str(transfer, "to") + " " + TsgHubFormat.number(amount) + " gp";
+				to.setToolTipText(exact);
+				gp.setToolTipText(exact);
+				JPanel line = row(shrinkable(to), gp);
+				line.setBorder(BorderFactory.createEmptyBorder(0, GAP_M, 0, 0));
 				lines.add(gap(GAP_XS));
-				lines.add(wrapped(str(transfer, "from") + " pays " + str(transfer, "to") + " " + TsgHubFormat.number(longValue(transfer, "amount", 0)) + " gp",
-					WARNING, smallFont(), TsgHubSidebarPanel.CARD_TEXT_W));
+				lines.add(line);
 			}
 			JPanel card = card();
 			card.add(lines, BorderLayout.CENTER);
@@ -299,17 +323,26 @@ final class TsgHubPartiesView
 
 	private JPanel dropRow(JsonObject drop)
 	{
-		String tag = bool(drop, "agreed") ? " (agreed)" : bool(drop, "estimated") ? " (estimated)" : "";
+		boolean estimated = bool(drop, "estimated");
 		String title = str(drop, "player") + ": " + str(drop, "name");
-		JLabel name = label(title, TEXT, smallFont());
-		JLabel value = label(splitGp(longValue(drop, "value", 0)) + tag, bool(drop, "estimated") ? MUTED : TEXT, smallFont());
-		JPanel row = row(shrinkable(name), value);
+		JLabel name = label(str(drop, "name"), TEXT, smallFont());
+		JLabel value = label((estimated ? "~" : "") + splitGp(longValue(drop, "value", 0)), estimated ? MUTED : TEXT, smallFont());
 		List<String> skipped = strings(array(drop, "skipped"));
+		String status = bool(drop, "agreed") ? "agreed" : estimated ? "estimated" : "sold";
+		String detail = str(drop, "player") + " · " + status + (skipped.isEmpty() ? "" : " · " + skipped.size() + " out");
+		JLabel by = caption(detail);
 		String tip = skipped.isEmpty() ? title : title + " (not sharing: " + String.join(", ", skipped) + ")";
-		name.setToolTipText(tip);
-		value.setToolTipText(tip);
+		for (JLabel label : new JLabel[] {name, value, by}) label.setToolTipText(tip);
+		JPanel row = stack();
+		row.add(row(shrinkable(name), value));
+		row.add(by);
 		JPopupMenu menu = dropMenu(drop, skipped);
-		if (menu.getComponentCount() > 0) row.setComponentPopupMenu(menu);
+		if (menu.getComponentCount() > 0)
+		{
+			row.setComponentPopupMenu(menu);
+			for (java.awt.Component child : row.getComponents()) if (child instanceof JComponent) ((JComponent) child).setInheritsPopupMenu(true);
+			for (JLabel label : new JLabel[] {name, value, by}) label.setInheritsPopupMenu(true);
+		}
 		return row;
 	}
 
