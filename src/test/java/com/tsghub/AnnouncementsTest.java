@@ -1,6 +1,8 @@
 package com.tsghub;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -90,5 +92,14 @@ public class AnnouncementsTest
 		assertEquals("<ol style='margin-left:16px;margin-bottom:0;margin-top:0px'><li style='margin-top:3px'>one</li><li style='margin-top:3px'><a href='https://x.io/a_b' style='color:" + accent + "'>the <b>site</b></a></li></ol>",
 			TsgHubHtml.postHtml("1. one\n2) [the **site**](https://x.io/a_b)"));
 		assertEquals("<p style='margin:0;margin-top:0px'>&lt;b&gt;no&lt;/b&gt;</p>", TsgHubHtml.postHtml("<b>no</b>"));
+	}
+
+	@Test
+	public void newsImagesOnlyLoadFromTheHub()
+	{
+		assertTrue(TsgHubApi.isNewsImage("/v1/announcements/images/aB3_-x"));
+		assertFalse(TsgHubApi.isNewsImage("https://evil.example/x.png"));
+		assertFalse(TsgHubApi.isNewsImage("/v1/announcements/images/../me"));
+		assertFalse(TsgHubApi.isNewsImage("//evil.example/v1/announcements/images/a"));
 	}
 }

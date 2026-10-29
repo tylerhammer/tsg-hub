@@ -3,11 +3,15 @@ package com.tsghub;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -16,6 +20,7 @@ import javax.swing.SwingUtilities;
 final class TsgHubAnnouncements
 {
 	static final int MAX_CHAT_LINES = 3;
+	private static final int MAX_CACHED_IMAGES = 20;
 
 	private final TsgHubPlugin plugin;
 	private final ScheduledExecutorService executor;
@@ -23,6 +28,14 @@ final class TsgHubAnnouncements
 	private final Consumer<String> chat;
 	private final TsgHubNewsPoll polls;
 	private volatile JsonArray list;
+	private final Map<String, CompletableFuture<BufferedImage>> images = new LinkedHashMap<String, CompletableFuture<BufferedImage>>(16, 0.75f, true)
+	{
+		@Override
+		protected boolean removeEldestEntry(Map.Entry<String, CompletableFuture<BufferedImage>> eldest)
+		{
+			return size() > MAX_CACHED_IMAGES;
+		}
+	};
 
 	TsgHubAnnouncements(TsgHubPlugin plugin, ScheduledExecutorService executor, Supplier<TsgHubApi> api, Consumer<String> chat)
 	{
@@ -41,6 +54,17 @@ final class TsgHubAnnouncements
 	JsonArray list()
 	{
 		return list;
+	}
+
+	synchronized CompletableFuture<BufferedImage> image(String path)
+	{
+		CompletableFuture<BufferedImage> image = images.get(path);
+		if (image == null || image.isCompletedExceptionally())
+		{
+			image = api.get().newsImage(path);
+			images.put(path, image);
+		}
+		return image;
 	}
 
 	void load()
