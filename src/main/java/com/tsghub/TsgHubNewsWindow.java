@@ -117,12 +117,6 @@ final class TsgHubNewsWindow extends JPanel
 		if (photos.isEmpty()) return;
 		page.add(gap(GAP_S));
 		page.add(new TsgHubNewsGallery(photos, width, images, open));
-		String caption = photos.size() == 1 ? str(photos.get(0), "caption") : "";
-		if (!caption.isEmpty())
-		{
-			page.add(gap(GAP_XS));
-			page.add(wrapped(caption, MUTED, smallFont(), width));
-		}
 		page.add(gap(GAP_M));
 	}
 

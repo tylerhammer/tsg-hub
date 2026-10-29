@@ -104,15 +104,14 @@ public class AnnouncementsTest
 	}
 
 	@Test
-	public void galleryTilesLikeDiscord()
+	public void galleryFitsPhotosWhole()
 	{
-		assertEquals(new java.awt.Rectangle(0, 0, 400, 300), TsgHubNewsGallery.layout(1, 400, 800, 600).get(0));
-		assertEquals(360, TsgHubNewsGallery.layout(1, 400, 400, 2000).get(0).height);
-		List<java.awt.Rectangle> four = TsgHubNewsGallery.layout(4, 400, 0, 0);
-		assertEquals(new java.awt.Rectangle(202, 152, 198, 148), four.get(3));
-		List<java.awt.Rectangle> five = TsgHubNewsGallery.layout(5, 400, 0, 0);
-		assertEquals(198, five.get(0).width);
-		assertEquals(five.get(0).height + TsgHubNewsGallery.GAP, five.get(2).y);
-		assertEquals(400, five.get(4).x + five.get(4).width);
+		JsonObject wide = new JsonParser().parse("{\"url\":\"/v1/announcements/images/a\",\"width\":1600,\"height\":900}").getAsJsonObject();
+		JsonObject tall = new JsonParser().parse("{\"url\":\"/v1/announcements/images/b\",\"width\":400,\"height\":1200}").getAsJsonObject();
+		assertEquals(225, TsgHubNewsGallery.viewHeight(Collections.singletonList(new TsgHubNewsGallery.Photo(wide)), 400));
+		assertEquals(TsgHubNewsGallery.MAX_VIEW_H, TsgHubNewsGallery.viewHeight(Arrays.asList(new TsgHubNewsGallery.Photo(wide), new TsgHubNewsGallery.Photo(tall)), 400));
+		assertEquals(new java.awt.Rectangle(140, 0, 120, 360), TsgHubNewsGallery.contain(400, 1200, 400, 360));
+		assertEquals(58, TsgHubNewsGallery.thumbWidth(2, 400));
+		assertEquals(36, TsgHubNewsGallery.thumbWidth(10, 400));
 	}
 }
