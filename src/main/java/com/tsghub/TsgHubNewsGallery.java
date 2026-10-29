@@ -29,6 +29,7 @@ import java.util.function.Function;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JComponent;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
@@ -44,6 +45,9 @@ final class TsgHubNewsGallery extends JPanel
 	private final int width;
 	private final int viewH;
 	private final JPanel captionRow = new JPanel(new BorderLayout(GAP_M, 0));
+	private final JLabel caption = label("", MUTED, smallFont());
+	private final JLabel count = label("", MUTED, smallFont());
+	private int countW;
 	private int selected;
 
 	static final class Photo
@@ -98,6 +102,10 @@ final class TsgHubNewsGallery extends JPanel
 		add(new Viewer(viewH, open));
 		captionRow.setOpaque(false);
 		captionRow.setAlignmentX(LEFT_ALIGNMENT);
+		captionRow.add(caption, BorderLayout.CENTER);
+		captionRow.add(count, BorderLayout.EAST);
+		if (photos.size() > 1) countW = getFontMetrics(smallFont()).stringWidth(photos.size() + " / " + photos.size()) + GAP_M;
+		if (photos.size() > 1 || photos.stream().anyMatch(p -> !p.caption.isEmpty())) captionRow.setBorder(BorderFactory.createEmptyBorder(GAP_XS, 0, 0, 0));
 		add(captionRow);
 		if (photos.size() > 1)
 		{
@@ -166,17 +174,15 @@ final class TsgHubNewsGallery extends JPanel
 		selected = index;
 		memory.selected.put(photos.get(0).url, index);
 		Photo photo = photos.get(index);
-		captionRow.removeAll();
-		String count = photos.size() > 1 ? (index + 1) + " / " + photos.size() : "";
-		if (!photo.caption.isEmpty() || !count.isEmpty())
+		int before = captionRow.getPreferredSize().height;
+		caption.setText(photo.caption.isEmpty() ? "" : TsgHubHtml.html(TsgHubHtml.escape(photo.caption), width - countW));
+		count.setText(photos.size() > 1 ? (index + 1) + " / " + photos.size() : "");
+		int after = captionRow.getPreferredSize().height;
+		if (after != before || captionRow.getMaximumSize().height != after)
 		{
-			captionRow.setBorder(BorderFactory.createEmptyBorder(GAP_XS, 0, 0, 0));
-			int countW = count.isEmpty() ? 0 : getFontMetrics(smallFont()).stringWidth(count) + GAP_M;
-			captionRow.add(wrapped(photo.caption, MUTED, smallFont(), width - countW), BorderLayout.CENTER);
-			if (!count.isEmpty()) captionRow.add(label(count, MUTED, smallFont()), BorderLayout.EAST);
+			captionRow.setMaximumSize(new Dimension(width, after));
+			revalidate();
 		}
-		captionRow.setMaximumSize(new Dimension(width, captionRow.getPreferredSize().height));
-		revalidate();
 		repaint();
 	}
 
@@ -206,9 +212,9 @@ final class TsgHubNewsGallery extends JPanel
 			addMouseListener(new MouseAdapter()
 			{
 				@Override
-				public void mouseClicked(MouseEvent e)
+				public void mousePressed(MouseEvent e)
 				{
-					open.accept(photos.get(selected).url);
+					if (SwingUtilities.isLeftMouseButton(e)) open.accept(photos.get(selected).url);
 				}
 			});
 		}
@@ -243,10 +249,11 @@ final class TsgHubNewsGallery extends JPanel
 			addMouseListener(new MouseAdapter()
 			{
 				@Override
-				public void mouseClicked(MouseEvent e)
+				public void mousePressed(MouseEvent e)
 				{
+					if (!SwingUtilities.isLeftMouseButton(e)) return;
 					int index = e.getX() / (thumbW + GAP);
-					if (index < photos.size() && e.getX() - index * (thumbW + GAP) < thumbW) select(index);
+					if (index < photos.size() && index != selected && e.getX() - index * (thumbW + GAP) < thumbW) select(index);
 				}
 			});
 		}
