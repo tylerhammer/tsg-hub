@@ -110,6 +110,11 @@ final class TsgHubApi
 		return send(build(method, path, token, payload));
 	}
 
+	String url(String path)
+	{
+		return baseUrl + path;
+	}
+
 	static boolean isNewsImage(String path)
 	{
 		return path.matches("/v1/announcements/images/[A-Za-z0-9_-]+");

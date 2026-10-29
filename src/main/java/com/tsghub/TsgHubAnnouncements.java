@@ -16,6 +16,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.swing.SwingUtilities;
+import net.runelite.client.util.LinkBrowser;
 
 final class TsgHubAnnouncements
 {
@@ -54,6 +55,11 @@ final class TsgHubAnnouncements
 	JsonArray list()
 	{
 		return list;
+	}
+
+	void openImage(String path)
+	{
+		if (TsgHubApi.isNewsImage(path)) LinkBrowser.browse(api.get().url(path));
 	}
 
 	synchronized CompletableFuture<BufferedImage> image(String path)

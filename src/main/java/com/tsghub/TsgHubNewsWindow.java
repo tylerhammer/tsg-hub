@@ -8,18 +8,16 @@ import static com.tsghub.TsgHubUi.*;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.awt.BorderLayout;
-import java.awt.Dimension;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.swing.BorderFactory;
-import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.SwingUtilities;
@@ -29,20 +27,23 @@ final class TsgHubNewsWindow extends JPanel
 	static final int TEXT_W = 460;
 	static final int MAX_TEXT_W = 760;
 	private static final int PAD_H = GAP_L + 4;
+	private static final int MAX_PHOTOS = 10;
 
 	private final TsgHubNewsPoll polls;
 	private final Function<String, CompletableFuture<BufferedImage>> images;
+	private final Consumer<String> open;
 	private final JPanel page = new WidthTrackingPanel();
 	private final JScrollPane scroll = scroll(page);
 	private JsonArray announcements;
 	private String id = "";
 	private int width = TEXT_W;
 
-	TsgHubNewsWindow(TsgHubNewsPoll polls, Function<String, CompletableFuture<BufferedImage>> images)
+	TsgHubNewsWindow(TsgHubNewsPoll polls, Function<String, CompletableFuture<BufferedImage>> images, Consumer<String> open)
 	{
 		super(new BorderLayout());
 		this.polls = polls;
 		this.images = images;
+		this.open = open;
 		setBackground(BACKGROUND);
 		page.setBorder(BorderFactory.createEmptyBorder(GAP_L, PAD_H, GAP_L, PAD_H));
 		add(scroll, BorderLayout.CENTER);
@@ -111,55 +112,18 @@ final class TsgHubNewsWindow extends JPanel
 
 	private void addImages(JsonArray list)
 	{
-		boolean first = true;
-		for (JsonObject image : objects(list))
+		List<JsonObject> photos = new ArrayList<>();
+		for (JsonObject photo : objects(list)) if (TsgHubApi.isNewsImage(str(photo, "url")) && photos.size() < MAX_PHOTOS) photos.add(photo);
+		if (photos.isEmpty()) return;
+		page.add(gap(GAP_S));
+		page.add(new TsgHubNewsGallery(photos, width, images, open));
+		String caption = photos.size() == 1 ? str(photos.get(0), "caption") : "";
+		if (!caption.isEmpty())
 		{
-			String url = str(image, "url");
-			int w = integer(image, "width", 0), h = integer(image, "height", 0);
-			if (!TsgHubApi.isNewsImage(url) || w <= 0 || h <= 0) continue;
-			page.add(gap(first ? GAP_S : GAP_M));
-			first = false;
-			page.add(new Photo(images.apply(url), Math.min(width, w), (int) ((long) h * Math.min(width, w) / w)));
-			String caption = str(image, "caption");
-			if (!caption.isEmpty())
-			{
-				page.add(gap(GAP_XS));
-				page.add(wrapped(caption, MUTED, smallFont(), width));
-			}
+			page.add(gap(GAP_XS));
+			page.add(wrapped(caption, MUTED, smallFont(), width));
 		}
-		if (!first) page.add(gap(GAP_S));
-	}
-
-	private static final class Photo extends JComponent
-	{
-		private BufferedImage image;
-
-		Photo(CompletableFuture<BufferedImage> load, int w, int h)
-		{
-			Dimension size = new Dimension(w, h);
-			setPreferredSize(size);
-			setMaximumSize(size);
-			setAlignmentX(LEFT_ALIGNMENT);
-			load.thenAccept(loaded -> SwingUtilities.invokeLater(() -> {
-				image = loaded;
-				repaint();
-			}));
-		}
-
-		@Override
-		protected void paintComponent(Graphics g)
-		{
-			if (image == null)
-			{
-				g.setColor(CARD);
-				g.fillRect(0, 0, getWidth(), getHeight());
-				return;
-			}
-			Graphics2D g2 = (Graphics2D) g.create();
-			g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-			g2.drawImage(image, 0, 0, getWidth(), getHeight(), null);
-			g2.dispose();
-		}
+		page.add(gap(GAP_M));
 	}
 
 	private static JPanel divider()

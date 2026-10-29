@@ -26,7 +26,7 @@ final class TsgHubWindows
 			if (newsDialog == null || !newsDialog.isDisplayable())
 			{
 				TsgHubAnnouncements news = announcements.get();
-				newsWindow = new TsgHubNewsWindow(news.polls(), news::image);
+				newsWindow = new TsgHubNewsWindow(news.polls(), news::image, news::openImage);
 				newsWindow.setAnnouncements(news.list());
 				newsDialog = dialog("TSG Hub · News", newsWindow, new Dimension(TsgHubNewsWindow.TEXT_W + 60, 320), new Dimension(TsgHubNewsWindow.TEXT_W + 60, 640));
 			}

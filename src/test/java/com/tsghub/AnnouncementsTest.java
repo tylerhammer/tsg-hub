@@ -102,4 +102,17 @@ public class AnnouncementsTest
 		assertFalse(TsgHubApi.isNewsImage("/v1/announcements/images/../me"));
 		assertFalse(TsgHubApi.isNewsImage("//evil.example/v1/announcements/images/a"));
 	}
+
+	@Test
+	public void galleryTilesLikeDiscord()
+	{
+		assertEquals(new java.awt.Rectangle(0, 0, 400, 300), TsgHubNewsGallery.layout(1, 400, 800, 600).get(0));
+		assertEquals(360, TsgHubNewsGallery.layout(1, 400, 400, 2000).get(0).height);
+		List<java.awt.Rectangle> four = TsgHubNewsGallery.layout(4, 400, 0, 0);
+		assertEquals(new java.awt.Rectangle(202, 152, 198, 148), four.get(3));
+		List<java.awt.Rectangle> five = TsgHubNewsGallery.layout(5, 400, 0, 0);
+		assertEquals(198, five.get(0).width);
+		assertEquals(five.get(0).height + TsgHubNewsGallery.GAP, five.get(2).y);
+		assertEquals(400, five.get(4).x + five.get(4).width);
+	}
 }
