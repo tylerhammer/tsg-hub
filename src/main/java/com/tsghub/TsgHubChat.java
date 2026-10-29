@@ -106,10 +106,10 @@ final class TsgHubChat
 		clan("Event", new ChatMessageBuilder().append(ChatColorType.HIGHLIGHT).append(Text.escapeJagex(text)));
 	}
 
-	void clanAnnouncement(String text)
+	void clanAnnouncement(String tag, String text)
 	{
 		if (!config.clanAnnouncements()) return;
-		clan("Announcement", new ChatMessageBuilder().append(ChatColorType.HIGHLIGHT).append(Text.escapeJagex(text)));
+		clan(tag, new ChatMessageBuilder().append(ChatColorType.HIGHLIGHT).append(Text.escapeJagex(text)));
 	}
 
 	void splitNotice(String text)

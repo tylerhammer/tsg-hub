@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import javax.swing.AbstractButton;
+import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -22,6 +23,7 @@ import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import lombok.RequiredArgsConstructor;
 import net.runelite.client.ui.components.ProgressBar;
+import net.runelite.client.util.SwingUtil;
 
 @RequiredArgsConstructor
 final class TsgHubNewsPoll
@@ -101,9 +103,31 @@ final class TsgHubNewsPoll
 			});
 		});
 		sync.run();
-		String note = !canVote ? "Log in to vote." : mine.isEmpty() ? "" : "You voted.";
 		block.add(gap(GAP_XS));
-		block.add(fitHeight(row(label(note, MUTED, smallFont()), vote)));
+		block.add(fitHeight(row(canVote && !mine.isEmpty() ? removeVote(id) : label(canVote ? "" : "Log in to vote.", MUTED, smallFont()), vote)));
 		return block;
+	}
+
+	private JButton removeVote(String id)
+	{
+		JButton remove = button("Remove vote");
+		SwingUtil.removeButtonDecorations(remove);
+		remove.setForeground(MUTED);
+		remove.setFont(smallFont());
+		remove.setHorizontalAlignment(JButton.LEFT);
+		remove.setBorder(BorderFactory.createEmptyBorder());
+		remove.setEnabled(!voting.contains(id));
+		remove.addActionListener(e -> {
+			voting.add(id);
+			errors.remove(id);
+			picks.remove(id);
+			remove.setEnabled(false);
+			announcements.unvote(id, message -> {
+				voting.remove(id);
+				errors.put(id, message);
+				changed.run();
+			});
+		});
+		return remove;
 	}
 }

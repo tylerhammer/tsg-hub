@@ -2,14 +2,27 @@ package com.tsghub;
 
 import static com.tsghub.TsgHubHtml.*;
 import static com.tsghub.TsgHubIcons.*;
+import static com.tsghub.TsgHubJson.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.tsghub.TsgHubSidebarPanel.View;
+import java.awt.AlphaComposite;
+import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GridLayout;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import javax.swing.BorderFactory;
@@ -18,6 +31,7 @@ import javax.swing.Icon;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.Timer;
 
 final class TsgHubHomeView
 {
@@ -27,6 +41,12 @@ final class TsgHubHomeView
 	boolean homeBuilt;
 	private String update;
 	private final List<Section> sections;
+	private static final int MOVED_HOLD_MS = 1500;
+	private static final int MOVED_FADE_MS = 600;
+
+	private final JPanel polls = stack();
+	private final Set<String> shownPolls = new HashSet<>();
+	private final Map<String, Fade> movedPolls = new HashMap<>();
 
 	TsgHubHomeView(TsgHubPlugin plugin, TsgHubSidebarPanel shell)
 	{
@@ -86,6 +106,9 @@ final class TsgHubHomeView
 			if (pair) row.add(sectionTile(sections.get(i + 1), true));
 			addCard(shell.page, fitHeight(row));
 		}
+		shell.page.add(polls);
+		shownPolls.clear();
+		renderPolls();
 		if (update != null)
 		{
 			shell.page.add(gap(GAP_S));
@@ -96,6 +119,78 @@ final class TsgHubHomeView
 		}
 		shell.refreshPage();
 		homeBuilt = true;
+	}
+
+	void renderPolls()
+	{
+		polls.removeAll();
+		Set<String> shown = new HashSet<>();
+		JsonArray announcements = plugin.announcements().list();
+		if (announcements != null)
+		{
+			Instant now = TsgHubFormat.clock.instant();
+			ZoneId zone = ZoneId.systemDefault();
+			for (JsonObject announcement : objects(announcements))
+			{
+				String id = str(announcement, "id");
+				if (TsgHubAnnouncements.homePoll(announcement))
+				{
+					shown.add(id);
+					addCard(polls, shell.newsView.pollCard(announcement, now, zone));
+				}
+				else if (movedPolls.containsKey(id) || shownPolls.contains(id) && TsgHubAnnouncements.pollOnly(announcement))
+				{
+					addCard(polls, movedPolls.computeIfAbsent(id, this::moved));
+				}
+			}
+		}
+		shownPolls.clear();
+		shownPolls.addAll(shown);
+		refresh(polls);
+	}
+
+	private Fade moved(String id)
+	{
+		JPanel card = card();
+		JLabel note = label("Moved to News", MUTED, smallFont());
+		note.setIcon(icon("check", SUCCESS));
+		note.setHorizontalAlignment(JLabel.CENTER);
+		card.add(note, BorderLayout.CENTER);
+		Fade fade = new Fade();
+		fade.add(card, BorderLayout.CENTER);
+		long start = System.currentTimeMillis();
+		Timer timer = new Timer(40, null);
+		timer.addActionListener(e -> {
+			long fading = System.currentTimeMillis() - start - MOVED_HOLD_MS;
+			fade.alpha = Math.max(0f, Math.min(1f, 1f - fading / (float) MOVED_FADE_MS));
+			fade.repaint();
+			if (fade.alpha > 0f) return;
+			timer.stop();
+			movedPolls.remove(id);
+			renderPolls();
+		});
+		timer.start();
+		return fade;
+	}
+
+	private static final class Fade extends JPanel
+	{
+		private float alpha = 1f;
+
+		Fade()
+		{
+			super(new BorderLayout());
+			setOpaque(false);
+		}
+
+		@Override
+		public void paint(Graphics g)
+		{
+			Graphics2D faded = (Graphics2D) g.create();
+			faded.setComposite(AlphaComposite.SrcOver.derive(alpha));
+			super.paint(faded);
+			faded.dispose();
+		}
 	}
 
 	void setUpdate(String version)
