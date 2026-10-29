@@ -4,6 +4,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -14,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import javax.imageio.ImageIO;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.MediaType;
@@ -38,6 +41,7 @@ final class TsgHubApi
 
 	private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
 	private static final MediaType JPEG = MediaType.parse("image/jpeg");
+	private static final long MAX_IMAGE_BYTES = 8 << 20;
 	private final String baseUrl;
 	private final OkHttpClient http;
 	private final Gson gson;
@@ -104,6 +108,50 @@ final class TsgHubApi
 	private CompletableFuture<JsonObject> send(String method, String path, String token, JsonObject payload)
 	{
 		return send(build(method, path, token, payload));
+	}
+
+	String url(String path)
+	{
+		return baseUrl + path;
+	}
+
+	static boolean isNewsImage(String path)
+	{
+		return path.matches("/v1/announcements/images/[A-Za-z0-9_-]+");
+	}
+
+	CompletableFuture<BufferedImage> newsImage(String path)
+	{
+		CompletableFuture<BufferedImage> future = new CompletableFuture<>();
+		if (!isNewsImage(path))
+		{
+			future.completeExceptionally(new IllegalArgumentException("Not a news image"));
+			return future;
+		}
+		Request request = new Request.Builder().url(baseUrl + path).header(TsgHubVersion.HEADER, TsgHubVersion.VERSION).build();
+		http.newCall(request).enqueue(new Callback()
+		{
+			@Override
+			public void onFailure(Call call, IOException e)
+			{
+				future.completeExceptionally(e);
+			}
+
+			@Override
+			public void onResponse(Call call, Response response)
+			{
+				try (response)
+				{
+					ResponseBody body = response.body();
+					if (!response.isSuccessful() || body == null || body.contentLength() > MAX_IMAGE_BYTES) throw new IOException("Image returned HTTP " + response.code());
+					BufferedImage image = ImageIO.read(new ByteArrayInputStream(body.bytes()));
+					if (image == null) throw new IOException("Unreadable image");
+					future.complete(image);
+				}
+				catch (Exception e) { future.completeExceptionally(e); }
+			}
+		});
+		return future;
 	}
 
 	private CompletableFuture<JsonObject> send(Request request)

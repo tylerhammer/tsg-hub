@@ -33,7 +33,8 @@ final class TsgHubHtml
 	private static final java.util.regex.Pattern HEADING = java.util.regex.Pattern.compile("(#{1,3})\\s+(.+)");
 	private static final java.util.regex.Pattern RULE = java.util.regex.Pattern.compile("-{3,}|\\*{3,}|_{3,}");
 	private static final java.util.regex.Pattern LINK = java.util.regex.Pattern.compile("\\[([^\\]]+)]\\((https?://[^\\s)]+)\\)|(https?://[^\\s<>\"']+)");
-	private static final java.util.regex.Pattern LEAD_IN = java.util.regex.Pattern.compile("([^:/]{1,24}:)(\\s.*)");
+	private static final java.util.regex.Pattern LEAD_IN = java.util.regex.Pattern.compile("((?:\\*\\*)?[^:/*]{1,28}(?:\\*\\*)?:)(\\s.*)");
+	private static final String LI = "<li style='margin-top:3px'>";
 
 	// Escapes plain text for HTML, keeps line breaks, and turns http(s) URLs into links. Long URLs show
 	// shortened: Swing can't wrap inside one, and a long one widens the whole label past its wrap width.
@@ -72,14 +73,16 @@ final class TsgHubHtml
 			kind = next;
 			if (heading.matches())
 			{
-				boolean big = heading.group(1).length() == 1;
-				int top = out.length() == 0 ? 0 : 6;
-				out.append("<p style='margin:0;margin-top:").append(top).append("px'>").append(big ? "<font size='+1'>" : "").append("<b>")
-					.append(inline(heading.group(2))).append("</b>").append(big ? "</font>" : "").append("</p>");
+				int level = heading.group(1).length();
+				int top = out.length() == 0 ? 0 : 12;
+				String size = level == 1 ? "+2" : level == 2 ? "+1" : "";
+				out.append("<p style='margin:0;margin-top:").append(top).append("px;color:").append(toHexColor(ACCENT)).append("'>")
+					.append(size.isEmpty() ? "" : "<font size='" + size + "'>").append("<b>").append(inline(heading.group(2))).append("</b>")
+					.append(size.isEmpty() ? "" : "</font>").append("</p>");
 			}
 			else if (RULE.matcher(trimmed).matches()) out.append("<p style='margin:0;margin-top:6px;border-top:1px solid ").append(toHexColor(MUTED.darker())).append("'></p>");
-			else if (next.equals("ul")) block.append("<li>").append(leadIn(bullet.group(1))).append("</li>");
-			else if (next.equals("ol")) block.append("<li>").append(leadIn(numbered.group(1))).append("</li>");
+			else if (next.equals("ul")) block.append(LI).append(leadIn(bullet.group(1))).append("</li>");
+			else if (next.equals("ol")) block.append(LI).append(leadIn(numbered.group(1))).append("</li>");
 			else if (!next.isEmpty())
 			{
 				if (block.length() > 0) block.append("<br>");
@@ -93,7 +96,7 @@ final class TsgHubHtml
 	private static void flushBlock(StringBuilder out, StringBuilder block, String kind)
 	{
 		if (block.length() == 0) return;
-		String top = "margin-top:" + (out.length() == 0 ? 0 : 4) + "px";
+		String top = "margin-top:" + (out.length() == 0 ? 0 : 8) + "px";
 		if (kind.equals("ul") || kind.equals("ol"))
 			out.append("<").append(kind).append(" style='margin-left:").append(kind.equals("ol") ? 16 : 10).append("px;margin-bottom:0;").append(top).append("'>")
 				.append(block).append("</").append(kind).append(">");

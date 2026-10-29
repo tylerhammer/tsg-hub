@@ -1,6 +1,8 @@
 package com.tsghub;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -68,10 +70,10 @@ public class AnnouncementsTest
 	public void postHtmlFormatsBulletsAndParagraphs()
 	{
 		assertEquals("<p style='margin:0;margin-top:0px'>Intro</p>"
-			+ "<ul style='margin-left:10px;margin-bottom:0;margin-top:4px'><li><b>Events:</b> boards</li><li>a &amp; b</li></ul>"
-			+ "<p style='margin:0;margin-top:4px'>Line one<br>Line two</p>",
+			+ "<ul style='margin-left:10px;margin-bottom:0;margin-top:8px'><li style='margin-top:3px'><b>Events:</b> boards</li><li style='margin-top:3px'>a &amp; b</li></ul>"
+			+ "<p style='margin:0;margin-top:8px'>Line one<br>Line two</p>",
 			TsgHubHtml.postHtml("Intro\n\n- Events: boards\n* a & b\n\nLine one\nLine two"));
-		assertEquals("<ul style='margin-left:10px;margin-bottom:0;margin-top:0px'><li><a href='https://x.io' style='color:" + net.runelite.client.util.ColorUtil.toHexColor(TsgHubTheme.ACCENT) + "'>x.io</a></li></ul>",
+		assertEquals("<ul style='margin-left:10px;margin-bottom:0;margin-top:0px'><li style='margin-top:3px'><a href='https://x.io' style='color:" + net.runelite.client.util.ColorUtil.toHexColor(TsgHubTheme.ACCENT) + "'>x.io</a></li></ul>",
 			TsgHubHtml.postHtml("- https://x.io"));
 	}
 
@@ -81,10 +83,35 @@ public class AnnouncementsTest
 		String accent = net.runelite.client.util.ColorUtil.toHexColor(TsgHubTheme.ACCENT);
 		assertEquals("<p style='margin:0;margin-top:0px'><b>bold</b> <i>it</i> <i>it</i> <u>under</u> <strike>gone</strike> snake_case_name 2*3*4</p>",
 			TsgHubHtml.postHtml("**bold** *it* _it_ __under__ ~~gone~~ snake_case_name 2*3*4"));
-		assertEquals("<p style='margin:0;margin-top:0px'><font size='+1'><b>Title</b></font></p><p style='margin:0;margin-top:6px'><b>Sub</b></p>",
-			TsgHubHtml.postHtml("# Title\n## Sub"));
-		assertEquals("<ol style='margin-left:16px;margin-bottom:0;margin-top:0px'><li>one</li><li><a href='https://x.io/a_b' style='color:" + accent + "'>the <b>site</b></a></li></ol>",
+		assertEquals("<p style='margin:0;margin-top:0px;color:" + accent + "'><font size='+2'><b>Title</b></font></p>"
+			+ "<p style='margin:0;margin-top:12px;color:" + accent + "'><font size='+1'><b>Sub</b></font></p>"
+			+ "<p style='margin:0;margin-top:12px;color:" + accent + "'><b>Small</b></p>",
+			TsgHubHtml.postHtml("# Title\n## Sub\n### Small"));
+		assertEquals("<ul style='margin-left:10px;margin-bottom:0;margin-top:0px'><li style='margin-top:3px'><b><b>The Fractured Archive</b>:</b> tracked</li></ul>",
+			TsgHubHtml.postHtml("- **The Fractured Archive**: tracked"));
+		assertEquals("<ol style='margin-left:16px;margin-bottom:0;margin-top:0px'><li style='margin-top:3px'>one</li><li style='margin-top:3px'><a href='https://x.io/a_b' style='color:" + accent + "'>the <b>site</b></a></li></ol>",
 			TsgHubHtml.postHtml("1. one\n2) [the **site**](https://x.io/a_b)"));
 		assertEquals("<p style='margin:0;margin-top:0px'>&lt;b&gt;no&lt;/b&gt;</p>", TsgHubHtml.postHtml("<b>no</b>"));
+	}
+
+	@Test
+	public void newsImagesOnlyLoadFromTheHub()
+	{
+		assertTrue(TsgHubApi.isNewsImage("/v1/announcements/images/aB3_-x"));
+		assertFalse(TsgHubApi.isNewsImage("https://evil.example/x.png"));
+		assertFalse(TsgHubApi.isNewsImage("/v1/announcements/images/../me"));
+		assertFalse(TsgHubApi.isNewsImage("//evil.example/v1/announcements/images/a"));
+	}
+
+	@Test
+	public void galleryFitsPhotosWhole()
+	{
+		JsonObject wide = new JsonParser().parse("{\"url\":\"/v1/announcements/images/a\",\"width\":1600,\"height\":900}").getAsJsonObject();
+		JsonObject tall = new JsonParser().parse("{\"url\":\"/v1/announcements/images/b\",\"width\":400,\"height\":1200}").getAsJsonObject();
+		assertEquals(225, TsgHubNewsGallery.viewHeight(Collections.singletonList(new TsgHubNewsGallery.Photo(wide)), 400));
+		assertEquals(TsgHubNewsGallery.MAX_VIEW_H, TsgHubNewsGallery.viewHeight(Arrays.asList(new TsgHubNewsGallery.Photo(wide), new TsgHubNewsGallery.Photo(tall)), 400));
+		assertEquals(new java.awt.Rectangle(140, 0, 120, 360), TsgHubNewsGallery.contain(400, 1200, 400, 360));
+		assertEquals(58, TsgHubNewsGallery.thumbWidth(2, 400));
+		assertEquals(36, TsgHubNewsGallery.thumbWidth(10, 400));
 	}
 }
