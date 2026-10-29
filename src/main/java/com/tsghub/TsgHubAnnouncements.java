@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.swing.SwingUtilities;
@@ -26,7 +27,7 @@ final class TsgHubAnnouncements
 	private final TsgHubPlugin plugin;
 	private final ScheduledExecutorService executor;
 	private final Supplier<TsgHubApi> api;
-	private final Consumer<String> chat;
+	private final BiConsumer<String, String> chat;
 	private final TsgHubNewsPoll polls;
 	private volatile JsonArray list;
 	private final Map<String, CompletableFuture<BufferedImage>> images = new LinkedHashMap<String, CompletableFuture<BufferedImage>>(16, 0.75f, true)
@@ -38,13 +39,16 @@ final class TsgHubAnnouncements
 		}
 	};
 
-	TsgHubAnnouncements(TsgHubPlugin plugin, ScheduledExecutorService executor, Supplier<TsgHubApi> api, Consumer<String> chat)
+	TsgHubAnnouncements(TsgHubPlugin plugin, ScheduledExecutorService executor, Supplier<TsgHubApi> api, BiConsumer<String, String> chat)
 	{
 		this.plugin = plugin;
 		this.executor = executor;
 		this.api = api;
 		this.chat = chat;
-		this.polls = new TsgHubNewsPoll(plugin, this, () -> plugin.windows().news(TsgHubNewsWindow::render));
+		this.polls = new TsgHubNewsPoll(plugin, this, () -> {
+			plugin.windows().news(TsgHubNewsWindow::render);
+			plugin.ui(s -> s.newsView.setAnnouncements(list));
+		});
 	}
 
 	TsgHubNewsPoll polls()
@@ -115,7 +119,8 @@ final class TsgHubAnnouncements
 			if (skip.contains(id) || fresh.contains(announcement)) alerted.add(id);
 		}
 		plugin.session().set(TsgHubSession.ANNOUNCEMENTS_ALERTED, String.join(",", alerted));
-		for (String line : chatLines(fresh)) chat.accept(line);
+		List<String> lines = chatLines(fresh);
+		for (int i = 0; i < lines.size(); i++) chat.accept(i < MAX_CHAT_LINES && pollOnly(fresh.get(i)) ? "Poll" : "Announcement", lines.get(i));
 	}
 
 	void onLoggedOut()
@@ -177,6 +182,23 @@ final class TsgHubAnnouncements
 		return announcement != null && announcement.has("poll") && announcement.get("poll").isJsonObject() ? announcement.getAsJsonObject("poll") : null;
 	}
 
+	static boolean pollOnly(JsonObject announcement)
+	{
+		return TsgHubJson.bool(announcement, "pollOnly") && poll(announcement) != null;
+	}
+
+	static List<JsonObject> homePolls(JsonArray announcements)
+	{
+		List<JsonObject> out = new ArrayList<>();
+		for (JsonObject announcement : TsgHubJson.objects(announcements)) if (homePoll(announcement)) out.add(announcement);
+		return out;
+	}
+
+	static boolean homePoll(JsonObject announcement)
+	{
+		return pollOnly(announcement) && TsgHubJson.bool(announcement, "pinned") && myVote(poll(announcement)).isEmpty();
+	}
+
 	static List<Integer> myVote(JsonObject poll)
 	{
 		List<Integer> picks = new ArrayList<>();
@@ -197,7 +219,23 @@ final class TsgHubAnnouncements
 		JsonArray picks = new JsonArray();
 		for (int option : options) picks.add(option);
 		request.add("options", picks);
-		api.get().call("POST", path(id) + "/vote", null, request).whenCompleteAsync((response, error) -> {
+		sendVote("POST", path(id) + "/vote", request, failed);
+	}
+
+	void unvote(String id, Consumer<String> failed)
+	{
+		String hash = plugin.clan().accountHash();
+		if (hash.isEmpty() || !plugin.canUseHub() || executor.isShutdown())
+		{
+			failed.accept("Log in to vote.");
+			return;
+		}
+		sendVote("DELETE", path(id) + "/vote?clanName=" + TsgHubApi.encode(plugin.clan().name()) + "&accountHash=" + hash, null, failed);
+	}
+
+	private void sendVote(String method, String path, JsonObject request, Consumer<String> failed)
+	{
+		api.get().call(method, path, null, request).whenCompleteAsync((response, error) -> {
 			try
 			{
 				TsgHubApi.result(response, error);

@@ -34,7 +34,11 @@ final class TsgHubNewsView
 			renderNews();
 			plugin.announcements().markRead();
 		}
-		else if (shell.view == View.HOME) shell.homeView.renderHome();
+		else if (shell.view == View.HOME)
+		{
+			shell.homeView.renderHome();
+			shell.homeView.renderPolls();
+		}
 	}
 
 	void showNews()
@@ -97,6 +101,7 @@ final class TsgHubNewsView
 
 	private JPanel newsCard(JsonObject announcement, Instant now, ZoneId zone)
 	{
+		if (TsgHubAnnouncements.pollOnly(announcement)) return pollCard(announcement, now, zone);
 		JPanel card = card();
 		JPanel lines = stack();
 		JPanel icons = newsIcons(announcement);
@@ -107,6 +112,19 @@ final class TsgHubNewsView
 		card.add(TsgHubSidebarPanel.fillWidth(lines), BorderLayout.CENTER);
 		String id = str(announcement, "id");
 		clickable(card, () -> plugin.windows().openNews(id));
+		return fitHeight(card);
+	}
+
+	JPanel pollCard(JsonObject announcement, Instant now, ZoneId zone)
+	{
+		JPanel card = card();
+		JPanel lines = stack();
+		JPanel icons = newsIcons(announcement);
+		lines.add(row(label(html(escape(str(announcement, "title")), TsgHubSidebarPanel.CARD_TEXT_W - icons.getPreferredSize().width - 6), TEXT, boldFont()), north(icons)));
+		lines.add(gap(GAP_XS));
+		lines.add(TsgHubSidebarPanel.cardNote(str(announcement, "postedBy") + " · " + TsgHubFormat.shortDate(str(announcement, "postedAt"), now, zone)));
+		lines.add(plugin.announcements().polls().block(str(announcement, "id"), TsgHubAnnouncements.poll(announcement), TsgHubSidebarPanel.CARD_TEXT_W));
+		card.add(TsgHubSidebarPanel.fillWidth(lines), BorderLayout.CENTER);
 		return fitHeight(card);
 	}
 }

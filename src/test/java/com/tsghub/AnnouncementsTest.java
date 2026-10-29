@@ -114,4 +114,13 @@ public class AnnouncementsTest
 		assertEquals(58, TsgHubNewsGallery.thumbWidth(2, 400));
 		assertEquals(36, TsgHubNewsGallery.thumbWidth(10, 400));
 	}
+
+	@Test
+	public void homeShowsPinnedPollsUntilVoted()
+	{
+		JsonArray announcements = list("[{\"id\":\"1\",\"pinned\":true,\"pollOnly\":true,\"poll\":{\"options\":[]}},{\"id\":\"2\",\"pollOnly\":true,\"poll\":{\"options\":[]}},{\"id\":\"3\",\"pinned\":true,\"poll\":{\"options\":[]}},{\"id\":\"4\",\"pinned\":true,\"pollOnly\":true},{\"id\":\"5\",\"pinned\":true,\"pollOnly\":true,\"poll\":{\"options\":[],\"myVote\":[0]}}]");
+		List<JsonObject> home = TsgHubAnnouncements.homePolls(announcements);
+		assertEquals(1, home.size());
+		assertEquals("1", TsgHubJson.str(home.get(0), "id"));
+	}
 }
