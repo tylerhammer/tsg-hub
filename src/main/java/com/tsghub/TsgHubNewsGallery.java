@@ -11,6 +11,7 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.GraphicsEnvironment;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
@@ -18,8 +19,11 @@ import java.awt.event.MouseEvent;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.swing.BorderFactory;
@@ -27,7 +31,6 @@ import javax.swing.BoxLayout;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
-import net.runelite.client.util.ImageUtil;
 
 final class TsgHubNewsGallery extends JPanel
 {
@@ -37,7 +40,9 @@ final class TsgHubNewsGallery extends JPanel
 	private static final int RADIUS = 8;
 
 	private final List<Photo> photos = new ArrayList<>();
+	private final Memory memory;
 	private final int width;
+	private final int viewH;
 	private final JPanel captionRow = new JPanel(new BorderLayout(GAP_M, 0));
 	private int selected;
 
@@ -48,8 +53,6 @@ final class TsgHubNewsGallery extends JPanel
 		final int width;
 		final int height;
 		BufferedImage image;
-		BufferedImage view;
-		BufferedImage thumb;
 
 		Photo(JsonObject json)
 		{
@@ -60,9 +63,16 @@ final class TsgHubNewsGallery extends JPanel
 		}
 	}
 
-	TsgHubNewsGallery(List<JsonObject> list, int width, Function<String, CompletableFuture<BufferedImage>> load, Consumer<String> open)
+	static final class Memory
+	{
+		final Map<String, BufferedImage> scaled = new ConcurrentHashMap<>();
+		final Map<String, Integer> selected = new HashMap<>();
+	}
+
+	TsgHubNewsGallery(List<JsonObject> list, int width, Function<String, CompletableFuture<BufferedImage>> load, Consumer<String> open, Memory memory)
 	{
 		this.width = width;
+		this.memory = memory;
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 		setOpaque(false);
 		setAlignmentX(LEFT_ALIGNMENT);
@@ -70,12 +80,22 @@ final class TsgHubNewsGallery extends JPanel
 		{
 			Photo photo = new Photo(json);
 			photos.add(photo);
-			load.apply(photo.url).thenAccept(image -> SwingUtilities.invokeLater(() -> {
-				photo.image = image;
-				repaint();
-			}));
 		}
-		add(new Viewer(viewHeight(photos, width), open));
+		viewH = viewHeight(photos, width);
+		double scale = screenScale();
+		for (Photo photo : photos)
+		{
+			load.apply(photo.url).thenAccept(image -> {
+				Rectangle at = contain(image.getWidth(), image.getHeight(), width, viewH);
+				scaled(photo.url + "#view", image, (int) Math.ceil(at.width * scale), (int) Math.ceil(at.height * scale), false);
+				if (photos.size() > 1) scaled(photo.url + "#thumb", image, (int) Math.ceil(thumbWidth(photos.size(), width) * scale), (int) Math.ceil(THUMB_H * scale), true);
+				SwingUtilities.invokeLater(() -> {
+					photo.image = image;
+					repaint();
+				});
+			});
+		}
+		add(new Viewer(viewH, open));
 		captionRow.setOpaque(false);
 		captionRow.setAlignmentX(LEFT_ALIGNMENT);
 		add(captionRow);
@@ -84,7 +104,42 @@ final class TsgHubNewsGallery extends JPanel
 			add(gap(GAP_S));
 			add(new Strip());
 		}
-		select(0);
+		select(Math.min(memory.selected.getOrDefault(photos.get(0).url, 0), photos.size() - 1));
+	}
+
+	private static double screenScale()
+	{
+		if (GraphicsEnvironment.isHeadless()) return 1;
+		return GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDefaultConfiguration().getDefaultTransform().getScaleX();
+	}
+
+	private BufferedImage scaled(String key, BufferedImage image, int w, int h, boolean crop)
+	{
+		BufferedImage cached = memory.scaled.get(key);
+		if (cached != null && cached.getWidth() == w && cached.getHeight() == h) return cached;
+		BufferedImage made = crop ? cover(image, w, h) : resize(image, w, h);
+		memory.scaled.put(key, made);
+		return made;
+	}
+
+	static BufferedImage resize(BufferedImage image, int w, int h)
+	{
+		BufferedImage out = image;
+		int cw = image.getWidth(), ch = image.getHeight();
+		do
+		{
+			cw = Math.max(w, cw / 2);
+			ch = Math.max(h, ch / 2);
+			if (out != image && cw == out.getWidth() && ch == out.getHeight()) break;
+			BufferedImage step = new BufferedImage(cw, ch, BufferedImage.TYPE_INT_ARGB);
+			Graphics2D g = step.createGraphics();
+			g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+			g.drawImage(out, 0, 0, cw, ch, null);
+			g.dispose();
+			out = step;
+		}
+		while (cw != w || ch != h);
+		return out;
 	}
 
 	static int viewHeight(List<Photo> photos, int width)
@@ -109,6 +164,7 @@ final class TsgHubNewsGallery extends JPanel
 	private void select(int index)
 	{
 		selected = index;
+		memory.selected.put(photos.get(0).url, index);
 		Photo photo = photos.get(index);
 		captionRow.removeAll();
 		String count = photos.size() > 1 ? (index + 1) + " / " + photos.size() : "";
@@ -170,9 +226,8 @@ final class TsgHubNewsGallery extends JPanel
 				Rectangle at = contain(photo.image.getWidth(), photo.image.getHeight(), getWidth(), getHeight());
 				double scale = g2.getTransform().getScaleX();
 				int w = (int) Math.ceil(at.width * scale), h = (int) Math.ceil(at.height * scale);
-				if (photo.view == null || photo.view.getWidth() != w || photo.view.getHeight() != h) photo.view = ImageUtil.resizeImage(photo.image, w, h);
 				g2.setClip(shape);
-				g2.drawImage(photo.view, at.x, at.y, at.width, at.height, null);
+				g2.drawImage(scaled(photo.url + "#view", photo.image, w, h, false), at.x, at.y, at.width, at.height, null);
 			}
 			g2.dispose();
 		}
@@ -212,10 +267,10 @@ final class TsgHubNewsGallery extends JPanel
 				if (photo.image != null)
 				{
 					int w = (int) Math.ceil(thumbW * scale), h = (int) Math.ceil(THUMB_H * scale);
-					if (photo.thumb == null || photo.thumb.getWidth() != w || photo.thumb.getHeight() != h) photo.thumb = cover(photo.image, w, h);
+					BufferedImage thumb = scaled(photo.url + "#thumb", photo.image, w, h, true);
 					if (i != selected) cell.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.45f));
 					cell.setClip(shape);
-					cell.drawImage(photo.thumb, x, 0, thumbW, THUMB_H, null);
+					cell.drawImage(thumb, x, 0, thumbW, THUMB_H, null);
 				}
 				cell.dispose();
 				if (i == selected)
@@ -235,6 +290,6 @@ final class TsgHubNewsGallery extends JPanel
 		int cropW = iw, cropH = ih;
 		if ((long) iw * h > (long) ih * w) cropW = (int) Math.max(1, (long) ih * w / h);
 		else cropH = (int) Math.max(1, (long) iw * h / w);
-		return ImageUtil.resizeImage(image.getSubimage((iw - cropW) / 2, (ih - cropH) / 2, cropW, cropH), w, h);
+		return resize(image.getSubimage((iw - cropW) / 2, (ih - cropH) / 2, cropW, cropH), w, h);
 	}
 }

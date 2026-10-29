@@ -32,6 +32,7 @@ final class TsgHubNewsWindow extends JPanel
 	private final TsgHubNewsPoll polls;
 	private final Function<String, CompletableFuture<BufferedImage>> images;
 	private final Consumer<String> open;
+	private final TsgHubNewsGallery.Memory memory = new TsgHubNewsGallery.Memory();
 	private final JPanel page = new WidthTrackingPanel();
 	private final JScrollPane scroll = scroll(page);
 	private JsonArray announcements;
@@ -116,7 +117,7 @@ final class TsgHubNewsWindow extends JPanel
 		for (JsonObject photo : objects(list)) if (TsgHubApi.isNewsImage(str(photo, "url")) && photos.size() < MAX_PHOTOS) photos.add(photo);
 		if (photos.isEmpty()) return;
 		page.add(gap(GAP_S));
-		page.add(new TsgHubNewsGallery(photos, width, images, open));
+		page.add(new TsgHubNewsGallery(photos, width, images, open, memory));
 		page.add(gap(GAP_M));
 	}
 
