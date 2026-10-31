@@ -217,6 +217,8 @@ Once you opt in, it sends the following to the TSG Hub service:
 - All clan and personal broadcast messages
 - When you open the Clan Coffer, its coin total, and each change while it stays open: deposit or withdrawal, the balance before and after, and whether a coffer chat message showed you made it. Only clan admins can see this, on the admin site. The plugin doesn't show it
 
+These go over a live connection to the service, with plain web requests as a fallback while it's down. Drops, kill counts, sales, payments, reports and loot split starts are kept until the service confirms them, and sent again with growing gaps if it's busy or doesn't answer, for up to 10 minutes. Location, XP and online status aren't queued, since the next update replaces them.
+
 In a clan party, your stats, gear and inventory go to the other members through **RuneLite's party service**, not the TSG Hub service. The TSG Hub service only learns your display name, party and world, plus your area name and position if location sharing is on, and during a loot split the value of the loot you receive.
 
 Turning sharing off, or disconnecting from an event, deletes your local token and asks the service to revoke it. Progress your team already earned stays with the clan.

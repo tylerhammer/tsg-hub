@@ -66,7 +66,8 @@ public class SignalsTest
 		}).build();
 		TsgHubSocket socket = new TsgHubSocket(http, new Gson(), "https://hub.test", executor, null);
 		TsgHubApi api = new TsgHubApi(http, new Gson(), "https://hub.test");
-		return new TsgHubSignals(socket, () -> api, received::add);
+		TsgHubOutbox outbox = new TsgHubOutbox(socket, (method, path, token, body) -> api.request(method, path, token, body));
+		return new TsgHubSignals(socket, outbox, () -> api, received::add);
 	}
 
 	@Test

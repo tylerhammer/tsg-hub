@@ -44,8 +44,7 @@ final class TsgHubLiveSync
 			@Override public void onReady(String rulesVersion)
 			{
 				refreshRules(rulesVersion);
-				plugin.signals().resend();
-				plugin.reports().resend();
+				plugin.outbox().resend();
 			}
 			@Override public void onRulesChanged(String version) { refreshRules(version); }
 			@Override public void onChanged(String topic, String eventId) { changed(topic, eventId); }
@@ -54,13 +53,9 @@ final class TsgHubLiveSync
 			@Override public void onUpdateAvailable(String version) { plugin.chat().updateAvailable(version); }
 			@Override public void onSnapshot(JsonObject message) { snapshot(message); }
 			@Override public void onConnection(TsgHubSocket.State state) { plugin.ui(s -> s.setConnection(state)); }
-			@Override public void onAck(String id)
-			{
-				plugin.signals().acked(id);
-				plugin.reports().acked(id);
-			}
-			@Override public void onRejected(String id, int status) { plugin.reports().failed(id, status); }
-			@Override public void onSubscribed() { plugin.signals().resend(); }
+			@Override public void onAck(String id) { plugin.outbox().acked(id); }
+			@Override public void onRejected(String id, int status, String message) { plugin.outbox().failed(id, status, message); }
+			@Override public void onSubscribed() { plugin.outbox().resendSignals(); }
 			@Override public void onReply(JsonObject message) { plugin.chat().reply(message); }
 			@Override public void onXpRequest(String skills) { plugin.tracker().reportXp(skills); }
 			@Override public void onScreenshotRequest(String id, String token) { plugin.drops().sendScreenshot(id, token); }
@@ -106,9 +101,9 @@ final class TsgHubLiveSync
 
 	void tick()
 	{
-		TsgHubReports reports = plugin.reports();
-		if (!plugin.sharingEnabled()) reports.clear();
-		reports.flush();
+		TsgHubOutbox outbox = plugin.outbox();
+		if (!plugin.sharingEnabled()) outbox.clear();
+		outbox.flush();
 		if (!plugin.sharingInClan())
 		{
 			socket.disconnect();

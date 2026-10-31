@@ -181,10 +181,10 @@ final class TsgHubGameTracker
 
 	void report(String type, String method, String path, String token, JsonObject body)
 	{
-		TsgHubReports reports = plugin.reports();
-		if (reports == null || reports.send(type, method, path, token, body) || executor.isShutdown()) return;
-		if (client.isClientThread()) executor.execute(reports::flush);
-		else reports.flush();
+		TsgHubOutbox outbox = plugin.outbox();
+		if (outbox == null || outbox.report(type, method, path, token, body) || executor.isShutdown()) return;
+		if (client.isClientThread()) executor.execute(outbox::flush);
+		else outbox.flush();
 	}
 
 	void reset()

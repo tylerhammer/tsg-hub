@@ -22,7 +22,7 @@ import okhttp3.WebSocket;
 import okhttp3.WebSocketListener;
 
 @Slf4j
-final class TsgHubSocket
+final class TsgHubSocket implements TsgHubOutbox.Link
 {
 	enum State { DISCONNECTED, CONNECTING, CONNECTED }
 
@@ -46,7 +46,7 @@ final class TsgHubSocket
 
 		void onAck(String id);
 
-		void onRejected(String id, int status);
+		void onRejected(String id, int status, String message);
 
 		void onSubscribed();
 
@@ -90,6 +90,7 @@ final class TsgHubSocket
 	private String clanName = "";
 	private String rejectedClan = "";
 	private boolean ready;
+	private int protocol;
 	private final TsgHubBackoff backoff = new TsgHubBackoff(1_000, 60_000);
 	private State state = State.DISCONNECTED;
 
@@ -102,9 +103,16 @@ final class TsgHubSocket
 		this.listener = listener;
 	}
 
-	synchronized boolean isLive()
+	@Override
+	public synchronized boolean isLive()
 	{
 		return ready;
+	}
+
+	@Override
+	public synchronized int protocol()
+	{
+		return ready ? protocol : 0;
 	}
 
 	synchronized void connect(String clan)
@@ -163,7 +171,8 @@ final class TsgHubSocket
 		return live;
 	}
 
-	synchronized boolean send(String type, JsonObject body)
+	@Override
+	public synchronized boolean send(String type, JsonObject body)
 	{
 		return emit(type, body.deepCopy());
 	}
@@ -180,11 +189,6 @@ final class TsgHubSocket
 		if (!ready || socket == null) return false;
 		message.addProperty("type", type);
 		return socket.send(message.toString());
-	}
-
-	synchronized boolean sendSignal(JsonObject message)
-	{
-		return isLive() && socket.send(message.toString());
 	}
 
 	synchronized boolean xp(String skill, int xp, int tick)
@@ -246,7 +250,7 @@ final class TsgHubSocket
 	private void open()
 	{
 		retry = null;
-		Request request = new Request.Builder().url(url.newBuilder().addQueryParameter("clanName", clanName).addQueryParameter("version", TsgHubVersion.VERSION).build()).build();
+		Request request = new Request.Builder().url(url.newBuilder().addQueryParameter("clanName", clanName).addQueryParameter("version", TsgHubVersion.VERSION).addQueryParameter("protocol", String.valueOf(TsgHubOutbox.ANSWERING_PROTOCOL)).build()).build();
 		socket = http.newWebSocket(request, new Handler());
 		changed();
 	}
@@ -277,6 +281,7 @@ final class TsgHubSocket
 	{
 		if (ws != socket) return;
 		ready = true;
+		protocol = TsgHubJson.integer(message, "protocol", 1);
 		backoff.reset();
 		for (Map.Entry<String, Subscription> entry : subscriptions.entrySet())
 		{
@@ -421,12 +426,13 @@ final class TsgHubSocket
 				case "error":
 					String failed = TsgHubJson.str(message, "id");
 					int status = TsgHubJson.integer(message, "status", 0);
-					if (!failed.isEmpty()) dispatch(ws, () -> listener.onRejected(failed, status));
+					String reason = TsgHubJson.str(message, "message");
 					String errorTopic = TsgHubJson.str(message, "topic");
-					if (!eventId.isEmpty()) rejected(ws, eventId);
+					if (!failed.isEmpty()) dispatch(ws, () -> listener.onRejected(failed, status, reason));
+					else if (!eventId.isEmpty()) rejected(ws, eventId);
 					else if ("admin".equals(errorTopic) && status == 401) adminRevoked(ws);
 					else if ("group".equals(errorTopic)) dispatch(ws, () -> listener.onGroupRejected(status));
-					log.debug("TSG Hub socket error: {}", TsgHubJson.str(message, "message"));
+					log.debug("TSG Hub socket error: {}", reason);
 					break;
 				default:
 			}
