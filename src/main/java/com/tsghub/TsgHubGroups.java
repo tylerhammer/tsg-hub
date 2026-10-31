@@ -156,9 +156,19 @@ final class TsgHubGroups implements GroupTracker.Listener
 
 	void setSplit(boolean active)
 	{
+		String token = plugin.session().get(GROUP_TOKEN);
 		JsonObject payload = new JsonObject();
 		payload.addProperty("active", active);
-		if (!socket.group("group.split", plugin.session().get(GROUP_TOKEN), payload)) update("/v1/groups/split", payload);
+		JsonObject request = payload.deepCopy();
+		request.addProperty("token", token);
+		if (token.isEmpty() || plugin.outbox().request("group.split", request, this::splitRejected)) return;
+		if (!socket.group("group.split", token, payload)) update("/v1/groups/split", payload);
+	}
+
+	void splitRejected(int status, String message, boolean resent)
+	{
+		if (resent && status == 400) return;
+		when404(new TsgHubApi.HttpError(status, message));
 	}
 
 	void setSplitValue(String dropId, long gp)

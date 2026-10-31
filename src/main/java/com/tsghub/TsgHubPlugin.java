@@ -119,7 +119,7 @@ public class TsgHubPlugin extends Plugin
 	private volatile boolean routedClanPending;
 	private volatile TsgHubApi api;
 	private TsgHubSignals signals;
-	private TsgHubReports reports;
+	private TsgHubOutbox outbox;
 	private TsgHubGroups groups;
 	private TsgHubPresence presence;
 	private TsgHubMemberMap memberMap;
@@ -147,8 +147,8 @@ public class TsgHubPlugin extends Plugin
 		sessions = new TsgHubSessions(this, executor);
 		liveSync = new TsgHubLiveSync(this, okHttpClient, gson, serviceUrl, executor);
 		TsgHubSocket socket = liveSync.socket();
-		signals = new TsgHubSignals(socket, this::api, chat::reply);
-		reports = new TsgHubReports(socket::send, (method, path, token, body) -> api().request(method, path, token, body));
+		outbox = new TsgHubOutbox(socket, (method, path, token, body) -> api().request(method, path, token, body));
+		signals = new TsgHubSignals(socket, outbox, this::api, chat::reply);
 		executor.execute(this::loadCachedRules);
 		every(liveSync::tick, 2, 5, TimeUnit.SECONDS);
 		every(liveSync.unlessLive(() -> sessions.autoRefreshBoard(sidebar)), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
@@ -301,7 +301,7 @@ public class TsgHubPlugin extends Plugin
 	TsgHubLiveSync liveSync() { return liveSync; }
 	TsgHubGameTracker tracker() { return tracker; }
 	TsgHubSignals signals() { return signals; }
-	TsgHubReports reports() { return reports; }
+	TsgHubOutbox outbox() { return outbox; }
 	TsgHubApi api() { return api; }
 	TsgHubSidebarPanel sidebar() { return sidebar; }
 	TsgHubBingo bingo() { return bingo; }
@@ -402,7 +402,7 @@ public class TsgHubPlugin extends Plugin
 	{
 		if (TsgHubRecords.PB_GROUP.equals(event.getGroup()) && records != null) records.onConfigChanged(event);
 		if (!"tsghub".equals(event.getGroup())) return;
-		if ("dataSharingOptIn".equals(event.getKey()) && !config.dataSharingOptIn() && reports != null) reports.clear();
+		if ("dataSharingOptIn".equals(event.getKey()) && !config.dataSharingOptIn() && outbox != null) outbox.clear();
 		if ("partyShowSelf".equals(event.getKey()))
 		{
 			if (config.partyShowSelf()) groupTracker.refreshSelf();
