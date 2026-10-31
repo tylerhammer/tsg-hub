@@ -80,6 +80,12 @@ final class TsgHubSignals
 		synchronized (this) { offlineXp.merge(skill, xp, Math::max); }
 	}
 
+	static boolean socketOnly(JsonObject message)
+	{
+		String type = TsgHubJson.str(message, "type");
+		return "sale".equals(type) || "payment".equals(type);
+	}
+
 	synchronized void acked(String id)
 	{
 		pending.remove(id);
@@ -131,7 +137,7 @@ final class TsgHubSignals
 			for (Pending entry : pending.values())
 			{
 				if (entries.size() + xp.size() >= MAX_BATCH) break;
-				entries.add(entry);
+				if (!socketOnly(entry.message)) entries.add(entry);
 			}
 		}
 		boolean retryXp = false;
