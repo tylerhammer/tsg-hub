@@ -250,7 +250,7 @@ final class TsgHubSocket implements TsgHubOutbox.Link
 	private void open()
 	{
 		retry = null;
-		Request request = new Request.Builder().url(url.newBuilder().addQueryParameter("clanName", clanName).addQueryParameter("version", TsgHubVersion.VERSION).build()).build();
+		Request request = new Request.Builder().url(url.newBuilder().addQueryParameter("clanName", clanName).addQueryParameter("version", TsgHubVersion.VERSION).addQueryParameter("protocol", String.valueOf(TsgHubOutbox.ANSWERING_PROTOCOL)).build()).build();
 		socket = http.newWebSocket(request, new Handler());
 		changed();
 	}

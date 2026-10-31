@@ -36,7 +36,7 @@ final class TsgHubOutbox
 
 	interface Rejection
 	{
-		void rejected(int status, String message, boolean resent);
+		void rejected(int status, String message);
 	}
 
 	enum Kind { REPORT, SIGNAL, SOCKET_SIGNAL, REQUEST }
@@ -156,7 +156,7 @@ final class TsgHubOutbox
 			entry = pending.get(id);
 			if (entry == null) return;
 			long now = clock.getAsLong();
-			if (status == 429 || status >= 500 || status == 0)
+			if (status == 429 || status >= 500 || (status == 0 && link.protocol() < ANSWERING_PROTOCOL))
 			{
 				entry.nextAt = now + retryDelay(entry.attempts);
 				return;
@@ -170,7 +170,7 @@ final class TsgHubOutbox
 			pending.remove(id);
 		}
 		log.debug("TSG Hub {} rejected ({}): {}", entry.type, status, message);
-		if (entry.rejection != null) entry.rejection.rejected(status, message, entry.attempts > 1);
+		if (entry.rejection != null) entry.rejection.rejected(status, message);
 	}
 
 	synchronized void resend()

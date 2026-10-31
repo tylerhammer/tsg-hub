@@ -33,6 +33,7 @@ public class SocketTest
 	private ServerSocket server;
 	private Socket peer;
 	private TsgHubSocket socket;
+	private String requestLine;
 
 	@After
 	public void stop() throws IOException
@@ -50,7 +51,7 @@ public class SocketTest
 		socket.connect("TSGaming");
 		peer = server.accept();
 		peer.setSoTimeout(5_000);
-		handshake();
+		requestLine = handshake();
 		write(ready);
 		assertEquals("ready", events.poll(5, TimeUnit.SECONDS));
 	}
@@ -60,6 +61,7 @@ public class SocketTest
 	{
 		connect("{\"type\":\"ready\",\"rules\":\"v1\",\"protocol\":\"2\"}");
 		assertEquals(2, socket.protocol());
+		assertTrue(requestLine, requestLine.contains("protocol=2"));
 	}
 
 	@Test
@@ -107,7 +109,7 @@ public class SocketTest
 		assertEquals(0, outbox.size());
 	}
 
-	private void handshake() throws Exception
+	private String handshake() throws Exception
 	{
 		InputStream in = peer.getInputStream();
 		ByteArrayOutputStream head = new ByteArrayOutputStream();
@@ -121,6 +123,7 @@ public class SocketTest
 		String reply = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: "
 			+ Base64.getEncoder().encodeToString(digest) + "\r\n\r\n";
 		peer.getOutputStream().write(reply.getBytes(StandardCharsets.UTF_8));
+		return head.toString("UTF-8").split("\r\n")[0];
 	}
 
 	private void write(String text) throws IOException

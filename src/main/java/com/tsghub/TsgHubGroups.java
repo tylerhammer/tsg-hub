@@ -165,9 +165,8 @@ final class TsgHubGroups implements GroupTracker.Listener
 		if (!socket.group("group.split", token, payload)) update("/v1/groups/split", payload);
 	}
 
-	void splitRejected(int status, String message, boolean resent)
+	void splitRejected(int status, String message)
 	{
-		if (resent && status == 400) return;
 		when404(new TsgHubApi.HttpError(status, message));
 	}
 

@@ -340,19 +340,19 @@ public class OutboxTest
 		TsgHubOutbox outbox = reports();
 		JsonObject split = new JsonObject();
 		split.addProperty("active", true);
-		assertFalse(outbox.request("group.split", split, (status, message, resent) -> rejections.add(new Object[] {status, message, resent})));
+		assertFalse(outbox.request("group.split", split, (status, message) -> rejections.add(new Object[] {status, message})));
 		assertEquals(0, outbox.size());
 		assertTrue(socketSent.isEmpty());
 
 		protocol = 2;
-		assertTrue(outbox.request("group.split", split, (status, message, resent) -> rejections.add(new Object[] {status, message, resent})));
+		assertTrue(outbox.request("group.split", split, (status, message) -> rejections.add(new Object[] {status, message})));
 		assertEquals("group.split", socketSent.get(0).get("type").getAsString());
 		assertTrue(socketSent.get(0).has("id"));
 		outbox.acked(lastId());
 		assertEquals(0, outbox.size());
 
 		live = false;
-		assertFalse(outbox.request("group.split", split, (status, message, resent) -> { }));
+		assertFalse(outbox.request("group.split", split, (status, message) -> { }));
 		assertEquals(0, outbox.size());
 	}
 
@@ -363,21 +363,34 @@ public class OutboxTest
 		TsgHubOutbox outbox = reports();
 		JsonObject split = new JsonObject();
 		split.addProperty("active", true);
-		outbox.request("group.split", split, (status, message, resent) -> rejections.add(new Object[] {status, message, resent}));
+		outbox.request("group.split", split, (status, message) -> rejections.add(new Object[] {status, message}));
 		outbox.failed(lastId(), 403, "Only the leader can do that");
 		assertEquals(1, rejections.size());
 		assertEquals(403, rejections.get(0)[0]);
 		assertEquals("Only the leader can do that", rejections.get(0)[1]);
-		assertEquals(false, rejections.get(0)[2]);
 
-		outbox.request("group.split", split, (status, message, resent) -> rejections.add(new Object[] {status, message, resent}));
+		outbox.request("group.split", split, (status, message) -> rejections.add(new Object[] {status, message}));
 		String id = lastId();
 		now += TsgHubOutbox.RETRY_MILLIS;
 		outbox.flush();
 		assertEquals(3, socketSent.size());
 		outbox.failed(id, 400, "A loot split is already running");
-		assertEquals(true, rejections.get(1)[2]);
+		assertEquals(400, rejections.get(1)[0]);
 		assertEquals(0, outbox.size());
+	}
+
+	@Test
+	public void missingStatusIsFinalOnlyForAnsweringServer()
+	{
+		TsgHubOutbox outbox = reports();
+		outbox.signal("loot", signal(), false);
+		outbox.failed(lastId(), 0, "");
+		assertEquals(1, outbox.size());
+
+		protocol = 2;
+		outbox.signal("loot", signal(), false);
+		outbox.failed(lastId(), 0, "");
+		assertEquals(1, outbox.size());
 	}
 
 	@Test
@@ -385,7 +398,7 @@ public class OutboxTest
 	{
 		protocol = 2;
 		TsgHubOutbox outbox = reports();
-		outbox.request("group.split", new JsonObject(), (status, message, resent) -> { });
+		outbox.request("group.split", new JsonObject(), (status, message) -> { });
 		outbox.signal("loot", signal(), false);
 		live = false;
 		now += TsgHubOutbox.MAX_RETRY_MILLIS;
