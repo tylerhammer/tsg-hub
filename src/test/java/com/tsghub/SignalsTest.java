@@ -166,18 +166,14 @@ public class SignalsTest
 	}
 
 	@Test
-	public void saleUpdateReplacesPendingFill()
+	public void salesSkipHttpFallback()
 	{
 		TsgHubSignals signals = signals();
-		signals.send("sale", TsgHubSales.update("", 20997, GrandExchangeOfferState.SELLING, 2, 1_400_000_000, 1, 1_400_000_000, "offer").sale);
 		signals.send("sale", TsgHubSales.update("", 20997, GrandExchangeOfferState.SOLD, 2, 1_400_000_000, 2, 2_800_000_000L, "offer").sale);
+		signals.send("loot", new JsonObject());
 		signals.flush(Map.of("e1", "member"));
 		assertEquals(1, posted.get(0).getAsJsonArray("signals").size());
-		JsonObject sale = posted.get(0).getAsJsonArray("signals").get(0).getAsJsonObject();
-		assertEquals("sale", sale.get("type").getAsString());
-		assertEquals("offer", sale.get("id").getAsString());
-		assertEquals(2, sale.get("quantity").getAsInt());
-		assertTrue(sale.get("done").getAsBoolean());
+		assertEquals("loot", posted.get(0).getAsJsonArray("signals").get(0).getAsJsonObject().get("type").getAsString());
 	}
 
 	@Test

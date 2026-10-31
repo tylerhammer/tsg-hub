@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import java.util.Locale;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.GrandExchangeOffer;
@@ -13,6 +14,7 @@ import net.runelite.api.events.GrandExchangeOfferChanged;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.game.ItemManager;
 
+@Slf4j
 @RequiredArgsConstructor
 final class TsgHubSales
 {
@@ -66,7 +68,9 @@ final class TsgHubSales
 		String saved = session.get(key);
 		Update update = unique ? update(saved, offer.getItemId(), offer.getState(), offer.getTotalQuantity(), offer.getPrice(), offer.getQuantitySold(), offer.getSpent(), TsgHubSignals.newId()) : new Update("", null);
 		if (!update.saved.equals(saved)) session.set(key, update.saved);
-		if (update.sale != null) plugin.signals().send("sale", update.sale);
+		if (update.sale == null) return;
+		log.info("TSG Hub GE sale {}", update.sale);
+		plugin.signals().send("sale", update.sale);
 	}
 
 	static boolean isRaidUnique(String name)
