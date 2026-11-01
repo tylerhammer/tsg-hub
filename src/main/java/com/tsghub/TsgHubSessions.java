@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 final class TsgHubSessions
 {
+	private static final int HISTORY_PAGE = 5;
 	private final TsgHubPlugin plugin;
 	private final ScheduledExecutorService executor;
 	private final Map<String, Integer> syncedClanRanks = new ConcurrentHashMap<>();
@@ -399,7 +400,23 @@ final class TsgHubSessions
 		JsonArray events = TsgHubJson.array(response, "events");
 		clanEvents = events;
 		joinedCompetitions = joinedCompetitionIds(events);
-		plugin.ui(s -> s.eventsView.setEvents(events));
+		plugin.ui(s -> {
+			s.eventsView.setEvents(events);
+			if (s.view == TsgHubSidebarPanel.View.EVENTS) loadEventHistory("");
+		});
+	}
+
+	void loadEventHistory(String before)
+	{
+		String clanName = plugin.clan().name();
+		if (!plugin.sharingInClan() || clanName.trim().isEmpty()) return;
+		String path = "/v1/events/history?clanName=" + TsgHubApi.encode(clanName) + "&limit=" + HISTORY_PAGE + (before.isEmpty() ? "" : "&before=" + TsgHubApi.encode(before));
+		api().call("GET", path, null, null).whenCompleteAsync(TsgHubApi.handle(response ->
+		{
+			JsonArray rows = TsgHubJson.array(response, "events");
+			boolean more = TsgHubJson.bool(response, "more");
+			plugin.ui(s -> s.eventsView.setHistory(rows, more, !before.isEmpty()));
+		}, e -> plugin.ui(s -> s.eventsView.setHistory(new JsonArray(), false, !before.isEmpty()))), executor);
 	}
 
 	private List<String> joinedCompetitionIds(JsonArray events)

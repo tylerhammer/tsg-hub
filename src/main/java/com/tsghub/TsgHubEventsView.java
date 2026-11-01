@@ -9,11 +9,17 @@ import static com.tsghub.TsgHubUi.*;
 import static net.runelite.client.util.ColorUtil.toHexColor;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.tsghub.TsgHubSidebarPanel.View;
 import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.GridLayout;
+import java.time.Instant;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -23,6 +29,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+import net.runelite.client.util.ColorUtil;
 
 final class TsgHubEventsView
 {
@@ -42,6 +49,8 @@ final class TsgHubEventsView
 
 	private JsonArray events;
 	private JsonObject previewEvent;
+	private JsonArray history = new JsonArray();
+	private boolean historyMore;
 
 	TsgHubEventsView(TsgHubPlugin plugin, TsgHubSidebarPanel shell)
 	{
@@ -65,6 +74,17 @@ final class TsgHubEventsView
 		this.events = events;
 		if (shell.view == View.EVENTS) renderEvents();
 		else if (shell.view == View.HOME) shell.homeView.renderHome();
+	}
+
+	void setHistory(JsonArray rows, boolean more, boolean append)
+	{
+		JsonArray next = new JsonArray();
+		if (append) next.addAll(history);
+		next.addAll(rows);
+		if (next.equals(history) && more == historyMore) return;
+		history = next;
+		historyMore = more;
+		if (shell.view == View.EVENTS) renderEvents();
 	}
 
 	int liveEvents()
@@ -92,7 +112,8 @@ final class TsgHubEventsView
 	void openEvents()
 	{
 		showEventList();
-		if (!plugin.live()) plugin.sessions().loadClanEvents();
+		if (plugin.live()) plugin.sessions().loadEventHistory("");
+		else plugin.sessions().loadClanEvents();
 	}
 
 	void showEventList()
@@ -171,9 +192,13 @@ final class TsgHubEventsView
 				.comparing((JsonObject e) -> !joined(e))
 				.thenComparing(e -> !"active".equals(str(e, "status")))
 				.thenComparing(TsgHubEvents::eventStart, Comparator.nullsLast(Comparator.naturalOrder())));
-			if (visible.isEmpty())
+			if (visible.isEmpty() && history.size() == 0)
 			{
 				shell.page.add(shell.errorPanel("No events yet", "When an admin creates an event, it will show up here."));
+			}
+			else if (visible.isEmpty())
+			{
+				shell.page.add(caption("No live or upcoming events."));
 			}
 			String section = null;
 			for (JsonObject event : visible)
@@ -186,8 +211,64 @@ final class TsgHubEventsView
 				}
 				addCard(shell.page, eventCard(event));
 			}
+			addHistory();
 		}
 		shell.refreshPage();
+	}
+
+	private void addHistory()
+	{
+		List<JsonObject> results = objects(history);
+		if (results.isEmpty()) return;
+		shell.page.add(listHeading("Past", false));
+		for (JsonObject result : results) addCard(shell.page, historyCard(result));
+		if (historyMore)
+		{
+			String last = str(results.get(results.size() - 1), "eventId");
+			shell.page.add(fitHeight(onClick(button("Show more"), () -> plugin.sessions().loadEventHistory(last))));
+		}
+	}
+
+	private JPanel historyCard(JsonObject result)
+	{
+		JPanel card = card();
+		if (placedIn(result, plugin.clan().playerName())) highlightSelf(card);
+		JPanel lines = stack();
+		Instant ended = instant(str(result, "endedAt"));
+		String day = ended == null ? "" : day(ended.atZone(ZoneId.systemDefault()), clock.instant());
+		lines.add(twoLines(row(shrinkable(boldLabel(str(result, "name"))), label(day, MUTED, smallFont())), shrinkable(caption(historyDetail(result)))));
+		lines.add(gap(GAP_S));
+		List<JsonObject> places = objects(array(result, "places"));
+		if (places.isEmpty()) lines.add(caption("Nobody placed"));
+		for (JsonObject place : places) lines.add(placeRow(result, place));
+		String mvp = str(result, "mvp");
+		if (!mvp.isEmpty())
+		{
+			lines.add(gap(GAP_XS));
+			lines.add(caption("MVP " + mvp));
+		}
+		card.add(lines, BorderLayout.CENTER);
+		return fitHeight(card);
+	}
+
+	private JPanel placeRow(JsonObject result, JsonObject place)
+	{
+		Font font = smallFont();
+		int rank = integer(place, "place", 0);
+		String hex = str(place, "color");
+		Color nameColor = hex.matches("#[0-9a-fA-F]{6}") ? ColorUtil.fromHex(hex) : TEXT;
+		JPanel name = panel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+		name.add(label(place(rank) + " ", rank == 1 ? ACCENT : MUTED, font));
+		name.add(label(str(place, "name"), nameColor, font));
+		JPanel score = panel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+		score.add(label(historyScore(result, place), MUTED, font));
+		long prize = longValue(place, "prize", 0);
+		if (prize > 0) score.add(label("  " + formatGp(prize), coinColor(prize), font));
+		JPanel line = row(name, score);
+		List<String> members = new ArrayList<>();
+		for (JsonElement member : array(place, "members")) members.add(escape(member.getAsString()));
+		if (!members.isEmpty()) line.setToolTipText(tooltipHtml("<b>" + escape(str(place, "name")) + "</b><br>" + String.join("<br>", members)));
+		return fitHeight(line);
 	}
 
 	private JPanel eventCard(JsonObject event)
