@@ -244,7 +244,8 @@ final class TsgHubEventsView
 		lines.add(gap(GAP_S));
 		List<JsonObject> places = objects(array(result, "places"));
 		if (places.isEmpty()) lines.add(caption("Nobody placed"));
-		for (JsonObject place : places) lines.add(placeRow(result, place));
+		int prizeWidth = prizeColumn(places);
+		for (JsonObject place : places) lines.add(placeRow(result, place, prizeWidth));
 		String mvp = str(result, "mvp");
 		if (!mvp.isEmpty())
 		{
@@ -255,7 +256,19 @@ final class TsgHubEventsView
 		return fitHeight(card);
 	}
 
-	private JPanel placeRow(JsonObject result, JsonObject place)
+	private static int prizeColumn(List<JsonObject> places)
+	{
+		FontMetrics metrics = new JLabel().getFontMetrics(smallFont());
+		int width = 0;
+		for (JsonObject place : places)
+		{
+			long prize = longValue(place, "prize", 0);
+			if (prize > 0) width = Math.max(width, Math.max(metrics.stringWidth("000M"), metrics.stringWidth(formatGp(prize))));
+		}
+		return width == 0 ? 0 : width + 6;
+	}
+
+	private JPanel placeRow(JsonObject result, JsonObject place, int prizeWidth)
 	{
 		Font font = smallFont();
 		int rank = integer(place, "place", 0);
@@ -271,8 +284,14 @@ final class TsgHubEventsView
 		name.add(label(str(place, "name"), nameColor, font));
 		JPanel score = panel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
 		score.add(label(historyScore(result, place), MUTED, font));
-		long prize = longValue(place, "prize", 0);
-		if (prize > 0) score.add(label("  " + formatGp(prize), coinColor(prize), font));
+		if (prizeWidth > 0)
+		{
+			long prize = longValue(place, "prize", 0);
+			JLabel amount = label(formatGp(prize), coinColor(prize), font);
+			amount.setHorizontalAlignment(JLabel.RIGHT);
+			amount.setPreferredSize(new Dimension(prizeWidth, amount.getPreferredSize().height));
+			score.add(amount);
+		}
 		JPanel line = row(name, score);
 		List<String> members = new ArrayList<>();
 		for (JsonElement member : array(place, "members")) members.add(escape(member.getAsString()));
