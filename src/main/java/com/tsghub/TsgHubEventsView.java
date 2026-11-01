@@ -253,7 +253,25 @@ final class TsgHubEventsView
 			lines.add(caption("MVP " + mvp));
 		}
 		card.add(lines, BorderLayout.CENTER);
+		String self = plugin.clan().playerName();
+		fullTextTooltip(card, () -> rosters(places, self));
 		return fitHeight(card);
+	}
+
+	private static String rosters(List<JsonObject> places, String self)
+	{
+		StringBuilder out = new StringBuilder();
+		for (JsonObject place : places)
+		{
+			List<String> members = new ArrayList<>();
+			for (JsonElement member : array(place, "members")) members.add(nameHtml(member.getAsString(), self));
+			if (members.isEmpty()) continue;
+			String hex = str(place, "color");
+			Color bar = hex.matches("#[0-9a-fA-F]{6}") ? ColorUtil.fromHex(hex) : ACCENT;
+			out.append(tipSection(out.length() == 0, tipLine(MUTED, "<b>" + escape((place(integer(place, "place", 0)) + " · " + str(place, "name")).toUpperCase()) + "</b>")));
+			out.append(tipCard(bar, String.join("<br>", members)));
+		}
+		return out.toString();
 	}
 
 	private static int prizeColumn(List<JsonObject> places)
@@ -293,9 +311,6 @@ final class TsgHubEventsView
 			score.add(amount);
 		}
 		JPanel line = row(name, score);
-		List<String> members = new ArrayList<>();
-		for (JsonElement member : array(place, "members")) members.add(escape(member.getAsString()));
-		if (!members.isEmpty()) line.setToolTipText(tooltipHtml("<b>" + escape(str(place, "name")) + "</b><br>" + String.join("<br>", members)));
 		return fitHeight(line);
 	}
 
