@@ -14,8 +14,10 @@ import com.google.gson.JsonObject;
 import com.tsghub.TsgHubSidebarPanel.View;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.GridLayout;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -33,6 +35,8 @@ import net.runelite.client.util.ColorUtil;
 
 final class TsgHubEventsView
 {
+	private static final int MAX_PLACES = 5;
+
 	private final TsgHubPlugin plugin;
 	private final TsgHubSidebarPanel shell;
 
@@ -258,7 +262,12 @@ final class TsgHubEventsView
 		String hex = str(place, "color");
 		Color nameColor = hex.matches("#[0-9a-fA-F]{6}") ? ColorUtil.fromHex(hex) : TEXT;
 		JPanel name = panel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-		name.add(label(place(rank) + " ", rank == 1 ? ACCENT : MUTED, font));
+		JLabel position = label(place(rank), rank == 1 ? ACCENT : MUTED, font);
+		FontMetrics metrics = position.getFontMetrics(font);
+		int width = 0;
+		for (int i = 1; i <= MAX_PLACES; i++) width = Math.max(width, metrics.stringWidth(place(i)));
+		position.setPreferredSize(new Dimension(width + 6, position.getPreferredSize().height));
+		name.add(position);
 		name.add(label(str(place, "name"), nameColor, font));
 		JPanel score = panel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
 		score.add(label(historyScore(result, place), MUTED, font));
