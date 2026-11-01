@@ -116,6 +116,37 @@ final class TsgHubEvents
 		return String.join(" · ", parts);
 	}
 
+	static String historyScore(JsonObject result, JsonObject place)
+	{
+		long score = longValue(place, "score", 0);
+		String amount = score >= 1000 ? formatGp(score) : String.valueOf(score);
+		switch (str(result, "unit"))
+		{
+			case "XP": return amount + " XP";
+			case "kills": return amount + " kc";
+			default: return amount + " pts";
+		}
+	}
+
+	static String historyDetail(JsonObject result)
+	{
+		String subject = str(result, "subject");
+		String players = plural(integer(result, "participants", 0), "player");
+		return subject.isEmpty() ? players : subject + " · " + players;
+	}
+
+	static boolean placedIn(JsonObject result, String player)
+	{
+		if (player == null || player.isEmpty()) return false;
+		for (JsonObject place : objects(array(result, "places")))
+		{
+			if (samePlayer(str(place, "name"), player) && array(place, "members").size() == 0) return true;
+			for (JsonElement member : array(place, "members"))
+				if (member.isJsonPrimitive() && samePlayer(member.getAsString(), player)) return true;
+		}
+		return false;
+	}
+
 	static String eventStartWhen(JsonObject event)
 	{
 		Instant start = eventStart(event);

@@ -101,4 +101,21 @@ public class EventsPanelTest
 		assertFalse(TsgHubEvents.attended(party, "Woox"));
 		assertFalse(TsgHubEvents.attended(event("{\"type\":\"drop-party\"}"), "Zezima"));
 	}
+
+	@Test
+	public void history()
+	{
+		JsonObject boss = event("{\"unit\":\"kills\",\"subject\":\"Vorkath\",\"participants\":12,\"places\":[{\"place\":1,\"name\":\"Zezima\",\"score\":412}]}");
+		JsonObject skill = event("{\"unit\":\"XP\",\"participants\":1}");
+		JsonObject bingo = event("{\"unit\":\"points\",\"participants\":8,\"places\":[{\"place\":1,\"name\":\"Red\",\"members\":[\"Lynx Titan\"],\"score\":84}]}");
+		assertEquals("412 kc", TsgHubEvents.historyScore(boss, event("{\"score\":412}")));
+		assertEquals("1.5M XP", TsgHubEvents.historyScore(skill, event("{\"score\":1500000}")));
+		assertEquals("84 pts", TsgHubEvents.historyScore(bingo, event("{\"score\":84}")));
+		assertEquals("Vorkath · 12 players", TsgHubEvents.historyDetail(boss));
+		assertEquals("8 players", TsgHubEvents.historyDetail(bingo));
+		assertTrue(TsgHubEvents.placedIn(boss, "zezima"));
+		assertTrue(TsgHubEvents.placedIn(bingo, "Lynx_Titan"));
+		assertFalse(TsgHubEvents.placedIn(bingo, "Red"));
+		assertFalse(TsgHubEvents.placedIn(boss, ""));
+	}
 }
