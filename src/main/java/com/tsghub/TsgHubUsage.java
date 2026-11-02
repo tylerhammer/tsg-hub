@@ -1,7 +1,6 @@
 package com.tsghub;
 
 import com.google.gson.JsonObject;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -10,7 +9,6 @@ import java.util.Map;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import net.runelite.client.config.ConfigItem;
 
 /**
  * Counts how often features are used, so the clan can see which ones members rely on before
@@ -93,24 +91,31 @@ final class TsgHubUsage
 		counts.clear();
 	}
 
-	/** The boolean settings that are on, as setting.<key>, read from the config interface. */
+	/** The visible on/off settings that are on, as setting.<key>. Add new toggles here to count them. */
 	static List<String> enabledSettings(TsgHubConfig config)
 	{
 		List<String> on = new ArrayList<>();
-		for (Method method : TsgHubConfig.class.getMethods())
-		{
-			ConfigItem item = method.getAnnotation(ConfigItem.class);
-			if (item == null || item.hidden() || item.secret() || method.getReturnType() != boolean.class || method.getParameterCount() != 0) continue;
-			if ("dataSharingOptIn".equals(item.keyName())) continue;
-			try
-			{
-				if ((boolean) method.invoke(config)) on.add(settingName(item.keyName()));
-			}
-			catch (ReflectiveOperationException ignored)
-			{
-			}
-		}
+		add(on, "shareLocation", config.shareLocation());
+		add(on, "shareDropScreenshots", config.shareDropScreenshots());
+		add(on, "hideScreenshotPms", config.hideScreenshotPms());
+		add(on, "bingoReveal", config.bingoReveal());
+		add(on, "bingoSounds", config.bingoSounds());
+		add(on, "bingoOverlay", config.bingoOverlay());
+		add(on, "eventAnnouncements", config.eventAnnouncements());
+		add(on, "clanAnnouncements", config.clanAnnouncements());
+		add(on, "teamNameColors", config.teamNameColors());
+		add(on, "eventCountdown", config.eventCountdown());
+		add(on, "showClanMap", config.showClanMap());
+		add(on, "partyShowSelf", config.partyShowSelf());
+		add(on, "partyExpandMembers", config.partyExpandMembers());
+		add(on, "partyVirtualLevels", config.partyVirtualLevels());
+		add(on, "partyShowWorlds", config.partyShowWorlds());
 		return on;
+	}
+
+	private static void add(List<String> on, String key, boolean value)
+	{
+		if (value) on.add(settingName(key));
 	}
 
 	static String settingName(String key)
