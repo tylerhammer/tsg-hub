@@ -45,9 +45,12 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 	private volatile long peekClosing;
 	private volatile int[] hover;
 
-	TsgHubBoardOverlay(TsgHubTileIcons icons)
+	private final Runnable onPeek;
+
+	TsgHubBoardOverlay(TsgHubTileIcons icons, Runnable onPeek)
 	{
 		this.icons = icons;
+		this.onPeek = onPeek;
 		setPosition(OverlayPosition.TOP_LEFT);
 		setLayer(OverlayLayer.ABOVE_WIDGETS);
 		setPriority(Overlay.PRIORITY_LOW);
@@ -291,6 +294,7 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 		int[] at = tileAt(point);
 		String id = at == null ? null : data.board.taskAt(at[0], at[1]);
 		if (id == null) return event;
+		onPeek.run();
 		peekId = id;
 		peekOpened = now;
 		peekClosing = 0;

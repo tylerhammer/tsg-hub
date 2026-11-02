@@ -120,6 +120,7 @@ public class TsgHubPlugin extends Plugin
 	private volatile TsgHubApi api;
 	private TsgHubSignals signals;
 	private TsgHubOutbox outbox;
+	private TsgHubUsage usage;
 	private TsgHubGroups groups;
 	private TsgHubPresence presence;
 	private TsgHubMemberMap memberMap;
@@ -149,6 +150,8 @@ public class TsgHubPlugin extends Plugin
 		TsgHubSocket socket = liveSync.socket();
 		outbox = new TsgHubOutbox(socket, (method, path, token, body) -> api().request(method, path, token, body));
 		signals = new TsgHubSignals(socket, outbox, this::api, chat::reply);
+		usage = new TsgHubUsage(this::sharingInClan, this::usageIdentity, body -> outbox.report("usage", "/v1/usage", body), () -> TsgHubUsage.enabledSettings(config));
+		every(usage::flush, TsgHubUsage.FLUSH_SECONDS, TsgHubUsage.FLUSH_SECONDS, TimeUnit.SECONDS);
 		executor.execute(this::loadCachedRules);
 		every(liveSync::tick, 2, 5, TimeUnit.SECONDS);
 		every(liveSync.unlessLive(() -> sessions.autoRefreshBoard(sidebar)), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
@@ -156,7 +159,7 @@ public class TsgHubPlugin extends Plugin
 		announcements = new TsgHubAnnouncements(this, executor, this::api, chat::clanAnnouncement);
 		TsgHubRankIcons rankIcons = new TsgHubRankIcons(chatIconManager);
 		windows = new TsgHubWindows(client, () -> announcements);
-		bingo = new TsgHubBingo(client, audioPlayer, config, configManager, overlayManager, mouseManager, new TsgHubTileIcons(this::getItemImage, spriteManager));
+		bingo = new TsgHubBingo(client, audioPlayer, config, configManager, overlayManager, mouseManager, new TsgHubTileIcons(this::getItemImage, spriteManager), usage::count);
 		bingo.start();
 		GroupMembersPanel groupMembers = new GroupMembersPanel(config, spriteManager, itemManager);
 		sidebar = new TsgHubSidebarPanel(this, groupMembers);
@@ -312,6 +315,7 @@ public class TsgHubPlugin extends Plugin
 	TsgHubRecords records() { return records; }
 	TsgHubAnnouncements announcements() { return announcements; }
 	TsgHubTeamColors teamColors() { return teamColors; }
+	TsgHubUsage usage() { return usage; }
 	SpriteManager sprites() { return spriteManager; }
 
 	boolean live() { return liveSync != null && liveSync.live(); }
@@ -323,6 +327,16 @@ public class TsgHubPlugin extends Plugin
 	String currentArea() { return presence == null ? "" : presence.area(); }
 	AsyncBufferedImage getItemImage(int itemId) { return itemManager == null ? null : itemManager.getImage(itemId); }
 	AsyncBufferedImage getCoinImage(long gp) { return itemManager == null ? null : itemManager.getImage(ItemID.COINS, (int) Math.min(gp, Integer.MAX_VALUE), false); }
+
+	private JsonObject usageIdentity()
+	{
+		long hash = client.getAccountHash();
+		if (hash == -1) return null;
+		JsonObject body = new JsonObject();
+		body.addProperty("clanName", clan.name());
+		body.addProperty("accountHash", Long.toString(hash));
+		return body;
+	}
 
 	boolean sharingInClan()
 	{
@@ -402,7 +416,11 @@ public class TsgHubPlugin extends Plugin
 	{
 		if (TsgHubRecords.PB_GROUP.equals(event.getGroup()) && records != null) records.onConfigChanged(event);
 		if (!"tsghub".equals(event.getGroup())) return;
-		if ("dataSharingOptIn".equals(event.getKey()) && !config.dataSharingOptIn() && outbox != null) outbox.clear();
+		if ("dataSharingOptIn".equals(event.getKey()) && !config.dataSharingOptIn() && outbox != null)
+		{
+			outbox.clear();
+			usage.clear();
+		}
 		if ("partyShowSelf".equals(event.getKey()))
 		{
 			if (config.partyShowSelf()) groupTracker.refreshSelf();
@@ -586,6 +604,7 @@ public class TsgHubPlugin extends Plugin
 		boolean show = worldMapOpen && config.showClanMap();
 		if (show == memberMap.isOpen()) return;
 		memberMap.setOpen(show);
+		if (show) usage.count("map.clanmates");
 		liveSync.syncNow();
 		if (show && !live()) memberMap.autoRefresh();
 	}
