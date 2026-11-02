@@ -116,9 +116,12 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	private final Map<String, Area> dots = new HashMap<>();
 	private int dotCell;
 
-	TsgHubRevealOverlay(Client client, TsgHubTileIcons icons, TsgHubSounds sounds)
+	private final Runnable onSkip;
+
+	TsgHubRevealOverlay(Client client, TsgHubTileIcons icons, TsgHubSounds sounds, Runnable onSkip)
 	{
 		this.client = client;
+		this.onSkip = onSkip;
 		this.icons = icons;
 		this.sounds = sounds;
 		setPosition(OverlayPosition.DYNAMIC);
@@ -727,6 +730,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 			long now = System.currentTimeMillis();
 			if (now - startedAt < exitAt(moment))
 			{
+				onSkip.run();
 				heard = exitAt(moment);
 				startedAt = now - exitAt(moment);
 			}

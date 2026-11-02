@@ -122,6 +122,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		JPanel header = panel(new BorderLayout());
 		titleRow.setOpaque(false);
 		back.addActionListener(e -> {
+			plugin.usage().count("button.back");
 			if (view == View.GROUPS && partiesView.browsingParties && plugin.groups().inGroup())
 			{
 				partiesView.browsingParties = false;
@@ -150,11 +151,13 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 		actions.setOpaque(false);
 		admin.addActionListener(e -> {
+			plugin.usage().count("button.admin-site");
 			admin.setEnabled(false);
 			plugin.openAdminSite(() -> admin.setEnabled(true));
 		});
 		admin.setVisible(false);
 		refresh.addActionListener(e -> {
+			plugin.usage().count("button.refresh");
 			if (view == View.HOME)
 			{
 				plugin.sessions().loadClanEvents();
@@ -175,8 +178,14 @@ final class TsgHubSidebarPanel extends PluginPanel
 		JPanel refreshSlot = panel(new BorderLayout());
 		refreshSlot.setPreferredSize(refresh.getPreferredSize());
 		refreshSlot.add(refresh);
-		settings.addActionListener(e -> plugin.openSettings());
-		pin.addActionListener(e -> pinCurrent());
+		settings.addActionListener(e -> {
+			plugin.usage().count("button.settings");
+			plugin.openSettings();
+		});
+		pin.addActionListener(e -> {
+			plugin.usage().count("button.pin");
+			pinCurrent();
+		});
 		pin.setVisible(false);
 		actions.add(admin);
 		actions.add(pin);
@@ -241,6 +250,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	public void onActivate()
 	{
 		active = true;
+		plugin.usage().count("panel.open");
 	}
 
 	@Override
@@ -322,6 +332,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	void setView(View next)
 	{
+		if (next != view && !gated(next)) plugin.usage().count(TsgHubUsage.viewName(next));
 		view = next;
 		homeView.homeBuilt = false;
 		boardShowing = next == View.BOARD || next == View.SIGNUP;
@@ -468,6 +479,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private JPanel buildFooter()
 	{
 		discord.addActionListener(e -> {
+			plugin.usage().count("button.discord");
 			discord.setEnabled(false);
 			plugin.openDiscordInvite(() -> discord.setEnabled(true));
 		});
@@ -478,6 +490,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		link.setForeground(Color.WHITE);
 		link.setAlignmentX(Component.CENTER_ALIGNMENT);
 		link.addActionListener(e -> {
+			plugin.usage().count("button.link-discord");
 			link.setEnabled(false);
 			if (linkDeadline > System.currentTimeMillis()) plugin.keys().cancelLink();
 			else plugin.keys().startLink();

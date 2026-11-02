@@ -35,7 +35,7 @@ public interface TsgHubConfig extends Config
 	@ConfigSection(name = "Discord", description = "Link your Discord account and unlock the admin site.", position = 20)
 	String discordSection = "admin";
 
-	@ConfigItem(keyName = "dataSharingOptIn", position = 0, section = sharingSection, name = "Share game and clan progress", description = WRAP + "Opt in to send the TSG Hub service your RuneScape name, clan and rank, PvM progress, event loot, claims, raid, boss and minigame completions (with nearby clanmates' names), clan chat presence and world, and clan drop, pet and collection log broadcasts.<br><br>No other game chat is sent." + END)
+	@ConfigItem(keyName = "dataSharingOptIn", position = 0, section = sharingSection, name = "Share game and clan progress", description = WRAP + "Opt in to send the TSG Hub service your RuneScape name, clan and rank, PvM progress, event loot, claims, raid, boss and minigame completions (with nearby clanmates' names), clan chat presence and world, clan drop, pet and collection log broadcasts, and anonymous counts of which plugin features you use.<br><br>No other game chat is sent." + END)
 	default boolean dataSharingOptIn()
 	{
 		return false;

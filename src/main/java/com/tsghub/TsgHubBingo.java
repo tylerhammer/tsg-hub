@@ -1,6 +1,7 @@
 package com.tsghub;
 
 import com.google.gson.JsonObject;
+import java.util.function.Consumer;
 import net.runelite.api.Client;
 import net.runelite.client.audio.AudioPlayer;
 import net.runelite.client.config.ConfigManager;
@@ -20,8 +21,9 @@ final class TsgHubBingo
 	private final TsgHubRevealOverlay revealOverlay;
 	private volatile TsgHubBingoView view;
 	private volatile String listEventId = "";
+	private final Consumer<String> usage;
 
-	TsgHubBingo(Client client, AudioPlayer audioPlayer, TsgHubConfig config, ConfigManager configManager, OverlayManager overlayManager, MouseManager mouseManager, TsgHubTileIcons icons)
+	TsgHubBingo(Client client, AudioPlayer audioPlayer, TsgHubConfig config, ConfigManager configManager, OverlayManager overlayManager, MouseManager mouseManager, TsgHubTileIcons icons, Consumer<String> usage)
 	{
 		this.config = config;
 		this.configManager = configManager;
@@ -29,8 +31,9 @@ final class TsgHubBingo
 		this.mouseManager = mouseManager;
 		this.icons = icons;
 		sounds = new TsgHubSounds(audioPlayer, config::bingoSounds, config::bingoVolume);
-		boardOverlay = new TsgHubBoardOverlay(icons);
-		revealOverlay = new TsgHubRevealOverlay(client, icons, sounds);
+		boardOverlay = new TsgHubBoardOverlay(icons, () -> usage.accept("overlay.board.peek"));
+		revealOverlay = new TsgHubRevealOverlay(client, icons, sounds, () -> usage.accept("overlay.reveal.skip"));
+		this.usage = usage;
 	}
 
 	void start()
@@ -87,7 +90,11 @@ final class TsgHubBingo
 		view = next;
 		boardOverlay.setView(next);
 		TsgHubReveals.Moment moment = reveals.update(next, displayName == null ? "" : displayName);
-		if (config.bingoReveal()) revealOverlay.reveal(moment);
+		if (config.bingoReveal() && moment != null)
+		{
+			revealOverlay.reveal(moment);
+			usage.accept("overlay.reveal");
+		}
 	}
 
 	void resetReveals()
