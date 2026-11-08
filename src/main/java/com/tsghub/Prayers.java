@@ -29,6 +29,7 @@ import java.util.Map;
 import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.api.EnumID;
+import net.runelite.api.GameState;
 import net.runelite.api.Prayer;
 
 class Prayers
@@ -47,12 +48,13 @@ class Prayers
 
 	Prayers(Client client)
 	{
-		if (client.getLocalPlayer() == null) prayerIds = client.getEnum(EnumID.PRAYERS_NORMAL).getIntVals();
+		if (!canRunScripts(client)) prayerIds = client.getEnum(EnumID.PRAYERS_NORMAL).getIntVals();
 		else for (PrayerSprites p : PrayerSprites.values()) updatePrayerState(p, client);
 	}
 
 	boolean updatePrayerState(PrayerSprites p, Client client)
 	{
+		if (!canRunScripts(client)) return false;
 		if (prayerIds.length == 0) prayerIds = client.getEnum(EnumID.PRAYERS_NORMAL).getIntVals();
 		boolean unlocked = p.isUnlocked(client);
 		boolean available = false;
@@ -78,6 +80,11 @@ class Prayers
 	void resetPrayerIds()
 	{
 		prayerIds = new int[0];
+	}
+
+	static boolean canRunScripts(Client client)
+	{
+		return client.getGameState() == GameState.LOGGED_IN && client.getLocalPlayer() != null;
 	}
 
 	static boolean isUnlockedByDefault(Prayer p)

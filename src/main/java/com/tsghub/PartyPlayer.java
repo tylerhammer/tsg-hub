@@ -89,7 +89,7 @@ class PartyPlayer
 				equipment = GameItem.of(worn.getItems(), itemManager);
 				quiver.readEquipment(equipment);
 			}
-			if (prayers == null) prayers = new Prayers(client);
+			if (prayers == null && Prayers.canRunScripts(client)) prayers = new Prayers(client);
 		}
 		if (quiver.isSlotVisible()) quiver.setQuiverAmmo(Quiver.ammo(client, itemManager));
 	}
