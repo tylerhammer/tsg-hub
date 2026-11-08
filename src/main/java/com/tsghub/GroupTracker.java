@@ -277,7 +277,7 @@ final class GroupTracker
 		}
 
 		boolean prayersChanged = false;
-		if (myPlayer.getPrayers() == null)
+		if (myPlayer.getPrayers() == null && Prayers.canRunScripts(client))
 		{
 			myPlayer.setPrayers(new Prayers(client));
 			prayersChanged = true;
