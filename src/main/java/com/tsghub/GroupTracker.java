@@ -358,10 +358,6 @@ final class GroupTracker
 	public void onVarbitChanged(VarbitChanged event)
 	{
 		if (PRAYER_VARBITS.contains(event.getVarbitId())) prayersDirty = true;
-		if ((event.getVarbitId() == VarbitID.PRAYER_DEADEYE_UNLOCKED || event.getVarbitId() == VarbitID.PRAYER_MYSTIC_VIGOUR_UNLOCKED) && myPlayer != null && myPlayer.getPrayers() != null)
-		{
-			myPlayer.getPrayers().resetPrayerIds();
-		}
 		if (myPlayer == null || myPlayer.getStats() == null || !isSharing()) return;
 
 		trackMisc(S, client.getVarpValue(VarPlayerID.SA_ENERGY) / 10, myPlayer.getStats().getSpecialPercent(), myPlayer.getStats()::setSpecialPercent);
