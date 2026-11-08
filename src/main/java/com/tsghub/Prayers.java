@@ -28,17 +28,15 @@ import java.util.HashMap;
 import java.util.Map;
 import lombok.Getter;
 import net.runelite.api.Client;
-import net.runelite.api.EnumID;
 import net.runelite.api.GameState;
 import net.runelite.api.Prayer;
 
 class Prayers
 {
-	static final int PRAYER_IS_AVAILABLE = 464;
+	static final int PRAYER_IS_AVAILABLE = 10154;
 
 	@Getter
 	private final Map<Prayer, PrayerData> prayerData = new HashMap<>();
-	private int[] prayerIds = new int[0];
 
 	Prayers()
 	{
@@ -48,19 +46,17 @@ class Prayers
 
 	Prayers(Client client)
 	{
-		if (!canRunScripts(client)) prayerIds = client.getEnum(EnumID.PRAYERS_NORMAL).getIntVals();
-		else for (PrayerSprites p : PrayerSprites.values()) updatePrayerState(p, client);
+		if (canRunScripts(client)) for (PrayerSprites p : PrayerSprites.values()) updatePrayerState(p, client);
 	}
 
 	boolean updatePrayerState(PrayerSprites p, Client client)
 	{
 		if (!canRunScripts(client)) return false;
-		if (prayerIds.length == 0) prayerIds = client.getEnum(EnumID.PRAYERS_NORMAL).getIntVals();
 		boolean unlocked = p.isUnlocked(client);
 		boolean available = false;
 		if (unlocked)
 		{
-			client.runScript(PRAYER_IS_AVAILABLE, prayerIds[p.getScriptIndex()]);
+			client.runScript(PRAYER_IS_AVAILABLE, p.getItemId());
 			available = client.getIntStack()[0] > 0;
 		}
 		boolean enabled = unlocked && client.getVarbitValue(p.getPrayer().getVarbit()) == 1;
@@ -75,11 +71,6 @@ class Prayers
 		data.setEnabled(enabled);
 		data.setUnlocked(unlocked);
 		return changed;
-	}
-
-	void resetPrayerIds()
-	{
-		prayerIds = new int[0];
 	}
 
 	static boolean canRunScripts(Client client)
