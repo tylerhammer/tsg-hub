@@ -106,6 +106,9 @@ final class TsgHubUsage
 		add(on, "teamNameColors", config.teamNameColors());
 		add(on, "eventCountdown", config.eventCountdown());
 		add(on, "showClanMap", config.showClanMap());
+		add(on, "defenceLabel", config.defenceLabel());
+		add(on, "defenceInfoBox", config.defenceInfoBox());
+		add(on, "defenceChat", config.defenceChat());
 		add(on, "partyShowSelf", config.partyShowSelf());
 		add(on, "partyExpandMembers", config.partyExpandMembers());
 		add(on, "partyVirtualLevels", config.partyVirtualLevels());

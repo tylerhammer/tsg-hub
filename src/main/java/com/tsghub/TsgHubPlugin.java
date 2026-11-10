@@ -48,6 +48,7 @@ import net.runelite.client.events.OverlayMenuClicked;
 import net.runelite.client.events.RuneScapeProfileChanged;
 import net.runelite.client.game.ChatIconManager;
 import net.runelite.client.game.ItemManager;
+import net.runelite.client.game.SkillIconManager;
 import net.runelite.client.game.SpriteManager;
 import net.runelite.client.hiscore.HiscoreClient;
 import net.runelite.client.hiscore.HiscoreResult;
@@ -56,12 +57,14 @@ import net.runelite.client.party.PartyService;
 import net.runelite.client.party.WSClient;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.plugins.PluginManager;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.DrawManager;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.ui.overlay.OverlayMenuEntry;
+import net.runelite.client.ui.overlay.infobox.InfoBoxManager;
 import net.runelite.client.ui.overlay.worldmap.WorldMapOverlay;
 import net.runelite.client.ui.overlay.worldmap.WorldMapPointManager;
 import net.runelite.client.util.AsyncBufferedImage;
@@ -96,6 +99,9 @@ public class TsgHubPlugin extends Plugin
 	@Inject private MouseManager mouseManager;
 	@Inject private DrawManager drawManager;
 	@Inject private AudioPlayer audioPlayer;
+	@Inject private PluginManager pluginManager;
+	@Inject private InfoBoxManager infoBoxManager;
+	@Inject private SkillIconManager skillIconManager;
 	@Inject @Named("developerMode") private boolean developerMode;
 	private TsgHubSession session;
 	private TsgHubClan clan;
@@ -131,6 +137,7 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubRecords records;
 	private TsgHubAnnouncements announcements;
 	private GroupTracker groupTracker;
+	private TsgHubDefence defence;
 
 	@Override
 	protected void startUp()
@@ -190,6 +197,9 @@ public class TsgHubPlugin extends Plugin
 		eventBus.register(sales);
 		trades = new TsgHubTrades(this, client);
 		eventBus.register(trades);
+		defence = new TsgHubDefence(this, client, clientThread, partyService, wsClient, pluginManager, infoBoxManager, overlayManager, skillIconManager, config, gson, chat::defenceSpec);
+		eventBus.register(defence);
+		defence.start();
 		teamColors = new TsgHubTeamColors(config, () -> ui(s -> s.membersView.refreshIfShown()));
 		eventBus.register(teamColors);
 		navigationButton = NavigationButton.builder()
@@ -227,6 +237,11 @@ public class TsgHubPlugin extends Plugin
 		if (sales != null) eventBus.unregister(sales);
 		if (trades != null) eventBus.unregister(trades);
 		if (teamColors != null) eventBus.unregister(teamColors);
+		if (defence != null)
+		{
+			eventBus.unregister(defence);
+			defence.stop();
+		}
 		if (groupTracker != null)
 		{
 			groupTracker.stop();
