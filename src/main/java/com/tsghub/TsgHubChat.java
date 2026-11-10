@@ -117,6 +117,11 @@ final class TsgHubChat
 		local(new ChatMessageBuilder().append(ChatColorType.HIGHLIGHT).append(Text.escapeJagex(text)));
 	}
 
+	void defenceSpec(String text)
+	{
+		if (config.defenceChat()) local(new ChatMessageBuilder().append(ChatColorType.NORMAL).append(Text.escapeJagex(text)));
+	}
+
 	void updateAvailable(String version)
 	{
 		if (version.equals(notifiedUpdate)) return;

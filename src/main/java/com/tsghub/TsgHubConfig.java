@@ -29,6 +29,9 @@ public interface TsgHubConfig extends Config
 	@ConfigSection(name = "World map", description = "Clanmates on your world map.", position = 7)
 	String mapSection = "map";
 
+	@ConfigSection(name = "Boss Defence", description = "Track boss Defence after drain specs, shared with your party.", position = 9)
+	String defenceSection = "defence";
+
 	@ConfigSection(name = "Party", description = "How clan parties look in the TSG Hub sidebar.", position = 10)
 	String partySection = "party";
 
@@ -130,6 +133,24 @@ public interface TsgHubConfig extends Config
 
 	@ConfigItem(keyName = "showClanMap", position = 0, section = mapSection, name = "Show clanmates", description = WRAP + "Show clanmates who share their location on your world map. This only affects what you see." + END)
 	default boolean showClanMap()
+	{
+		return true;
+	}
+
+	@ConfigItem(keyName = "defenceLabel", position = 0, section = defenceSection, name = "Label on bosses", description = WRAP + "Show a boss's estimated Defence above it after a drain spec like a Dragon warhammer or Bandos godsword lands. Party members' specs count too." + END)
+	default boolean defenceLabel()
+	{
+		return true;
+	}
+
+	@ConfigItem(keyName = "defenceInfoBox", position = 1, section = defenceSection, name = "Defence infobox", description = WRAP + "Show the Defence of the last drained boss in an infobox." + END)
+	default boolean defenceInfoBox()
+	{
+		return true;
+	}
+
+	@ConfigItem(keyName = "defenceChat", position = 2, section = defenceSection, name = "Specs in chat", description = WRAP + "Post each drain spec on a boss in your chatbox: who used it, whether it hit, and how far the boss's Defence dropped." + END)
+	default boolean defenceChat()
 	{
 		return true;
 	}

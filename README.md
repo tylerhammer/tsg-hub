@@ -116,6 +116,10 @@ A party closes when its last member leaves. Members drop out after 3 minutes wit
 
 <p align="center"><img src="docs/images/parties.png" width="280" alt="Clan party list"></p>
 
+### Boss Defence
+
+After a Defence-draining special attack lands on a boss, like a Dragon warhammer, Elder maul, Bandos godsword, Arclight, Emberlight, Bone dagger or Tonalztics of Ralos, a small label above the boss shows its estimated Defence and how far it has dropped, and an infobox shows the last boss you drained. The label turns green once the boss can't be drained further. Each spec also posts a short line in your chatbox with who used it, whether it hit, and what it lowered, including Magic from a Seercull or Accursed sceptre and the Magic Defence bonus from an Eye of ayak. Specs from party members count too, including members who only use RuneLite's Special Attack Counter. Chambers of Xeric bosses scale with party size and Challenge Mode. Turn the label, infobox or chat lines off under **Boss Defence** in the plugin settings.
+
 ### Loot split
 
 The leader can click **Start loot split** to share the party's raid purples. While it runs, each tradeable purple a member gets from Chambers of Xeric, Theatre of Blood, Tombs of Amascut or The Fractured Archive counts automatically, valued at Grand Exchange prices, and are split evenly between whoever was in the party at the time, so members who join or leave partway only share loot from while they were in it. A raid chest reopened with the same loot counts once. Everyone in the party sees what each member looted and their fair share. When the leader clicks **End split**, a short list of who pays whom shows how to settle up, and **Copy split** copies the summary to paste in chat or Discord.
@@ -228,6 +232,6 @@ Clan membership, rank and progress are reported by each player's client. They're
 
 ## Credits
 
-The live party member panels are adapted from [Party Panel](https://github.com/TheStonedTurtle/party-panel) by TheStonedTurtle, under the BSD 2-Clause license. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+The live party member panels are adapted from [Party Panel](https://github.com/TheStonedTurtle/party-panel) by TheStonedTurtle, and the boss Defence tracker from [Better Party Defence](https://github.com/Falsary/better-party-defence), both under the BSD 2-Clause license. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 TSG Hub is licensed under the [BSD 2-Clause License](LICENSE).
