@@ -78,6 +78,7 @@ final class TsgHubDefence
 	private final TsgHubDefenceOverlay overlay;
 	private final InfoBox infoBox;
 	private NPC focus;
+	private SpecialWeapon held;
 
 	private int specPercent = -1;
 	private int hpXp = -1;
@@ -199,6 +200,7 @@ final class TsgHubDefence
 		targets.clear();
 		partySeen.clear();
 		focus = null;
+		held = null;
 		clearPending();
 	}
 
@@ -228,7 +230,7 @@ final class TsgHubDefence
 		int[] before = {t.def, t.magic, t.magicDef};
 		t.drain(used, hit, missDrain);
 		focus = npc;
-		chat.accept(message(who, used, hit, boss.name, before, new int[]{t.def, t.magic, t.magicDef}));
+		chat.accept(message(who, used, hit, boss.name, before, new int[]{t.def, t.magic, t.magicDef}) + capNote(t, used));
 	}
 
 	private static final String[] STATS = {"Def", "Magic", "Magic def"};
@@ -245,6 +247,33 @@ final class TsgHubDefence
 		}
 		if (!changed) out.append(", ").append(STATS[stat(used)]).append(' ').append(after[stat(used)]);
 		return out.toString();
+	}
+
+	static String capNote(TsgHubDefenceTarget t, SpecialWeapon used)
+	{
+		if (t.floor <= 0 || stat(used) != 0) return "";
+		if (t.atFloor()) return ", Def capped";
+		int left = t.toCap(used);
+		return left <= 0 ? "" : ", " + left + " more " + unit(used, left) + " to cap";
+	}
+
+	static String capLabel(TsgHubDefenceTarget t, SpecialWeapon held)
+	{
+		if (held == null || t.floor <= 0 || t.atFloor() || stat(held) != 0) return null;
+		int left = t.toCap(held);
+		return left <= 0 ? null : shortName(held) + " " + left + (TsgHubDefenceTarget.damageBased(held) ? " dmg" : held == SpecialWeapon.TONALZTICS_OF_RALOS ? " glaive" + (left == 1 ? "" : "s") : "") + " to cap";
+	}
+
+	private static String unit(SpecialWeapon used, int left)
+	{
+		if (TsgHubDefenceTarget.damageBased(used)) return shortName(used) + " damage";
+		if (used == SpecialWeapon.TONALZTICS_OF_RALOS) return left == 1 ? "Ralos glaive" : "Ralos glaives";
+		return shortName(used);
+	}
+
+	SpecialWeapon held()
+	{
+		return held;
 	}
 
 	private static int stat(SpecialWeapon used)
@@ -341,6 +370,7 @@ final class TsgHubDefence
 	public void onGameTick(GameTick event)
 	{
 		int tick = client.getTickCount();
+		held = wielded();
 		if (!partySeen.isEmpty()) partySeen.values().removeIf(seen -> tick - seen > PARTY_DEDUPE_TICKS);
 		if (weapon == null) return;
 		if (weapon == SpecialWeapon.ELDER_MAUL)

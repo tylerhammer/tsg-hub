@@ -72,9 +72,66 @@ final class TsgHubDefenceTarget
 		this.floor = boss.floor;
 	}
 
+	private TsgHubDefenceTarget(TsgHubDefenceTarget from)
+	{
+		boss = from.boss;
+		startDef = from.startDef;
+		floor = from.floor;
+		def = from.def;
+		magic = from.magic;
+		atk = from.atk;
+		str = from.str;
+		magicDef = from.magicDef;
+		condemned = from.condemned;
+	}
+
 	boolean atFloor()
 	{
 		return def <= floor;
+	}
+
+	int toCap(SpecialWeapon weapon)
+	{
+		if (floor <= 0 || atFloor()) return 0;
+		switch (weapon)
+		{
+			case BANDOS_GODSWORD:
+				return doubled() ? (def - floor + 1) / 2 : def - floor;
+			case BONE_DAGGER:
+			case DORGESHUUN_CROSSBOW:
+				return def >= startDef ? def - floor : 0;
+			case BARRELCHEST_ANCHOR:
+				return (def - floor) * 10;
+			case DRAGON_WARHAMMER:
+			case ELDER_MAUL:
+			case TONALZTICS_OF_RALOS:
+			case ARCLIGHT:
+			case DARKLIGHT:
+			case EMBERLIGHT:
+			case ACCURSED_SCEPTRE:
+				TsgHubDefenceTarget sim = new TsgHubDefenceTarget(this);
+				for (int n = 1; n <= 50; n++)
+				{
+					int before = sim.def;
+					sim.drain(weapon, 1, false);
+					if (sim.def == before) return 0;
+					if (sim.atFloor()) return n;
+				}
+				return 0;
+			default:
+				return 0;
+		}
+	}
+
+	static boolean damageBased(SpecialWeapon weapon)
+	{
+		return weapon == SpecialWeapon.BANDOS_GODSWORD || weapon == SpecialWeapon.BONE_DAGGER
+			|| weapon == SpecialWeapon.DORGESHUUN_CROSSBOW || weapon == SpecialWeapon.BARRELCHEST_ANCHOR;
+	}
+
+	private boolean doubled()
+	{
+		return boss.name.equals("Corporeal Beast") || boss.name.equals("Pestilent Bloat");
 	}
 
 	void drain(SpecialWeapon weapon, int hit, boolean missDrain)
@@ -91,7 +148,7 @@ final class TsgHubDefenceTarget
 				else if (missDrain) def -= def * 5 / 100;
 				break;
 			case BANDOS_GODSWORD:
-				if (hit > 0) bandos(boss.name.equals("Corporeal Beast") || boss.name.equals("Pestilent Bloat") ? hit * 2 : hit);
+				if (hit > 0) bandos(doubled() ? hit * 2 : hit);
 				break;
 			case TONALZTICS_OF_RALOS:
 				for (int i = 0; i < hit; i++) def -= magic / 8;
