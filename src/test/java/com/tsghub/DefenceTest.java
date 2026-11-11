@@ -114,6 +114,28 @@ public class DefenceTest
 	}
 
 	@Test
+	public void countsSpecsToCap()
+	{
+		TsgHubDefenceTarget sote = target("Sotetseg");
+		assertEquals(2, sote.toCap(SpecialWeapon.DRAGON_WARHAMMER));
+		assertEquals(4, sote.toCap(SpecialWeapon.TONALZTICS_OF_RALOS));
+		assertEquals(100, sote.toCap(SpecialWeapon.BANDOS_GODSWORD));
+		assertEquals(0, sote.toCap(SpecialWeapon.ACCURSED_SCEPTRE));
+		assertEquals(1, target("Nex").toCap(SpecialWeapon.DRAGON_WARHAMMER));
+		assertEquals(0, target("General Graardor").toCap(SpecialWeapon.DRAGON_WARHAMMER));
+		assertEquals("Maul 2 to cap", TsgHubDefence.capLabel(sote, SpecialWeapon.ELDER_MAUL));
+		assertEquals("BGS 100 dmg to cap", TsgHubDefence.capLabel(sote, SpecialWeapon.BANDOS_GODSWORD));
+		assertNull(TsgHubDefence.capLabel(sote, SpecialWeapon.EYE_OF_AYAK));
+
+		sote.drain(SpecialWeapon.DRAGON_WARHAMMER, 30, false);
+		assertEquals(", 1 more DWH to cap", TsgHubDefence.capNote(sote, SpecialWeapon.DRAGON_WARHAMMER));
+		sote.drain(SpecialWeapon.DRAGON_WARHAMMER, 30, false);
+		assertEquals(", Def capped", TsgHubDefence.capNote(sote, SpecialWeapon.DRAGON_WARHAMMER));
+		assertNull(TsgHubDefence.capLabel(sote, SpecialWeapon.DRAGON_WARHAMMER));
+		assertEquals("", TsgHubDefence.capNote(target("Vorkath"), SpecialWeapon.DRAGON_WARHAMMER));
+	}
+
+	@Test
 	public void resolvesRalosGlaives()
 	{
 		assertEquals(1, TsgHubDefence.resolve(SpecialWeapon.TONALZTICS_OF_RALOS, Arrays.asList(12, 0)));
