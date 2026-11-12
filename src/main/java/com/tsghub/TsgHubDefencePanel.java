@@ -66,15 +66,15 @@ final class TsgHubDefencePanel extends Overlay
 			String value = String.valueOf(t.def);
 			int baseline = y + line - 1;
 			g.setColor(t == focus ? TsgHubTheme.TEXT : TsgHubTheme.MUTED);
-			g.drawString(t.boss.name, PAD, baseline);
+			TsgHubDefenceOverlay.text(g, t.boss.name, PAD, baseline);
 			g.setColor(t.atFloor() ? TsgHubTheme.CAPPED : TsgHubTheme.TEXT);
-			g.drawString(value, width - PAD - m.stringWidth(value), baseline);
+			TsgHubDefenceOverlay.text(g, value, width - PAD - m.stringWidth(value), baseline);
 			y += line;
 			if (caps.get(i) != null)
 			{
 				y += line + 1;
 				g.setColor(TsgHubTheme.WARNING);
-				g.drawString(caps.get(i), PAD, y - 1);
+				TsgHubDefenceOverlay.text(g, caps.get(i), PAD, y - 1);
 			}
 			y += 2;
 			int barWidth = width - PAD * 2;
