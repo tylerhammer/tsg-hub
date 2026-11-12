@@ -107,6 +107,8 @@ final class TsgHubUsage
 		add(on, "eventCountdown", config.eventCountdown());
 		add(on, "showClanMap", config.showClanMap());
 		add(on, "defenceLabel", config.defenceLabel());
+		add(on, "defenceCompact", config.defenceLabel() && config.defenceStyle() == TsgHubConfig.DefenceStyle.COMPACT);
+		add(on, "defencePanel", config.defenceLabel() && config.defenceStyle() == TsgHubConfig.DefenceStyle.PANEL);
 		add(on, "defenceInfoBox", config.defenceInfoBox());
 		add(on, "defenceChat", config.defenceChat());
 		add(on, "partyShowSelf", config.partyShowSelf());

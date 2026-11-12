@@ -137,19 +137,45 @@ public interface TsgHubConfig extends Config
 		return true;
 	}
 
-	@ConfigItem(keyName = "defenceLabel", position = 0, section = defenceSection, name = "Label on bosses", description = WRAP + "Show a boss's estimated Defence above it after a drain spec like a Dragon warhammer or Bandos godsword lands. Party members' specs count too." + END)
+	enum DefenceStyle
+	{
+		FULL("Full label"),
+		COMPACT("Compact label"),
+		PANEL("Side panel");
+
+		private final String label;
+
+		DefenceStyle(String label)
+		{
+			this.label = label;
+		}
+
+		@Override
+		public String toString()
+		{
+			return label;
+		}
+	}
+
+	@ConfigItem(keyName = "defenceLabel", position = 0, section = defenceSection, name = "Show Defence", description = WRAP + "Show a boss's estimated Defence after a drain spec like a Dragon warhammer or Bandos godsword lands. Party members' specs count too." + END)
 	default boolean defenceLabel()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "defenceInfoBox", position = 1, section = defenceSection, name = "Defence infobox", description = WRAP + "Show the Defence of the last drained boss in an infobox." + END)
+	@ConfigItem(keyName = "defenceStyle", position = 1, section = defenceSection, name = "Style", description = WRAP + "Full label: a card above the boss with the drop and specs left to cap. Compact label: just the Defence above the boss. Side panel: a box you can move anywhere on screen." + END)
+	default DefenceStyle defenceStyle()
+	{
+		return DefenceStyle.FULL;
+	}
+
+	@ConfigItem(keyName = "defenceInfoBox", position = 2, section = defenceSection, name = "Defence infobox", description = WRAP + "Show the Defence of the last drained boss in an infobox." + END)
 	default boolean defenceInfoBox()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "defenceChat", position = 2, section = defenceSection, name = "Specs in chat", description = WRAP + "Post each drain spec on a boss in your chatbox: who used it, whether it hit, and how far the boss's Defence dropped." + END)
+	@ConfigItem(keyName = "defenceChat", position = 3, section = defenceSection, name = "Specs in chat", description = WRAP + "Post each drain spec on a boss in your chatbox: who used it, whether it hit, and how far the boss's Defence dropped." + END)
 	default boolean defenceChat()
 	{
 		return true;
