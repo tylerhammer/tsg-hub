@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.util.Map;
 import net.runelite.api.NPC;
@@ -58,12 +59,9 @@ final class TsgHubDefenceOverlay extends Overlay
 		FontMetrics m = g.getFontMetrics();
 		Point at = npc.getCanvasTextLocation(g, text, npc.getLogicalHeight() + HEIGHT_OFFSET);
 		if (at == null) return;
-		int x = at.getX() - PAD;
-		int y = at.getY() - m.getAscent() - PAD + 1;
-		int width = m.stringWidth(text) + PAD * 2;
-		int height = m.getAscent() + PAD * 2 - 1;
-		card(g, x, y, width, height, t.atFloor());
 		int baseline = at.getY() - 1;
+		Rectangle glyphs = g.getFont().createGlyphVector(g.getFontRenderContext(), text).getPixelBounds(null, 0, 0);
+		card(g, at.getX() + glyphs.x - 4, baseline + glyphs.y - 3, glyphs.width + 9, glyphs.height + 7, t.atFloor(), false);
 		g.setColor(TsgHubTheme.MUTED);
 		text(g, LABEL, at.getX(), baseline);
 		g.setColor(t.atFloor() ? TsgHubTheme.CAPPED : TsgHubTheme.TEXT);
@@ -72,12 +70,17 @@ final class TsgHubDefenceOverlay extends Overlay
 
 	static void card(Graphics2D g, int x, int y, int width, int height, boolean capped)
 	{
+		card(g, x, y, width, height, capped, true);
+	}
+
+	private static void card(Graphics2D g, int x, int y, int width, int height, boolean capped, boolean thick)
+	{
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		g.setColor(CARD);
 		g.fillRoundRect(x, y, width, height, 5, 5);
 		g.setColor(capped ? TsgHubTheme.CAPPED : TsgHubTheme.ACCENT);
 		g.drawRoundRect(x, y, width - 1, height - 1, 5, 5);
-		if (capped) g.drawRoundRect(x + 1, y + 1, width - 3, height - 3, 4, 4);
+		if (capped && thick) g.drawRoundRect(x + 1, y + 1, width - 3, height - 3, 4, 4);
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
 	}
 
