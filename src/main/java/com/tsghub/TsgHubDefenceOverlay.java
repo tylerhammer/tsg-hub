@@ -24,7 +24,6 @@ final class TsgHubDefenceOverlay extends Overlay
 	private static final Color CARD = new Color(0x1F, 0x1D, 0x22, 225);
 	private static final Color TRACK = new Color(0x3B, 0x37, 0x41);
 	private static final String LABEL = "DEF";
-	private static final String CAPPED = "CAPPED";
 
 	private final TsgHubDefence defence;
 	private final TsgHubConfig config;
@@ -48,7 +47,7 @@ final class TsgHubDefenceOverlay extends Overlay
 			NPC npc = e.getKey();
 			if (npc.isDead()) continue;
 			if (style == TsgHubConfig.DefenceStyle.COMPACT) compact(g, npc, e.getValue());
-			else draw(g, npc, e.getValue(), e.getValue().atFloor() ? CAPPED : TsgHubDefence.capLabel(e.getValue(), defence.held()));
+			else draw(g, npc, e.getValue(), TsgHubDefence.capLabel(e.getValue(), defence.held()));
 		}
 		return null;
 	}
@@ -71,7 +70,7 @@ final class TsgHubDefenceOverlay extends Overlay
 		g.drawString(String.valueOf(t.def), at.getX() + m.stringWidth(LABEL + " "), baseline);
 	}
 
-	private static void card(Graphics2D g, int x, int y, int width, int height, boolean capped)
+	static void card(Graphics2D g, int x, int y, int width, int height, boolean capped)
 	{
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		g.setColor(CARD);
@@ -116,7 +115,7 @@ final class TsgHubDefenceOverlay extends Overlay
 		if (cap != null)
 		{
 			baseline += row;
-			g.setColor(t.atFloor() ? TsgHubTheme.CAPPED : TsgHubTheme.WARNING);
+			g.setColor(TsgHubTheme.WARNING);
 			g.drawString(cap, x + PAD, baseline);
 		}
 		int barY = baseline + 2;
