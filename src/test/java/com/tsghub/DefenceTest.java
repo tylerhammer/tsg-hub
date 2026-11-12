@@ -28,7 +28,10 @@ public class DefenceTest
 		assertEquals("Core", TsgHubDefence.boss(BOSSES, "Core").name);
 		assertEquals("Great Olm (Left claw)", TsgHubDefence.boss(BOSSES, "Great Olm (Left claw)").name);
 		assertNull(TsgHubDefence.boss(BOSSES, "Goblin"));
-		assertNull(TsgHubDefence.boss(BOSSES, null));
+		assertNull(TsgHubDefence.boss(BOSSES, (String) null));
+		assertNull(TsgHubDefence.boss(BOSSES, "Ocellus"));
+		assertEquals(150, target("Ocellus P3").floor);
+		assertEquals(2, target("Ocellus P3").toCap(SpecialWeapon.DRAGON_WARHAMMER));
 	}
 
 	@Test

@@ -35,10 +35,13 @@ import net.runelite.api.events.FakeXpDrop;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.HitsplatApplied;
+import net.runelite.api.events.NpcChanged;
 import net.runelite.api.events.NpcDespawned;
+import net.runelite.api.events.NpcSpawned;
 import net.runelite.api.events.StatChanged;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.gameval.InventoryID;
+import net.runelite.api.gameval.NpcID;
 import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.api.gameval.VarbitID;
 import net.runelite.client.callback.ClientThread;
@@ -62,6 +65,15 @@ import net.runelite.client.util.Text;
 final class TsgHubDefence
 {
 	private static final int PARTY_DEDUPE_TICKS = 3;
+	private static final Map<Integer, String> BY_ID = new HashMap<>();
+
+	static
+	{
+		BY_ID.put(NpcID.TFA_OCELLUS_INTRO_MET, "ocellus p1");
+		BY_ID.put(NpcID.TFA_OCELLUS_P1, "ocellus p1");
+		BY_ID.put(NpcID.TFA_OCELLUS_P2_SWORD_HITBOX, "ocellus p2");
+		BY_ID.put(NpcID.TFA_OCELLUS_P3, "ocellus p3");
+	}
 
 	private final Client client;
 	private final ClientThread clientThread;
@@ -74,8 +86,10 @@ final class TsgHubDefence
 	private final Map<String, Boss> bosses;
 	private final Consumer<String> chat;
 	private final Map<NPC, TsgHubDefenceTarget> targets = new IdentityHashMap<>();
+	private final Map<Boss, TsgHubDefenceTarget> retained = new HashMap<>();
 	private final Map<String, Integer> partySeen = new HashMap<>();
 	private final TsgHubDefenceOverlay overlay;
+	private final TsgHubDefencePanel panel;
 	private final InfoBox infoBox;
 	private NPC focus;
 	private SpecialWeapon held;
@@ -104,6 +118,7 @@ final class TsgHubDefence
 		this.config = config;
 		this.bosses = load(gson);
 		this.overlay = new TsgHubDefenceOverlay(this, config);
+		this.panel = new TsgHubDefencePanel(plugin, this, config);
 		this.infoBox = new InfoBox(skillIcons.getSkillImage(Skill.DEFENCE), plugin)
 		{
 			@Override
@@ -117,7 +132,7 @@ final class TsgHubDefence
 			public Color getTextColor()
 			{
 				TsgHubDefenceTarget t = focused();
-				return t != null && t.atFloor() ? TsgHubTheme.SUCCESS : Color.WHITE;
+				return t != null && t.atFloor() ? TsgHubTheme.CAPPED : Color.WHITE;
 			}
 
 			@Override
@@ -153,6 +168,12 @@ final class TsgHubDefence
 		return out;
 	}
 
+	static Boss boss(Map<String, Boss> bosses, NPC npc)
+	{
+		String byId = BY_ID.get(npc.getId());
+		return byId != null ? bosses.get(byId) : boss(bosses, npc.getName());
+	}
+
 	static Boss boss(Map<String, Boss> bosses, String npcName)
 	{
 		if (npcName == null) return null;
@@ -173,6 +194,7 @@ final class TsgHubDefence
 	{
 		wsClient.registerMessage(SpecialCounterUpdate.class);
 		overlayManager.add(overlay);
+		overlayManager.add(panel);
 		infoBoxManager.addInfoBox(infoBox);
 	}
 
@@ -180,6 +202,7 @@ final class TsgHubDefence
 	{
 		if (!specialCounterActive()) wsClient.unregisterMessage(SpecialCounterUpdate.class);
 		overlayManager.remove(overlay);
+		overlayManager.remove(panel);
 		infoBoxManager.removeInfoBox(infoBox);
 		clear();
 		specPercent = -1;
@@ -190,7 +213,7 @@ final class TsgHubDefence
 		return Collections.unmodifiableMap(targets);
 	}
 
-	private TsgHubDefenceTarget focused()
+	TsgHubDefenceTarget focused()
 	{
 		return focus == null ? null : targets.get(focus);
 	}
@@ -198,6 +221,7 @@ final class TsgHubDefence
 	private void clear()
 	{
 		targets.clear();
+		retained.clear();
 		partySeen.clear();
 		focus = null;
 		held = null;
@@ -215,10 +239,12 @@ final class TsgHubDefence
 
 	private void apply(NPC npc, SpecialWeapon used, int hit, String who)
 	{
-		Boss boss = boss(bosses, npc.getName());
+		Boss boss = boss(bosses, npc);
 		if (boss == null) return;
 		TsgHubDefenceTarget t = targets.get(npc);
-		if (t == null || t.boss != boss)
+		if (t == null || t.boss != boss) t = retained.remove(boss);
+		if (t != null) targets.put(npc, t);
+		else
 		{
 			boolean inCox = client.getVarbitValue(VarbitID.RAIDS_CLIENT_INDUNGEON) == 1;
 			t = new TsgHubDefenceTarget(boss, inCox, client.getVarbitValue(VarbitID.RAIDS_CLIENT_PARTYSIZE_SCALED),
@@ -307,13 +333,39 @@ final class TsgHubDefence
 			specPercent = -1;
 			hpXp = -1;
 		}
+		WorldView view = client.getTopLevelWorldView();
+		if (state == GameState.LOGGED_IN && view != null && !view.isInstance()) retained.clear();
+	}
+
+	@Subscribe
+	public void onNpcSpawned(NpcSpawned event)
+	{
+		restore(event.getNpc());
+	}
+
+	@Subscribe
+	public void onNpcChanged(NpcChanged event)
+	{
+		NPC npc = event.getNpc();
+		TsgHubDefenceTarget t = targets.get(npc);
+		if (t != null && t.boss != boss(bosses, npc)) targets.remove(npc);
+		restore(npc);
+	}
+
+	private void restore(NPC npc)
+	{
+		if (retained.isEmpty() || targets.containsKey(npc)) return;
+		Boss boss = boss(bosses, npc);
+		TsgHubDefenceTarget t = boss == null ? null : retained.remove(boss);
+		if (t != null) targets.put(npc, t);
 	}
 
 	@Subscribe
 	public void onNpcDespawned(NpcDespawned event)
 	{
 		NPC npc = event.getNpc();
-		targets.remove(npc);
+		TsgHubDefenceTarget t = targets.remove(npc);
+		if (t != null && t.boss.has('P')) retained.put(t.boss, t);
 		if (npc == focus) focus = null;
 		if (npc == target) clearPending();
 	}
@@ -350,7 +402,7 @@ final class TsgHubDefence
 		if (used == null) return;
 		Player local = client.getLocalPlayer();
 		Actor interacting = local == null ? null : local.getInteracting();
-		if (!(interacting instanceof NPC) || boss(bosses, interacting.getName()) == null) return;
+		if (!(interacting instanceof NPC) || boss(bosses, (NPC) interacting) == null) return;
 		weapon = used;
 		target = (NPC) interacting;
 		hpOnSpec = hpCycle == client.getGameCycle();

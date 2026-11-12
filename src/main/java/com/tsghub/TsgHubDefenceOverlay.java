@@ -39,15 +39,46 @@ final class TsgHubDefenceOverlay extends Overlay
 	@Override
 	public Dimension render(Graphics2D g)
 	{
-		if (!config.defenceLabel()) return null;
+		TsgHubConfig.DefenceStyle style = config.defenceStyle();
+		if (!config.defenceLabel() || style == TsgHubConfig.DefenceStyle.PANEL) return null;
 		g.setFont(FontManager.getRunescapeSmallFont());
 		for (Map.Entry<NPC, TsgHubDefenceTarget> e : defence.targets().entrySet())
 		{
 			NPC npc = e.getKey();
 			if (npc.isDead()) continue;
-			draw(g, npc, e.getValue(), TsgHubDefence.capLabel(e.getValue(), defence.held()));
+			if (style == TsgHubConfig.DefenceStyle.COMPACT) compact(g, npc, e.getValue());
+			else draw(g, npc, e.getValue(), TsgHubDefence.capLabel(e.getValue(), defence.held()));
 		}
 		return null;
+	}
+
+	private void compact(Graphics2D g, NPC npc, TsgHubDefenceTarget t)
+	{
+		String text = LABEL + " " + t.def;
+		FontMetrics m = g.getFontMetrics();
+		Point at = npc.getCanvasTextLocation(g, text, npc.getLogicalHeight() + HEIGHT_OFFSET);
+		if (at == null) return;
+		int x = at.getX() - PAD;
+		int y = at.getY() - m.getAscent() - PAD + 1;
+		int width = m.stringWidth(text) + PAD * 2;
+		int height = m.getAscent() + PAD * 2 - 1;
+		card(g, x, y, width, height, t.atFloor());
+		int baseline = at.getY() - 1;
+		g.setColor(TsgHubTheme.MUTED);
+		g.drawString(LABEL, at.getX(), baseline);
+		g.setColor(t.atFloor() ? TsgHubTheme.CAPPED : TsgHubTheme.TEXT);
+		g.drawString(String.valueOf(t.def), at.getX() + m.stringWidth(LABEL + " "), baseline);
+	}
+
+	static void card(Graphics2D g, int x, int y, int width, int height, boolean capped)
+	{
+		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		g.setColor(CARD);
+		g.fillRoundRect(x, y, width, height, 5, 5);
+		g.setColor(capped ? TsgHubTheme.CAPPED : TsgHubTheme.ACCENT);
+		g.drawRoundRect(x, y, width - 1, height - 1, 5, 5);
+		if (capped) g.drawRoundRect(x + 1, y + 1, width - 3, height - 3, 4, 4);
+		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
 	}
 
 	private void draw(Graphics2D g, NPC npc, TsgHubDefenceTarget t, String cap)
@@ -64,17 +95,12 @@ final class TsgHubDefenceOverlay extends Overlay
 		int height = m.getAscent() + PAD * 2 + BAR + 1 + (cap == null ? 0 : row);
 		int x = at.getX() + (m.stringWidth(LABEL + " " + value) - width) / 2;
 		int y = at.getY() - m.getAscent() - PAD - (cap == null ? 0 : row);
-		Color tone = t.atFloor() ? TsgHubTheme.SUCCESS : TsgHubTheme.ACCENT;
-		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		g.setColor(CARD);
-		g.fillRoundRect(x, y, width, height, 5, 5);
-		g.setColor(tone);
-		g.drawRoundRect(x, y, width - 1, height - 1, 5, 5);
-		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+		Color tone = t.atFloor() ? TsgHubTheme.CAPPED : TsgHubTheme.ACCENT;
+		card(g, x, y, width, height, t.atFloor());
 		int baseline = y + PAD + m.getAscent() - 1;
 		g.setColor(TsgHubTheme.MUTED);
 		g.drawString(LABEL, x + PAD, baseline);
-		g.setColor(t.atFloor() ? TsgHubTheme.SUCCESS : TsgHubTheme.TEXT);
+		g.setColor(t.atFloor() ? TsgHubTheme.CAPPED : TsgHubTheme.TEXT);
 		int valueX = x + PAD + m.stringWidth(LABEL) + GAP;
 		g.drawString(value, valueX, baseline);
 		if (!drop.isEmpty())
