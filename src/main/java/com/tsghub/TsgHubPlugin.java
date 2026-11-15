@@ -164,9 +164,10 @@ public class TsgHubPlugin extends Plugin
 		every(liveSync::tick, 2, 5, TimeUnit.SECONDS);
 		every(liveSync.unlessLive(() -> sessions.autoRefreshBoard(sidebar)), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
 		every(liveSync.unlessLive(sessions::pollNotifications), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
-		newsOverlay = new TsgHubNewsOverlay(this, config);
+		newsOverlay = new TsgHubNewsOverlay(this, config, client);
 		overlayManager.add(newsOverlay);
 		mouseManager.registerMouseListener(newsOverlay);
+		mouseManager.registerMouseWheelListener(newsOverlay);
 		announcements = new TsgHubAnnouncements(this, executor, this::api, chat::clanAnnouncement);
 		TsgHubRankIcons rankIcons = new TsgHubRankIcons(chatIconManager);
 		windows = new TsgHubWindows(client, () -> announcements);
@@ -263,6 +264,8 @@ public class TsgHubPlugin extends Plugin
 		{
 			overlayManager.remove(newsOverlay);
 			mouseManager.unregisterMouseListener(newsOverlay);
+			mouseManager.unregisterMouseWheelListener(newsOverlay);
+			newsOverlay.closeReader();
 		}
 		if (liveSync != null) liveSync.socket().disconnect();
 		tasks.forEach(task -> task.cancel(false));
@@ -339,6 +342,12 @@ public class TsgHubPlugin extends Plugin
 	TsgHubRecords records() { return records; }
 	TsgHubAnnouncements announcements() { return announcements; }
 	TsgHubNewsOverlay newsOverlay() { return newsOverlay; }
+
+	void openNews(String id)
+	{
+		if (config.newsOverlay() && client.getGameState() == GameState.LOGGED_IN) newsOverlay.openReader(id);
+		else windows.openNews(id);
+	}
 	TsgHubTeamColors teamColors() { return teamColors; }
 	TsgHubUsage usage() { return usage; }
 	SpriteManager sprites() { return spriteManager; }

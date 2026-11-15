@@ -111,7 +111,7 @@ final class TsgHubNewsView
 		lines.add(TsgHubSidebarPanel.cardNote(str(announcement, "postedBy") + " · " + TsgHubFormat.shortDate(str(announcement, "postedAt"), now, zone) + poll));
 		card.add(TsgHubSidebarPanel.fillWidth(lines), BorderLayout.CENTER);
 		String id = str(announcement, "id");
-		clickable(card, () -> plugin.windows().openNews(id));
+		clickable(card, () -> plugin.openNews(id));
 		return fitHeight(card);
 	}
 

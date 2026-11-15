@@ -61,6 +61,11 @@ final class TsgHubNewsWindow extends JPanel
 		});
 	}
 
+	JPanel page()
+	{
+		return page;
+	}
+
 	void show(String id)
 	{
 		this.id = id;

@@ -48,6 +48,7 @@ final class TsgHubAnnouncements
 		this.polls = new TsgHubNewsPoll(plugin, this, () -> {
 			plugin.windows().news(TsgHubNewsWindow::render);
 			plugin.ui(s -> s.newsView.setAnnouncements(list));
+			plugin.newsOverlay().refresh();
 		});
 	}
 
@@ -127,6 +128,7 @@ final class TsgHubAnnouncements
 	void onLoggedOut()
 	{
 		list = null;
+		plugin.newsOverlay().closeReader();
 		plugin.newsOverlay().refresh();
 	}
 
