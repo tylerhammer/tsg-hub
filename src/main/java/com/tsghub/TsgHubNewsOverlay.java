@@ -40,6 +40,8 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 	private static final int WIDTH = 300;
 	private static final int READER_W = TsgHubNewsWindow.TEXT_W + 2 * (GAP_L + 4);
 	private static final int CLOSE = 22;
+	private static final int INSET = 12;
+	private static final int TRACK_TOP = CLOSE + INSET * 2;
 
 	private final TsgHubPlugin plugin;
 	private final TsgHubConfig config;
@@ -214,18 +216,19 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 		g.drawImage(full.getSubimage(0, top, READER_W, height), 0, 0, null);
 		if (full.getHeight() > height)
 		{
-			int thumb = Math.max(24, height * height / full.getHeight());
-			int thumbY = (height - thumb) * top / (full.getHeight() - height);
+			int track = height - TRACK_TOP - 6;
+			int thumb = Math.max(24, track * height / full.getHeight());
+			int thumbY = TRACK_TOP + (track - thumb) * top / (full.getHeight() - height);
 			g.setColor(BORDER_HOVER);
-			g.fillRoundRect(READER_W - 6, thumbY + 2, 4, thumb - 4, 4, 4);
+			g.fillRoundRect(READER_W - 7, thumbY, 4, thumb, 4, 4);
 		}
 		g.setClip(null);
 		g.setColor(BORDER_HOVER);
 		g.draw(new RoundRectangle2D.Float(.5f, .5f, READER_W - 1, height - 1, RADIUS * 2, RADIUS * 2));
 		g.setColor(RAISED);
-		g.fillRoundRect(READER_W - CLOSE - 6, 6, CLOSE, CLOSE, RADIUS, RADIUS);
+		g.fillRoundRect(READER_W - CLOSE - INSET, INSET, CLOSE, CLOSE, RADIUS, RADIUS);
 		g.setColor(TEXT);
-		int c = READER_W - CLOSE / 2 - 6, m = 6 + CLOSE / 2;
+		int c = READER_W - CLOSE / 2 - INSET, m = INSET + CLOSE / 2;
 		g.drawLine(c - 4, m - 4, c + 4, m + 4);
 		g.drawLine(c - 4, m + 4, c + 4, m - 4);
 		g.dispose();
@@ -244,7 +247,7 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 
 	private void click(Point point)
 	{
-		if (point.x >= READER_W - CLOSE - 6 && point.y <= CLOSE + 6)
+		if (point.x >= READER_W - CLOSE - INSET && point.y <= CLOSE + INSET)
 		{
 			closeReader();
 			return;
