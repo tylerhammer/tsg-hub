@@ -209,12 +209,13 @@ final class TsgHubNewsGallery extends JPanel
 		{
 			sized(this, width, height);
 			setToolTipText("Open full size");
+			pressable(this, point -> open.accept(photos.get(selected).url));
 			addMouseListener(new MouseAdapter()
 			{
 				@Override
 				public void mousePressed(MouseEvent e)
 				{
-					if (SwingUtilities.isLeftMouseButton(e)) open.accept(photos.get(selected).url);
+					if (SwingUtilities.isLeftMouseButton(e)) press(Viewer.this, e.getPoint());
 				}
 			});
 		}
@@ -246,14 +247,16 @@ final class TsgHubNewsGallery extends JPanel
 		Strip()
 		{
 			sized(this, width, THUMB_H);
+			pressable(this, point -> {
+				int index = point.x / (thumbW + GAP);
+				if (index < photos.size() && index != selected && point.x - index * (thumbW + GAP) < thumbW) select(index);
+			});
 			addMouseListener(new MouseAdapter()
 			{
 				@Override
 				public void mousePressed(MouseEvent e)
 				{
-					if (!SwingUtilities.isLeftMouseButton(e)) return;
-					int index = e.getX() / (thumbW + GAP);
-					if (index < photos.size() && index != selected && e.getX() - index * (thumbW + GAP) < thumbW) select(index);
+					if (SwingUtilities.isLeftMouseButton(e)) press(Strip.this, e.getPoint());
 				}
 			});
 		}

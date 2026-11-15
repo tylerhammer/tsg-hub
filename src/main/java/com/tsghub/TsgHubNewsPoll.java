@@ -77,11 +77,16 @@ final class TsgHubNewsPoll
 			toggle.setFont(smallFont());
 			toggle.setSelected(chosen.contains(index));
 			toggle.setEnabled(canVote);
-			toggle.addActionListener(e -> {
+			Runnable pick = () -> {
 				if (!multi) chosen.clear();
 				if (toggle.isSelected()) chosen.add(index);
 				else chosen.remove(index);
 				sync.run();
+			};
+			toggle.addActionListener(e -> pick.run());
+			pressable(toggle, point -> {
+				toggle.setSelected(!multi || !toggle.isSelected());
+				pick.run();
 			});
 			if (!multi) group.add(toggle);
 			List<String> names = strings(array(option, "voters"));
@@ -94,7 +99,7 @@ final class TsgHubNewsPoll
 		}
 		String error = errors.get(id);
 		if (error != null) block.add(label(html(escape(error), widthPx), TsgHubTheme.ERROR, smallFont()));
-		vote.addActionListener(e -> {
+		Runnable cast = () -> {
 			voting.add(id);
 			errors.remove(id);
 			vote.setEnabled(false);
@@ -103,7 +108,9 @@ final class TsgHubNewsPoll
 				errors.put(id, message);
 				changed.run();
 			});
-		});
+		};
+		vote.addActionListener(e -> cast.run());
+		pressable(vote, point -> cast.run());
 		sync.run();
 		block.add(gap(GAP_M));
 		block.add(fitHeight(row(canVote && !mine.isEmpty() ? removeVote(id) : label(canVote ? "" : "Log in to vote.", MUTED, smallFont()), vote)));
@@ -120,7 +127,7 @@ final class TsgHubNewsPoll
 		remove.setHorizontalAlignment(JButton.LEFT);
 		remove.setBorder(BorderFactory.createEmptyBorder());
 		remove.setEnabled(!voting.contains(id));
-		remove.addActionListener(e -> {
+		Runnable undo = () -> {
 			voting.add(id);
 			errors.remove(id);
 			picks.remove(id);
@@ -130,7 +137,8 @@ final class TsgHubNewsPoll
 				errors.put(id, message);
 				changed.run();
 			});
-		});
-		return remove;
+		};
+		remove.addActionListener(e -> undo.run());
+		return pressable(remove, point -> undo.run());
 	}
 }
