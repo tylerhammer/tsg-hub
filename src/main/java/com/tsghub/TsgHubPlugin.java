@@ -136,6 +136,7 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubDrops drops;
 	private TsgHubRecords records;
 	private TsgHubAnnouncements announcements;
+	private TsgHubNewsOverlay newsOverlay;
 	private GroupTracker groupTracker;
 	private TsgHubDefence defence;
 
@@ -163,6 +164,9 @@ public class TsgHubPlugin extends Plugin
 		every(liveSync::tick, 2, 5, TimeUnit.SECONDS);
 		every(liveSync.unlessLive(() -> sessions.autoRefreshBoard(sidebar)), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
 		every(liveSync.unlessLive(sessions::pollNotifications), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
+		newsOverlay = new TsgHubNewsOverlay(this, config);
+		overlayManager.add(newsOverlay);
+		mouseManager.registerMouseListener(newsOverlay);
 		announcements = new TsgHubAnnouncements(this, executor, this::api, chat::clanAnnouncement);
 		TsgHubRankIcons rankIcons = new TsgHubRankIcons(chatIconManager);
 		windows = new TsgHubWindows(client, () -> announcements);
@@ -255,6 +259,11 @@ public class TsgHubPlugin extends Plugin
 		if (mapOverlay != null) overlayManager.remove(mapOverlay);
 		if (bingo != null) bingo.stop();
 		if (countdown != null) overlayManager.remove(countdown);
+		if (newsOverlay != null)
+		{
+			overlayManager.remove(newsOverlay);
+			mouseManager.unregisterMouseListener(newsOverlay);
+		}
 		if (liveSync != null) liveSync.socket().disconnect();
 		tasks.forEach(task -> task.cancel(false));
 		tasks.clear();
@@ -329,6 +338,7 @@ public class TsgHubPlugin extends Plugin
 	TsgHubDrops drops() { return drops; }
 	TsgHubRecords records() { return records; }
 	TsgHubAnnouncements announcements() { return announcements; }
+	TsgHubNewsOverlay newsOverlay() { return newsOverlay; }
 	TsgHubTeamColors teamColors() { return teamColors; }
 	TsgHubUsage usage() { return usage; }
 	SpriteManager sprites() { return spriteManager; }
@@ -436,6 +446,7 @@ public class TsgHubPlugin extends Plugin
 			outbox.clear();
 			usage.clear();
 		}
+		if ("newsOverlay".equals(event.getKey()) && newsOverlay != null) newsOverlay.refresh();
 		if ("partyShowSelf".equals(event.getKey()))
 		{
 			if (config.partyShowSelf()) groupTracker.refreshSelf();

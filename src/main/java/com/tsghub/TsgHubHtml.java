@@ -57,6 +57,8 @@ final class TsgHubHtml
 		return out.toString().replace("\n", "<br>");
 	}
 
+	private static final String[] MEDALS = {"\uD83E\uDD47", "\uD83E\uDD48", "\uD83E\uDD49"};
+
 	static String postHtml(String text)
 	{
 		StringBuilder out = new StringBuilder();
@@ -91,7 +93,10 @@ final class TsgHubHtml
 			}
 		}
 		flushBlock(out, block, kind);
-		return out.toString();
+		String html = out.toString();
+		for (int i = 0; i < MEDALS.length; i++)
+			if (html.contains(MEDALS[i])) html = html.replace(MEDALS[i], "<img src='" + TsgHubHtml.class.getResource("icons/medal" + (i + 1) + ".png") + "' width='12' height='14'>");
+		return html;
 	}
 
 	private static void flushBlock(StringBuilder out, StringBuilder block, String kind)
