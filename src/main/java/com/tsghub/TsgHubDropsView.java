@@ -16,7 +16,10 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GridLayout;
+import java.awt.RenderingHints;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Objects;
@@ -42,7 +45,7 @@ final class TsgHubDropsView
 	private volatile int dropTypeIndex;
 	private volatile int dropValueIndex;
 	private JsonArray drops;
-	private static final int DROP_ICON_W = 40;
+	private static final int DROP_ICON_W = 36;
 	private static final String[] DROP_KINDS = {"", "", "raid", "pet", "log"};
 	private static final long[] DROP_VALUES = {0, 100_000, 1_000_000, 10_000_000};
 	void setDrops(JsonArray drops)
@@ -176,7 +179,7 @@ final class TsgHubDropsView
 		if (value > 0) extras.add(label(formatGp(value), coinColor(value), smallFont()));
 		card.add(TsgHubSidebarPanel.fillWidth(twoLines(
 			row(name, caption(TsgHubDrops.dropWhen(str(drop, "receivedAt"), now, zone))),
-			row(shrinkable(label(player, ACCENT, smallFont())), extras))), BorderLayout.CENTER);
+			row(shrinkable(label(player, self ? ACCENT : MUTED, smallFont())), extras))), BorderLayout.CENTER);
 		fullTextTooltip(card, () -> TsgHubDrops.dropTooltip(drop));
 		return fitHeight(card);
 	}
@@ -186,9 +189,21 @@ final class TsgHubDropsView
 		if (itemId <= 0) return null;
 		AsyncBufferedImage image = plugin.getItemImage(itemId);
 		if (image == null) return null;
-		JLabel label = new JLabel();
-		label.setVerticalAlignment(JLabel.CENTER);
-		label.setPreferredSize(new Dimension(DROP_ICON_W, 32));
+		JLabel label = new JLabel()
+		{
+			@Override
+			protected void paintComponent(Graphics g)
+			{
+				Graphics2D g2 = (Graphics2D) g.create();
+				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+				g2.setColor(SLOT);
+				g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+				g2.dispose();
+				super.paintComponent(g);
+			}
+		};
+		label.setHorizontalAlignment(JLabel.CENTER);
+		label.setPreferredSize(new Dimension(DROP_ICON_W, DROP_ICON_W));
 		image.addTo(label);
 		return label;
 	}

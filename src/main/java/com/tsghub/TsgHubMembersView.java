@@ -190,7 +190,7 @@ final class TsgHubMembersView
 		badges.setOpaque(false);
 		boolean sameWorld = !self && world > 0 && world == myWorld;
 		addMemberBadges(badges, member, note, world > 0);
-		if (world > 0) badges.add(label("W" + world, sameWorld ? SUCCESS : MUTED, small));
+		if (world > 0) badges.add(worldChip(world, sameWorld));
 		if (badges.getComponentCount() > 0) top.add(badges, BorderLayout.EAST);
 
 		JPanel text = stack();

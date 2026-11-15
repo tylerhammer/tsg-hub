@@ -556,7 +556,7 @@ final class TsgHubPartiesView
 		}
 		int myWorld = myPartyWorld();
 		boolean sameWorld = !mine && world > 0 && world == myWorld;
-		JPanel top = world > 0 ? row(heading, label("W" + world, sameWorld ? SUCCESS : MUTED, smallFont())) : row(heading, new JLabel());
+		JPanel top = world > 0 ? row(heading, north(worldChip(world, sameWorld))) : row(heading, new JLabel());
 
 		Map.Entry<String, Integer> area = TsgHubGroups.areaSummary(members);
 		boolean showArea = area != null && !area.getKey().equalsIgnoreCase(title) && (area.getValue() >= 2 || members.size() == 1);

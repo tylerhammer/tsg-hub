@@ -208,6 +208,15 @@ final class TsgHubUi
 		return label;
 	}
 
+	static JLabel worldChip(int world, boolean same)
+	{
+		JLabel chip = badge("W" + world, same ? SUCCESS : MUTED);
+		chip.setHorizontalAlignment(JLabel.CENTER);
+		Dimension size = chip.getPreferredSize();
+		chip.setPreferredSize(new Dimension(Math.max(size.width, chip.getFontMetrics(chip.getFont()).stringWidth("W000") + 10), size.height));
+		return chip;
+	}
+
 	static Component gap(int height)
 	{
 		return Box.createVerticalStrut(height);

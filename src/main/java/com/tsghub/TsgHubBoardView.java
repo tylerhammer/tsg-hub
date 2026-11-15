@@ -150,8 +150,7 @@ final class TsgHubBoardView
 		row.add(label(html(escape(teamName), CARD_TITLE_W), TEXT, boldFont()), BorderLayout.CENTER);
 		if (rank > 0 && !bool(boardEvent, "hideScores"))
 		{
-			JLabel rankLabel = label("#" + rank + " of " + ranked.size(), rank == 1 ? ACCENT : MUTED, boldFont());
-			row.add(rankLabel, BorderLayout.EAST);
+			row.add(north(badge("#" + rank + " of " + ranked.size(), rank == 1 ? ACCENT : MUTED)), BorderLayout.EAST);
 		}
 		card.add(row, BorderLayout.NORTH);
 		JPanel middle = stack();
@@ -288,7 +287,8 @@ final class TsgHubBoardView
 		JLabel name = shrinkable(label(str(task, "title"), completed ? MUTED : TEXT, boldFont()));
 		name.putClientProperty("html.disable", Boolean.TRUE);
 		if (completed) name.setIcon(icon("check", SUCCESS));
-		JLabel points = label(integer(task, "points", 1) + " pts", completed ? MUTED : ACCENT, smallFont());
+		JLabel points = badge(String.valueOf(integer(task, "points", 1)), completed ? MUTED : ACCENT);
+		points.setToolTipText("Points");
 		card.add(row(name, north(points)), BorderLayout.NORTH);
 
 		JPanel body = stack();
