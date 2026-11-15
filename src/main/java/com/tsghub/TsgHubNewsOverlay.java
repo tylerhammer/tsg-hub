@@ -62,8 +62,8 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 		this.config = config;
 		this.client = client;
 		setPosition(OverlayPosition.DYNAMIC);
-		setLayer(OverlayLayer.ABOVE_WIDGETS);
-		setPriority(Overlay.PRIORITY_HIGH);
+		setLayer(OverlayLayer.ALWAYS_ON_TOP);
+		setPriority(Overlay.PRIORITY_HIGHEST);
 	}
 
 	void openReader(String id)

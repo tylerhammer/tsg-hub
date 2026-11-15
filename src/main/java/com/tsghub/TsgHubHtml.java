@@ -95,7 +95,7 @@ final class TsgHubHtml
 		flushBlock(out, block, kind);
 		String html = out.toString();
 		for (int i = 0; i < MEDALS.length; i++)
-			if (html.contains(MEDALS[i])) html = html.replace(MEDALS[i], "<img src='" + TsgHubHtml.class.getResource("icons/medal" + (i + 1) + ".png") + "' width='12' height='14'>");
+			if (html.contains(MEDALS[i])) html = html.replace(MEDALS[i], "<img src='" + TsgHubHtml.class.getResource("icons/medal" + (i + 1) + ".png") + "' width='12' height='14' hspace='2'>");
 		return html;
 	}
 
