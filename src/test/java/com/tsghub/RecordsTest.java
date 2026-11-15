@@ -36,7 +36,7 @@ public class RecordsTest
 		kc.add(entry("Bob", "score", 900));
 		String tip = TsgHubRecordsView.standings("MOST KC", kc, true, "Bob");
 		assertTrue(tip, tip.contains("MOST KC"));
-		assertTrue(tip, tip.contains("1. Zezima<font color='#a7a1b1'> 1,234</font>"));
+		assertTrue(tip, tip.contains("1. Zezima</td><td align='right'><font color='#a7a1b1'>1,234</font>"));
 		assertTrue(tip, tip.contains("2. " + TsgHubTheme.selfName("Bob")));
 
 		JsonArray pb = new JsonArray();

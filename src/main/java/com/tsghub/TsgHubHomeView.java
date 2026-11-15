@@ -208,9 +208,9 @@ final class TsgHubHomeView
 		summarize(section);
 		Glyph chevron = icon("chevron", DIM, 10);
 		chevron.angle = -Math.PI / 2;
-		JPanel east = row(section.summaryLabel, new JLabel(chevron));
+		shrinkable(section.summaryLabel).setHorizontalAlignment(JLabel.RIGHT);
 		row.add(name, BorderLayout.WEST);
-		row.add(east, BorderLayout.EAST);
+		row.add(row(section.summaryLabel, new JLabel(chevron)), BorderLayout.CENTER);
 		clickable(row, section.open);
 		return fitHeight(row);
 	}

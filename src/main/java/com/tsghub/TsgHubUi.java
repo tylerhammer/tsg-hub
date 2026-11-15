@@ -47,6 +47,7 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JToolTip;
 import javax.swing.Scrollable;
@@ -54,6 +55,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.ToolTipManager;
 import javax.swing.border.Border;
+import javax.swing.plaf.basic.BasicScrollBarUI;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.plaf.basic.BasicHTML;
@@ -385,6 +387,16 @@ final class TsgHubUi
 			return tipText;
 		}
 
+		@Override
+		public JToolTip createToolTip()
+		{
+			JToolTip tip = super.createToolTip();
+			tip.setBackground(CARD);
+			tip.setForeground(TEXT);
+			tip.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(BORDER_HOVER), BorderFactory.createEmptyBorder(4, 6, 4, 6)));
+			return tip;
+		}
+
 		// Anchor tooltips beside the card so they don't follow the mouse.
 		@Override
 		public Point getToolTipLocation(MouseEvent event)
@@ -522,7 +534,47 @@ final class TsgHubUi
 		scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		scroll.setOpaque(false);
 		scroll.getViewport().setOpaque(false);
-		scroll.getVerticalScrollBar().setUnitIncrement(16);
+		JScrollBar bar = scroll.getVerticalScrollBar();
+		bar.setUnitIncrement(16);
+		bar.setOpaque(false);
+		bar.setPreferredSize(new Dimension(8, 0));
+		bar.setUI(new BasicScrollBarUI()
+		{
+			@Override
+			protected void paintTrack(Graphics g, JComponent c, Rectangle bounds)
+			{
+			}
+
+			@Override
+			protected void paintThumb(Graphics g, JComponent c, Rectangle thumb)
+			{
+				if (thumb.isEmpty()) return;
+				Graphics2D g2 = (Graphics2D) g.create();
+				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+				g2.setColor(isThumbRollover() || isDragging ? DIM : BORDER_HOVER);
+				g2.fillRoundRect(thumb.x + 3, thumb.y, thumb.width - 3, thumb.height, 5, 5);
+				g2.dispose();
+			}
+
+			@Override
+			protected JButton createDecreaseButton(int orientation)
+			{
+				return noButton();
+			}
+
+			@Override
+			protected JButton createIncreaseButton(int orientation)
+			{
+				return noButton();
+			}
+
+			private JButton noButton()
+			{
+				JButton none = new JButton();
+				none.setPreferredSize(new Dimension(0, 0));
+				return none;
+			}
+		});
 		return scroll;
 	}
 

@@ -6,6 +6,7 @@ import static com.tsghub.TsgHubUi.*;
 import static net.runelite.client.util.ColorUtil.toHexColor;
 
 import java.awt.Color;
+import java.util.List;
 import javax.swing.text.html.HTML;
 
 final class TsgHubHtml
@@ -156,8 +157,16 @@ final class TsgHubHtml
 
 	static String tipCard(Color bar, String inner)
 	{
-		return "<table cellspacing='0' cellpadding='0' width='100%' style='margin-top:2px'><tr><td bgcolor='" + toHexColor(bar) + "' width='2'></td>"
-			+ "<td bgcolor='" + toHexColor(CARD_HOVER) + "' style='padding:3px 6px'>" + inner + "</td></tr></table>";
+		boolean marked = !bar.equals(ACCENT) && !bar.equals(CARD_HOVER) && !bar.equals(BORDER);
+		return "<table cellspacing='0' cellpadding='0' width='100%' style='margin-top:3px'><tr>" + (marked ? "<td bgcolor='" + toHexColor(bar) + "' width='2'></td>" : "")
+			+ "<td bgcolor='" + toHexColor(SLOT) + "' style='padding:4px 6px'>" + inner + "</td></tr></table>";
+	}
+
+	static String tipRows(List<String[]> rows)
+	{
+		StringBuilder out = new StringBuilder("<table cellspacing='0' cellpadding='0' width='100%'>");
+		for (String[] row : rows) out.append("<tr><td>").append(row[0]).append("</td><td align='right'>").append(tipLine(MUTED, row[1])).append("</td></tr>");
+		return out.append("</table>").toString();
 	}
 
 	static String withCorner(String body, String corner)
