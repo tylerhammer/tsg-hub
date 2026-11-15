@@ -51,6 +51,7 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 	private volatile BufferedImage page;
 	private volatile int scrollY;
 	private volatile int viewH;
+	private volatile int headerH;
 	private volatile Rectangle area;
 	private volatile BufferedImage card;
 	private volatile Rectangle read;
@@ -102,6 +103,8 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 		g.fillRect(0, 0, out.getWidth(), out.getHeight());
 		content.printAll(g);
 		g.dispose();
+		Component byline = content.getComponentCount() > 2 ? content.getComponent(2) : null;
+		headerH = byline == null ? 0 : byline.getY() + byline.getHeight() + GAP_M;
 		page = out;
 	}
 
@@ -213,12 +216,20 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		RoundRectangle2D frame = new RoundRectangle2D.Float(0, 0, READER_W, height, RADIUS * 2, RADIUS * 2);
 		g.setClip(frame);
-		g.drawImage(full.getSubimage(0, top, READER_W, height), 0, 0, null);
+		int head = Math.min(headerH, height);
+		g.drawImage(full.getSubimage(0, 0, READER_W, head), 0, 0, null);
+		g.drawImage(full.getSubimage(0, head + top, READER_W, height - head), 0, head, null);
+		if (top > 0)
+		{
+			g.setColor(BORDER);
+			g.drawLine(0, head, READER_W, head);
+		}
 		if (full.getHeight() > height)
 		{
-			int track = height - TRACK_TOP - 6;
-			int thumb = Math.max(24, track * height / full.getHeight());
-			int thumbY = TRACK_TOP + (track - thumb) * top / (full.getHeight() - height);
+			int trackTop = Math.max(TRACK_TOP, head + 4);
+			int track = height - trackTop - 6;
+			int thumb = Math.max(24, track * (height - head) / (full.getHeight() - head));
+			int thumbY = trackTop + (track - thumb) * top / (full.getHeight() - height);
 			g.setColor(BORDER_HOVER);
 			g.fillRoundRect(READER_W - 7, thumbY, 4, thumb, 4, 4);
 		}
@@ -252,7 +263,7 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 			closeReader();
 			return;
 		}
-		int x = point.x, y = point.y + scrollY;
+		int x = point.x, y = point.y < headerH ? point.y : point.y + scrollY;
 		SwingUtilities.invokeLater(() -> {
 			if (reader == null) return;
 			JPanel content = reader.page();
