@@ -29,8 +29,10 @@ import static com.tsghub.TsgHubUi.*;
 
 import com.google.common.base.Strings;
 import java.awt.Dimension;
+import java.awt.Graphics;
 import java.awt.GridLayout;
 import java.awt.image.BufferedImage;
+import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
@@ -50,7 +52,7 @@ class PlayerBanner extends JPanel
 
 	private final SpriteManager spriteManager;
 	private final JLabel nameLabel = fullTextLabel();
-	private final JLabel worldLabel = new JLabel();
+	private final JLabel worldLabel = worldChip(0, false);
 	private final JLabel areaLabel = fullTextLabel();
 	private final JLabel spellbookLabel = new JLabel();
 	private final JLabel hpLabel = statLabel("Hitpoints");
@@ -76,15 +78,22 @@ class PlayerBanner extends JPanel
 		nameLabel.setFont(boldFont());
 		nameLabel.setMinimumSize(new Dimension(0, 0));
 		nameLabel.putClientProperty("html.disable", Boolean.TRUE);
-		worldLabel.setFont(smallFont());
-		worldLabel.setForeground(MUTED);
 		areaLabel.setFont(smallFont());
 		areaLabel.setMinimumSize(new Dimension(0, 0));
 		areaLabel.putClientProperty("html.disable", Boolean.TRUE);
 
-		JPanel stats = panel(new GridLayout(1, 4, 2, 0));
+		JPanel stats = new JPanel(new GridLayout(1, 4, 2, 0))
+		{
+			@Override
+			protected void paintComponent(Graphics g)
+			{
+				paintSlot(g, this, SLOT);
+			}
+		};
+		stats.setOpaque(false);
+		stats.setBorder(BorderFactory.createEmptyBorder(4, 6, 3, 4));
 		for (JLabel stat : new JLabel[]{hpLabel, prayerLabel, specLabel, runLabel}) stats.add(stat);
-		add(row(nameLabel, worldLabel));
+		add(row(nameLabel, north(worldLabel)));
 		add(gap(GAP_XS));
 		add(row(areaLabel, spellbookLabel));
 		add(gap(GAP_S));
@@ -125,6 +134,7 @@ class PlayerBanner extends JPanel
 		boolean online = !Strings.isNullOrEmpty(player.getUsername());
 		boolean inGame = online && player.getWorld() > 0;
 		worldLabel.setText(displayWorlds && inGame ? "W" + player.getWorld() : "");
+		worldLabel.setVisible(displayWorlds && inGame);
 		String area = Strings.nullToEmpty(player.getArea());
 		String text = !online ? "Last seen stats" : !inGame ? "Not logged in" : area;
 		areaLabel.setText(text);

@@ -27,8 +27,12 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.function.LongFunction;
 import java.util.function.Supplier;
@@ -290,21 +294,51 @@ final class TsgHubUi
 	static JPanel eventLines(JsonObject event, LongFunction<AsyncBufferedImage> coins)
 	{
 		boolean active = "active".equals(str(event, "status"));
-		JPanel extras = panel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
-		if (bool(event, "hidden")) extras.add(badge("Hidden", MUTED));
-		JLabel prize = prizeLabel(event, null, coins);
-		if (prize != null) extras.add(prize);
-		JPanel lines = stack();
-		lines.add(fitHeight(row(shrinkable(boldLabel(eventName(event))), extras)));
 		Instant start = eventStart(event), end = eventEnd(event);
+		boolean dated = !active && start != null;
+		JPanel extras = inline();
+		if (bool(event, "hidden")) inline(extras, badge("Hidden", MUTED));
+		JLabel prize = prizeLabel(event, null, coins);
+		if (prize != null) inline(extras, prize);
+		JPanel lines = stack();
+		lines.add(fitHeight(dated ? row(shrinkable(boldLabel(eventName(event))), new JLabel()) : row(shrinkable(boldLabel(eventName(event))), extras)));
 		if (active && start != null && end != null && end.isAfter(start))
 		{
 			long now = TsgHubFormat.clock.millis();
 			lines.add(progressBar((int) ((now - start.toEpochMilli()) / 60000), (int) ((end.toEpochMilli() - start.toEpochMilli()) / 60000), null, null));
 		}
 		lines.add(gap(GAP_XS));
-		lines.add(fitHeight(row(shrinkable(caption(eventDetail(event))), label(eventCountdown(event), active ? SUCCESS : MUTED, smallFont()))));
-		return lines;
+		boolean soon = !active && start != null && start.toEpochMilli() - TsgHubFormat.clock.millis() < 86_400_000L;
+		JLabel countdown = label(eventCountdown(event), active ? SUCCESS : soon ? ACCENT : MUTED, smallFont());
+		if (dated) inline(extras, countdown);
+		lines.add(fitHeight(row(shrinkable(caption(eventDetail(event))), dated ? extras : countdown)));
+		if (!dated) return lines;
+		ZonedDateTime day = start.atZone(ZoneId.systemDefault());
+		JPanel stub = stack();
+		JLabel weekday = label(day.getDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.ENGLISH).toUpperCase(), ACCENT, smallFont());
+		JLabel date = boldLabel(String.valueOf(day.getDayOfMonth()));
+		for (JLabel part : new JLabel[]{weekday, date})
+		{
+			part.setAlignmentX(Component.CENTER_ALIGNMENT);
+			stub.add(part);
+		}
+		stub.setPreferredSize(new Dimension(30, stub.getPreferredSize().height));
+		stub.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, BORDER), BorderFactory.createEmptyBorder(0, 0, 0, 4)));
+		JPanel withDate = panel(new BorderLayout(6, 0));
+		withDate.add(stub, BorderLayout.WEST);
+		withDate.add(lines, BorderLayout.CENTER);
+		return withDate;
+	}
+
+	static JPanel inline()
+	{
+		return panel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+	}
+
+	static void inline(JPanel row, Component part)
+	{
+		if (row.getComponentCount() > 0) row.add(Box.createHorizontalStrut(GAP_S));
+		row.add(part);
 	}
 
 	static JLabel shrinkable(JLabel label)
@@ -531,7 +565,26 @@ final class TsgHubUi
 
 	static JButton button(String text)
 	{
-		JButton button = new JButton(text);
+		JButton button = new JButton(text)
+		{
+			@Override
+			protected void paintComponent(Graphics g)
+			{
+				Color fill = getBackground();
+				if (!isEnabled()) fill = ColorUtil.colorLerp(fill, BACKGROUND, .5);
+				else if (getModel().isPressed()) fill = fill.darker();
+				else if (getModel().isRollover()) fill = ACCENT_STRONG.equals(fill) ? ACCENT_HOVER : RAISED.equals(fill) ? RAISED_HOVER : fill.brighter();
+				paintSlot(g, this, fill);
+				super.paintComponent(g);
+			}
+		};
+		button.setContentAreaFilled(false);
+		button.setBorderPainted(false);
+		button.setOpaque(false);
+		button.setRolloverEnabled(true);
+		button.setBackground(RAISED);
+		button.setForeground(TEXT);
+		button.setBorder(BorderFactory.createEmptyBorder(6, 10, 5, 10));
 		button.setFocusPainted(false);
 		button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 		return button;
@@ -557,7 +610,7 @@ final class TsgHubUi
 	static JButton primaryButton(String text)
 	{
 		JButton button = button(text);
-		button.setBackground(ACCENT.darker());
+		button.setBackground(ACCENT_STRONG);
 		button.setForeground(Color.WHITE);
 		return button;
 	}

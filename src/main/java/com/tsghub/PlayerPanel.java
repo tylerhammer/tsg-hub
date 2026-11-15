@@ -31,7 +31,6 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
@@ -137,12 +136,6 @@ class PlayerPanel extends JPanel
 		details.setOpaque(false);
 		details.setLayout(new BoxLayout(details, BoxLayout.Y_AXIS));
 
-		JComponent rule = new JPanel();
-		rule.setBackground(BORDER);
-		rule.setMinimumSize(new Dimension(0, 1));
-		rule.setPreferredSize(new Dimension(10, 1));
-		rule.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
-
 		JComponent[] contents = {inventoryPanel, equipmentPanel, prayersPanel, skillsPanel};
 		JPanel display = new JPanel(new BorderLayout())
 		{
@@ -155,17 +148,13 @@ class PlayerPanel extends JPanel
 			}
 		};
 		display.setOpaque(false);
-		MaterialTabGroup tabs = new MaterialTabGroup(display);
-		tabs.setLayout(new FlowLayout(FlowLayout.CENTER, 0, 0));
-		tabs.setOpaque(false);
+		MaterialTabGroup tabs = segmented(display);
 		String[] names = {"Items", "Gear", "Prayer", "Skills"};
 		for (int i = 0; i < contents.length; i++) addTab(tabs, names[i], contents[i], i);
 
-		for (JComponent c : new JComponent[]{rule, tabs, display}) c.setAlignmentX(LEFT_ALIGNMENT);
+		for (JComponent c : new JComponent[]{tabs, display}) c.setAlignmentX(LEFT_ALIGNMENT);
 		details.add(gap(GAP_M));
-		details.add(rule);
-		details.add(gap(GAP_XS));
-		details.add(tabs);
+		details.add(fitHeight(tabs));
 		details.add(gap(GAP_S));
 		details.add(display);
 	}
@@ -173,7 +162,6 @@ class PlayerPanel extends JPanel
 	private void addTab(MaterialTabGroup group, String name, JComponent content, int tab)
 	{
 		MaterialTab materialTab = themedTab(name, group, content);
-		materialTab.setFont(smallFont());
 		materialTab.setOnSelectEvent(() -> {
 			selected = tab;
 			updatePlayerData(player);

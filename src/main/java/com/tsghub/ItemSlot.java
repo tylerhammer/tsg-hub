@@ -2,6 +2,7 @@ package com.tsghub;
 
 import java.awt.AlphaComposite;
 import java.awt.Dimension;
+import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import javax.swing.ImageIcon;
@@ -20,11 +21,17 @@ class ItemSlot extends JLabel
 	ItemSlot(int width, int height, ItemManager itemManager)
 	{
 		this.itemManager = itemManager;
-		setOpaque(true);
-		setBackground(TsgHubTheme.SLOT);
+		setOpaque(false);
 		setPreferredSize(new Dimension(width, height));
 		setMinimumSize(getPreferredSize());
 		setHorizontalAlignment(CENTER);
+	}
+
+	@Override
+	protected void paintComponent(Graphics g)
+	{
+		TsgHubTheme.paintSlot(g, this, TsgHubTheme.SLOT);
+		super.paintComponent(g);
 	}
 
 	void setPlaceholder(BufferedImage image)

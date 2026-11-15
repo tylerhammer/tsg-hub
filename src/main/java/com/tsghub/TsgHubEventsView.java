@@ -178,7 +178,7 @@ final class TsgHubEventsView
 	private void renderEvents()
 	{
 		String clan = plugin.clan().name();
-		shell.setHeader("Events", "", true, true);
+		shell.setHeader("Events", events == null ? "" : eventsSummary(), true, true);
 		shell.page.removeAll();
 		if (clan.isEmpty())
 		{

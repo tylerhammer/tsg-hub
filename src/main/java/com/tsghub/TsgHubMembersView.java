@@ -18,6 +18,8 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.image.BufferedImage;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
@@ -101,7 +103,7 @@ final class TsgHubMembersView
 
 	void renderMembers()
 	{
-		shell.viewHeader(View.MEMBERS, "Members", "", membersSummary());
+		shell.viewHeader(View.MEMBERS, "Members", members == null ? "" : membersSummary(), membersSummary());
 		membersPage.removeAll();
 		if (members == null)
 		{
@@ -109,14 +111,19 @@ final class TsgHubMembersView
 			refresh(membersPage);
 			return;
 		}
-		membersPage.add(shell.sectionHeading("Online (" + members.size() + ")", null));
 		if (members.size() == 0) membersPage.add(TsgHubSidebarPanel.hint("Nobody online right now."));
 		int myWorld = 0;
 		for (JsonObject member : objects(members))
 			if (samePlayer(str(member, "displayName"), plugin.clan().playerName())) myWorld = integer(member, "world", 0);
-		for (JsonObject member : objects(members))
+		String[] groups = {"Bossing", "Skilling", "Elsewhere"};
+		for (int g = 0; g < groups.length; g++)
 		{
-			addCard(membersPage, memberCard(member, myWorld));
+			List<JsonObject> inGroup = new ArrayList<>();
+			for (JsonObject member : objects(members)) if (activityGroup(str(member, "activity")) == g) inGroup.add(member);
+			if (inGroup.isEmpty()) continue;
+			if (membersPage.getComponentCount() > 0) membersPage.add(gap(GAP_S));
+			membersPage.add(shell.sectionHeading(groups[g] + " (" + inGroup.size() + ")", null));
+			for (JsonObject member : inGroup) addCard(membersPage, memberCard(member, myWorld));
 		}
 		if (offlineMembers.size() > 0)
 		{
@@ -134,6 +141,12 @@ final class TsgHubMembersView
 		membersPage.add(TsgHubSidebarPanel.hint(plugin.locationSharingEnabled() ? "Leave clan chat to hide yourself."
 			: "You show as Online. Turn on location sharing in settings to show what you're doing."));
 		refresh(membersPage);
+	}
+
+	static int activityGroup(String activity)
+	{
+		if (activity.startsWith("Bossing") || activity.startsWith("Raiding") || activity.startsWith("Minigame")) return 0;
+		return activity.startsWith("Skilling") ? 1 : 2;
 	}
 
 	private JLabel memberName(JsonObject member, String text, Color color, Font font)
@@ -199,7 +212,7 @@ final class TsgHubMembersView
 		JLabel detailLabel = null;
 		if (!detail.isEmpty())
 		{
-			boolean active = !"Idle".equals(activity) && !"Online".equals(activity) && !activity.isEmpty();
+			boolean active = activityGroup(activity) == 0;
 			detailLabel = noFullText(shrinkable(label(detail, active ? SUCCESS : MUTED, small)));
 			JPanel bottom = row();
 			bottom.add(detailLabel, BorderLayout.CENTER);

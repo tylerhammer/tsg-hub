@@ -75,9 +75,7 @@ final class TsgHubBoardView
 	{
 		JPanel board = panel(new BorderLayout(0, 6));
 		JPanel display = panel(new BorderLayout());
-		MaterialTabGroup tabs = new MaterialTabGroup(display);
-		tabs.setLayout(new GridLayout(1, 3, 4, 0));
-		tabs.setOpaque(false);
+		MaterialTabGroup tabs = segmented(display);
 		MaterialTab tasks = themedTab("Tasks", tabs, scroll(tasksTab));
 		tabs.addTab(tasks);
 		tabs.addTab(themedTab("Scores", tabs, scroll(scoreboardTab)));
@@ -217,9 +215,25 @@ final class TsgHubBoardView
 			tasksTab.add(shell.errorPanel("All done!", "Your team has completed every task."));
 		}
 		for (JsonObject task : open) addTaskCard(task, progressFor(progressRows, str(task, "id")));
-		if (!hideCompleted.isSelected())
+		if (!hideCompleted.isSelected() && !done.isEmpty())
 		{
-			for (JsonObject task : done) addTaskCard(task, progressFor(progressRows, str(task, "id")));
+			tasksTab.add(listHeading("Completed (" + done.size() + ")", false));
+			JPanel card = card();
+			card.setBorder(BorderFactory.createCompoundBorder(card.getBorder(), BorderFactory.createEmptyBorder(0, 0, 1, 0)));
+			JPanel rows = stack();
+			for (JsonObject task : done)
+			{
+				JsonObject progress = progressFor(progressRows, str(task, "id"));
+				JLabel title = shrinkable(label(str(task, "title"), MUTED, plainFont()));
+				title.putClientProperty("html.disable", Boolean.TRUE);
+				title.setIcon(icon("check", SUCCESS));
+				JPanel line = fitHeight(row(title, caption(String.valueOf(integer(task, "points", 1)))));
+				lazyTooltip(line, () -> taskTooltip(task, progress, truncated(title)));
+				if (rows.getComponentCount() > 0) rows.add(gap(GAP_S));
+				rows.add(line);
+			}
+			card.add(rows, BorderLayout.CENTER);
+			addCard(tasksTab, fitHeight(card));
 		}
 		refresh(tasksTab);
 	}

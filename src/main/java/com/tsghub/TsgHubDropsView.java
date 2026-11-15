@@ -15,7 +15,6 @@ import com.tsghub.TsgHubSidebarPanel.View;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridLayout;
@@ -169,14 +168,14 @@ final class TsgHubDropsView
 
 		String item = str(drop, "name");
 		JLabel name = shrinkable(boldLabel(item.isEmpty() ? str(drop, "item") : item));
-		JPanel extras = panel(new FlowLayout(FlowLayout.RIGHT, 3, 0));
+		JPanel extras = inline();
 		for (JsonElement tag : array(drop, "tags"))
 		{
 			Color color = tag.isJsonObject() ? ColorUtil.fromHex(str(tag.getAsJsonObject(), "color")) : null;
-			if (color != null) extras.add(badge(str(tag.getAsJsonObject(), "text"), color));
+			if (color != null) inline(extras, badge(str(tag.getAsJsonObject(), "text"), color));
 		}
 		long value = drop.has("value") ? drop.get("value").getAsLong() : 0;
-		if (value > 0) extras.add(label(formatGp(value), coinColor(value), smallFont()));
+		if (value > 0) inline(extras, label(formatGp(value), value >= 1_000_000 ? WARNING : MUTED, smallFont()));
 		card.add(TsgHubSidebarPanel.fillWidth(twoLines(
 			row(name, caption(TsgHubDrops.dropWhen(str(drop, "receivedAt"), now, zone))),
 			row(shrinkable(label(player, self ? ACCENT : MUTED, smallFont())), extras))), BorderLayout.CENTER);
