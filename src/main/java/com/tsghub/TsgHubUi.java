@@ -26,6 +26,7 @@ import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -279,13 +280,22 @@ final class TsgHubUi
 
 	static JPanel eventLines(JsonObject event, LongFunction<AsyncBufferedImage> coins)
 	{
-		JPanel top = row(shrinkable(boldLabel(eventName(event))),
-			label(eventCountdown(event), "active".equals(str(event, "status")) ? SUCCESS : MUTED, smallFont()));
-		JPanel extras = panel(new FlowLayout(FlowLayout.RIGHT, 3, 0));
+		boolean active = "active".equals(str(event, "status"));
+		JPanel extras = panel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
 		if (bool(event, "hidden")) extras.add(badge("Hidden", MUTED));
-		JLabel prize = prizeLabel(event, smallFont(), coins);
+		JLabel prize = prizeLabel(event, null, coins);
 		if (prize != null) extras.add(prize);
-		return twoLines(top, row(shrinkable(caption(eventDetail(event))), extras));
+		JPanel lines = stack();
+		lines.add(fitHeight(row(shrinkable(boldLabel(eventName(event))), extras)));
+		Instant start = eventStart(event), end = eventEnd(event);
+		if (active && start != null && end != null && end.isAfter(start))
+		{
+			long now = TsgHubFormat.clock.millis();
+			lines.add(progressBar((int) ((now - start.toEpochMilli()) / 60000), (int) ((end.toEpochMilli() - start.toEpochMilli()) / 60000), null, null));
+		}
+		lines.add(gap(GAP_XS));
+		lines.add(fitHeight(row(shrinkable(caption(eventDetail(event))), label(eventCountdown(event), active ? SUCCESS : MUTED, smallFont()))));
+		return lines;
 	}
 
 	static JLabel shrinkable(JLabel label)
@@ -615,16 +625,17 @@ final class TsgHubUi
 		List<Long> prizes = eventPrizes(event);
 		if (prizes.isEmpty()) return null;
 		long total = prizeTotal(prizes);
-		JLabel label = label(formatGp(total), coinColor(total), font);
+		JLabel label = font == null ? badge(formatGp(total), coinColor(total)) : label(formatGp(total), coinColor(total), font);
 		label.setToolTipText("Prize pool: " + prizeSummary(prizes));
 		label.setIconTextGap(2);
+		int w = font == null ? 11 : COIN_ICON_W, h = font == null ? 10 : COIN_ICON_H;
 		AsyncBufferedImage image = coins.apply(total);
 		if (image != null)
 		{
-			ImageIcon icon = new ImageIcon(ImageUtil.resizeImage(image, COIN_ICON_W, COIN_ICON_H));
+			ImageIcon icon = new ImageIcon(ImageUtil.resizeImage(image, w, h));
 			label.setIcon(icon);
 			image.onLoaded(() -> SwingUtilities.invokeLater(() -> {
-				icon.setImage(ImageUtil.resizeImage(image, COIN_ICON_W, COIN_ICON_H));
+				icon.setImage(ImageUtil.resizeImage(image, w, h));
 				label.repaint();
 			}));
 		}

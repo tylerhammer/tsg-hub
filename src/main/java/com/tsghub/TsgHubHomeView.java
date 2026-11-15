@@ -14,7 +14,6 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.GridLayout;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Arrays;
@@ -53,12 +52,12 @@ final class TsgHubHomeView
 		this.plugin = plugin;
 		this.shell = shell;
 		sections = Arrays.asList(
-			new Section("Events", icon("calendar", ACCENT), () -> shell.eventsView.openEvents(), () -> shell.eventsView.eventsSummary(), () -> shell.eventsView.liveEvents() > 0),
-			new Section("Parties", icon("party", ACCENT), () -> shell.partiesView.showParties(), () -> shell.partiesView.partiesSummary(), () -> plugin.groups().inGroup()),
-			new Section("Members", icon("members", ACCENT), () -> shell.membersView.showMembers(), () -> shell.membersView.membersSummary(), () -> shell.membersView.onlineCount() > 0),
-			new Section("Drops", icon("drops", ACCENT), () -> shell.dropsView.showDrops(), () -> "", () -> false),
-			new Section("Records", icon("records", ACCENT), () -> shell.recordsView.showRecords(), () -> "PBs, KC and clues", () -> false),
-			new Section("News", icon("news", ACCENT), () -> shell.newsView.showNews(), () -> shell.newsView.newsSummary(), () -> plugin.announcements().unreadCount() > 0));
+			new Section("Events", icon("calendar", ACCENT, 16), () -> shell.eventsView.openEvents(), () -> shell.eventsView.eventsSummary(), () -> shell.eventsView.liveEvents() > 0),
+			new Section("Parties", icon("party", ACCENT, 16), () -> shell.partiesView.showParties(), () -> shell.partiesView.partiesSummary(), () -> plugin.groups().inGroup()),
+			new Section("Members", icon("members", ACCENT, 16), () -> shell.membersView.showMembers(), () -> shell.membersView.membersSummary(), () -> shell.membersView.onlineCount() > 0),
+			new Section("Drops", icon("drops", ACCENT, 16), () -> shell.dropsView.showDrops(), () -> "", () -> false),
+			new Section("Records", icon("records", ACCENT, 16), () -> shell.recordsView.showRecords(), () -> "PBs, KC and clues", () -> false),
+			new Section("News", icon("news", ACCENT, 16), () -> shell.newsView.showNews(), () -> shell.newsView.newsSummary(), () -> plugin.announcements().unreadCount() > 0));
 	}
 
 	private static final class Section
@@ -69,7 +68,6 @@ final class TsgHubHomeView
 		private final Supplier<String> summary;
 		private final BooleanSupplier live;
 		private JLabel summaryLabel;
-		private boolean half;
 
 		Section(String name, Icon icon, Runnable open, Supplier<String> summary, BooleanSupplier live)
 		{
@@ -98,14 +96,14 @@ final class TsgHubHomeView
 		}
 		shell.setHeader("TSG Hub", plugin.clan().playerName(), false, true);
 		shell.page.removeAll();
-		for (int i = 0; i < sections.size(); i += 2)
+		JPanel live = shell.eventsView.liveCard();
+		if (live != null)
 		{
-			boolean pair = i + 1 < sections.size();
-			JPanel row = panel(new GridLayout(1, pair ? 2 : 1, 6, 0));
-			row.add(sectionTile(sections.get(i), pair));
-			if (pair) row.add(sectionTile(sections.get(i + 1), true));
-			addCard(shell.page, fitHeight(row));
+			shell.page.add(listHeading("Happening now", true));
+			addCard(shell.page, live);
+			shell.page.add(gap(GAP_S));
 		}
+		for (Section section : sections) addCard(shell.page, sectionRow(section));
 		shell.page.add(polls);
 		shownPolls.clear();
 		renderPolls();
@@ -200,35 +198,26 @@ final class TsgHubHomeView
 		if (shell.view == View.HOME) renderHome();
 	}
 
-	private JPanel sectionTile(Section section, boolean half)
+	private JPanel sectionRow(Section section)
 	{
-		JPanel tile = new JPanel();
-		tile.setLayout(new BoxLayout(tile, BoxLayout.Y_AXIS));
-		tile.setBackground(CARD);
-		tile.setBorder(BorderFactory.createEmptyBorder(12, 6, 12, 6));
-		JLabel icon = new JLabel(section.icon);
-		JLabel name = boldLabel(section.name);
-		JLabel summary = label("", MUTED, smallFont());
-		section.summaryLabel = summary;
-		section.half = half;
+		JPanel row = card();
+		JLabel name = label(section.name, TEXT, plainFont());
+		name.setIcon(section.icon);
+		name.setIconTextGap(8);
+		section.summaryLabel = label("", MUTED, smallFont());
 		summarize(section);
-		tile.add(icon);
-		tile.add(gap(GAP_M));
-		tile.add(name);
-		tile.add(gap(GAP_XS));
-		tile.add(summary);
-		for (Component part : tile.getComponents())
-		{
-			((JComponent) part).setAlignmentX(Component.CENTER_ALIGNMENT);
-			if (part instanceof JLabel) ((JLabel) part).setHorizontalAlignment(JLabel.CENTER);
-		}
-		clickable(tile, section.open);
-		return tile;
+		Glyph chevron = icon("chevron", DIM, 10);
+		chevron.angle = -Math.PI / 2;
+		JPanel east = row(section.summaryLabel, new JLabel(chevron));
+		row.add(name, BorderLayout.WEST);
+		row.add(east, BorderLayout.EAST);
+		clickable(row, section.open);
+		return fitHeight(row);
 	}
 
 	private void summarize(Section section)
 	{
-		String text = html("<div style='text-align:center'>" + escape(section.summary.get()) + "</div>", section.half ? 80 : 180);
+		String text = section.summary.get();
 		if (!text.equals(section.summaryLabel.getText())) section.summaryLabel.setText(text);
 		section.summaryLabel.setForeground(section.live.getAsBoolean() ? SUCCESS : MUTED);
 	}

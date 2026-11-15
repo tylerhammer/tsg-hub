@@ -314,6 +314,15 @@ final class TsgHubEventsView
 		return fitHeight(line);
 	}
 
+	JPanel liveCard()
+	{
+		if (events == null) return null;
+		JsonObject best = null;
+		for (JsonObject event : objects(events))
+			if ("active".equals(str(event, "status")) && (best == null || joined(event) && !joined(best))) best = event;
+		return best == null ? null : eventCard(best);
+	}
+
 	private JPanel eventCard(JsonObject event)
 	{
 		boolean joined = joined(event);
