@@ -21,7 +21,7 @@ Join a bingo team, climb the Skill of the Week leaderboard, find a raid party, a
 3. Click **Enable sharing**. Nothing is sent until you do.
 4. Pick an event. For bingo, enter the team code an admin gave you, or [sign up](#sign-up-without-a-team) if the bingo takes sign-ups. Your team is fixed once you join.
 
-<table align="center"><tr><td align="center" valign="top"><img src="docs/images/home.png" width="260" alt="TSG Hub home with Events, Parties, Members and Drops tiles"><br><sub>Home</sub></td><td align="center" valign="top"><img src="docs/images/events.png" width="260" alt="Live and upcoming events"><br><sub>Events</sub></td></tr></table>
+<table align="center"><tr><td align="center" valign="top"><img src="docs/images/home.png" width="260" alt="TSG Hub home with the live event card and a row for each section"><br><sub>Home</sub></td><td align="center" valign="top"><img src="docs/images/events.png" width="260" alt="Live and upcoming events"><br><sub>Events</sub></td></tr></table>
 
 **Disconnect from event** on the **Team** tab stops tracking on this device. Your team keeps its progress, and you can rejoin with the same code.
 
@@ -37,7 +37,7 @@ Join a bingo team, climb the Skill of the Week leaderboard, find a raid party, a
 | 👥 **[Members](#members)** | Which clanmates are online, their world, area and what they're doing |
 | 💎 **[Drops](#drops)** | The clan's big drops, raid loot, pets and collection log items, so you can catch up |
 | 🏅 **[Records](#records)** | The clan's top kill counts and fastest PBs for every boss and raid, plus clue scroll counts |
-| 📰 **[News](#news)** | Announcements from the admins, in the sidebar and your chatbox |
+| 📰 **[News](#news)** | Announcements from the admins, in the sidebar, your chatbox and on screen |
 | 📌 **[Split view](#split-view)** | Pin Members, Parties or Drops below the main view |
 | 🔗 **[Discord linking](#link-your-discord)** | Link your RuneScape account to the clan Discord |
 | 🛠️ **[Admin tools](#for-admins)** | One click to the admin site, plus member notes and warnings in the sidebar |
@@ -126,7 +126,7 @@ The leader can click **Start loot split** to share the party's raid purples. Whi
 
 ## Members
 
-The **Members** section lists clanmates who are in clan chat with sharing on. Each row shows their world, area and what they're doing, such as `Mining · Motherlode Mine`, `Vorkath` or `Chambers of Xeric`. Clanmates on your world have their world shown in green.
+The **Members** section lists clanmates who are in clan chat with sharing on. Each row shows their world, area and what they're doing, such as `Mining · Motherlode Mine`, `Vorkath` or `Chambers of Xeric`. Clanmates on your world have their world shown in green. The list is grouped by what people are doing: **Bossing** (bosses, raids and minigames), **Skilling** and **Elsewhere**.
 
 Activity is detected automatically from where you are and the XP you gain.
 
@@ -169,7 +169,9 @@ Kill and clue counts come from the official hiscores. The TSG Hub service looks 
 
 ## News
 
-The **News** section lists announcements from the clan admins, pinned ones first. A pin marks pinned posts, a green dot marks ones you haven't read, and the **News** tile on the home screen shows how many are new. Each new announcement appears in your chatbox once, when you log in or when it's posted. Links in an announcement show the full address and ask before opening in your browser. Turn that off with **Clan announcements** under **Chat** in the plugin settings.
+The **News** section lists announcements from the clan admins, pinned ones first. A pin marks pinned posts, a green dot marks ones you haven't read, and the **News** row on the home screen shows how many are new. Each new announcement appears in your chatbox once, when you log in or when it's posted. Links in an announcement show the full address and ask before opening in your browser. Turn that off with **Clan announcements** under **Chat** in the plugin settings.
+
+New announcements from the last 3 days also show as a small card at the top of the game view, with the title, who posted it and when. **Dismiss** marks it read; **Read more** opens it. Clicking a post in **News** opens it in the middle of the game view, with its formatting, images and polls: scroll with the mouse wheel, click links or vote right there, and click **✕** to close it. The title stays put while you scroll. Turn the card and the in-game reader off with **Announcements on screen** under **Chat**; posts then open in a separate window.
 
 ## Split view
 
