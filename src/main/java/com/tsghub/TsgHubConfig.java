@@ -105,7 +105,7 @@ public interface TsgHubConfig extends Config
 		return true;
 	}
 
-	@ConfigItem(keyName = "newsOverlay", position = 4, section = chatSection, name = "Announcements on screen", description = WRAP + "Show new admin announcements in a card over the game until you dismiss them. Alt+drag to move it." + END)
+	@ConfigItem(keyName = "newsOverlay", position = 4, section = chatSection, name = "Announcements on screen", description = WRAP + "Show new admin announcements in a card over the game until you dismiss them, and open News posts in the middle of the screen." + END)
 	default boolean newsOverlay()
 	{
 		return true;
