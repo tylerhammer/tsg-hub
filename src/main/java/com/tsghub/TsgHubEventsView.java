@@ -178,7 +178,7 @@ final class TsgHubEventsView
 	private void renderEvents()
 	{
 		String clan = plugin.clan().name();
-		shell.setHeader("Events", "", true, true);
+		shell.setHeader("Events", events == null ? "" : eventsSummary(), true, true);
 		shell.page.removeAll();
 		if (clan.isEmpty())
 		{
@@ -314,7 +314,16 @@ final class TsgHubEventsView
 		return fitHeight(line);
 	}
 
-	private JPanel eventCard(JsonObject event)
+	JsonObject liveEvent()
+	{
+		if (events == null) return null;
+		JsonObject best = null;
+		for (JsonObject event : objects(events))
+			if ("active".equals(str(event, "status")) && (best == null || joined(event) && !joined(best))) best = event;
+		return best;
+	}
+
+	JPanel eventCard(JsonObject event)
 	{
 		boolean joined = joined(event);
 		JPanel card = card();

@@ -30,7 +30,6 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
-import net.runelite.client.ui.components.ProgressBar;
 import net.runelite.client.ui.components.materialtabs.MaterialTab;
 import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
 
@@ -76,9 +75,7 @@ final class TsgHubBoardView
 	{
 		JPanel board = panel(new BorderLayout(0, 6));
 		JPanel display = panel(new BorderLayout());
-		MaterialTabGroup tabs = new MaterialTabGroup(display);
-		tabs.setLayout(new GridLayout(1, 3, 4, 0));
-		tabs.setOpaque(false);
+		MaterialTabGroup tabs = segmented(display);
 		MaterialTab tasks = themedTab("Tasks", tabs, scroll(tasksTab));
 		tabs.addTab(tasks);
 		tabs.addTab(themedTab("Scores", tabs, scroll(scoreboardTab)));
@@ -151,14 +148,15 @@ final class TsgHubBoardView
 		row.add(label(html(escape(teamName), CARD_TITLE_W), TEXT, boldFont()), BorderLayout.CENTER);
 		if (rank > 0 && !bool(boardEvent, "hideScores"))
 		{
-			JLabel rankLabel = label("#" + rank + " of " + ranked.size(), rank == 1 ? ACCENT : MUTED, boldFont());
-			row.add(rankLabel, BorderLayout.EAST);
+			row.add(north(badge("#" + rank + " of " + ranked.size(), rank == 1 ? ACCENT : MUTED)), BorderLayout.EAST);
 		}
 		card.add(row, BorderLayout.NORTH);
-		ProgressBar bar = progressBar(completed, Math.max(totalTasks, 1));
-		bar.setLeftLabel(integer(score, "points", 0) + " pts");
-		bar.setRightLabel(completed + "/" + totalTasks + " tasks");
-		card.add(bar, BorderLayout.CENTER);
+		JPanel middle = stack();
+		middle.add(gap(GAP_S));
+		middle.add(fitHeight(row(label(integer(score, "points", 0) + " pts", TEXT, plainFont()), caption(completed + "/" + totalTasks + " tasks"))));
+		middle.add(gap(GAP_S));
+		middle.add(progressBar(completed, Math.max(totalTasks, 1), null, null));
+		card.add(middle, BorderLayout.CENTER);
 		JPanel prizes = prizeRow(boardEvent, smallFont());
 		if (prizes != null)
 		{
@@ -217,9 +215,25 @@ final class TsgHubBoardView
 			tasksTab.add(shell.errorPanel("All done!", "Your team has completed every task."));
 		}
 		for (JsonObject task : open) addTaskCard(task, progressFor(progressRows, str(task, "id")));
-		if (!hideCompleted.isSelected())
+		if (!hideCompleted.isSelected() && !done.isEmpty())
 		{
-			for (JsonObject task : done) addTaskCard(task, progressFor(progressRows, str(task, "id")));
+			tasksTab.add(listHeading("Completed (" + done.size() + ")", false));
+			JPanel card = card();
+			card.setBorder(BorderFactory.createCompoundBorder(card.getBorder(), BorderFactory.createEmptyBorder(0, 0, 1, 0)));
+			JPanel rows = stack();
+			for (JsonObject task : done)
+			{
+				JsonObject progress = progressFor(progressRows, str(task, "id"));
+				JLabel title = shrinkable(label(str(task, "title"), MUTED, plainFont()));
+				title.putClientProperty("html.disable", Boolean.TRUE);
+				title.setIcon(icon("check", SUCCESS));
+				JPanel line = fitHeight(row(title, caption(String.valueOf(integer(task, "points", 1)))));
+				lazyTooltip(line, () -> taskTooltip(task, progress, truncated(title)));
+				if (rows.getComponentCount() > 0) rows.add(gap(GAP_S));
+				rows.add(line);
+			}
+			card.add(rows, BorderLayout.CENTER);
+			addCard(tasksTab, fitHeight(card));
 		}
 		refresh(tasksTab);
 	}
@@ -287,7 +301,8 @@ final class TsgHubBoardView
 		JLabel name = shrinkable(label(str(task, "title"), completed ? MUTED : TEXT, boldFont()));
 		name.putClientProperty("html.disable", Boolean.TRUE);
 		if (completed) name.setIcon(icon("check", SUCCESS));
-		JLabel points = label(integer(task, "points", 1) + " pts", completed ? MUTED : ACCENT, smallFont());
+		JLabel points = badge(String.valueOf(integer(task, "points", 1)), completed ? MUTED : ACCENT);
+		points.setToolTipText("Points");
 		card.add(row(name, north(points)), BorderLayout.NORTH);
 
 		JPanel body = stack();
@@ -310,17 +325,17 @@ final class TsgHubBoardView
 		else if (solo)
 		{
 			int have = mine == null ? 0 : integer(mine, "progress", 0);
-			if (target > 1) addBar(body, have, target, "You: " + have + "/" + target);
+			if (target > 1) addBar(body, have, target, "You");
 			addSoloLeader(body, progress);
 		}
 		else if (individual)
 		{
 			int have = mine == null ? 0 : integer(mine, "progress", 0);
 			int need = mine == null ? 1 : integer(mine, "target", 1);
-			if (mine != null && need > 1 && !bool(mine, "completed")) addBar(body, have, need, "You: " + have + "/" + need);
+			if (mine != null && need > 1 && !bool(mine, "completed")) addBar(body, have, need, "You");
 			body.add(teammatesLine(mine, value, target));
 		}
-		else if (target > 1) addBar(body, value, target, value + " / " + target);
+		else if (target > 1) addBar(body, value, target, null);
 		if (!individual && !solo && (!progress.has("sets") || completed))
 		{
 			String amounts = contributorsHtml(progress, " · ", CARD_CONTRIBUTORS, boardDisplayName);
@@ -431,10 +446,8 @@ final class TsgHubBoardView
 		{
 			int have = integer(set, "have", 0);
 			int target = integer(set, "target", 1);
-			ProgressBar bar = progressBar(have, target);
-			bar.setCenterLabel((mine ? "You: " : "") + str(set, "name") + " " + have + "/" + target);
 			body.add(gap(GAP_S));
-			body.add(bar);
+			body.add(progressBar(have, target, str(set, "name"), have + "/" + target));
 			body.add(gap(GAP_XS));
 			List<String> needed = strings(array(set, "needed"));
 			if (!needed.isEmpty()) body.add(TsgHubSidebarPanel.cardNote("Need: " + String.join(", ", needed)));
@@ -472,7 +485,7 @@ final class TsgHubBoardView
 		if (individual || solo) sections += memberSections(progress, solo, head.isEmpty());
 		else if (sections.isEmpty() && array(progress, "contributors").size() > CARD_CONTRIBUTORS)
 		{
-			sections += tipSection(head.isEmpty(), tipLine(MUTED, "<b>CONTRIBUTORS</b>")) + tipCard(CARD_HOVER, contributorsHtml(progress, "<br>", 50, boardDisplayName));
+			sections += tipSection(head.isEmpty(), tipLine(MUTED, "<b>CONTRIBUTORS</b>")) + tipCard(null, contributorsHtml(progress, "<br>", 50, boardDisplayName));
 		}
 		if (!completed) sections += claimSection(str(task, "id"), head.isEmpty() && sections.isEmpty());
 		if (head.isEmpty() && sections.isEmpty()) return null;
@@ -489,7 +502,7 @@ final class TsgHubBoardView
 			String note = str(claim, "note");
 			lines.add(claimName(claim) + (note.isEmpty() ? "" : "<br>" + tipLine(MUTED, escape(note))));
 		}
-		return tipSection(first, tipLine(MUTED, "<b>CLAIMED</b> " + claims.size())) + tipCard(ACCENT, String.join("<br>", lines));
+		return tipSection(first, tipLine(MUTED, "<b>CLAIMED</b> " + claims.size())) + tipCard(null, String.join("<br>", lines));
 	}
 
 	private String setSections(JsonObject progress, boolean first)
@@ -504,7 +517,7 @@ final class TsgHubBoardView
 				String by = str(piece, "by");
 				found.add(escape(str(piece, "piece")) + (by.isEmpty() ? "" : " (" + nameHtml(by, boardDisplayName) + ")"));
 			}
-			if (!found.isEmpty()) out.append(tipCard(ACCENT, "<b>" + escape(str(set, "name")) + "</b><br>" + String.join(", ", found)));
+			if (!found.isEmpty()) out.append(tipCard(null, "<b>" + escape(str(set, "name")) + "</b><br>" + String.join(", ", found)));
 		}
 		return out.length() == 0 ? "" : tipSection(first, tipLine(MUTED, "<b>FOUND</b>")) + out;
 	}
@@ -525,10 +538,10 @@ final class TsgHubBoardView
 			else if (bool(member, "completed")) done.add(name);
 			else waiting.add(need > 1 ? name + " " + tipLine(MUTED, have + "/" + need) : name);
 		}
-		if (solo) return tipSection(first, tipLine(MUTED, "<b>STANDINGS</b>")) + tipCard(CARD_HOVER, String.join("<br>", waiting));
+		if (solo) return tipSection(first, tipLine(MUTED, "<b>STANDINGS</b>")) + tipCard(null, String.join("<br>", waiting));
 		String out = "";
 		if (!done.isEmpty()) out += tipSection(first, tipLine(SUCCESS, "<b>DONE</b> ") + tipLine(MUTED, String.valueOf(done.size()))) + tipCard(SUCCESS, String.join("<br>", done));
-		if (!waiting.isEmpty()) out += tipSection(first && done.isEmpty(), tipLine(MUTED, "<b>STILL NEED</b> " + waiting.size())) + tipCard(CARD_HOVER, String.join("<br>", waiting));
+		if (!waiting.isEmpty()) out += tipSection(first && done.isEmpty(), tipLine(MUTED, "<b>STILL NEED</b> " + waiting.size())) + tipCard(null, String.join("<br>", waiting));
 		return out;
 	}
 
@@ -640,10 +653,8 @@ final class TsgHubBoardView
 
 	private void addBar(JPanel body, int value, int max, String label)
 	{
-		ProgressBar bar = progressBar(value, max);
-		bar.setCenterLabel(label);
 		body.add(gap(GAP_S));
-		body.add(bar);
+		body.add(progressBar(value, max, label, value + "/" + max));
 		body.add(gap(GAP_S));
 	}
 }

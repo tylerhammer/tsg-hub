@@ -135,13 +135,13 @@ final class TsgHubRecordsView
 	static String standings(String heading, JsonArray rows, boolean first, String self)
 	{
 		if (rows.size() == 0) return "";
-		List<String> lines = new ArrayList<>();
+		List<String[]> lines = new ArrayList<>();
 		for (JsonObject row : objects(rows))
 		{
 			String value = row.has("time") ? escape(str(row, "time")) : count(row);
-			lines.add((lines.size() + 1) + ". " + nameHtml(str(row, "player"), self) + tipLine(MUTED, " " + value));
+			lines.add(new String[]{(lines.size() + 1) + ". " + nameHtml(str(row, "player"), self), value});
 		}
-		return tipSection(first, tipLine(MUTED, "<b>" + heading + "</b>")) + tipCard(ACCENT, String.join("<br>", lines));
+		return tipSection(first, tipLine(MUTED, "<b>" + heading + "</b>")) + tipCard(null, tipRows(lines));
 	}
 
 	private static boolean leads(JsonObject entry, String self)

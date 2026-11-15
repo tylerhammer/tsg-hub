@@ -239,7 +239,7 @@ final class TsgHubDrops
 		if (!source.isEmpty())
 		{
 			out += tipSection(true, tipLine(MUTED, "<b>DROPPED BY</b>"))
-				+ tipCard(ACCENT, "<b>" + escape(source) + "</b>" + (rate.isEmpty() ? "" : "<br>" + escape(rate) + tipLine(MUTED, " drop rate")));
+				+ tipCard(null, "<b>" + escape(source) + "</b>" + (rate.isEmpty() ? "" : "<br>" + escape(rate) + tipLine(MUTED, " drop rate")));
 		}
 		if (kc > 0) out += tipSection(out.isEmpty(), tipLine(MUTED, "<b>KILL COUNT</b> ") + TsgHubFormat.number(kc));
 		JsonObject luck = object(drop, "luck");

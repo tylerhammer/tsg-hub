@@ -15,16 +15,24 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.LayoutManager;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.RenderingHints;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.function.LongFunction;
 import java.util.function.Supplier;
@@ -39,6 +47,7 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JToolTip;
 import javax.swing.Scrollable;
@@ -46,6 +55,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.ToolTipManager;
 import javax.swing.border.Border;
+import javax.swing.plaf.basic.BasicScrollBarUI;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.plaf.basic.BasicHTML;
@@ -56,8 +66,8 @@ import javax.swing.text.Position;
 import javax.swing.text.View;
 import javax.swing.text.html.HTML;
 import javax.swing.text.html.HTMLDocument;
-import net.runelite.client.ui.components.ProgressBar;
 import net.runelite.client.util.AsyncBufferedImage;
+import net.runelite.client.util.ColorUtil;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.SwingUtil;
 
@@ -184,11 +194,33 @@ final class TsgHubUi
 
 	static JLabel badge(String text, Color color)
 	{
-		JLabel label = label(text, color, smallFont());
-		label.setBorder(BorderFactory.createCompoundBorder(
-			BorderFactory.createLineBorder(color.darker()),
-			BorderFactory.createEmptyBorder(0, 4, 0, 4)));
+		Color fill = ColorUtil.colorLerp(CARD, color, .16);
+		JLabel label = new JLabel(text)
+		{
+			@Override
+			protected void paintComponent(Graphics g)
+			{
+				Graphics2D g2 = (Graphics2D) g.create();
+				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+				g2.setColor(fill);
+				g2.fillRoundRect(0, 0, getWidth(), getHeight(), getHeight(), getHeight());
+				g2.dispose();
+				super.paintComponent(g);
+			}
+		};
+		label.setForeground(color);
+		label.setFont(smallFont());
+		label.setBorder(BorderFactory.createEmptyBorder(2, 5, 0, 5));
 		return label;
+	}
+
+	static JLabel worldChip(int world, boolean same)
+	{
+		JLabel chip = badge("W" + world, same ? SUCCESS : MUTED);
+		chip.setHorizontalAlignment(JLabel.CENTER);
+		Dimension size = chip.getPreferredSize();
+		chip.setPreferredSize(new Dimension(Math.max(size.width, chip.getFontMetrics(chip.getFont()).stringWidth("W000") + 10), size.height));
+		return chip;
 	}
 
 	static Component gap(int height)
@@ -263,13 +295,52 @@ final class TsgHubUi
 
 	static JPanel eventLines(JsonObject event, LongFunction<AsyncBufferedImage> coins)
 	{
-		JPanel top = row(shrinkable(boldLabel(eventName(event))),
-			label(eventCountdown(event), "active".equals(str(event, "status")) ? SUCCESS : MUTED, smallFont()));
-		JPanel extras = panel(new FlowLayout(FlowLayout.RIGHT, 3, 0));
-		if (bool(event, "hidden")) extras.add(badge("Hidden", MUTED));
-		JLabel prize = prizeLabel(event, smallFont(), coins);
-		if (prize != null) extras.add(prize);
-		return twoLines(top, row(shrinkable(caption(eventDetail(event))), extras));
+		boolean active = "active".equals(str(event, "status"));
+		Instant start = eventStart(event), end = eventEnd(event);
+		boolean dated = !active && start != null && start.toEpochMilli() > TsgHubFormat.clock.millis();
+		JPanel extras = inline();
+		if (bool(event, "hidden")) inline(extras, badge("Hidden", MUTED));
+		JLabel prize = prizeLabel(event, null, coins);
+		if (prize != null) inline(extras, prize);
+		JPanel lines = stack();
+		lines.add(fitHeight(dated ? row(shrinkable(boldLabel(eventName(event))), new JLabel()) : row(shrinkable(boldLabel(eventName(event))), extras)));
+		if (active && start != null && end != null && end.isAfter(start))
+		{
+			long now = TsgHubFormat.clock.millis();
+			lines.add(progressBar((int) ((now - start.toEpochMilli()) / 60000), (int) ((end.toEpochMilli() - start.toEpochMilli()) / 60000), null, null));
+		}
+		lines.add(gap(GAP_XS));
+		boolean soon = dated && start.toEpochMilli() - TsgHubFormat.clock.millis() < 86_400_000L;
+		JLabel countdown = label(eventCountdown(event), active ? SUCCESS : soon ? ACCENT : MUTED, smallFont());
+		if (dated) inline(extras, countdown);
+		lines.add(fitHeight(row(shrinkable(caption(eventDetail(event))), dated ? extras : countdown)));
+		if (!dated) return lines;
+		ZonedDateTime day = start.atZone(ZoneId.systemDefault());
+		JPanel stub = stack();
+		JLabel weekday = label(day.getDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.ENGLISH).toUpperCase(), ACCENT, smallFont());
+		JLabel date = boldLabel(String.valueOf(day.getDayOfMonth()));
+		for (JLabel part : new JLabel[]{weekday, date})
+		{
+			part.setAlignmentX(Component.CENTER_ALIGNMENT);
+			stub.add(part);
+		}
+		stub.setPreferredSize(new Dimension(30, stub.getPreferredSize().height));
+		stub.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, BORDER), BorderFactory.createEmptyBorder(0, 0, 0, 4)));
+		JPanel withDate = panel(new BorderLayout(6, 0));
+		withDate.add(stub, BorderLayout.WEST);
+		withDate.add(lines, BorderLayout.CENTER);
+		return withDate;
+	}
+
+	static JPanel inline()
+	{
+		return panel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+	}
+
+	static void inline(JPanel row, Component part)
+	{
+		if (row.getComponentCount() > 0) row.add(Box.createHorizontalStrut(GAP_S));
+		row.add(part);
 	}
 
 	static JLabel shrinkable(JLabel label)
@@ -314,6 +385,16 @@ final class TsgHubUi
 				tipText = ((Supplier<String>) tip).get();
 			}
 			return tipText;
+		}
+
+		@Override
+		public JToolTip createToolTip()
+		{
+			JToolTip tip = super.createToolTip();
+			tip.setBackground(CARD);
+			tip.setForeground(TEXT);
+			tip.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(BORDER_HOVER), BorderFactory.createEmptyBorder(4, 6, 4, 6)));
+			return tip;
 		}
 
 		// Anchor tooltips beside the card so they don't follow the mouse.
@@ -407,17 +488,44 @@ final class TsgHubUi
 			for (Component child : ((Container) component).getComponents()) recolor(child, from, to);
 	}
 
-	static ProgressBar progressBar(int value, int max)
+	static JPanel progressBar(int value, int max, String name, String count)
 	{
-		ProgressBar bar = new ProgressBar();
-		bar.setMaximumValue(Math.max(1, max));
-		bar.setValue(Math.min(value, Math.max(1, max)));
-		bar.setBackground(BACKGROUND);
-		bar.setForeground(value >= max ? SUCCESS.darker() : ACCENT.darker().darker());
-		// ProgressBar passes its fill color to labels; keep text white.
-		for (Component child : bar.getComponents()) if (child instanceof JLabel) child.setForeground(Color.WHITE);
-		bar.setPreferredSize(new Dimension(100, 16));
-		return fitHeight(bar);
+		int cap = Math.max(1, max);
+		float fill = Math.max(0, Math.min(value, cap)) / (float) cap;
+		Color color = value >= max ? SUCCESS : ACCENT;
+		JComponent bar = new JComponent()
+		{
+			@Override
+			protected void paintComponent(Graphics g)
+			{
+				Graphics2D g2 = (Graphics2D) g.create();
+				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+				int y = (getHeight() - 4) / 2;
+				g2.setColor(SLOT);
+				g2.fillRoundRect(0, y, getWidth(), 4, 4, 4);
+				g2.setColor(color);
+				g2.fillRoundRect(0, y, Math.round(getWidth() * fill), 4, 4, 4);
+				g2.dispose();
+			}
+		};
+		bar.setPreferredSize(new Dimension(40, 12));
+		JPanel row = row();
+		if (name != null)
+		{
+			JLabel label = caption(name);
+			label.setToolTipText(name);
+			label.setPreferredSize(new Dimension(Math.min(Math.max(52, label.getPreferredSize().width), 96), label.getPreferredSize().height));
+			row.add(label, BorderLayout.WEST);
+		}
+		row.add(bar, BorderLayout.CENTER);
+		if (count != null)
+		{
+			JLabel label = caption(count);
+			label.setHorizontalAlignment(JLabel.RIGHT);
+			label.setPreferredSize(new Dimension(Math.max(26, label.getPreferredSize().width), label.getPreferredSize().height));
+			row.add(label, BorderLayout.EAST);
+		}
+		return fitHeight(row);
 	}
 
 	static JScrollPane scroll(JComponent content)
@@ -427,7 +535,47 @@ final class TsgHubUi
 		scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		scroll.setOpaque(false);
 		scroll.getViewport().setOpaque(false);
-		scroll.getVerticalScrollBar().setUnitIncrement(16);
+		JScrollBar bar = scroll.getVerticalScrollBar();
+		bar.setUnitIncrement(16);
+		bar.setOpaque(false);
+		bar.setPreferredSize(new Dimension(8, 0));
+		bar.setUI(new BasicScrollBarUI()
+		{
+			@Override
+			protected void paintTrack(Graphics g, JComponent c, Rectangle bounds)
+			{
+			}
+
+			@Override
+			protected void paintThumb(Graphics g, JComponent c, Rectangle thumb)
+			{
+				if (thumb.isEmpty()) return;
+				Graphics2D g2 = (Graphics2D) g.create();
+				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+				g2.setColor(isThumbRollover() || isDragging ? DIM : BORDER_HOVER);
+				g2.fillRoundRect(thumb.x + 3, thumb.y, thumb.width - 3, thumb.height, 5, 5);
+				g2.dispose();
+			}
+
+			@Override
+			protected JButton createDecreaseButton(int orientation)
+			{
+				return noButton();
+			}
+
+			@Override
+			protected JButton createIncreaseButton(int orientation)
+			{
+				return noButton();
+			}
+
+			private JButton noButton()
+			{
+				JButton none = new JButton();
+				none.setPreferredSize(new Dimension(0, 0));
+				return none;
+			}
+		});
 		return scroll;
 	}
 
@@ -470,7 +618,26 @@ final class TsgHubUi
 
 	static JButton button(String text)
 	{
-		JButton button = new JButton(text);
+		JButton button = new JButton(text)
+		{
+			@Override
+			protected void paintComponent(Graphics g)
+			{
+				Color fill = getBackground();
+				if (!isEnabled()) fill = ColorUtil.colorLerp(fill, BACKGROUND, .5);
+				else if (getModel().isPressed()) fill = fill.darker();
+				else if (getModel().isRollover()) fill = ACCENT_STRONG.equals(fill) ? ACCENT_HOVER : RAISED.equals(fill) ? RAISED_HOVER : fill.brighter();
+				paintSlot(g, this, fill);
+				super.paintComponent(g);
+			}
+		};
+		button.setContentAreaFilled(false);
+		button.setBorderPainted(false);
+		button.setOpaque(false);
+		button.setRolloverEnabled(true);
+		button.setBackground(RAISED);
+		button.setForeground(TEXT);
+		button.setBorder(BorderFactory.createEmptyBorder(6, 10, 5, 10));
 		button.setFocusPainted(false);
 		button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 		return button;
@@ -496,7 +663,7 @@ final class TsgHubUi
 	static JButton primaryButton(String text)
 	{
 		JButton button = button(text);
-		button.setBackground(ACCENT.darker());
+		button.setBackground(ACCENT_STRONG);
 		button.setForeground(Color.WHITE);
 		return button;
 	}
@@ -573,16 +740,17 @@ final class TsgHubUi
 		List<Long> prizes = eventPrizes(event);
 		if (prizes.isEmpty()) return null;
 		long total = prizeTotal(prizes);
-		JLabel label = label(formatGp(total), coinColor(total), font);
+		JLabel label = font == null ? badge(formatGp(total), coinColor(total)) : label(formatGp(total), coinColor(total), font);
 		label.setToolTipText("Prize pool: " + prizeSummary(prizes));
 		label.setIconTextGap(2);
+		int w = font == null ? 11 : COIN_ICON_W, h = font == null ? 10 : COIN_ICON_H;
 		AsyncBufferedImage image = coins.apply(total);
 		if (image != null)
 		{
-			ImageIcon icon = new ImageIcon(ImageUtil.resizeImage(image, COIN_ICON_W, COIN_ICON_H));
+			ImageIcon icon = new ImageIcon(ImageUtil.resizeImage(image, w, h));
 			label.setIcon(icon);
 			image.onLoaded(() -> SwingUtilities.invokeLater(() -> {
-				icon.setImage(ImageUtil.resizeImage(image, COIN_ICON_W, COIN_ICON_H));
+				icon.setImage(ImageUtil.resizeImage(image, w, h));
 				label.repaint();
 			}));
 		}

@@ -32,6 +32,7 @@ import java.awt.AlphaComposite;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Graphics;
+import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
@@ -77,12 +78,13 @@ class PrayerSlot extends JComponent
 	{
 		Graphics2D g = (Graphics2D) g0.create();
 		boolean active = data.isEnabled();
+		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		g.setColor(active ? PRAYER_ACTIVE : SLOT);
-		g.fillRect(0, 0, getWidth(), getHeight());
+		g.fillRoundRect(0, 0, getWidth(), getHeight(), RADIUS, RADIUS);
 		if (active)
 		{
 			g.setColor(PRAYER_ACTIVE_BORDER);
-			g.drawRect(0, 0, getWidth() - 1, getHeight() - 1);
+			g.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, RADIUS, RADIUS);
 		}
 		else g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.35f));
 		BufferedImage icon = data.isAvailable() || active ? availableImage : unavailableImage;

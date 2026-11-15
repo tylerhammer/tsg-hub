@@ -7,6 +7,7 @@ import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import java.awt.Cursor;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -22,7 +23,6 @@ import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import lombok.RequiredArgsConstructor;
-import net.runelite.client.ui.components.ProgressBar;
 import net.runelite.client.util.SwingUtil;
 
 @RequiredArgsConstructor
@@ -70,7 +70,10 @@ final class TsgHubNewsPoll
 			int index = i;
 			int votes = integer(option, "votes", 0);
 			AbstractButton toggle = plain(multi ? new JCheckBox() : new JRadioButton(), TEXT);
-			toggle.setText(html(escape(str(option, "label")), widthPx - 24));
+			String count = voters == 0 ? "0" : votes + " · " + Math.round(votes * 100f / voters) + "%";
+			toggle.setText(html(escape(str(option, "label")), widthPx - 70));
+			toggle.setBorder(BorderFactory.createEmptyBorder(1, 0, 1, 0));
+			toggle.setIconTextGap(6);
 			toggle.setFont(smallFont());
 			toggle.setSelected(chosen.contains(index));
 			toggle.setEnabled(canVote);
@@ -83,12 +86,11 @@ final class TsgHubNewsPoll
 			if (!multi) group.add(toggle);
 			List<String> names = strings(array(option, "voters"));
 			if (!names.isEmpty()) toggle.setToolTipText(html(escape(String.join(", ", names)), 200));
-			block.add(fitHeight(toggle));
-			ProgressBar bar = progressBar(votes, Math.max(voters, 1));
-			bar.setForeground(ACCENT.darker().darker());
-			bar.setCenterLabel(voters == 0 ? "0" : votes + " · " + Math.round(votes * 100f / voters) + "%");
+			block.add(gap(GAP_S));
+			block.add(fitHeight(row(toggle, north(caption(count)))));
+			JPanel bar = progressBar(votes, Math.max(voters, 1), null, null);
+			bar.setBorder(BorderFactory.createEmptyBorder(0, toggle.getPreferredSize().height - 2, 0, 0));
 			block.add(bar);
-			block.add(gap(GAP_XS));
 		}
 		String error = errors.get(id);
 		if (error != null) block.add(label(html(escape(error), widthPx), TsgHubTheme.ERROR, smallFont()));
@@ -103,14 +105,15 @@ final class TsgHubNewsPoll
 			});
 		});
 		sync.run();
-		block.add(gap(GAP_XS));
+		block.add(gap(GAP_M));
 		block.add(fitHeight(row(canVote && !mine.isEmpty() ? removeVote(id) : label(canVote ? "" : "Log in to vote.", MUTED, smallFont()), vote)));
 		return block;
 	}
 
 	private JButton removeVote(String id)
 	{
-		JButton remove = button("Remove vote");
+		JButton remove = new JButton("Remove vote");
+		remove.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 		SwingUtil.removeButtonDecorations(remove);
 		remove.setForeground(MUTED);
 		remove.setFont(smallFont());

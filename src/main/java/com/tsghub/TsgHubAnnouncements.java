@@ -48,6 +48,7 @@ final class TsgHubAnnouncements
 		this.polls = new TsgHubNewsPoll(plugin, this, () -> {
 			plugin.windows().news(TsgHubNewsWindow::render);
 			plugin.ui(s -> s.newsView.setAnnouncements(list));
+			plugin.newsOverlay().refresh();
 		});
 	}
 
@@ -96,6 +97,7 @@ final class TsgHubAnnouncements
 		plugin.ui(s -> s.newsView.setAnnouncements(announcements));
 		plugin.windows().news(w -> w.setAnnouncements(announcements));
 		alert(announcements);
+		plugin.newsOverlay().refresh();
 	}
 
 	static JsonArray published(JsonArray all)
@@ -126,6 +128,8 @@ final class TsgHubAnnouncements
 	void onLoggedOut()
 	{
 		list = null;
+		plugin.newsOverlay().closeReader();
+		plugin.newsOverlay().refresh();
 	}
 
 	int unreadCount()
@@ -146,9 +150,19 @@ final class TsgHubAnnouncements
 		Set<String> ids = new LinkedHashSet<>();
 		for (JsonObject announcement : TsgHubJson.objects(current)) ids.add(TsgHubJson.str(announcement, "id"));
 		plugin.session().set(TsgHubSession.ANNOUNCEMENTS_READ, String.join(",", ids));
+		plugin.newsOverlay().refresh();
 	}
 
-	private Set<String> readIds()
+	void markRead(String id)
+	{
+		Set<String> ids = readIds();
+		ids.add(id);
+		plugin.session().set(TsgHubSession.ANNOUNCEMENTS_READ, String.join(",", ids));
+		plugin.newsOverlay().refresh();
+		plugin.ui(s -> s.newsView.setAnnouncements(list));
+	}
+
+	Set<String> readIds()
 	{
 		return ids(TsgHubSession.ANNOUNCEMENTS_READ);
 	}

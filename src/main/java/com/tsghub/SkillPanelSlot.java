@@ -27,6 +27,7 @@ package com.tsghub;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 
+import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -47,8 +48,7 @@ class SkillPanelSlot extends JPanel
 	SkillPanelSlot(String name)
 	{
 		this.name = name;
-		setOpaque(true);
-		setBackground(SLOT);
+		setOpaque(false);
 		setBorder(new EmptyBorder(3, 3, 3, 1));
 		setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
 		levelLabel.setIconTextGap(3);
@@ -56,6 +56,12 @@ class SkillPanelSlot extends JPanel
 		add(baseLabel);
 		add(Box.createHorizontalGlue());
 		setToolTipText(name);
+	}
+
+	@Override
+	protected void paintComponent(Graphics g)
+	{
+		paintSlot(g, this, SLOT);
 	}
 
 	void setSkillIcon(BufferedImage icon)
