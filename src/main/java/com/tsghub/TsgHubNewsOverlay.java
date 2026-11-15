@@ -303,11 +303,8 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 			if (reader == null) return;
 			JPanel content = reader.page();
 			Component target = SwingUtilities.getDeepestComponentAt(content, x, y);
-			if (target == null) return;
-			Point at = SwingUtilities.convertPoint(content, x, y, target);
-			long now = System.currentTimeMillis();
-			for (int id : new int[]{MouseEvent.MOUSE_PRESSED, MouseEvent.MOUSE_RELEASED, MouseEvent.MOUSE_CLICKED})
-				target.dispatchEvent(new MouseEvent(target, id, now, 0, at.x, at.y, 1, false, MouseEvent.BUTTON1));
+			while (target != null && target != content && !press(target, SwingUtilities.convertPoint(content, x, y, target))) target = target.getParent();
+			if (target == null || target == content) return;
 			renderReader();
 			ticks = 0;
 			ticker.setDelay(300);

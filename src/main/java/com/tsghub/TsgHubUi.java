@@ -102,14 +102,18 @@ final class TsgHubUi
 	static JLabel linkedHtml(String innerHtml, Color color, Font font, int widthPx)
 	{
 		JLabel label = label(html(innerHtml, widthPx), color, font);
+		Consumer<Point> press = point -> {
+			String href = linkAt(label, point);
+			if (href != null && confirm(label, "Open link", "Open this link in your browser?\n\n" + href, "Open", false))
+				net.runelite.client.util.LinkBrowser.browse(href);
+		};
+		pressable(label, press);
 		MouseAdapter links = new MouseAdapter()
 		{
 			@Override
 			public void mouseClicked(MouseEvent e)
 			{
-				String href = linkAt(label, e.getPoint());
-				if (href != null && confirm(label, "Open link", "Open this link in your browser?\n\n" + href, "Open", false))
-					net.runelite.client.util.LinkBrowser.browse(href);
+				press.accept(e.getPoint());
 			}
 
 			@Override
@@ -600,6 +604,23 @@ final class TsgHubUi
 		@Override public int getScrollableBlockIncrement(Rectangle visible, int orientation, int direction) { return Math.max(visible.height - 16, 16); }
 		@Override public boolean getScrollableTracksViewportWidth() { return true; }
 		@Override public boolean getScrollableTracksViewportHeight() { return false; }
+	}
+
+	static final String PRESS = "tsghub.press";
+
+	static <T extends JComponent> T pressable(T component, Consumer<Point> action)
+	{
+		component.putClientProperty(PRESS, action);
+		return component;
+	}
+
+	@SuppressWarnings("unchecked")
+	static boolean press(Component component, Point point)
+	{
+		Object action = component instanceof JComponent ? ((JComponent) component).getClientProperty(PRESS) : null;
+		if (!(action instanceof Consumer) || !component.isEnabled()) return false;
+		((Consumer<Point>) action).accept(point);
+		return true;
 	}
 
 	static <T extends AbstractButton> T onClick(T button, Runnable action)
