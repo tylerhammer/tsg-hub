@@ -54,7 +54,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final Glyph refreshIcon = hover("refresh");
 	final JButton refresh = iconButton(refreshIcon, "Refresh");
 	private final JButton admin = iconButton(hover("organizer"), "Open the admin site");
-	private final JButton settings = iconButton(hover("cog"), "Plugin settings (v" + TsgHubVersion.VERSION + ")");
+	private final JButton settings = iconButton(hover("cog"), "Plugin settings");
 	private final JButton pin = iconButton(hover("pin"), "Pin below");
 	private final JPanel footer = new JPanel();
 	private final JButton discord = iconButton(hover("discord", DISCORD), "Open the clan Discord");
@@ -65,6 +65,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private Color connectionColor = TsgHubTheme.ERROR;
 	private String connectionText = "Disconnected";
 	private String subtitleText = "";
+	private final JLabel version = label("v" + TsgHubVersion.VERSION, DIM, smallFont());
 	private final StatusLine status = new StatusLine(TEXT_W);
 
 	private final CardLayout centerLayout = new CardLayout();
@@ -345,6 +346,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		centerLayout.show(center, cardName(next));
 		discord.setVisible(next == View.HOME && !needsLink);
 		link.setVisible(next == View.HOME && needsLink);
+		version.setVisible(next == View.HOME);
 		dock.setShown(!gated(next));
 		pin.setVisible(pinnable(next));
 		title.setText(html(escape(titleText), titleWidth()));
@@ -502,6 +504,9 @@ final class TsgHubSidebarPanel extends PluginPanel
 		footer.setOpaque(false);
 		footer.add(discord);
 		footer.add(link);
+		version.setAlignmentX(Component.CENTER_ALIGNMENT);
+		footer.add(gap(GAP_XS));
+		footer.add(version);
 		discord.setVisible(false);
 		link.setVisible(false);
 		return footer;
