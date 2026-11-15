@@ -162,7 +162,7 @@ final class TsgHubHtml
 
 	static String tipCard(Color bar, String inner)
 	{
-		boolean marked = !bar.equals(ACCENT) && !bar.equals(CARD_HOVER) && !bar.equals(BORDER);
+		boolean marked = bar != null;
 		return "<table cellspacing='0' cellpadding='0' width='100%' style='margin-top:3px'><tr>" + (marked ? "<td bgcolor='" + toHexColor(bar) + "' width='2'></td>" : "")
 			+ "<td bgcolor='" + toHexColor(SLOT) + "' style='padding:4px 6px'>" + inner + "</td></tr></table>";
 	}

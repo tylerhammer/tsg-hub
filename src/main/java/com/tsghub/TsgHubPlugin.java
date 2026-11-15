@@ -345,7 +345,7 @@ public class TsgHubPlugin extends Plugin
 
 	void openNews(String id)
 	{
-		if (config.newsOverlay() && client.getGameState() == GameState.LOGGED_IN) newsOverlay.openReader(id);
+		if (config.newsOverlay() && newsOverlay.inGame()) newsOverlay.openReader(id);
 		else windows.openNews(id);
 	}
 	TsgHubTeamColors teamColors() { return teamColors; }
@@ -455,7 +455,11 @@ public class TsgHubPlugin extends Plugin
 			outbox.clear();
 			usage.clear();
 		}
-		if ("newsOverlay".equals(event.getKey()) && newsOverlay != null) newsOverlay.refresh();
+		if ("newsOverlay".equals(event.getKey()) && newsOverlay != null)
+		{
+			if (!config.newsOverlay()) newsOverlay.closeReader();
+			newsOverlay.refresh();
+		}
 		if ("partyShowSelf".equals(event.getKey()))
 		{
 			if (config.partyShowSelf()) groupTracker.refreshSelf();

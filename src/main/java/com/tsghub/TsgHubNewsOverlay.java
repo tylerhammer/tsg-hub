@@ -46,7 +46,9 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 	private final TsgHubPlugin plugin;
 	private final TsgHubConfig config;
 	private final Client client;
-	private final Timer ticker = new Timer(300, e -> renderReader());
+	private final Timer ticker = new Timer(300, e -> tick());
+	private volatile boolean inGame;
+	private int ticks;
 	private TsgHubNewsWindow reader;
 	private volatile BufferedImage page;
 	private volatile int scrollY;
@@ -77,7 +79,8 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 			reader.show(id);
 			scrollY = 0;
 			renderReader();
-			ticker.start();
+			ticks = 0;
+			ticker.restart();
 			news.markRead(id);
 		});
 	}
@@ -90,6 +93,17 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 		});
 	}
 
+	boolean inGame()
+	{
+		return inGame;
+	}
+
+	private void tick()
+	{
+		renderReader();
+		if (++ticks >= 20) ticker.stop();
+	}
+
 	private void renderReader()
 	{
 		if (reader == null) return;
@@ -97,14 +111,14 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 		content.setSize(READER_W, 10);
 		content.setSize(READER_W, content.getPreferredSize().height);
 		layout(content);
-		BufferedImage out = new BufferedImage(READER_W, Math.max(1, content.getHeight()), BufferedImage.TYPE_INT_ARGB);
+		BufferedImage last = page;
+		BufferedImage out = last != null && last.getHeight() == Math.max(1, content.getHeight()) ? last : new BufferedImage(READER_W, Math.max(1, content.getHeight()), BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g = out.createGraphics();
 		g.setColor(BACKGROUND);
 		g.fillRect(0, 0, out.getWidth(), out.getHeight());
 		content.printAll(g);
 		g.dispose();
-		Component byline = content.getComponentCount() > 2 ? content.getComponent(2) : null;
-		headerH = byline == null ? 0 : byline.getY() + byline.getHeight() + GAP_M;
+		headerH = reader.headerHeight();
 		page = out;
 	}
 
@@ -116,6 +130,8 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 			reader.setAnnouncements(plugin.announcements().list());
 			reader.render();
 			renderReader();
+			ticks = 0;
+			ticker.restart();
 		});
 	}
 
@@ -184,7 +200,8 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 	public Dimension render(Graphics2D graphics)
 	{
 		Widget welcome = client.getWidget(InterfaceID.WELCOME_SCREEN, 0);
-		if (client.getGameState() != GameState.LOGGED_IN || welcome != null && !welcome.isHidden())
+		inGame = client.getGameState() == GameState.LOGGED_IN && (welcome == null || welcome.isHidden());
+		if (!inGame)
 		{
 			area = null;
 			return null;
@@ -216,7 +233,7 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		RoundRectangle2D frame = new RoundRectangle2D.Float(0, 0, READER_W, height, RADIUS * 2, RADIUS * 2);
 		g.setClip(frame);
-		int head = Math.min(headerH, height);
+		int head = Math.min(headerH, height - 40);
 		g.drawImage(full.getSubimage(0, 0, READER_W, head), 0, 0, null);
 		g.drawImage(full.getSubimage(0, head + top, READER_W, height - head), 0, head, null);
 		if (top > 0)
@@ -274,6 +291,8 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 			for (int id : new int[]{MouseEvent.MOUSE_PRESSED, MouseEvent.MOUSE_RELEASED, MouseEvent.MOUSE_CLICKED})
 				target.dispatchEvent(new MouseEvent(target, id, now, 0, at.x, at.y, 1, false, MouseEvent.BUTTON1));
 			renderReader();
+			ticks = 0;
+			ticker.restart();
 		});
 	}
 
@@ -288,8 +307,9 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 	public MouseEvent mousePressed(MouseEvent event)
 	{
 		Point point = local(event);
-		if (point == null || !SwingUtilities.isLeftMouseButton(event)) return event;
+		if (point == null) return event;
 		event.consume();
+		if (!SwingUtilities.isLeftMouseButton(event)) return event;
 		if (page != null)
 		{
 			click(point);
@@ -321,6 +341,17 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 
 	@Override public MouseEvent mouseEntered(MouseEvent event) { return event; }
 	@Override public MouseEvent mouseExited(MouseEvent event) { return event; }
-	@Override public MouseEvent mouseDragged(MouseEvent event) { return event; }
-	@Override public MouseEvent mouseMoved(MouseEvent event) { return event; }
+	@Override
+	public MouseEvent mouseDragged(MouseEvent event)
+	{
+		if (local(event) != null) event.consume();
+		return event;
+	}
+
+	@Override
+	public MouseEvent mouseMoved(MouseEvent event)
+	{
+		if (local(event) != null) event.consume();
+		return event;
+	}
 }

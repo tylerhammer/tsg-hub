@@ -513,7 +513,8 @@ final class TsgHubUi
 		if (name != null)
 		{
 			JLabel label = caption(name);
-			label.setPreferredSize(new Dimension(52, label.getPreferredSize().height));
+			label.setToolTipText(name);
+			label.setPreferredSize(new Dimension(Math.min(Math.max(52, label.getPreferredSize().width), 96), label.getPreferredSize().height));
 			row.add(label, BorderLayout.WEST);
 		}
 		row.add(bar, BorderLayout.CENTER);

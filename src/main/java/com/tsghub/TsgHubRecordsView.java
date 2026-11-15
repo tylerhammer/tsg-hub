@@ -141,7 +141,7 @@ final class TsgHubRecordsView
 			String value = row.has("time") ? escape(str(row, "time")) : count(row);
 			lines.add(new String[]{(lines.size() + 1) + ". " + nameHtml(str(row, "player"), self), value});
 		}
-		return tipSection(first, tipLine(MUTED, "<b>" + heading + "</b>")) + tipCard(ACCENT, tipRows(lines));
+		return tipSection(first, tipLine(MUTED, "<b>" + heading + "</b>")) + tipCard(null, tipRows(lines));
 	}
 
 	private static boolean leads(JsonObject entry, String self)

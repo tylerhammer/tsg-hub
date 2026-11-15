@@ -65,6 +65,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private Color connectionColor = TsgHubTheme.ERROR;
 	private String connectionText = "Disconnected";
 	private String subtitleText = "";
+	private String subtitleTip;
 	private final JLabel version = label("v" + TsgHubVersion.VERSION, DIM, smallFont());
 	private final StatusLine status = new StatusLine(TEXT_W);
 
@@ -542,13 +543,15 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		subtitle.setIcon(icon("dot", connectionColor, 6));
 		subtitle.setText(subtitleText.isEmpty() ? connectionText : subtitleText);
+		subtitle.setToolTipText(subtitleTip == null ? connectionText : subtitleTip + " · " + connectionText);
 	}
 
 	void setEventHeader(JsonObject event, boolean showBack, boolean showRefresh)
 	{
 		String relative = eventRelative(event);
 		setHeader(eventName(event), relative.isEmpty() ? statusLabel(str(event, "status")) : capitalize(relative), showBack, showRefresh);
-		subtitle.setToolTipText(eventWhen(event));
+		subtitleTip = eventWhen(event);
+		renderSubtitle();
 	}
 
 	void setHeader(String titleText, String subtitleText, boolean showBack, boolean showRefresh)
@@ -556,7 +559,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		this.titleText = titleText;
 		title.setText(html(escape(titleText), titleWidth()));
 		this.subtitleText = subtitleText;
-		subtitle.setToolTipText(null);
+		subtitleTip = null;
 		renderSubtitle();
 		back.setVisible(showBack);
 		refresh.setVisible(showRefresh);

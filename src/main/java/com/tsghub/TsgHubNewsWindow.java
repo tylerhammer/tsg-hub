@@ -8,6 +8,7 @@ import static com.tsghub.TsgHubUi.*;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
@@ -38,6 +39,7 @@ final class TsgHubNewsWindow extends JPanel
 	private JsonArray announcements;
 	private String id = "";
 	private int width = TEXT_W;
+	private Component byline;
 
 	TsgHubNewsWindow(TsgHubNewsPoll polls, Function<String, CompletableFuture<BufferedImage>> images, Consumer<String> open)
 	{
@@ -66,6 +68,11 @@ final class TsgHubNewsWindow extends JPanel
 		return page;
 	}
 
+	int headerHeight()
+	{
+		return byline == null || byline.getParent() != page ? 0 : byline.getY() + byline.getHeight() + GAP_M;
+	}
+
 	void show(String id)
 	{
 		this.id = id;
@@ -82,6 +89,7 @@ final class TsgHubNewsWindow extends JPanel
 	void render()
 	{
 		page.removeAll();
+		byline = null;
 		JsonObject announcement = find();
 		if (announcement == null)
 		{
@@ -91,7 +99,8 @@ final class TsgHubNewsWindow extends JPanel
 		{
 			page.add(wrapped(str(announcement, "title"), TEXT, headingFont(), width));
 			page.add(gap(GAP_XS));
-			page.add(wrapped(str(announcement, "postedBy") + " · " + TsgHubFormat.shortDate(str(announcement, "postedAt"), clock.instant(), ZoneId.systemDefault()), MUTED, smallFont(), width));
+			byline = wrapped(str(announcement, "postedBy") + " · " + TsgHubFormat.shortDate(str(announcement, "postedAt"), clock.instant(), ZoneId.systemDefault()), MUTED, smallFont(), width);
+			page.add(byline);
 			JsonArray blocks = array(announcement, "blocks");
 			String body = str(announcement, "body");
 			if (blocks.size() > 0 || !body.isEmpty()) page.add(gap(GAP_L));

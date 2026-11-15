@@ -62,12 +62,12 @@ final class TsgHubRoster
 		if (!formerly.isEmpty())
 		{
 			sections += tipSection(head.isEmpty(), tipLine(MUTED, "<b>PREVIOUS NAMES</b>"))
-				+ tipCard(CARD_HOVER, escape(String.join("\n", formerly)).replace("\n", "<br>"));
+				+ tipCard(null, escape(String.join("\n", formerly)).replace("\n", "<br>"));
 		}
 		if (!note.isEmpty())
 		{
 			sections += tipSection(head.isEmpty() && sections.isEmpty(), tipLine(WARNING, "<b>ADMIN NOTE</b>"))
-				+ tipCard(CARD_HOVER, escape(note).replace("\n", "<br>"));
+				+ tipCard(null, escape(note).replace("\n", "<br>"));
 		}
 		List<JsonObject> history = objects(warnings);
 		if (!history.isEmpty())

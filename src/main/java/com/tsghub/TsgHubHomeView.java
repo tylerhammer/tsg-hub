@@ -38,6 +38,7 @@ final class TsgHubHomeView
 	private final TsgHubSidebarPanel shell;
 
 	boolean homeBuilt;
+	private String shownLive = "";
 	private String update;
 	private final List<Section> sections;
 	private static final int MOVED_HOLD_MS = 1500;
@@ -89,18 +90,20 @@ final class TsgHubHomeView
 
 	void renderHome()
 	{
-		if (homeBuilt)
+		JsonObject liveEvent = shell.eventsView.liveEvent();
+		String liveKey = liveEvent == null ? "" : liveEvent.toString();
+		if (homeBuilt && liveKey.equals(shownLive))
 		{
 			for (Section section : sections) summarize(section);
 			return;
 		}
 		shell.setHeader("TSG Hub", plugin.clan().playerName(), false, true);
 		shell.page.removeAll();
-		JPanel live = shell.eventsView.liveCard();
-		if (live != null)
+		shownLive = liveKey;
+		if (liveEvent != null)
 		{
 			shell.page.add(listHeading("Happening now", true));
-			addCard(shell.page, live);
+			addCard(shell.page, shell.eventsView.liveCard(liveEvent));
 			shell.page.add(gap(GAP_S));
 		}
 		for (Section section : sections) addCard(shell.page, sectionRow(section));

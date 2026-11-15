@@ -485,7 +485,7 @@ final class TsgHubBoardView
 		if (individual || solo) sections += memberSections(progress, solo, head.isEmpty());
 		else if (sections.isEmpty() && array(progress, "contributors").size() > CARD_CONTRIBUTORS)
 		{
-			sections += tipSection(head.isEmpty(), tipLine(MUTED, "<b>CONTRIBUTORS</b>")) + tipCard(CARD_HOVER, contributorsHtml(progress, "<br>", 50, boardDisplayName));
+			sections += tipSection(head.isEmpty(), tipLine(MUTED, "<b>CONTRIBUTORS</b>")) + tipCard(null, contributorsHtml(progress, "<br>", 50, boardDisplayName));
 		}
 		if (!completed) sections += claimSection(str(task, "id"), head.isEmpty() && sections.isEmpty());
 		if (head.isEmpty() && sections.isEmpty()) return null;
@@ -502,7 +502,7 @@ final class TsgHubBoardView
 			String note = str(claim, "note");
 			lines.add(claimName(claim) + (note.isEmpty() ? "" : "<br>" + tipLine(MUTED, escape(note))));
 		}
-		return tipSection(first, tipLine(MUTED, "<b>CLAIMED</b> " + claims.size())) + tipCard(ACCENT, String.join("<br>", lines));
+		return tipSection(first, tipLine(MUTED, "<b>CLAIMED</b> " + claims.size())) + tipCard(null, String.join("<br>", lines));
 	}
 
 	private String setSections(JsonObject progress, boolean first)
@@ -517,7 +517,7 @@ final class TsgHubBoardView
 				String by = str(piece, "by");
 				found.add(escape(str(piece, "piece")) + (by.isEmpty() ? "" : " (" + nameHtml(by, boardDisplayName) + ")"));
 			}
-			if (!found.isEmpty()) out.append(tipCard(ACCENT, "<b>" + escape(str(set, "name")) + "</b><br>" + String.join(", ", found)));
+			if (!found.isEmpty()) out.append(tipCard(null, "<b>" + escape(str(set, "name")) + "</b><br>" + String.join(", ", found)));
 		}
 		return out.length() == 0 ? "" : tipSection(first, tipLine(MUTED, "<b>FOUND</b>")) + out;
 	}
@@ -538,10 +538,10 @@ final class TsgHubBoardView
 			else if (bool(member, "completed")) done.add(name);
 			else waiting.add(need > 1 ? name + " " + tipLine(MUTED, have + "/" + need) : name);
 		}
-		if (solo) return tipSection(first, tipLine(MUTED, "<b>STANDINGS</b>")) + tipCard(CARD_HOVER, String.join("<br>", waiting));
+		if (solo) return tipSection(first, tipLine(MUTED, "<b>STANDINGS</b>")) + tipCard(null, String.join("<br>", waiting));
 		String out = "";
 		if (!done.isEmpty()) out += tipSection(first, tipLine(SUCCESS, "<b>DONE</b> ") + tipLine(MUTED, String.valueOf(done.size()))) + tipCard(SUCCESS, String.join("<br>", done));
-		if (!waiting.isEmpty()) out += tipSection(first && done.isEmpty(), tipLine(MUTED, "<b>STILL NEED</b> " + waiting.size())) + tipCard(CARD_HOVER, String.join("<br>", waiting));
+		if (!waiting.isEmpty()) out += tipSection(first && done.isEmpty(), tipLine(MUTED, "<b>STILL NEED</b> " + waiting.size())) + tipCard(null, String.join("<br>", waiting));
 		return out;
 	}
 
