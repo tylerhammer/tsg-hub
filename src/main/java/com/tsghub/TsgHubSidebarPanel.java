@@ -54,7 +54,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final Glyph refreshIcon = hover("refresh");
 	final JButton refresh = iconButton(refreshIcon, "Refresh");
 	private final JButton admin = iconButton(hover("organizer"), "Open the admin site");
-	private final JButton settings = iconButton(hover("cog"), "Plugin settings");
+	private final JButton settings = iconButton(hover("cog"), "Plugin settings (v" + TsgHubVersion.VERSION + ")");
 	private final JButton pin = iconButton(hover("pin"), "Pin below");
 	private final JPanel footer = new JPanel();
 	private final JButton discord = iconButton(hover("discord", DISCORD), "Open the clan Discord");
@@ -62,8 +62,9 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final Timer linkTimer = new Timer(1000, e -> renderLink());
 	private boolean needsLink;
 	private long linkDeadline;
-	private final JLabel connection = label("", MUTED, smallFont());
-	private final JLabel version = label("v" + TsgHubVersion.VERSION, DIM, smallFont());
+	private Color connectionColor = TsgHubTheme.ERROR;
+	private String connectionText = "Disconnected";
+	private String subtitleText = "";
 	private final StatusLine status = new StatusLine(TEXT_W);
 
 	private final CardLayout centerLayout = new CardLayout();
@@ -306,9 +307,9 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		Color color = state == TsgHubSocket.State.CONNECTED ? SUCCESS : state == TsgHubSocket.State.CONNECTING ? WARNING : TsgHubTheme.ERROR;
 		String status = state == TsgHubSocket.State.CONNECTED ? "Connected" : state == TsgHubSocket.State.CONNECTING ? "Connecting…" : "Disconnected";
-		connection.setIcon(icon("dot", color, 7));
-		connection.setText(status);
-		connection.setToolTipText(state == TsgHubSocket.State.CONNECTED ? "Receiving live updates" : state == TsgHubSocket.State.CONNECTING ? "Connecting to TSG Hub" : "Not connected to TSG Hub");
+		connectionColor = color;
+		connectionText = status;
+		renderSubtitle();
 	}
 
 	JPanel sectionHeading(String text, JComponent right)
@@ -495,20 +496,12 @@ final class TsgHubSidebarPanel extends PluginPanel
 			if (linkDeadline > System.currentTimeMillis()) plugin.keys().cancelLink();
 			else plugin.keys().startLink();
 		});
-		connection.setIconTextGap(6);
+		subtitle.setIconTextGap(4);
 		setConnection(TsgHubSocket.State.DISCONNECTED);
-		JPanel status = new JPanel(new BorderLayout());
-		status.setOpaque(false);
-		status.setAlignmentX(Component.CENTER_ALIGNMENT);
-		status.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, BORDER), BorderFactory.createEmptyBorder(6, 2, 0, 2)));
-		status.add(connection, BorderLayout.WEST);
-		status.add(version, BorderLayout.EAST);
 		footer.setLayout(new BoxLayout(footer, BoxLayout.Y_AXIS));
 		footer.setOpaque(false);
 		footer.add(discord);
 		footer.add(link);
-		footer.add(gap(6));
-		footer.add(status);
 		discord.setVisible(false);
 		link.setVisible(false);
 		return footer;
@@ -540,6 +533,12 @@ final class TsgHubSidebarPanel extends PluginPanel
 		link.setToolTipText("Copy a /plugin link command and open the clan Discord");
 	}
 
+	private void renderSubtitle()
+	{
+		subtitle.setIcon(icon("dot", connectionColor, 6));
+		subtitle.setText(subtitleText.isEmpty() ? connectionText : subtitleText);
+	}
+
 	void setEventHeader(JsonObject event, boolean showBack, boolean showRefresh)
 	{
 		String relative = eventRelative(event);
@@ -551,9 +550,9 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		this.titleText = titleText;
 		title.setText(html(escape(titleText), titleWidth()));
-		subtitle.setText(subtitleText);
-		subtitle.setVisible(!subtitleText.isEmpty());
+		this.subtitleText = subtitleText;
 		subtitle.setToolTipText(null);
+		renderSubtitle();
 		back.setVisible(showBack);
 		refresh.setVisible(showRefresh);
 	}

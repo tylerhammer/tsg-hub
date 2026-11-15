@@ -15,10 +15,13 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.LayoutManager;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.RenderingHints;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.MouseAdapter;
@@ -56,8 +59,8 @@ import javax.swing.text.Position;
 import javax.swing.text.View;
 import javax.swing.text.html.HTML;
 import javax.swing.text.html.HTMLDocument;
-import net.runelite.client.ui.components.ProgressBar;
 import net.runelite.client.util.AsyncBufferedImage;
+import net.runelite.client.util.ColorUtil;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.SwingUtil;
 
@@ -184,10 +187,23 @@ final class TsgHubUi
 
 	static JLabel badge(String text, Color color)
 	{
-		JLabel label = label(text, color, smallFont());
-		label.setBorder(BorderFactory.createCompoundBorder(
-			BorderFactory.createLineBorder(color.darker()),
-			BorderFactory.createEmptyBorder(0, 4, 0, 4)));
+		Color fill = ColorUtil.colorLerp(CARD, color, .16);
+		JLabel label = new JLabel(text)
+		{
+			@Override
+			protected void paintComponent(Graphics g)
+			{
+				Graphics2D g2 = (Graphics2D) g.create();
+				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+				g2.setColor(fill);
+				g2.fillRoundRect(0, 0, getWidth(), getHeight(), getHeight(), getHeight());
+				g2.dispose();
+				super.paintComponent(g);
+			}
+		};
+		label.setForeground(color);
+		label.setFont(smallFont());
+		label.setBorder(BorderFactory.createEmptyBorder(2, 5, 0, 5));
 		return label;
 	}
 
@@ -407,17 +423,43 @@ final class TsgHubUi
 			for (Component child : ((Container) component).getComponents()) recolor(child, from, to);
 	}
 
-	static ProgressBar progressBar(int value, int max)
+	static JPanel progressBar(int value, int max, String name, String count)
 	{
-		ProgressBar bar = new ProgressBar();
-		bar.setMaximumValue(Math.max(1, max));
-		bar.setValue(Math.min(value, Math.max(1, max)));
-		bar.setBackground(BACKGROUND);
-		bar.setForeground(value >= max ? SUCCESS.darker() : ACCENT.darker().darker());
-		// ProgressBar passes its fill color to labels; keep text white.
-		for (Component child : bar.getComponents()) if (child instanceof JLabel) child.setForeground(Color.WHITE);
-		bar.setPreferredSize(new Dimension(100, 16));
-		return fitHeight(bar);
+		int cap = Math.max(1, max);
+		float fill = Math.max(0, Math.min(value, cap)) / (float) cap;
+		Color color = value >= max ? SUCCESS : ACCENT;
+		JComponent bar = new JComponent()
+		{
+			@Override
+			protected void paintComponent(Graphics g)
+			{
+				Graphics2D g2 = (Graphics2D) g.create();
+				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+				int y = (getHeight() - 4) / 2;
+				g2.setColor(SLOT);
+				g2.fillRoundRect(0, y, getWidth(), 4, 4, 4);
+				g2.setColor(color);
+				g2.fillRoundRect(0, y, Math.round(getWidth() * fill), 4, 4, 4);
+				g2.dispose();
+			}
+		};
+		bar.setPreferredSize(new Dimension(40, 12));
+		JPanel row = row();
+		if (name != null)
+		{
+			JLabel label = caption(name);
+			label.setPreferredSize(new Dimension(52, label.getPreferredSize().height));
+			row.add(label, BorderLayout.WEST);
+		}
+		row.add(bar, BorderLayout.CENTER);
+		if (count != null)
+		{
+			JLabel label = caption(count);
+			label.setHorizontalAlignment(JLabel.RIGHT);
+			label.setPreferredSize(new Dimension(Math.max(26, label.getPreferredSize().width), label.getPreferredSize().height));
+			row.add(label, BorderLayout.EAST);
+		}
+		return fitHeight(row);
 	}
 
 	static JScrollPane scroll(JComponent content)

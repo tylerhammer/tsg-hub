@@ -30,7 +30,6 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
-import net.runelite.client.ui.components.ProgressBar;
 import net.runelite.client.ui.components.materialtabs.MaterialTab;
 import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
 
@@ -155,10 +154,12 @@ final class TsgHubBoardView
 			row.add(rankLabel, BorderLayout.EAST);
 		}
 		card.add(row, BorderLayout.NORTH);
-		ProgressBar bar = progressBar(completed, Math.max(totalTasks, 1));
-		bar.setLeftLabel(integer(score, "points", 0) + " pts");
-		bar.setRightLabel(completed + "/" + totalTasks + " tasks");
-		card.add(bar, BorderLayout.CENTER);
+		JPanel middle = stack();
+		middle.add(gap(GAP_S));
+		middle.add(fitHeight(row(label(integer(score, "points", 0) + " pts", TEXT, plainFont()), caption(completed + "/" + totalTasks + " tasks"))));
+		middle.add(gap(GAP_S));
+		middle.add(progressBar(completed, Math.max(totalTasks, 1), null, null));
+		card.add(middle, BorderLayout.CENTER);
 		JPanel prizes = prizeRow(boardEvent, smallFont());
 		if (prizes != null)
 		{
@@ -310,17 +311,17 @@ final class TsgHubBoardView
 		else if (solo)
 		{
 			int have = mine == null ? 0 : integer(mine, "progress", 0);
-			if (target > 1) addBar(body, have, target, "You: " + have + "/" + target);
+			if (target > 1) addBar(body, have, target, "You");
 			addSoloLeader(body, progress);
 		}
 		else if (individual)
 		{
 			int have = mine == null ? 0 : integer(mine, "progress", 0);
 			int need = mine == null ? 1 : integer(mine, "target", 1);
-			if (mine != null && need > 1 && !bool(mine, "completed")) addBar(body, have, need, "You: " + have + "/" + need);
+			if (mine != null && need > 1 && !bool(mine, "completed")) addBar(body, have, need, "You");
 			body.add(teammatesLine(mine, value, target));
 		}
-		else if (target > 1) addBar(body, value, target, value + " / " + target);
+		else if (target > 1) addBar(body, value, target, null);
 		if (!individual && !solo && (!progress.has("sets") || completed))
 		{
 			String amounts = contributorsHtml(progress, " · ", CARD_CONTRIBUTORS, boardDisplayName);
@@ -431,10 +432,8 @@ final class TsgHubBoardView
 		{
 			int have = integer(set, "have", 0);
 			int target = integer(set, "target", 1);
-			ProgressBar bar = progressBar(have, target);
-			bar.setCenterLabel((mine ? "You: " : "") + str(set, "name") + " " + have + "/" + target);
 			body.add(gap(GAP_S));
-			body.add(bar);
+			body.add(progressBar(have, target, str(set, "name"), have + "/" + target));
 			body.add(gap(GAP_XS));
 			List<String> needed = strings(array(set, "needed"));
 			if (!needed.isEmpty()) body.add(TsgHubSidebarPanel.cardNote("Need: " + String.join(", ", needed)));
@@ -640,10 +639,8 @@ final class TsgHubBoardView
 
 	private void addBar(JPanel body, int value, int max, String label)
 	{
-		ProgressBar bar = progressBar(value, max);
-		bar.setCenterLabel(label);
 		body.add(gap(GAP_S));
-		body.add(bar);
+		body.add(progressBar(value, max, label, value + "/" + max));
 		body.add(gap(GAP_S));
 	}
 }

@@ -1,13 +1,22 @@
 package com.tsghub;
 
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Insets;
+import java.awt.Rectangle;
+import java.awt.RenderingHints;
+import java.awt.geom.Area;
+import java.awt.geom.RoundRectangle2D;
 import javax.swing.BorderFactory;
 import java.awt.event.MouseEvent;
 import javax.swing.Icon;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.ToolTipManager;
+import javax.swing.border.AbstractBorder;
 import javax.swing.border.Border;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.components.materialtabs.MaterialTab;
@@ -16,28 +25,28 @@ import net.runelite.client.util.ColorUtil;
 
 public final class TsgHubTheme
 {
-	public static final Color BACKGROUND = new Color(0x28262B);
-	public static final Color CARD = new Color(0x1F1D22);
-	public static final Color CARD_HOVER = new Color(0x2E2B33);
-	public static final Color BORDER = new Color(0x3B3741);
+	public static final Color BACKGROUND = new Color(0x18171D);
+	public static final Color CARD = new Color(0x201E26);
+	public static final Color CARD_HOVER = new Color(0x2A2731);
+	public static final Color BORDER = new Color(0x2C2A33);
 	public static final Color ACCENT = new Color(0xA98BF0);
 	public static final Color TEXT = new Color(0xF2EFF5);
-	public static final Color MUTED = new Color(0xA29CAB);
-	public static final Color DIM = new Color(0x6C6774);
+	public static final Color MUTED = new Color(0xA7A1B1);
+	public static final Color DIM = new Color(0x7C7785);
 	public static final Color SUCCESS = new Color(0x6BD68A);
-	public static final Color ERROR = new Color(0xE86060);
+	public static final Color ERROR = new Color(0xF08A8A);
 	public static final Color WARNING = new Color(0xE8BE5A);
 	public static final Color CAPPED = new Color(0xFFD700);
 	public static final Color DISCORD = new Color(88, 101, 242);
 	public static final Color CHAT = new Color(0x3F2575);
 	public static final Color CHAT_SUCCESS = new Color(0x1A5028);
 
-	public static final Color SELF_CARD = new Color(0x2A2238);
-	public static final Color SELF_CARD_HOVER = new Color(0x342A45);
-	public static final Color SELF_BORDER = new Color(0x664C9E);
+	public static final Color SELF_CARD = new Color(0x2A2535);
+	public static final Color SELF_CARD_HOVER = new Color(0x332D41);
+	public static final Color SELF_BORDER = new Color(0x4A3D6E);
 	public static final Color SELF_TEXT = ACCENT;
 	public static final Color LOW = new Color(255, 90, 74);
-	public static final Color SLOT = new Color(0x18161B);
+	public static final Color SLOT = new Color(0x141318);
 	public static final Color PRAYER_ACTIVE = new Color(90, 67, 18);
 	public static final Color PRAYER_ACTIVE_BORDER = new Color(200, 144, 42);
 
@@ -47,8 +56,9 @@ public final class TsgHubTheme
 	public static final int GAP_M = 8;
 	public static final int GAP_L = 12;
 
-	public static final int CARD_PAD_V = 7;
+	public static final int CARD_PAD_V = 6;
 	public static final int CARD_PAD_H = 8;
+	public static final int RADIUS = 6;
 
 	private TsgHubTheme()
 	{
@@ -74,9 +84,48 @@ public final class TsgHubTheme
 		return boldFont().deriveFont(18f);
 	}
 
-	private static final Border CARD_EDGE = BorderFactory.createEmptyBorder(CARD_PAD_V, CARD_PAD_H, CARD_PAD_V, CARD_PAD_H);
-	private static final Border SELF_EDGE = BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(SELF_BORDER),
-		BorderFactory.createEmptyBorder(CARD_PAD_V - 1, CARD_PAD_H - 1, CARD_PAD_V - 1, CARD_PAD_H - 1));
+	private static final Border CARD_EDGE = new RoundEdge(new Insets(CARD_PAD_V + 1, CARD_PAD_H + 1, CARD_PAD_V, CARD_PAD_H + 1));
+	private static final Border SELF_EDGE = CARD_EDGE;
+
+	static final class RoundEdge extends AbstractBorder
+	{
+		private final Insets insets;
+
+		RoundEdge(Insets insets)
+		{
+			this.insets = insets;
+		}
+
+		@Override
+		public Insets getBorderInsets(Component c, Insets into)
+		{
+			into.set(insets.top, insets.left, insets.bottom, insets.right);
+			return into;
+		}
+
+		@Override
+		public void paintBorder(Component c, Graphics g, int x, int y, int w, int h)
+		{
+			Graphics2D g2 = (Graphics2D) g.create();
+			g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			RoundRectangle2D shape = new RoundRectangle2D.Float(x + .5f, y + .5f, w - 1, h - 1, RADIUS * 2, RADIUS * 2);
+			Area corners = new Area(new Rectangle(x, y, w, h));
+			corners.subtract(new Area(new RoundRectangle2D.Float(x, y, w, h, RADIUS * 2, RADIUS * 2)));
+			g2.setColor(behind(c));
+			g2.fill(corners);
+			Color bg = c.getBackground();
+			g2.setColor(SELF_CARD.equals(bg) || SELF_CARD_HOVER.equals(bg) ? SELF_BORDER : BORDER);
+			g2.draw(shape);
+			g2.dispose();
+		}
+
+		private static Color behind(Component c)
+		{
+			for (Component p = c.getParent(); p != null; p = p.getParent())
+				if (p.isOpaque()) return p.getBackground();
+			return BACKGROUND;
+		}
+	}
 
 	public static Border cardBorder()
 	{

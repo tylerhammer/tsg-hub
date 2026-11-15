@@ -22,7 +22,6 @@ import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import lombok.RequiredArgsConstructor;
-import net.runelite.client.ui.components.ProgressBar;
 import net.runelite.client.util.SwingUtil;
 
 @RequiredArgsConstructor
@@ -84,10 +83,7 @@ final class TsgHubNewsPoll
 			List<String> names = strings(array(option, "voters"));
 			if (!names.isEmpty()) toggle.setToolTipText(html(escape(String.join(", ", names)), 200));
 			block.add(fitHeight(toggle));
-			ProgressBar bar = progressBar(votes, Math.max(voters, 1));
-			bar.setForeground(ACCENT.darker().darker());
-			bar.setCenterLabel(voters == 0 ? "0" : votes + " · " + Math.round(votes * 100f / voters) + "%");
-			block.add(bar);
+			block.add(progressBar(votes, Math.max(voters, 1), null, voters == 0 ? "0" : votes + " · " + Math.round(votes * 100f / voters) + "%"));
 			block.add(gap(GAP_XS));
 		}
 		String error = errors.get(id);
