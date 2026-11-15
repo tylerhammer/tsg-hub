@@ -27,6 +27,8 @@ import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
+import net.runelite.api.gameval.InterfaceID;
+import net.runelite.api.widgets.Widget;
 import net.runelite.client.input.MouseListener;
 import net.runelite.client.input.MouseWheelListener;
 import net.runelite.client.ui.overlay.Overlay;
@@ -176,7 +178,8 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 	@Override
 	public Dimension render(Graphics2D graphics)
 	{
-		if (client.getGameState() != GameState.LOGGED_IN)
+		Widget welcome = client.getWidget(InterfaceID.WELCOME_SCREEN, 0);
+		if (client.getGameState() != GameState.LOGGED_IN || welcome != null && !welcome.isHidden())
 		{
 			area = null;
 			return null;
