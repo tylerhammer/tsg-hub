@@ -91,7 +91,7 @@ final class TsgHubHomeView
 	void renderHome()
 	{
 		JsonObject liveEvent = shell.eventsView.liveEvent();
-		String liveKey = liveEvent == null ? "" : liveEvent.toString();
+		String liveKey = liveEvent == null ? "" : str(liveEvent, "id") + str(liveEvent, "status") + str(liveEvent, "name");
 		if (homeBuilt && liveKey.equals(shownLive))
 		{
 			for (Section section : sections) summarize(section);
@@ -103,7 +103,7 @@ final class TsgHubHomeView
 		if (liveEvent != null)
 		{
 			shell.page.add(listHeading("Happening now", true));
-			addCard(shell.page, shell.eventsView.liveCard(liveEvent));
+			addCard(shell.page, shell.eventsView.eventCard(liveEvent));
 			shell.page.add(gap(GAP_S));
 		}
 		for (Section section : sections) addCard(shell.page, sectionRow(section));

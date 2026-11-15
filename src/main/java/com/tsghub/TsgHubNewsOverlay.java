@@ -19,6 +19,8 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
 import javax.swing.JLabel;
@@ -40,6 +42,7 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 	private static final int WIDTH = 300;
 	private static final int READER_W = TsgHubNewsWindow.TEXT_W + 2 * (GAP_L + 4);
 	private static final int CLOSE = 22;
+	private static final int RECENT_DAYS = 3;
 	private static final int INSET = 12;
 	private static final int TRACK_TOP = CLOSE + INSET * 2;
 
@@ -54,6 +57,8 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 	private volatile int scrollY;
 	private volatile int viewH;
 	private volatile int headerH;
+	private volatile int drawnHead;
+	private volatile int maxTop;
 	private volatile Rectangle area;
 	private volatile BufferedImage card;
 	private volatile Rectangle read;
@@ -80,6 +85,7 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 			scrollY = 0;
 			renderReader();
 			ticks = 0;
+			ticker.setDelay(300);
 			ticker.restart();
 			news.markRead(id);
 		});
@@ -101,7 +107,7 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 	private void tick()
 	{
 		renderReader();
-		if (++ticks >= 20) ticker.stop();
+		ticker.setDelay(++ticks >= 20 ? 1500 : 300);
 	}
 
 	private void renderReader()
@@ -111,8 +117,7 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 		content.setSize(READER_W, 10);
 		content.setSize(READER_W, content.getPreferredSize().height);
 		layout(content);
-		BufferedImage last = page;
-		BufferedImage out = last != null && last.getHeight() == Math.max(1, content.getHeight()) ? last : new BufferedImage(READER_W, Math.max(1, content.getHeight()), BufferedImage.TYPE_INT_ARGB);
+		BufferedImage out = new BufferedImage(READER_W, Math.max(1, content.getHeight()), BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g = out.createGraphics();
 		g.setColor(BACKGROUND);
 		g.fillRect(0, 0, out.getWidth(), out.getHeight());
@@ -131,6 +136,7 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 			reader.render();
 			renderReader();
 			ticks = 0;
+			ticker.setDelay(300);
 			ticker.restart();
 		});
 	}
@@ -138,7 +144,7 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 	private void rebuild()
 	{
 		TsgHubAnnouncements news = plugin.announcements();
-		List<JsonObject> unread = news == null || news.list() == null || !config.newsOverlay() ? null : TsgHubAnnouncements.unread(news.list(), news.readIds());
+		List<JsonObject> unread = news == null || news.list() == null || !config.newsOverlay() ? null : recent(TsgHubAnnouncements.unread(news.list(), news.readIds()));
 		if (unread == null || unread.isEmpty())
 		{
 			card = null;
@@ -180,6 +186,16 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 		read = bounds(open, panel);
 		dismiss = bounds(skip, panel);
 		card = out;
+	}
+
+	private static List<JsonObject> recent(List<JsonObject> unread)
+	{
+		Instant cutoff = TsgHubFormat.clock.instant().minus(Duration.ofDays(RECENT_DAYS));
+		unread.removeIf(a -> {
+			Instant at = instant(str(a, "postedAt"));
+			return at == null || at.isBefore(cutoff);
+		});
+		return unread;
 	}
 
 	private static void layout(Component c)
@@ -233,8 +249,10 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		RoundRectangle2D frame = new RoundRectangle2D.Float(0, 0, READER_W, height, RADIUS * 2, RADIUS * 2);
 		g.setClip(frame);
-		int head = Math.min(headerH, height - 40);
-		g.drawImage(full.getSubimage(0, 0, READER_W, head), 0, 0, null);
+		int head = Math.max(0, Math.min(headerH, height - 40));
+		drawnHead = head;
+		maxTop = full.getHeight() - height;
+		if (head > 0) g.drawImage(full.getSubimage(0, 0, READER_W, head), 0, 0, null);
 		g.drawImage(full.getSubimage(0, head + top, READER_W, height - head), 0, head, null);
 		if (top > 0)
 		{
@@ -268,7 +286,7 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 	{
 		Rectangle bounds = area;
 		if (page == null || bounds == null || !bounds.contains(event.getPoint())) return event;
-		scrollY += event.getWheelRotation() * 48;
+		scrollY = Math.max(0, Math.min(maxTop, scrollY + event.getWheelRotation() * 48));
 		event.consume();
 		return event;
 	}
@@ -280,7 +298,7 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 			closeReader();
 			return;
 		}
-		int x = point.x, y = point.y < headerH ? point.y : point.y + scrollY;
+		int x = point.x, y = point.y < drawnHead ? point.y : point.y + Math.min(scrollY, maxTop);
 		SwingUtilities.invokeLater(() -> {
 			if (reader == null) return;
 			JPanel content = reader.page();
@@ -292,6 +310,7 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 				target.dispatchEvent(new MouseEvent(target, id, now, 0, at.x, at.y, 1, false, MouseEvent.BUTTON1));
 			renderReader();
 			ticks = 0;
+			ticker.setDelay(300);
 			ticker.restart();
 		});
 	}

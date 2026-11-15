@@ -297,7 +297,7 @@ final class TsgHubUi
 	{
 		boolean active = "active".equals(str(event, "status"));
 		Instant start = eventStart(event), end = eventEnd(event);
-		boolean dated = !active && start != null;
+		boolean dated = !active && start != null && start.toEpochMilli() > TsgHubFormat.clock.millis();
 		JPanel extras = inline();
 		if (bool(event, "hidden")) inline(extras, badge("Hidden", MUTED));
 		JLabel prize = prizeLabel(event, null, coins);
@@ -310,7 +310,7 @@ final class TsgHubUi
 			lines.add(progressBar((int) ((now - start.toEpochMilli()) / 60000), (int) ((end.toEpochMilli() - start.toEpochMilli()) / 60000), null, null));
 		}
 		lines.add(gap(GAP_XS));
-		boolean soon = !active && start != null && start.toEpochMilli() - TsgHubFormat.clock.millis() < 86_400_000L;
+		boolean soon = dated && start.toEpochMilli() - TsgHubFormat.clock.millis() < 86_400_000L;
 		JLabel countdown = label(eventCountdown(event), active ? SUCCESS : soon ? ACCENT : MUTED, smallFont());
 		if (dated) inline(extras, countdown);
 		lines.add(fitHeight(row(shrinkable(caption(eventDetail(event))), dated ? extras : countdown)));

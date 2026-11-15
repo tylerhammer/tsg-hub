@@ -323,12 +323,7 @@ final class TsgHubEventsView
 		return best;
 	}
 
-	JPanel liveCard(JsonObject event)
-	{
-		return eventCard(event);
-	}
-
-	private JPanel eventCard(JsonObject event)
+	JPanel eventCard(JsonObject event)
 	{
 		boolean joined = joined(event);
 		JPanel card = card();
