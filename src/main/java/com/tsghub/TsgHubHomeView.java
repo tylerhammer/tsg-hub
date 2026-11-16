@@ -100,6 +100,9 @@ final class TsgHubHomeView
 		shell.setHeader("TSG Hub", plugin.clan().playerName(), false, true);
 		shell.page.removeAll();
 		shownLive = liveKey;
+		shell.page.add(polls);
+		shownPolls.clear();
+		renderPolls();
 		if (liveEvent != null)
 		{
 			shell.page.add(listHeading("Happening now", true));
@@ -107,9 +110,6 @@ final class TsgHubHomeView
 			shell.page.add(gap(GAP_S));
 		}
 		for (Section section : sections) addCard(shell.page, sectionRow(section));
-		shell.page.add(polls);
-		shownPolls.clear();
-		renderPolls();
 		if (update != null)
 		{
 			shell.page.add(gap(GAP_S));
@@ -144,6 +144,11 @@ final class TsgHubHomeView
 					addCard(polls, movedPolls.computeIfAbsent(id, this::moved));
 				}
 			}
+		}
+		if (polls.getComponentCount() > 0)
+		{
+			polls.add(listHeading("Vote now", true), 0);
+			polls.add(gap(GAP_S));
 		}
 		shownPolls.clear();
 		shownPolls.addAll(shown);
