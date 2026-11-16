@@ -24,7 +24,7 @@ class TsgHubSession
 	static final String DOCK_SPLIT = "dockSplit";
 	static final String DOCK_COLLAPSED = "dockCollapsed";
 	static final String DROP_TYPE = "dropType";
-	static final String DROP_VALUE = "dropValue";
+	static final String DROP_VALUE = "dropMinValue";
 	static final String ANNOUNCEMENTS_READ = "announcementsRead";
 	static final String ANNOUNCEMENTS_ALERTED = "announcementsAlerted";
 	static final String GE_OFFER = "geOffer:";

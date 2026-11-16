@@ -40,13 +40,13 @@ final class TsgHubDropsView
 	private final WidthTrackingPanel dropsPage = new WidthTrackingPanel();
 	private final JScrollPane dropsScroll = scroll(dropsPage);
 	private final JComboBox<String> dropType = new JComboBox<>(new String[] {"All types", "Mine", "Raids", "Pets", "Log"});
-	private final JComboBox<String> dropValue = new JComboBox<>(new String[] {"Any value", "100k+", "1m+", "10m+"});
+	private final JComboBox<String> dropValue = new JComboBox<>(new String[] {"Any value", "1m+", "10m+"});
 	private volatile int dropTypeIndex;
 	private volatile int dropValueIndex;
 	private JsonArray drops;
 	private static final int DROP_ICON_W = 36;
 	private static final String[] DROP_KINDS = {"", "", "raid", "pet", "log"};
-	private static final long[] DROP_VALUES = {0, 100_000, 1_000_000, 10_000_000};
+	private static final long[] DROP_VALUES = {0, 1_000_000, 10_000_000};
 	void setDrops(JsonArray drops)
 	{
 		if (Objects.equals(this.drops, drops)) return;
