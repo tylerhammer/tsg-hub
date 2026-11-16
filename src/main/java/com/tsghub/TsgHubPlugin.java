@@ -676,6 +676,7 @@ public class TsgHubPlugin extends Plugin
 		if (presence != null) presence.onGameTick();
 		if (countdown != null) countdown.onGameTick(sharingInClan() && config.eventCountdown());
 		if (sharingInClan()) chat.mapNotice();
+		chat.onGameTick();
 		if (clan.tick()) refreshDetectedClan();
 	}
 
