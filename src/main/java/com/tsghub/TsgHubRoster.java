@@ -25,7 +25,7 @@ final class TsgHubRoster
 	static String locationTip(String activity, String area)
 	{
 		String detail = activityDetail(activity, "");
-		boolean active = TsgHubMembersView.activityGroup(activity) == 0;
+		boolean active = TsgHubMembersView.inActivity(activity);
 		String html = tipLine(active ? SUCCESS : MUTED, escape(detail));
 		return area.isEmpty() || area.equals(detail) ? html : html + "<br>" + tipLine(MUTED, escape(area));
 	}
