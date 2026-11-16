@@ -27,6 +27,7 @@ final class TsgHubChat
 	private final Set<String> localMessages = ConcurrentHashMap.newKeySet();
 	private volatile String notifiedUpdate = "";
 	private volatile boolean mapNoticeChecked;
+	private final TsgHubChatQueue queued = new TsgHubChatQueue();
 
 	boolean isOwnEcho(String message)
 	{
@@ -36,11 +37,13 @@ final class TsgHubChat
 	void onLoggedOut()
 	{
 		mapNoticeChecked = false;
+		queued.loggedOut();
 	}
 
 	void reset()
 	{
 		localMessages.clear();
+		queued.loggedOut();
 		notifiedUpdate = "";
 		mapNoticeChecked = false;
 	}
@@ -130,6 +133,19 @@ final class TsgHubChat
 		local(new ChatMessageBuilder().append(ChatColorType.HIGHLIGHT).append("TSG Hub " + Text.escapeJagex(version) + " is available. Restart RuneLite to update."));
 	}
 
+	void message(String tag, String text)
+	{
+		queued.add(tag, text);
+	}
+
+	void onGameTick()
+	{
+		for (TsgHubChatQueue.Line line : queued.tick())
+		{
+			local(line.getTag(), new ChatMessageBuilder().append(ChatColorType.HIGHLIGHT).append(Text.escapeJagex(line.getText())));
+		}
+	}
+
 	void mapNotice()
 	{
 		if (mapNoticeChecked) return;
@@ -141,7 +157,12 @@ final class TsgHubChat
 
 	private void local(ChatMessageBuilder body)
 	{
-		String message = new ChatMessageBuilder().append(config.chatColor(), "[TSG Hub] ").build() + body.build();
+		local(TsgHubChatQueue.DEFAULT_TAG, body);
+	}
+
+	private void local(String tag, ChatMessageBuilder body)
+	{
+		String message = new ChatMessageBuilder().append(config.chatColor(), "[" + Text.escapeJagex(tag) + "] ").build() + body.build();
 		chatMessageManager.queue(QueuedMessage.builder().type(ChatMessageType.GAMEMESSAGE).runeLiteFormattedMessage(message).build());
 	}
 

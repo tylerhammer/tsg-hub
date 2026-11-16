@@ -44,6 +44,8 @@ final class TsgHubSocket implements TsgHubOutbox.Link
 
 		void onUpdateAvailable(String version);
 
+		void onChatMessage(String tag, String text);
+
 		void onAck(String id);
 
 		void onRejected(String id, int status, String message);
@@ -422,6 +424,11 @@ final class TsgHubSocket implements TsgHubOutbox.Link
 				case "update":
 					String version = TsgHubJson.str(message, "version");
 					if (!version.isEmpty()) dispatch(ws, () -> listener.onUpdateAvailable(version));
+					break;
+				case "chat.message":
+					String chatTag = TsgHubJson.str(message, "tag");
+					String chatText = TsgHubJson.str(message, "text");
+					if (!chatText.isEmpty()) dispatch(ws, () -> listener.onChatMessage(chatTag, chatText));
 					break;
 				case "error":
 					String failed = TsgHubJson.str(message, "id");

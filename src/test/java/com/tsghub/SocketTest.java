@@ -83,6 +83,16 @@ public class SocketTest
 	}
 
 	@Test
+	public void chatMessagesReachListener() throws Exception
+	{
+		connect("{\"type\":\"ready\",\"protocol\":\"2\"}");
+		write("{\"type\":\"chat.message\",\"text\":\"\"}");
+		write("{\"type\":\"chat.message\",\"tag\":\"TSG Hub\",\"text\":\"Turn on Share location and activity\"}");
+		assertEquals("chat [TSG Hub] Turn on Share location and activity", events.poll(5, TimeUnit.SECONDS));
+		assertNull(events.poll(200, TimeUnit.MILLISECONDS));
+	}
+
+	@Test
 	public void outboxFollowsServerReplies() throws Exception
 	{
 		connect("{\"type\":\"ready\",\"protocol\":\"2\"}");
@@ -171,6 +181,7 @@ public class SocketTest
 		@Override public void onAdminRevoked(String token) { }
 		@Override public void onAnnouncement(String text) { }
 		@Override public void onUpdateAvailable(String version) { }
+		@Override public void onChatMessage(String tag, String text) { events.add("chat [" + tag + "] " + text); }
 		@Override public void onAck(String id) { events.add("ack " + id); }
 		@Override public void onRejected(String id, int status, String message) { events.add("rejected " + id + " " + status + " " + message); }
 		@Override public void onSubscribed() { }

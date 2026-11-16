@@ -51,6 +51,7 @@ final class TsgHubLiveSync
 			@Override public void onAdminRevoked(String token) { plugin.keys().recheck(token); }
 			@Override public void onAnnouncement(String text) { plugin.chat().announce(text); }
 			@Override public void onUpdateAvailable(String version) { plugin.chat().updateAvailable(version); }
+			@Override public void onChatMessage(String tag, String text) { plugin.chat().message(tag, text); }
 			@Override public void onSnapshot(JsonObject message) { snapshot(message); }
 			@Override public void onConnection(TsgHubSocket.State state) { plugin.ui(s -> s.setConnection(state)); }
 			@Override public void onAck(String id) { plugin.outbox().acked(id); }
