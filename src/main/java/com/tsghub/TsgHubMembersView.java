@@ -115,7 +115,7 @@ final class TsgHubMembersView
 		int myWorld = 0;
 		for (JsonObject member : objects(members))
 			if (samePlayer(str(member, "displayName"), plugin.clan().playerName())) myWorld = integer(member, "world", 0);
-		String[] groups = {"Bossing", "Skilling", "Elsewhere"};
+		String[] groups = {"Bossing", "Raiding", "Minigames", "Skilling", "Elsewhere"};
 		for (int g = 0; g < groups.length; g++)
 		{
 			List<JsonObject> inGroup = new ArrayList<>();
@@ -145,8 +145,14 @@ final class TsgHubMembersView
 
 	static int activityGroup(String activity)
 	{
-		if (activity.startsWith("Bossing") || activity.startsWith("Raiding") || activity.startsWith("Minigame")) return 0;
-		return activity.startsWith("Skilling") ? 1 : 2;
+		String[] prefixes = {"Bossing", "Raiding", "Minigame", "Skilling"};
+		for (int i = 0; i < prefixes.length; i++) if (activity.startsWith(prefixes[i])) return i;
+		return prefixes.length;
+	}
+
+	static boolean inActivity(String activity)
+	{
+		return activityGroup(activity) < 3;
 	}
 
 	private JLabel memberName(JsonObject member, String text, Color color, Font font)
@@ -212,7 +218,7 @@ final class TsgHubMembersView
 		JLabel detailLabel = null;
 		if (!detail.isEmpty())
 		{
-			boolean active = activityGroup(activity) == 0;
+			boolean active = inActivity(activity);
 			detailLabel = noFullText(shrinkable(label(detail, active ? SUCCESS : MUTED, small)));
 			JPanel bottom = row();
 			bottom.add(detailLabel, BorderLayout.CENTER);
