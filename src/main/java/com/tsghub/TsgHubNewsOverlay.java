@@ -83,11 +83,6 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 		});
 	}
 
-	boolean inGame()
-	{
-		return inGame;
-	}
-
 	private void tick()
 	{
 		renderReader();
