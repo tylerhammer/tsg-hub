@@ -4,7 +4,6 @@ import static org.junit.Assert.assertEquals;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import java.util.List;
 import org.junit.Test;
 
 public class SplitTest
@@ -63,16 +62,9 @@ public class SplitTest
 	@Test
 	public void parsesGpAmounts()
 	{
-		assertEquals(1_400_000_000L, TsgHubPartiesView.parseGp("1.4b"));
-		assertEquals(350_000_000L, TsgHubPartiesView.parseGp("350m"));
-		assertEquals(2_500_000L, TsgHubPartiesView.parseGp("2,500,000"));
-		assertEquals(-1, TsgHubPartiesView.parseGp("lots"));
-	}
-
-	@Test
-	public void sharersIncludeSkipped()
-	{
-		JsonObject drop = json("{'sharers':['Alice','Carl'],'skipped':['bob']}");
-		assertEquals(List.of("Alice", "Carl", "bob"), TsgHubPartiesView.dropSharers(drop, List.of("bob")));
+		assertEquals(1_400_000_000L, TsgHubPanelView.parseGp("1.4b"));
+		assertEquals(350_000_000L, TsgHubPanelView.parseGp("350m"));
+		assertEquals(2_500_000L, TsgHubPanelView.parseGp("2,500,000"));
+		assertEquals(-1, TsgHubPanelView.parseGp("lots"));
 	}
 }

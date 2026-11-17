@@ -22,6 +22,8 @@ final class TsgHubGroups implements GroupTracker.Listener
 	// The service drops members after 3 minutes without a check-in.
 	static final int HEARTBEAT_SECONDS = 60;
 	static final int REFRESH_SECONDS = 30;
+	static final Map<String, String> PANEL_OPS = Map.of("split.toggle", "/v1/groups/split", "split.skip", "/v1/groups/split/skip",
+		"split.share", "/v1/groups/split/share", "split.value", "/v1/groups/split/value", "split.paid", "/v1/groups/split/paid", "split.unpay", "/v1/groups/split/unpay");
 
 	private final TsgHubPlugin plugin;
 	private final Client client;
@@ -136,29 +138,13 @@ final class TsgHubGroups implements GroupTracker.Listener
 		failed(new TsgHubApi.HttpError(status, message));
 	}
 
-	void setSplitValue(String dropId, long gp)
+	boolean panelAction(String op, JsonObject args)
 	{
-		update("/v1/groups/split/value", obj("dropId", dropId, "gp", gp));
-	}
-
-	void setSplitShare(String dropId, String name, boolean share)
-	{
-		update("/v1/groups/split/share", obj("dropId", dropId, "displayName", name, "share", share));
-	}
-
-	void setSplitSkip(String name, boolean skip)
-	{
-		update("/v1/groups/split/skip", obj("displayName", name, "skip", skip));
-	}
-
-	void markPaid(String from, String to, long gp)
-	{
-		update("/v1/groups/split/paid", obj("from", from, "to", to, "gp", gp));
-	}
-
-	void unpay(String paymentId)
-	{
-		update("/v1/groups/split/unpay", obj("paymentId", paymentId));
+		String path = PANEL_OPS.get(op);
+		if (path == null) return false;
+		if (op.equals("split.toggle")) setSplit(bool(args, "active"));
+		else update(path, args);
+		return true;
 	}
 
 	private void adopt(JsonObject next)
