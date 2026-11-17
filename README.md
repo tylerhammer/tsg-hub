@@ -171,7 +171,7 @@ Kill and clue counts come from the official hiscores. The TSG Hub service looks 
 
 The **News** section lists announcements from the clan admins, pinned ones first. A pin marks pinned posts, a green dot marks ones you haven't read, and the **News** row on the home screen shows how many are new. Each new announcement appears in your chatbox once, when you log in or when it's posted. Links in an announcement show the full address and ask before opening in your browser. Turn that off with **Clan announcements** under **Chat** in the plugin settings.
 
-New announcements from the last 3 days also show as a small card at the top of the game view, with the title, who posted it and when. **Dismiss** marks it read; **Read more** opens it. Clicking a post in **News** opens it in the middle of the game view, with its formatting, images and polls: scroll with the mouse wheel, click links or vote right there, and click **✕** to close it. The title stays put while you scroll. Turn the card and the in-game reader off with **Announcements on screen** under **Chat**; posts then open in a separate window.
+New announcements from the last 3 days also show as a small card at the top of the game view, with the title, who posted it and when. **Dismiss** marks it read; **Read more** opens it. Clicking a post in **News** opens it in the middle of the game view, with its formatting, images and polls: scroll with the mouse wheel, click links or vote right there, and click **✕** to close it. The title stays put while you scroll. Turn the card off with **Announcements on screen** under **Chat**; posts still open in the reader.
 
 ## Split view
 

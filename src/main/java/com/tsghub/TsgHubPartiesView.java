@@ -27,7 +27,6 @@ final class TsgHubPartiesView
 	private final JLabel groupError = label("", TsgHubTheme.ERROR, smallFont());
 	private JsonArray groupList;
 	private boolean groupBusy;
-	// Browsing the full list from inside a party.
 	boolean browsingParties;
 
 	TsgHubPartiesView(TsgHubPlugin plugin, TsgHubSidebarPanel shell)
@@ -97,19 +96,8 @@ final class TsgHubPartiesView
 	void groupActionFailed(String message)
 	{
 		groupBusy = false;
-		showError(groupError, message, TsgHubSidebarPanel.TEXT_W);
+		showError(groupError, message, TEXT_W);
 		if (shell.shows(View.GROUPS)) renderGroups();
-	}
-
-	void groupMemberUpdated(PartyPlayer player, boolean self)
-	{
-		shell.groupMembers.update(player, self);
-	}
-
-	void groupMemberRemoved(PartyPlayer player)
-	{
-		shell.groupMembers.remove(player);
-		partyAreasChanged();
 	}
 
 	void partyAreasChanged()
@@ -120,21 +108,6 @@ final class TsgHubPartiesView
 		if (shell.shows(View.GROUPS) && !browsingParties) setPartyHeader(current);
 		else if (shell.shows(View.GROUPS)) renderGroups();
 		if (shell.view == View.HOME) shell.homeView.renderHome();
-	}
-
-	void groupSettingsChanged(boolean expandChanged)
-	{
-		shell.groupMembers.settingsChanged(expandChanged);
-	}
-
-	void groupSelfHidden()
-	{
-		shell.groupMembers.removeSelf();
-	}
-
-	void groupMembersCleared()
-	{
-		shell.groupMembers.clear();
 	}
 
 	private void confirmKick(String name)
@@ -234,8 +207,7 @@ final class TsgHubPartiesView
 			JPanel lines = stack();
 			String state = running ? "Running" : "Ended";
 			lines.add(row(boldLabel("Loot split"), label(state + " · " + splitGp(longValue(split, "total", 0)), running ? SUCCESS : MUTED, smallFont())));
-			lines.add(gap(GAP_M));
-			lines.add(row(caption("Members"), caption("looted / share")));
+			addGap(lines, GAP_M, row(caption("Members"), caption("looted / share")));
 			for (JsonObject member : objects(array(split, "members")))
 			{
 				lines.add(gap(GAP_XS));
@@ -245,13 +217,11 @@ final class TsgHubPartiesView
 			List<JsonObject> drops = objects(array(split, "drops"));
 			if (!drops.isEmpty())
 			{
-				lines.add(gap(GAP_M));
-				lines.add(row(caption("Drops"), caption("right-click to edit")));
+				addGap(lines, GAP_M, row(caption("Drops"), caption("right-click to edit")));
 			}
 			for (JsonObject drop : drops)
 			{
-				lines.add(gap(GAP_S));
-				lines.add(dropRow(drop));
+				addGap(lines, GAP_S, dropRow(drop));
 			}
 			List<JsonObject> transfers = objects(array(split, "transfers"));
 			if (!transfers.isEmpty())
@@ -269,32 +239,27 @@ final class TsgHubPartiesView
 				if (!from.equals(payer))
 				{
 					payer = from;
-					lines.add(gap(GAP_XS));
-					lines.add(shrinkable(label(from + " pays", TEXT, smallFont())));
+					addGap(lines, GAP_XS, shrinkable(label(from + " pays", TEXT, smallFont())));
 				}
 				JPanel line = row(shrinkable(label(str(transfer, "to"), TEXT, smallFont())), label((bool(split, "estimated") ? "~" : "") + splitGp(longValue(transfer, "amount", 0)), WARNING, smallFont()));
 				line.setBorder(BorderFactory.createEmptyBorder(0, GAP_M, 0, 0));
 				withMenu(line, transferMenu(transfer));
-				lines.add(gap(GAP_XS));
-				lines.add(line);
+				addGap(lines, GAP_XS, line);
 			}
 			List<JsonObject> payments = objects(array(split, "payments"));
 			if (!payments.isEmpty())
 			{
-				lines.add(gap(GAP_M));
-				lines.add(caption("Paid"));
+				addGap(lines, GAP_M, caption("Paid"));
 			}
 			for (JsonObject payment : payments)
 			{
 				JPanel line = row(shrinkable(label(str(payment, "from") + " paid " + str(payment, "to"), TEXT, smallFont())), label(splitGp(longValue(payment, "gp", 0)), SUCCESS, smallFont()));
 				withMenu(line, paymentMenu(payment));
-				lines.add(gap(GAP_XS));
-				lines.add(line);
+				addGap(lines, GAP_XS, line);
 			}
 			if (!running && transfers.isEmpty() && !payments.isEmpty())
 			{
-				lines.add(gap(GAP_S));
-				lines.add(label("All settled", SUCCESS, smallFont()));
+				addGap(lines, GAP_S, label("All settled", SUCCESS, smallFont()));
 			}
 			JPanel card = card();
 			card.add(lines, BorderLayout.CENTER);
@@ -346,9 +311,7 @@ final class TsgHubPartiesView
 
 	private static void withMenu(JPanel row, JPopupMenu menu)
 	{
-		if (menu.getComponentCount() == 0) return;
-		row.setComponentPopupMenu(menu);
-		inheritPopup(row);
+		if (menu.getComponentCount() > 0) withPopup(row, menu);
 	}
 
 	private JPopupMenu transferMenu(JsonObject transfer)
@@ -357,12 +320,8 @@ final class TsgHubPartiesView
 		String from = str(transfer, "from");
 		String to = str(transfer, "to");
 		if (!plugin.groups().isLeader() && !samePlayer(to, plugin.session().get(TsgHubSession.GROUP_PLAYER))) return menu;
-		JMenuItem paid = new JMenuItem("Mark paid");
-		paid.addActionListener(e -> plugin.groups().markPaid(from, to, 0));
-		menu.add(paid);
-		JMenuItem part = new JMenuItem("Mark part paid");
-		part.addActionListener(e -> promptPaid(from, to));
-		menu.add(part);
+		item(menu, "Mark paid", () -> plugin.groups().markPaid(from, to, 0));
+		item(menu, "Mark part paid", () -> promptPaid(from, to));
 		return menu;
 	}
 
@@ -370,9 +329,7 @@ final class TsgHubPartiesView
 	{
 		JPopupMenu menu = new JPopupMenu();
 		if (!plugin.groups().isLeader() && !samePlayer(str(payment, "to"), plugin.session().get(TsgHubSession.GROUP_PLAYER))) return menu;
-		JMenuItem undo = new JMenuItem("Undo payment");
-		undo.addActionListener(e -> plugin.groups().unpay(str(payment, "id")));
-		menu.add(undo);
+		item(menu, "Undo payment", () -> plugin.groups().unpay(str(payment, "id")));
 		return menu;
 	}
 
@@ -390,15 +347,6 @@ final class TsgHubPartiesView
 		plugin.groups().markPaid(from, to, gp);
 	}
 
-	private static void inheritPopup(java.awt.Container parent)
-	{
-		for (java.awt.Component child : parent.getComponents())
-		{
-			if (child instanceof JComponent) ((JComponent) child).setInheritsPopupMenu(true);
-			if (child instanceof java.awt.Container) inheritPopup((java.awt.Container) child);
-		}
-	}
-
 	private JPopupMenu dropMenu(JsonObject drop, List<String> skipped)
 	{
 		JPopupMenu menu = new JPopupMenu();
@@ -408,15 +356,8 @@ final class TsgHubPartiesView
 		boolean leader = groups.isLeader();
 		if (leader)
 		{
-			JMenuItem value = new JMenuItem("Set agreed value");
-			value.addActionListener(e -> promptDropValue(drop));
-			menu.add(value);
-			if (bool(drop, "agreed"))
-			{
-				JMenuItem clear = new JMenuItem("Clear agreed value");
-				clear.addActionListener(e -> groups.setSplitValue(id, 0));
-				menu.add(clear);
-			}
+			item(menu, "Set agreed value", () -> promptDropValue(drop));
+			if (bool(drop, "agreed")) item(menu, "Clear agreed value", () -> groups.setSplitValue(id, 0));
 		}
 		String self = plugin.session().get(TsgHubSession.GROUP_PLAYER);
 		for (String name : dropSharers(drop, skipped))
@@ -425,9 +366,7 @@ final class TsgHubPartiesView
 			if (!me && !leader) continue;
 			boolean sharing = skipped.stream().noneMatch(n -> samePlayer(n, name));
 			String who = me ? "my" : name + "'s";
-			JMenuItem share = new JMenuItem(sharing ? "Skip " + who + " share" : "Restore " + who + " share");
-			share.addActionListener(e -> groups.setSplitShare(id, name, !sharing));
-			menu.add(share);
+			item(menu, sharing ? "Skip " + who + " share" : "Restore " + who + " share", () -> groups.setSplitShare(id, name, !sharing));
 		}
 		return menu;
 	}
@@ -476,7 +415,7 @@ final class TsgHubPartiesView
 		}
 		else if (groupList.size() == 0)
 		{
-			groupsPage.add(shell.errorPanel("No parties yet", "Start one below. Clanmates can join it with one click, no code needed."));
+			groupsPage.add(errorPanel("No parties yet", "Start one below. Clanmates can join it with one click, no code needed."));
 		}
 		else
 		{
@@ -495,13 +434,9 @@ final class TsgHubPartiesView
 		groupsPage.add(fitHeight(createGroupButton));
 		groupsPage.add(groupError);
 		groupsPage.add(gap(GAP_M));
-		groupsPage.add(TsgHubSidebarPanel.hint(current != null ? "Joining or starting another party leaves your current one."
+		groupsPage.add(hint(current != null ? "Joining or starting another party leaves your current one."
 			: "Party members see each other's health, prayer, gear, inventory and skills while they're in the party."));
-		if (plugin.groups().inOtherParty())
-		{
-			groupsPage.add(gap(GAP_S));
-			groupsPage.add(wrapped("You're in a RuneLite party from outside TSG Hub. Joining or starting a party here leaves it.", WARNING, smallFont(), TsgHubSidebarPanel.TEXT_W));
-		}
+		if (plugin.groups().inOtherParty()) addGap(groupsPage, GAP_S, wrapped("You're in a RuneLite party from outside TSG Hub. Joining or starting a party here leaves it.", WARNING, smallFont(), TEXT_W));
 	}
 
 	private JPanel groupCard(JsonObject group, JsonObject current)
@@ -545,13 +480,9 @@ final class TsgHubPartiesView
 		String extra = showArea ? area.getKey() : leaderListed || leader.isEmpty() ? "" : "Led by " + leader;
 		JLabel detail = shrinkable(showArea ? label(extra, SUCCESS, smallFont()) : caption(extra));
 		detail.putClientProperty("html.disable", Boolean.TRUE);
-		JLabel who = label(html(String.join(", ", names), TsgHubSidebarPanel.CARD_TEXT_W), MUTED, smallFont());
+		JLabel who = label(html(String.join(", ", names), CARD_TEXT_W), MUTED, smallFont());
 		JPanel text = extra.isEmpty() ? twoLines(top, who) : twoLines(top, detail);
-		if (!extra.isEmpty())
-		{
-			text.add(gap(GAP_XS));
-			text.add(who);
-		}
+		if (!extra.isEmpty()) addGap(text, GAP_XS, who);
 		card.add(text, BorderLayout.CENTER);
 
 		fullTextTooltip(card, null);

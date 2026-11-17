@@ -20,12 +20,13 @@ final class TsgHubNewsGallery extends JPanel
 	static final int THUMB_H = 44;
 	static final int MAX_VIEW_H = 360;
 	private static final int RADIUS = 8;
+	private static final int MAX_SCALED = 40;
 
 	private final List<Photo> photos = new ArrayList<>();
 	private final Memory memory;
 	private final int width;
 	private final int viewH;
-	private final JPanel captionRow = new JPanel(new BorderLayout(GAP_M, 0));
+	private final JPanel captionRow = panel(new BorderLayout(GAP_M, 0));
 	private final JLabel caption = label("", MUTED, smallFont());
 	private final JLabel count = label("", MUTED, smallFont());
 	private int countW;
@@ -50,22 +51,25 @@ final class TsgHubNewsGallery extends JPanel
 
 	static final class Memory
 	{
-		final Map<String, BufferedImage> scaled = new ConcurrentHashMap<>();
+		final Map<String, BufferedImage> scaled = Collections.synchronizedMap(new LinkedHashMap<String, BufferedImage>(16, 0.75f, true)
+		{
+			@Override
+			protected boolean removeEldestEntry(Map.Entry<String, BufferedImage> eldest)
+			{
+				return size() > MAX_SCALED;
+			}
+		});
 		final Map<String, Integer> selected = new HashMap<>();
 	}
 
-	TsgHubNewsGallery(List<JsonObject> list, int width, Function<String, CompletableFuture<BufferedImage>> load, Consumer<String> open, Memory memory)
+	TsgHubNewsGallery(List<JsonObject> list, int width, Function<String, CompletableFuture<BufferedImage>> load, Consumer<String> open, Memory memory, Runnable loaded)
 	{
 		this.width = width;
 		this.memory = memory;
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 		setOpaque(false);
 		setAlignmentX(LEFT_ALIGNMENT);
-		for (JsonObject json : list)
-		{
-			Photo photo = new Photo(json);
-			photos.add(photo);
-		}
+		for (JsonObject json : list) photos.add(new Photo(json));
 		viewH = viewHeight(photos, width);
 		double scale = screenScale();
 		for (Photo photo : photos)
@@ -77,22 +81,18 @@ final class TsgHubNewsGallery extends JPanel
 				SwingUtilities.invokeLater(() -> {
 					photo.image = image;
 					repaint();
+					loaded.run();
 				});
 			});
 		}
 		add(new Viewer(viewH, open));
-		captionRow.setOpaque(false);
 		captionRow.setAlignmentX(LEFT_ALIGNMENT);
 		captionRow.add(caption, BorderLayout.CENTER);
 		captionRow.add(count, BorderLayout.EAST);
 		if (photos.size() > 1) countW = getFontMetrics(smallFont()).stringWidth(photos.size() + " / " + photos.size()) + GAP_M;
 		if (photos.size() > 1 || photos.stream().anyMatch(p -> !p.caption.isEmpty())) captionRow.setBorder(BorderFactory.createEmptyBorder(GAP_XS, 0, 0, 0));
 		add(captionRow);
-		if (photos.size() > 1)
-		{
-			add(gap(GAP_S));
-			add(new Strip());
-		}
+		if (photos.size() > 1) addGap(this, GAP_S, new Strip());
 		select(Math.min(memory.selected.getOrDefault(photos.get(0).url, 0), photos.size() - 1));
 	}
 
@@ -167,13 +167,6 @@ final class TsgHubNewsGallery extends JPanel
 		repaint();
 	}
 
-	private static Graphics2D smooth(Graphics g)
-	{
-		Graphics2D g2 = (Graphics2D) g.create();
-		g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		return g2;
-	}
-
 	private static JComponent sized(JComponent component, int w, int h)
 	{
 		Dimension size = new Dimension(w, h);
@@ -181,6 +174,14 @@ final class TsgHubNewsGallery extends JPanel
 		component.setMaximumSize(size);
 		component.setAlignmentX(LEFT_ALIGNMENT);
 		component.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		component.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mousePressed(MouseEvent e)
+			{
+				if (SwingUtilities.isLeftMouseButton(e)) press(component, e.getPoint());
+			}
+		});
 		return component;
 	}
 
@@ -191,14 +192,6 @@ final class TsgHubNewsGallery extends JPanel
 			sized(this, width, height);
 			setToolTipText("Open full size");
 			pressable(this, point -> open.accept(photos.get(selected).url));
-			addMouseListener(new MouseAdapter()
-			{
-				@Override
-				public void mousePressed(MouseEvent e)
-				{
-					if (SwingUtilities.isLeftMouseButton(e)) press(Viewer.this, e.getPoint());
-				}
-			});
 		}
 
 		@Override
@@ -231,14 +224,6 @@ final class TsgHubNewsGallery extends JPanel
 			pressable(this, point -> {
 				int index = point.x / (thumbW + GAP);
 				if (index < photos.size() && index != selected && point.x - index * (thumbW + GAP) < thumbW) select(index);
-			});
-			addMouseListener(new MouseAdapter()
-			{
-				@Override
-				public void mousePressed(MouseEvent e)
-				{
-					if (SwingUtilities.isLeftMouseButton(e)) press(Strip.this, e.getPoint());
-				}
 			});
 		}
 

@@ -10,10 +10,13 @@ import java.util.List;
 import javax.swing.*;
 import javax.swing.Timer;
 import net.runelite.client.ui.*;
+import net.runelite.client.util.*;
 
 final class TsgHubBoardGrid extends JComponent
 {
 	interface SelectListener { void selected(String taskId, int row, int col); }
+
+	interface CellPainter { void paint(int row, int col, int x, int y, String id); }
 
 	static final Color GOLD = new Color(232, 183, 91);
 	private static final int GAP = 3;
@@ -134,8 +137,13 @@ final class TsgHubBoardGrid extends JComponent
 
 	private int cell()
 	{
+		return cellFor(getWidth());
+	}
+
+	private int cellFor(int width)
+	{
 		int n = board == null ? TsgHubBingoBoard.MIN_SIZE : board.size;
-		return Math.max(12, (getWidth() - GAP * (n - 1)) / n);
+		return Math.max(12, (width - GAP * (n - 1)) / n);
 	}
 
 	private int offsetX()
@@ -175,8 +183,7 @@ final class TsgHubBoardGrid extends JComponent
 			Insets insets = getParent().getInsets();
 			width = getParent().getWidth() - insets.left - insets.right;
 		}
-		int cell = Math.max(12, (width - GAP * (n - 1)) / n);
-		return new Dimension(width, cell * n + GAP * (n - 1));
+		return new Dimension(width, cellFor(width) * n + GAP * (n - 1));
 	}
 
 	@Override
@@ -214,26 +221,11 @@ final class TsgHubBoardGrid extends JComponent
 		Set<Integer> inLines = cellsInLines(board, lines);
 		Font font = FontManager.getRunescapeSmallFont();
 		boolean names = cell >= 56;
-		for (int row = 0; row < board.size; row++)
-		{
-			for (int col = 0; col < board.size; col++)
-			{
-				int x = left + col * (cell + GAP);
-				int y = row * (cell + GAP);
-				String id = board.taskAt(row, col);
-				boolean hovered = hover != null && hover[0] == row && hover[1] == col;
-				if (id == null)
-				{
-					paintEmpty(g, x, y, cell);
-					continue;
-				}
-				JsonObject task = tasks.get(id);
-				JsonObject taskProgress = progress.get(id);
-				boolean complete = done.contains(id);
-				Tile tile = new Tile(task, taskProgress, complete, inLines.contains(row * board.size + col), id.equals(selectedTask), hovered, icon(task));
-				paintFlip(g, x, y, cell, tile, font, names, flips.get(id), now);
-			}
-		}
+		paintCells(g, board, left, 0, cell, GAP, (row, col, x, y, id) -> {
+			JsonObject task = tasks.get(id);
+			Tile tile = new Tile(task, progress.get(id), done.contains(id), inLines.contains(row * board.size + col), id.equals(selectedTask), hover != null && hover[0] == row && hover[1] == col, images == null ? null : images.icon(task));
+			paintFlip(g, x, y, cell, tile, font, names, flips.get(id), now);
+		});
 		for (TsgHubBingoBoard.Line line : lines)
 		{
 			Long start = lineStarts.get(line.key());
@@ -249,11 +241,6 @@ final class TsgHubBoardGrid extends JComponent
 			paintBonus(g, left, cell, line, "+" + bonus, (now - start - LINE_MS) / (double) BONUS_MS);
 		}
 		g.dispose();
-	}
-
-	private BufferedImage icon(JsonObject task)
-	{
-		return images == null ? null : images.icon(task);
 	}
 
 	static final class Tile
@@ -297,6 +284,21 @@ final class TsgHubBoardGrid extends JComponent
 		return cells;
 	}
 
+	static void paintCells(Graphics2D g, TsgHubBingoBoard board, int left, int top, int cell, int gap, CellPainter painter)
+	{
+		for (int row = 0; row < board.size; row++)
+		{
+			for (int col = 0; col < board.size; col++)
+			{
+				int x = left + col * (cell + gap);
+				int y = top + row * (cell + gap);
+				String id = board.taskAt(row, col);
+				if (id == null) paintEmpty(g, x, y, cell);
+				else painter.paint(row, col, x, y, id);
+			}
+		}
+	}
+
 	static void paintEmpty(Graphics2D g, int x, int y, int cell)
 	{
 		Shape shape = new RoundRectangle2D.Double(x + 0.5, y + 0.5, cell - 1, cell - 1, 6, 6);
@@ -311,7 +313,7 @@ final class TsgHubBoardGrid extends JComponent
 	{
 		Shape shape = new RoundRectangle2D.Double(x + 0.5, y + 0.5, cell - 1, cell - 1, 6, 6);
 		Color base = tile.hovered ? TsgHubTheme.CARD_HOVER : TsgHubTheme.CARD;
-		g.setColor(tile.complete ? blend(base, TsgHubTheme.SUCCESS, 0.32) : base);
+		g.setColor(tile.complete ? ColorUtil.colorLerp(base, TsgHubTheme.SUCCESS, 0.32) : base);
 		g.fill(shape);
 
 		int value = TsgHubJson.integer(tile.progress, "progress", 0);
@@ -462,11 +464,11 @@ final class TsgHubBoardGrid extends JComponent
 		Graphics2D stroke = (Graphics2D) g.create();
 		if (glow)
 		{
-			stroke.setColor(new Color(GOLD.getRed(), GOLD.getGreen(), GOLD.getBlue(), 70));
+			stroke.setColor(ColorUtil.colorWithAlpha(GOLD, 70));
 			stroke.setStroke(new BasicStroke(cell * 0.3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
 			stroke.draw(path);
 		}
-		stroke.setColor(new Color(GOLD.getRed(), GOLD.getGreen(), GOLD.getBlue(), glow ? 230 : 120));
+		stroke.setColor(ColorUtil.colorWithAlpha(GOLD, glow ? 230 : 120));
 		stroke.setStroke(new BasicStroke(glow ? cell * 0.12f : Math.max(3f, cell / 12f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
 		stroke.draw(path);
 		stroke.dispose();
@@ -516,20 +518,13 @@ final class TsgHubBoardGrid extends JComponent
 		if (line.length() > 0) lines.add(line.toString());
 		boolean cut = lines.size() > maxLines;
 		List<String> shown = new ArrayList<>(lines.subList(0, Math.min(lines.size(), maxLines)));
-		for (int i = 0; i < shown.size(); i++)
-		{
-			String part = shown.get(i) + (cut && i == shown.size() - 1 ? "…" : "");
-			while (metrics.stringWidth(part) > width && part.length() > 1) part = part.substring(0, part.length() - 2) + "…";
-			shown.set(i, part);
-		}
+		for (int i = 0; i < shown.size(); i++) shown.set(i, ellipsize(metrics, shown.get(i) + (cut && i == shown.size() - 1 ? "…" : ""), width));
 		return shown;
 	}
 
-	private static Color blend(Color a, Color b, double amount)
+	static String ellipsize(FontMetrics metrics, String text, int width)
 	{
-		return new Color(
-			(int) (a.getRed() + (b.getRed() - a.getRed()) * amount),
-			(int) (a.getGreen() + (b.getGreen() - a.getGreen()) * amount),
-			(int) (a.getBlue() + (b.getBlue() - a.getBlue()) * amount));
+		while (metrics.stringWidth(text) > width && text.length() > 1) text = text.substring(0, text.length() - 2) + "…";
+		return text;
 	}
 }

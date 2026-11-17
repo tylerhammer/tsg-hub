@@ -84,7 +84,6 @@ final class TsgHubBoardView
 
 	void showBoard(JsonObject event, String displayName, boolean open)
 	{
-		// Background refreshes must not pull the user off another screen.
 		if (!open && shell.view != View.BOARD && shell.view != View.SIGNUP) return;
 		String name = displayName == null ? "" : displayName;
 		shell.refresh.setToolTipText("Refresh (updated " + LocalTime.now().format(TsgHubSidebarPanel.TIME) + ")");
@@ -194,16 +193,16 @@ final class TsgHubBoardView
 
 		if (tasks.size() == 0)
 		{
-			tasksTab.add(shell.errorPanel("No tasks yet", "The admins haven't added tasks to this event yet."));
+			tasksTab.add(errorPanel("No tasks yet", "The admins haven't added tasks to this event yet."));
 		}
 		else if (open.isEmpty() && hideCompleted.isSelected())
 		{
-			tasksTab.add(shell.errorPanel("All done!", "Your team has completed every task."));
+			tasksTab.add(errorPanel("All done!", "Your team has completed every task."));
 		}
 		for (JsonObject task : open) addTaskCard(task, progressFor(progressRows, str(task, "id")));
 		if (!hideCompleted.isSelected() && !done.isEmpty())
 		{
-			tasksTab.add(listHeading("Completed (" + done.size() + ")", false));
+			tasksTab.add(listHeading("Completed (" + done.size() + ")", false, null));
 			JPanel card = card();
 			card.setBorder(BorderFactory.createCompoundBorder(card.getBorder(), BorderFactory.createEmptyBorder(0, 0, 1, 0)));
 			JPanel rows = stack();
@@ -245,13 +244,13 @@ final class TsgHubBoardView
 		boardGrid.setData(view);
 		int lines = view.lines.size();
 		int bonus = board.bonusFor(view.lines);
-		JLabel counts = label(view.left() + " left · " + lines + (lines == 1 ? " line" : " lines") + (bonus > 0 ? " (+" + bonus + ")" : ""), lines > 0 ? TsgHubBoardGrid.GOLD : MUTED, smallFont());
+		JLabel counts = label(view.left() + " left · " + TsgHubFormat.plural(lines, "line") + (bonus > 0 ? " (+" + bonus + ")" : ""), lines > 0 ? TsgHubBoardGrid.GOLD : MUTED, smallFont());
 		counts.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
 		tasksTab.add(fitHeight(row(caption(board.size + "x" + board.size + " board"), counts)));
 		tasksTab.add(gap(GAP_S));
 		tasksTab.add(boardGrid);
 		tasksTab.add(gap(GAP_S));
-		if (board.hasBonus()) tasksTab.add(wrapped(board.bonusRule() + ".", TsgHubBoardGrid.GOLD, smallFont(), TsgHubSidebarPanel.TEXT_W));
+		if (board.hasBonus()) tasksTab.add(wrapped(board.bonusRule() + ".", TsgHubBoardGrid.GOLD, smallFont(), TEXT_W));
 		boolean onScreen = plugin.bingo().overlayEnabled();
 		tasksTab.add(gap(GAP_S));
 		tasksTab.add(fitHeight(onClick(button(onScreen ? "Hide board from screen" : "Show board on screen"), () -> plugin.bingo().setOverlayEnabled(!onScreen))));
@@ -293,7 +292,7 @@ final class TsgHubBoardView
 
 		JPanel body = stack();
 		String description = str(task, "description").trim();
-		if (!description.isEmpty() && !completed) body.add(TsgHubSidebarPanel.cardNote(description));
+		if (!description.isEmpty() && !completed) body.add(cardNote(description));
 
 		int value = integer(progress, "progress", 0);
 		int target = Math.max(1, integer(progress, "target", 1));
@@ -325,10 +324,12 @@ final class TsgHubBoardView
 		if (!individual && !solo && (!progress.has("sets") || completed))
 		{
 			String amounts = contributorsHtml(progress, " · ", CARD_CONTRIBUTORS, boardDisplayName);
-			if (!amounts.isEmpty()) body.add(TsgHubSidebarPanel.cardNoteHtml(amounts));
+			if (!amounts.isEmpty()) body.add(cardNoteHtml(amounts));
 		}
 		List<JsonObject> claims = completed ? new ArrayList<>() : TsgHubTileClaims.forTask(boardEvent, taskId);
-		if (!claims.isEmpty()) body.add(TsgHubSidebarPanel.cardNoteHtml("Claimed: " + claimNames(claims, CARD_CLAIMS)));
+		List<String> claimers = new ArrayList<>();
+		for (JsonObject claim : claims) claimers.add(claimName(claim));
+		if (!claims.isEmpty()) body.add(cardNoteHtml("Claimed: " + firstThenRest(claimers, CARD_CLAIMS, ", ")));
 		addLineSpacing(body);
 		addScopeIcon(body, solo, individual);
 		card.add(body, BorderLayout.CENTER);
@@ -345,12 +346,11 @@ final class TsgHubBoardView
 		return bool(claim, "mine") ? selfName(name) : nameHtml(str(claim, "displayName"), boardDisplayName);
 	}
 
-	private String claimNames(List<JsonObject> claims, int max)
+	private static String firstThenRest(List<String> parts, int max, String separator)
 	{
-		List<String> names = new ArrayList<>();
-		for (int i = 0; i < Math.min(max, claims.size()); i++) names.add(claimName(claims.get(i)));
-		if (claims.size() > max) names.add("+" + (claims.size() - max));
-		return String.join(", ", names);
+		List<String> shown = new ArrayList<>(parts.subList(0, Math.min(max, parts.size())));
+		if (parts.size() > max) shown.add("+" + (parts.size() - max));
+		return String.join(separator, shown);
 	}
 
 	private void addClaimMenu(JPanel card, String taskId, String title, JsonObject myClaim)
@@ -371,8 +371,7 @@ final class TsgHubBoardView
 			drop.addActionListener(e -> sendClaim(taskId, null));
 			menu.add(drop);
 		}
-		card.setComponentPopupMenu(menu);
-		eachDeep(card, c -> { if (c != card && c instanceof JComponent) ((JComponent) c).setInheritsPopupMenu(true); });
+		withPopup(card, menu);
 	}
 
 	private void promptClaim(String taskId, String title, JsonObject current)
@@ -417,7 +416,7 @@ final class TsgHubBoardView
 	{
 		String count = value + " of " + target + " teammates done";
 		if (mine == null || !bool(mine, "completed")) return caption(count);
-		return label(html("<font color='" + toHexColor(SUCCESS) + "'>You're done</font> · " + count, TsgHubSidebarPanel.CARD_TEXT_W), MUTED, smallFont());
+		return label(html("<font color='" + toHexColor(SUCCESS) + "'>You're done</font> · " + count, CARD_TEXT_W), MUTED, smallFont());
 	}
 
 	private boolean addSetProgress(JPanel body, JsonObject source, boolean mine)
@@ -436,10 +435,10 @@ final class TsgHubBoardView
 			body.add(progressBar(have, target, str(set, "name"), have + "/" + target));
 			body.add(gap(GAP_XS));
 			List<String> needed = strings(array(set, "needed"));
-			if (!needed.isEmpty()) body.add(TsgHubSidebarPanel.cardNote("Need: " + String.join(", ", needed)));
+			if (!needed.isEmpty()) body.add(cardNote("Need: " + String.join(", ", needed)));
 		}
 		int notStarted = sets.size() - shown.size();
-		if (notStarted > 0) body.add(caption("+" + notStarted + (notStarted == 1 ? " more set" : " more sets") + " not started"));
+		if (notStarted > 0) body.add(caption("+" + TsgHubFormat.plural(notStarted, "more set") + " not started"));
 		return true;
 	}
 
@@ -540,16 +539,9 @@ final class TsgHubBoardView
 
 	private static String contributorsHtml(JsonObject progress, String separator, int max, String self)
 	{
-		JsonArray contributors = array(progress, "contributors");
-		if (contributors.size() == 0) return "";
 		List<String> parts = new ArrayList<>();
-		for (int i = 0; i < Math.min(max, contributors.size()); i++)
-		{
-			JsonObject entry = contributors.get(i).getAsJsonObject();
-			parts.add(nameHtml(str(entry, "displayName"), self) + " " + integer(entry, "amount", 1));
-		}
-		if (contributors.size() > max) parts.add("+" + (contributors.size() - max));
-		return String.join(separator, parts);
+		for (JsonObject entry : objects(array(progress, "contributors"))) parts.add(nameHtml(str(entry, "displayName"), self) + " " + integer(entry, "amount", 1));
+		return firstThenRest(parts, max, separator);
 	}
 
 	private void renderScoreboard()
@@ -564,7 +556,7 @@ final class TsgHubBoardView
 		JsonArray scores = array(boardEvent, "teamScores");
 		int totalTasks = array(boardEvent, "tasks").size();
 		String ownTeam = ownTeamId();
-		if (ranked.isEmpty()) scoreboardTab.add(shell.errorPanel("No teams yet", "Teams appear here once an admin adds them."));
+		if (ranked.isEmpty()) scoreboardTab.add(errorPanel("No teams yet", "Teams appear here once an admin adds them."));
 		for (int i = 0; i < ranked.size(); i++)
 		{
 			JsonObject team = ranked.get(i);
@@ -578,7 +570,7 @@ final class TsgHubBoardView
 			text.add(wrapped(str(team, "name"), TEXT, boldFont(), 120));
 			int lines = integer(score, "lines", 0);
 			int bonus = integer(score, "bonusPoints", 0);
-			text.add(caption(integer(score, "completedTasks", 0) + "/" + totalTasks + " tasks" + (lines > 0 ? " · " + lines + (lines == 1 ? " line" : " lines") : "") + (bonus > 0 ? " (+" + bonus + ")" : "")));
+			text.add(caption(integer(score, "completedTasks", 0) + "/" + totalTasks + " tasks" + (lines > 0 ? " · " + TsgHubFormat.plural(lines, "line") : "") + (bonus > 0 ? " (+" + bonus + ")" : "")));
 			card.add(text, BorderLayout.CENTER);
 			card.add(label(integer(score, "points", 0) + " pts", i == 0 ? ACCENT : TEXT, boldFont()), BorderLayout.EAST);
 			addCard(scoreboardTab, fitHeight(card));
@@ -588,7 +580,7 @@ final class TsgHubBoardView
 
 	private void renderHiddenScoreboard()
 	{
-		scoreboardTab.add(shell.errorPanel("Scores are hidden", "The admins are keeping scores secret for now. Your own team's progress is on the Tasks tab."));
+		scoreboardTab.add(errorPanel("Scores are hidden", "The admins are keeping scores secret for now. Your own team's progress is on the Tasks tab."));
 		List<JsonObject> teams = objects(array(boardEvent, "teams"));
 		teams.sort((a, b) -> str(a, "name").compareToIgnoreCase(str(b, "name")));
 		String ownTeam = ownTeamId();
@@ -597,7 +589,7 @@ final class TsgHubBoardView
 			boolean mine = str(team, "id").equals(ownTeam);
 			JPanel card = card();
 			if (mine) highlightSelf(card);
-			card.add(wrapped(str(team, "name"), TEXT, plainFont(), TsgHubSidebarPanel.CARD_TEXT_W), BorderLayout.CENTER);
+			card.add(wrapped(str(team, "name"), TEXT, plainFont(), CARD_TEXT_W), BorderLayout.CENTER);
 			addCard(scoreboardTab, fitHeight(card));
 		}
 		refresh(scoreboardTab);
@@ -613,20 +605,20 @@ final class TsgHubBoardView
 			if (!ownTeam.isEmpty() && str(member, "teamId").equals(ownTeam)) teammates.add(str(member, "displayName"));
 		}
 		teammates.sort(String.CASE_INSENSITIVE_ORDER);
-		teamTab.add(caption(teammates.size() == 1 ? "1 member" : teammates.size() + " members"));
+		teamTab.add(caption(TsgHubFormat.plural(teammates.size(), "member")));
 		teamTab.add(gap(GAP_S));
 		for (String name : teammates)
 		{
 			JPanel row = card();
 			if (samePlayer(name, boardDisplayName)) highlightSelf(row);
-			row.add(wrapped(name, TEXT, plainFont(), TsgHubSidebarPanel.CARD_TEXT_W), BorderLayout.CENTER);
+			row.add(wrapped(name, TEXT, plainFont(), CARD_TEXT_W), BorderLayout.CENTER);
 			addCard(teamTab, fitHeight(row));
 		}
 		teamTab.add(gap(GAP_L));
 		JButton leave = onClick(dangerButton("Disconnect from event"), () -> confirmLeave());
 		teamTab.add(fitHeight(leave));
 		teamTab.add(gap(GAP_S));
-		teamTab.add(TsgHubSidebarPanel.hint("Stops tracking on this device. Your team keeps its progress and you can rejoin with the same code."));
+		teamTab.add(hint("Stops tracking on this device. Your team keeps its progress and you can rejoin with the same code."));
 		refresh(teamTab);
 	}
 

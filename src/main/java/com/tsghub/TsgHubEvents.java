@@ -180,11 +180,7 @@ final class TsgHubEvents
 	static JsonObject scoreFor(JsonArray scores, String teamId)
 	{
 		for (JsonObject score : objects(scores)) if (str(score, "teamId").equals(teamId)) return score;
-		JsonObject empty = new JsonObject();
-		empty.addProperty("points", 0);
-		empty.addProperty("completedTasks", 0);
-		empty.add("tasks", new JsonArray());
-		return empty;
+		return obj("points", 0, "completedTasks", 0, "tasks", new JsonArray());
 	}
 
 	static List<JsonObject> rankedTeams(JsonObject event)
@@ -201,12 +197,7 @@ final class TsgHubEvents
 	static JsonObject progressFor(JsonArray progressRows, String taskId)
 	{
 		for (JsonObject progress : objects(progressRows)) if (str(progress, "taskId").equals(taskId)) return progress;
-		JsonObject empty = new JsonObject();
-		empty.addProperty("progress", 0);
-		empty.addProperty("target", 1);
-		empty.addProperty("completed", false);
-		empty.add("completedBy", JsonNull.INSTANCE);
-		return empty;
+		return obj("progress", 0, "target", 1, "completed", false, "completedBy", null);
 	}
 
 	static String teamIdFor(JsonObject event, String displayName)

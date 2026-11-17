@@ -286,8 +286,8 @@ public class RevealsTest
 		assertEquals(5, view.left());
 		assertEquals(1, view.lines.size());
 		assertEquals(4, view.done.size());
-		assertEquals(1, view.cellOf("t4")[0]);
-		assertEquals(1, view.cellOf("t4")[1]);
+		assertEquals(1, view.board.cellOf("t4")[0]);
+		assertEquals(1, view.board.cellOf("t4")[1]);
 		JsonObject list = event("red");
 		list.remove("board");
 		assertNull(TsgHubBingoView.of(list, "red"));

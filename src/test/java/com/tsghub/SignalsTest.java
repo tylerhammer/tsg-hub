@@ -64,10 +64,10 @@ public class SignalsTest
 			return new Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(code).message("")
 				.body(ResponseBody.create(MediaType.get("application/json"), reply)).build();
 		}).build();
-		TsgHubSocket socket = new TsgHubSocket(http, new Gson(), "https://hub.test", executor, null);
-		TsgHubApi api = new TsgHubApi(http, new Gson(), "https://hub.test");
-		TsgHubOutbox outbox = new TsgHubOutbox(socket, (method, path, token, body) -> api.request(method, path, token, body));
-		return new TsgHubSignals(socket, outbox, () -> api, received::add);
+		TsgHubSocket socket = new TsgHubSocket(http, new Gson(), "https://hub.test", executor, Map.of(), state -> { });
+		TsgHubApi api = new TsgHubApi(http, new Gson(), "https://hub.test", executor);
+		TsgHubOutbox outbox = new TsgHubOutbox(socket, api::call);
+		return new TsgHubSignals(socket, outbox, api, received::add);
 	}
 
 	@Test
@@ -98,7 +98,7 @@ public class SignalsTest
 	@Test
 	public void socketSendFallsBackWhenNotReady()
 	{
-		TsgHubSocket socket = new TsgHubSocket(new OkHttpClient(), new Gson(), "https://hub.test", executor, null);
+		TsgHubSocket socket = new TsgHubSocket(new OkHttpClient(), new Gson(), "https://hub.test", executor, Map.of(), state -> { });
 		JsonObject body = new JsonObject();
 		body.addProperty("message", "Bob received a drop: Abyssal whip");
 		assertFalse(socket.send("broadcast", body));
@@ -141,14 +141,14 @@ public class SignalsTest
 		tokens.put("gone", "member");
 		eventStatus.put("/v1/events/e2/signals", 500);
 		eventStatus.put("/v1/events/gone/signals", 404);
-		signals.flush(tokens);
+		signals.flush(tokens).join();
 		assertEquals(3, posted.size());
 
 		eventStatus.remove("/v1/events/e2/signals");
-		signals.flush(tokens);
+		signals.flush(tokens).join();
 		assertEquals(List.of("/v1/events/e1/signals", "/v1/events/e2/signals", "/v1/events/gone/signals", "/v1/events/e2/signals"), paths);
 
-		signals.flush(tokens);
+		signals.flush(tokens).join();
 		assertEquals(4, posted.size());
 	}
 
@@ -172,7 +172,7 @@ public class SignalsTest
 		TsgHubSignals signals = signals();
 		signals.send("sale", TsgHubSales.update("", 20997, GrandExchangeOfferState.SOLD, 2, 1_400_000_000, 2, 2_800_000_000L, "offer").getValue());
 		signals.send("loot", new JsonObject());
-		signals.flush(Map.of("e1", "member"));
+		signals.flush(Map.of("e1", "member")).join();
 		assertEquals(1, posted.get(0).getAsJsonArray("signals").size());
 		assertEquals("loot", posted.get(0).getAsJsonArray("signals").get(0).getAsJsonObject().get("type").getAsString());
 	}
@@ -188,18 +188,18 @@ public class SignalsTest
 		signals.xp("WOODCUTTING", 1200, 2);
 
 		status = 500;
-		signals.flush(Map.of("e1", "member"));
+		signals.flush(Map.of("e1", "member")).join();
 		assertEquals(1, posted.size());
 		assertEquals(2, posted.get(0).getAsJsonArray("signals").size());
 
 		status = 200;
-		signals.flush(Map.of("e1", "member"));
+		signals.flush(Map.of("e1", "member")).join();
 		assertEquals(2, posted.size());
 		JsonObject retried = posted.get(1).getAsJsonArray("signals").get(0).getAsJsonObject();
 		assertEquals(1200, retried.get("xp").getAsInt());
 		assertEquals(1, received.size());
 
-		signals.flush(Map.of("e1", "member"));
+		signals.flush(Map.of("e1", "member")).join();
 		assertEquals(2, posted.size());
 	}
 }

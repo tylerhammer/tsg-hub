@@ -80,7 +80,7 @@ final class TsgHubNewsView
 		}
 		else if (announcements.size() == 0)
 		{
-			shell.page.add(shell.errorPanel("No announcements", "When the admins post news for the clan, it shows up here."));
+			shell.page.add(errorPanel("No announcements", "When the admins post news for the clan, it shows up here."));
 		}
 		else
 		{
@@ -98,13 +98,7 @@ final class TsgHubNewsView
 	{
 		if (TsgHubAnnouncements.pollOnly(announcement)) return pollCard(announcement, now, zone);
 		JPanel card = card();
-		JPanel lines = stack();
-		JPanel icons = newsIcons(announcement);
-		lines.add(row(label(html(escape(str(announcement, "title")), TsgHubSidebarPanel.CARD_TEXT_W - icons.getPreferredSize().width - 6), TEXT, boldFont()), north(icons)));
-		String poll = TsgHubAnnouncements.poll(announcement) == null ? "" : " · Poll";
-		lines.add(gap(GAP_XS));
-		lines.add(TsgHubSidebarPanel.cardNote(str(announcement, "postedBy") + " · " + TsgHubFormat.shortDate(str(announcement, "postedAt"), now, zone) + poll));
-		card.add(TsgHubSidebarPanel.fillWidth(lines), BorderLayout.CENTER);
+		card.add(fillWidth(heading(announcement, now, zone, TsgHubAnnouncements.poll(announcement) == null ? "" : " · Poll")), BorderLayout.CENTER);
 		String id = str(announcement, "id");
 		clickable(card, () -> plugin.openNews(id));
 		return fitHeight(card);
@@ -112,14 +106,19 @@ final class TsgHubNewsView
 
 	JPanel pollCard(JsonObject announcement, Instant now, ZoneId zone)
 	{
+		JPanel lines = heading(announcement, now, zone, "");
+		lines.add(plugin.announcements().polls().block(str(announcement, "id"), TsgHubAnnouncements.poll(announcement), CARD_TEXT_W));
 		JPanel card = card();
+		card.add(fillWidth(lines), BorderLayout.CENTER);
+		return fitHeight(card);
+	}
+
+	private JPanel heading(JsonObject announcement, Instant now, ZoneId zone, String suffix)
+	{
 		JPanel lines = stack();
 		JPanel icons = newsIcons(announcement);
-		lines.add(row(label(html(escape(str(announcement, "title")), TsgHubSidebarPanel.CARD_TEXT_W - icons.getPreferredSize().width - 6), TEXT, boldFont()), north(icons)));
-		lines.add(gap(GAP_XS));
-		lines.add(TsgHubSidebarPanel.cardNote(str(announcement, "postedBy") + " · " + TsgHubFormat.shortDate(str(announcement, "postedAt"), now, zone)));
-		lines.add(plugin.announcements().polls().block(str(announcement, "id"), TsgHubAnnouncements.poll(announcement), TsgHubSidebarPanel.CARD_TEXT_W));
-		card.add(TsgHubSidebarPanel.fillWidth(lines), BorderLayout.CENTER);
-		return fitHeight(card);
+		lines.add(row(label(html(escape(str(announcement, "title")), CARD_TEXT_W - icons.getPreferredSize().width - 6), TEXT, boldFont()), north(icons)));
+		addGap(lines, GAP_XS, cardNote(str(announcement, "postedBy") + " · " + shortDate(str(announcement, "postedAt"), now, zone) + suffix));
+		return lines;
 	}
 }

@@ -2,6 +2,7 @@ package com.tsghub;
 
 import java.awt.*;
 import java.util.List;
+import java.util.regex.*;
 import javax.swing.text.html.*;
 import static com.tsghub.PlayerNames.*;
 import static com.tsghub.TsgHubTheme.*;
@@ -25,36 +26,14 @@ final class TsgHubHtml
 		return "<html><body style='width:" + Math.round(widthPx * 0.75f) + "px'>" + innerHtml + "</body></html>";
 	}
 
-	private static final java.util.regex.Pattern URL = java.util.regex.Pattern.compile("https?://[^\\s<>\"']+");
-
 	private static final int LINK_TEXT_MAX = 24;
-	private static final java.util.regex.Pattern BULLET = java.util.regex.Pattern.compile("[-*•]\\s+(.+)");
-	private static final java.util.regex.Pattern NUMBERED = java.util.regex.Pattern.compile("\\d{1,2}[.)]\\s+(.+)");
-	private static final java.util.regex.Pattern HEADING = java.util.regex.Pattern.compile("(#{1,3})\\s+(.+)");
-	private static final java.util.regex.Pattern RULE = java.util.regex.Pattern.compile("-{3,}|\\*{3,}|_{3,}");
-	private static final java.util.regex.Pattern LINK = java.util.regex.Pattern.compile("\\[([^\\]]+)]\\((https?://[^\\s)]+)\\)|(https?://[^\\s<>\"']+)");
-	private static final java.util.regex.Pattern LEAD_IN = java.util.regex.Pattern.compile("((?:\\*\\*)?[^:/*]{1,28}(?:\\*\\*)?:)(\\s.*)");
+	private static final Pattern BULLET = Pattern.compile("[-*•]\\s+(.+)");
+	private static final Pattern NUMBERED = Pattern.compile("\\d{1,2}[.)]\\s+(.+)");
+	private static final Pattern HEADING = Pattern.compile("(#{1,3})\\s+(.+)");
+	private static final Pattern RULE = Pattern.compile("-{3,}|\\*{3,}|_{3,}");
+	private static final Pattern LINK = Pattern.compile("\\[([^\\]]+)]\\((https?://[^\\s)]+)\\)|(https?://[^\\s<>\"']+)");
+	private static final Pattern LEAD_IN = Pattern.compile("((?:\\*\\*)?[^:/*]{1,28}(?:\\*\\*)?:)(\\s.*)");
 	private static final String LI = "<li style='margin-top:3px'>";
-
-	// Escapes plain text for HTML, keeps line breaks, and turns http(s) URLs into links. Long URLs show
-	// shortened: Swing can't wrap inside one, and a long one widens the whole label past its wrap width.
-	static String linkify(String text)
-	{
-		String raw = text == null ? "" : text;
-		StringBuilder out = new StringBuilder();
-		java.util.regex.Matcher matcher = URL.matcher(raw);
-		int last = 0;
-		while (matcher.find())
-		{
-			String url = matcher.group().replaceAll("[.,;:!?)]+$", "");
-			out.append(escape(raw.substring(last, matcher.start())));
-			out.append("<a href='").append(escape(url)).append("' style='color:").append(toHexColor(ACCENT)).append("'>")
-				.append(escape(linkText(url))).append("</a>");
-			last = matcher.start() + url.length();
-		}
-		out.append(escape(raw.substring(last)));
-		return out.toString().replace("\n", "<br>");
-	}
 
 	private static final String[] MEDALS = {"\uD83E\uDD47", "\uD83E\uDD48", "\uD83E\uDD49"};
 
@@ -66,9 +45,9 @@ final class TsgHubHtml
 		for (String line : (text == null ? "" : text).split("\n", -1))
 		{
 			String trimmed = line.trim();
-			java.util.regex.Matcher bullet = BULLET.matcher(trimmed);
-			java.util.regex.Matcher numbered = NUMBERED.matcher(trimmed);
-			java.util.regex.Matcher heading = HEADING.matcher(trimmed);
+			Matcher bullet = BULLET.matcher(trimmed);
+			Matcher numbered = NUMBERED.matcher(trimmed);
+			Matcher heading = HEADING.matcher(trimmed);
 			String next = trimmed.isEmpty() || heading.matches() || RULE.matcher(trimmed).matches() ? ""
 				: bullet.matches() ? "ul" : numbered.matches() ? "ol" : trimmed.startsWith(">") ? "quote" : "p";
 			if (!next.equals(kind)) flushBlock(out, block, kind);
@@ -114,14 +93,14 @@ final class TsgHubHtml
 
 	private static String leadIn(String item)
 	{
-		java.util.regex.Matcher lead = LEAD_IN.matcher(item);
+		Matcher lead = LEAD_IN.matcher(item);
 		return lead.matches() ? "<b>" + inline(lead.group(1)) + "</b>" + inline(lead.group(2)) : inline(item);
 	}
 
 	private static String inline(String raw)
 	{
 		StringBuilder out = new StringBuilder();
-		java.util.regex.Matcher matcher = LINK.matcher(raw);
+		Matcher matcher = LINK.matcher(raw);
 		int last = 0;
 		while (matcher.find())
 		{

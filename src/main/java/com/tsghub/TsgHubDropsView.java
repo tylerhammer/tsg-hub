@@ -42,7 +42,7 @@ final class TsgHubDropsView
 
 	JPanel buildDropsView()
 	{
-		JPanel filters = panel(new java.awt.GridLayout(1, 2, GAP_S, 0));
+		JPanel filters = panel(new GridLayout(1, 2, GAP_S, 0));
 		dropTypeIndex = sessionIndex(DROP_TYPE, dropType.getItemCount());
 		dropValueIndex = sessionIndex(DROP_VALUE, dropValue.getItemCount());
 		dropType.setSelectedIndex(dropTypeIndex);
@@ -117,11 +117,11 @@ final class TsgHubDropsView
 		}
 		else if (drops.size() == 0 && dropTypeIndex == 0 && dropValueIndex == 0)
 		{
-			dropsPage.add(shell.errorPanel("No drops yet", "Clan broadcasts for drops, raid loot, pets and collection log items show up here."));
+			dropsPage.add(errorPanel("No drops yet", "Clan broadcasts for drops, raid loot, pets and collection log items show up here."));
 		}
 		else if (drops.size() == 0)
 		{
-			dropsPage.add(shell.errorPanel("No matching drops", "Nothing recent matches this type and value."));
+			dropsPage.add(errorPanel("No matching drops", "Nothing recent matches this type and value."));
 		}
 		else
 		{
@@ -134,7 +134,7 @@ final class TsgHubDropsView
 				String nextDay = TsgHubDrops.dropDay(str(drop, "receivedAt"), now, zone);
 				if (!nextDay.equals(day))
 				{
-					dropsPage.add(listHeading(nextDay, i == 0));
+					dropsPage.add(listHeading(nextDay, i == 0, null));
 					day = nextDay;
 				}
 				addCard(dropsPage, dropCard(drop, now, zone));
@@ -162,7 +162,7 @@ final class TsgHubDropsView
 		}
 		long value = drop.has("value") ? drop.get("value").getAsLong() : 0;
 		if (value > 0) inline(extras, label(formatGp(value), value >= 1_000_000 ? WARNING : MUTED, smallFont()));
-		card.add(TsgHubSidebarPanel.fillWidth(twoLines(
+		card.add(fillWidth(twoLines(
 			row(name, caption(TsgHubDrops.dropWhen(str(drop, "receivedAt"), now, zone))),
 			row(shrinkable(label(player, self ? ACCENT : MUTED, smallFont())), extras))), BorderLayout.CENTER);
 		fullTextTooltip(card, () -> TsgHubDrops.dropTooltip(drop));
@@ -179,8 +179,7 @@ final class TsgHubDropsView
 			@Override
 			protected void paintComponent(Graphics g)
 			{
-				Graphics2D g2 = (Graphics2D) g.create();
-				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+				Graphics2D g2 = smooth(g);
 				g2.setColor(SLOT);
 				g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
 				g2.dispose();

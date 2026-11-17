@@ -55,11 +55,11 @@ final class TsgHubRecordsView
 		String self = plugin.clan().playerName();
 		if (unavailable)
 		{
-			shell.page.add(shell.errorPanel("Records aren't ready", "The TSG Hub service doesn't have clan records yet. Try again after its next update."));
+			shell.page.add(errorPanel("Records aren't ready", "The TSG Hub service doesn't have clan records yet. Try again after its next update."));
 		}
 		else if (records == null && loadFailed)
 		{
-			shell.page.add(shell.errorPanel("Couldn't load records", "Click refresh to try again."));
+			shell.page.add(errorPanel("Couldn't load records", "Click refresh to try again."));
 		}
 		else if (records == null)
 		{
@@ -67,13 +67,13 @@ final class TsgHubRecordsView
 		}
 		else if (clues.size() == 0 && bosses.size() == 0)
 		{
-			shell.page.add(shell.errorPanel("No records yet", "Kill and clue counts come from the hiscores and fill in over a day. PBs come from RuneLite's Chat Commands plugin."));
+			shell.page.add(errorPanel("No records yet", "Kill and clue counts come from the hiscores and fill in over a day. PBs come from RuneLite's Chat Commands plugin."));
 		}
 		else
 		{
-			if (clues.size() > 0) shell.page.add(listHeading("Clue scrolls", true));
+			if (clues.size() > 0) shell.page.add(listHeading("Clue scrolls", true, null));
 			for (JsonObject clue : objects(clues)) addCard(shell.page, clueCard(clue, self));
-			if (bosses.size() > 0) shell.page.add(listHeading("Bosses", clues.size() == 0));
+			if (bosses.size() > 0) shell.page.add(listHeading("Bosses", clues.size() == 0, null));
 			for (JsonObject boss : objects(bosses)) addCard(shell.page, bossCard(boss, self));
 		}
 		shell.refreshPage();
@@ -102,7 +102,7 @@ final class TsgHubRecordsView
 		if (most != null) lines.add(leader(most, count(most) + " KC"));
 		if (fastest != null) lines.add(leader(fastest, "PB " + str(fastest, "time")));
 		JPanel card = card();
-		card.add(TsgHubSidebarPanel.fillWidth(lines), BorderLayout.CENTER);
+		card.add(fillWidth(lines), BorderLayout.CENTER);
 		if (leads(most, self) || leads(fastest, self)) highlightSelf(card);
 		fullTextTooltip(card, () -> standings("MOST KC", kc, true, self) + standings("FASTEST", pb, kc.size() == 0, self));
 		return fitHeight(card);

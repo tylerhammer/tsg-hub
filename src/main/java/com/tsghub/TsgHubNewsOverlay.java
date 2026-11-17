@@ -33,9 +33,7 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 	private final TsgHubPlugin plugin;
 	private final TsgHubConfig config;
 	private final Client client;
-	private final Timer ticker = new Timer(300, e -> tick());
 	private volatile boolean inGame;
-	private int ticks;
 	private TsgHubNewsWindow reader;
 	private volatile BufferedImage page;
 	private volatile int scrollY;
@@ -48,6 +46,9 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 	private volatile Rectangle read;
 	private volatile Rectangle dismiss;
 	private volatile String shownId;
+	private final Timer rerender = new Timer(250, e -> {
+		if (page != null) renderReader();
+	});
 
 	TsgHubNewsOverlay(TsgHubPlugin plugin, TsgHubConfig config, Client client)
 	{
@@ -57,20 +58,19 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 		setPosition(OverlayPosition.DYNAMIC);
 		setLayer(OverlayLayer.ALWAYS_ON_TOP);
 		setPriority(Overlay.PRIORITY_HIGHEST);
+		rerender.setRepeats(false);
 	}
 
 	void openReader(String id)
 	{
 		SwingUtilities.invokeLater(() -> {
 			TsgHubAnnouncements news = plugin.announcements();
-			if (reader == null) reader = new TsgHubNewsWindow(news.polls(), news::image, news::openImage);
+			if (reader == null) reader = new TsgHubNewsWindow(news.polls(), news::image, news::openImage, rerender::restart);
 			reader.setAnnouncements(news.list());
 			reader.show(id);
 			scrollY = 0;
 			renderReader();
-			ticks = 0;
-			ticker.setDelay(300);
-			ticker.restart();
+			rerender.restart();
 			news.markRead(id);
 		});
 	}
@@ -78,15 +78,9 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 	void closeReader()
 	{
 		SwingUtilities.invokeLater(() -> {
-			ticker.stop();
+			rerender.stop();
 			page = null;
 		});
-	}
-
-	private void tick()
-	{
-		renderReader();
-		ticker.setDelay(++ticks >= 20 ? 1500 : 300);
 	}
 
 	private void renderReader()
@@ -114,9 +108,7 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 			reader.setAnnouncements(plugin.announcements().list());
 			reader.render();
 			renderReader();
-			ticks = 0;
-			ticker.setDelay(300);
-			ticker.restart();
+			rerender.restart();
 		});
 	}
 
@@ -135,18 +127,15 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 		JPanel panel = card();
 		JPanel lines = stack();
 		lines.add(caption(unread.size() > 1 ? "NEW ANNOUNCEMENTS · 1 OF " + unread.size() : "NEW ANNOUNCEMENT"));
-		lines.add(gap(GAP_S));
-		lines.add(wrapped(str(announcement, "title"), TEXT, boldFont(), WIDTH - 2 * (CARD_PAD_H + 1)));
-		lines.add(gap(GAP_XS));
-		lines.add(caption(str(announcement, "postedBy") + " · " + TsgHubFormat.shortDate(str(announcement, "postedAt"), TsgHubFormat.clock.instant(), ZoneId.systemDefault())));
+		addGap(lines, GAP_S, wrapped(str(announcement, "title"), TEXT, boldFont(), WIDTH - 2 * (CARD_PAD_H + 1)));
+		addGap(lines, GAP_XS, caption(str(announcement, "postedBy") + " · " + TsgHubFormat.shortDate(str(announcement, "postedAt"), TsgHubFormat.clock.instant(), ZoneId.systemDefault())));
 		JLabel skip = label("Dismiss", MUTED, smallFont());
 		JLabel open = label("Read more", ACCENT, smallFont());
 		JPanel actions = inline();
 		inline(actions, skip);
-		actions.add(javax.swing.Box.createHorizontalStrut(GAP_L));
+		actions.add(Box.createHorizontalStrut(GAP_L));
 		actions.add(open);
-		lines.add(gap(GAP_S));
-		lines.add(fitHeight(row(new JLabel(), actions)));
+		addGap(lines, GAP_S, fitHeight(row(new JLabel(), actions)));
 		panel.add(lines, BorderLayout.CENTER);
 		Dimension size = panel.getPreferredSize();
 		panel.setSize(WIDTH, size.height);
@@ -223,9 +212,8 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 		viewH = height;
 		int x = (client.getCanvasWidth() - READER_W) / 2, y = (client.getCanvasHeight() - height) / 2;
 		area = new Rectangle(x, y, READER_W, height);
-		Graphics2D g = (Graphics2D) graphics.create();
+		Graphics2D g = smooth(graphics);
 		g.translate(x, y);
-		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		RoundRectangle2D frame = new RoundRectangle2D.Float(0, 0, READER_W, height, RADIUS * 2, RADIUS * 2);
 		g.setClip(frame);
 		int head = Math.max(0, Math.min(headerH, height - 40));
@@ -285,9 +273,7 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 			while (target != null && target != content && !press(target, SwingUtilities.convertPoint(content, x, y, target))) target = target.getParent();
 			if (target == null || target == content) return;
 			renderReader();
-			ticks = 0;
-			ticker.setDelay(300);
-			ticker.restart();
+			rerender.restart();
 		});
 	}
 
