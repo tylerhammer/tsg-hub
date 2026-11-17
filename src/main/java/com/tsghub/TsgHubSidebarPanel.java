@@ -16,11 +16,47 @@ import static com.tsghub.TsgHubUi.*;
 
 final class TsgHubSidebarPanel extends PluginPanel
 {
-	static final int TEXT_W = 215;
-	static final int CARD_TEXT_W = 185;
 	static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("h:mm a");
 
-	enum View { LOGGED_OUT, NOT_IN_CLAN, SHARING_OFF, HOME, EVENTS, PREVIEW, SIGNUP, BOARD, COMPETITION_PREVIEW, COMPETITION, DROP_PARTY, GROUPS, MEMBERS, LOOKUP, DROPS, NEWS, RECORDS }
+	enum View
+	{
+		LOGGED_OUT, NOT_IN_CLAN, SHARING_OFF, HOME, EVENTS("Events", null), PREVIEW, SIGNUP, BOARD, COMPETITION_PREVIEW, COMPETITION, DROP_PARTY,
+		GROUPS("Parties", "party"), MEMBERS("Members", "members"), LOOKUP, DROPS("Drops", "drops"), NEWS("Home", null), RECORDS("Home", null);
+
+		private final String back;
+		final String pin;
+
+		View()
+		{
+			this(null, null);
+		}
+
+		View(String back, String pin)
+		{
+			this.back = back;
+			this.pin = pin;
+		}
+
+		boolean top()
+		{
+			return back != null;
+		}
+
+		boolean gated()
+		{
+			return ordinal() < HOME.ordinal();
+		}
+
+		String card()
+		{
+			return pin != null || this == BOARD ? name().toLowerCase() : "page";
+		}
+
+		String backLabel()
+		{
+			return back != null ? back : this == BOARD || this == COMPETITION ? "Back to event" : "Home";
+		}
+	}
 
 	private final TsgHubPlugin plugin;
 	final TsgHubHomeView homeView;
@@ -57,7 +93,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private final StatusLine status = new StatusLine(TEXT_W);
 
 	private final CardLayout centerLayout = new CardLayout();
-	private final JPanel center = new JPanel(centerLayout);
+	private final JPanel center = panel(centerLayout);
 	final WidthTrackingPanel page = new WidthTrackingPanel();
 	final TsgHubDock dock;
 	View pinned;
@@ -68,8 +104,8 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private volatile boolean membersWanted;
 	private volatile boolean groupsWanted;
 	private volatile boolean dropsWanted;
-	private final JPanel titleRow = new JPanel(new BorderLayout(4, 0));
-	private final JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 2, 0));
+	private final JPanel titleRow = panel(new BorderLayout(4, 0));
+	private final JPanel actions = panel(new FlowLayout(FlowLayout.RIGHT, 2, 0));
 	final GroupMembersPanel groupMembers;
 	TsgHubSidebarPanel(TsgHubPlugin plugin, GroupMembersPanel groupMembers)
 	{
@@ -94,7 +130,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 		add(buildHeader(), BorderLayout.NORTH);
 
-		center.setOpaque(false);
 		center.add(scroll(page), "page");
 		center.add(boardView.buildBoard(), "board");
 		center.add(partiesView.groupsScroll, "groups");
@@ -110,7 +145,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 	private JPanel buildHeader()
 	{
 		JPanel header = panel(new BorderLayout());
-		titleRow.setOpaque(false);
 		back.addActionListener(e -> {
 			plugin.usage().count("button.back");
 			if (view == View.GROUPS && partiesView.browsingParties && plugin.groups().inGroup())
@@ -124,7 +158,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 				reopen(lookupView.lookupReturn);
 				return;
 			}
-			if (view == View.GROUPS || view == View.EVENTS || view == View.MEMBERS || view == View.DROPS || view == View.NEWS || view == View.RECORDS)
+			if (view.top())
 			{
 				homeView.showHome();
 				return;
@@ -139,7 +173,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 		titles.add(shrinkable(subtitle));
 		titleRow.add(fillWidth(titles), BorderLayout.CENTER);
 
-		actions.setOpaque(false);
 		admin.addActionListener(e -> {
 			plugin.usage().count("button.admin-site");
 			admin.setEnabled(false);
@@ -301,85 +334,30 @@ final class TsgHubSidebarPanel extends PluginPanel
 		renderSubtitle();
 	}
 
-	JPanel sectionHeading(String text, JComponent right)
-	{
-		JPanel row = row();
-		row.setBorder(BorderFactory.createEmptyBorder(0, 2, 4, 0));
-		row.add(label(text.toUpperCase(), MUTED, smallFont()), BorderLayout.CENTER);
-		if (right != null) row.add(right, BorderLayout.EAST);
-		return fitHeight(row);
-	}
-
-	static JPanel fillWidth(Component content)
-	{
-		JPanel slot = panel(new GridBagLayout());
-		GridBagConstraints fill = new GridBagConstraints();
-		fill.weightx = 1;
-		fill.fill = GridBagConstraints.HORIZONTAL;
-		slot.add(content, fill);
-		return slot;
-	}
-
 	void setView(View next)
 	{
-		if (next != view && !gated(next)) plugin.usage().count(TsgHubUsage.viewName(next));
+		if (next != view && !next.gated()) plugin.usage().count(TsgHubUsage.viewName(next));
 		view = next;
 		homeView.homeBuilt = false;
 		boardShowing = next == View.BOARD || next == View.SIGNUP;
-		boolean docked = pinned != null && !gated(next);
+		boolean docked = pinned != null && !next.gated();
 		membersWanted = next == View.MEMBERS || next == View.HOME || docked && pinned == View.MEMBERS;
 		groupsWanted = next == View.GROUPS || next == View.HOME || docked && pinned == View.GROUPS;
 		dropsWanted = next == View.DROPS || docked && pinned == View.DROPS;
 		if (next != View.COMPETITION) competitionView.openCompetitionId = null;
-		centerLayout.show(center, cardName(next));
+		centerLayout.show(center, next.card());
 		discord.setVisible(next == View.HOME && !needsLink);
 		link.setVisible(next == View.HOME && needsLink);
 		version.setVisible(next == View.HOME);
-		dock.setShown(!gated(next));
-		pin.setVisible(pinnable(next));
+		dock.setShown(!next.gated());
+		pin.setVisible(next.pin != null);
 		title.setText(html(escape(titleText), titleWidth()));
-		back.setToolTipText(next == View.LOOKUP ? backLabel(lookupView.lookupReturn) : next == View.EVENTS || next == View.GROUPS || next == View.MEMBERS || next == View.DROPS || next == View.NEWS || next == View.RECORDS ? "Home" : "Back to events");
-	}
-
-	private static String cardName(View next)
-	{
-		switch (next)
-		{
-			case BOARD: return "board";
-			case GROUPS: return "groups";
-			case MEMBERS: return "members";
-			case DROPS: return "drops";
-			default: return "page";
-		}
-	}
-
-	private static boolean gated(View next)
-	{
-		return next == View.LOGGED_OUT || next == View.NOT_IN_CLAN || next == View.SHARING_OFF;
-	}
-
-	private static boolean pinnable(View next)
-	{
-		return next == View.MEMBERS || next == View.DROPS || next == View.GROUPS;
+		back.setToolTipText(next == View.LOOKUP ? lookupView.lookupReturn.backLabel() : next.top() ? "Home" : "Back to events");
 	}
 
 	boolean shows(View owner)
 	{
 		return view == owner || pinned == owner;
-	}
-
-	private static String backLabel(View target)
-	{
-		switch (target)
-		{
-			case MEMBERS: return "Members";
-			case BOARD:
-			case COMPETITION: return "Back to event";
-			case EVENTS: return "Events";
-			case DROPS: return "Drops";
-			case GROUPS: return "Parties";
-			default: return "Home";
-		}
 	}
 
 	private void reopen(View target)
@@ -413,14 +391,9 @@ final class TsgHubSidebarPanel extends PluginPanel
 		return owner == View.MEMBERS ? membersView.membersScroll : owner == View.DROPS ? dropsView.dropsPanel : partiesView.groupsScroll;
 	}
 
-	private String pinIcon(View owner)
-	{
-		return owner == View.MEMBERS ? "members" : owner == View.DROPS ? "drops" : "party";
-	}
-
 	void pinCurrent()
 	{
-		if (!pinnable(view)) return;
+		if (view.pin == null) return;
 		View next = view;
 		if (pinned != null) unpin();
 		pin(next);
@@ -431,7 +404,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		pinned = next;
 		plugin.session().set(DOCK_VIEW, next.name());
-		dock.pin(pinIcon(next), pane(next));
+		dock.pin(next.pin, pane(next));
 		dock.expand();
 		renderPinned();
 	}
@@ -443,7 +416,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		pinned = null;
 		plugin.session().set(DOCK_VIEW, "");
 		dock.unpin();
-		center.add(pane(was), cardName(was));
+		center.add(pane(was), was.card());
 		setView(view);
 	}
 
@@ -451,10 +424,10 @@ final class TsgHubSidebarPanel extends PluginPanel
 	{
 		String saved = plugin.session().get(DOCK_VIEW);
 		for (View candidate : View.values())
-			if (pinnable(candidate) && candidate.name().equals(saved))
+			if (candidate.pin != null && candidate.name().equals(saved))
 			{
 				pinned = candidate;
-				dock.pin(pinIcon(candidate), pane(candidate));
+				dock.pin(candidate.pin, pane(candidate));
 				setView(view);
 				renderPinned();
 			}
@@ -493,8 +466,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		footer.add(discord);
 		footer.add(link);
 		version.setAlignmentX(Component.CENTER_ALIGNMENT);
-		footer.add(gap(GAP_XS));
-		footer.add(version);
+		addGap(footer, GAP_XS, version);
 		discord.setVisible(false);
 		link.setVisible(false);
 		return footer;
@@ -550,26 +522,6 @@ final class TsgHubSidebarPanel extends PluginPanel
 		renderSubtitle();
 		back.setVisible(showBack);
 		refresh.setVisible(showRefresh);
-	}
-
-	JPanel errorPanel(String heading, String body)
-	{
-		return emptyState(heading, body, TEXT_W - 20);
-	}
-
-	static JLabel hint(String text)
-	{
-		return wrapped(text, MUTED, smallFont(), TEXT_W);
-	}
-
-	static JLabel cardNote(String text)
-	{
-		return wrapped(text, MUTED, smallFont(), CARD_TEXT_W);
-	}
-
-	static JLabel cardNoteHtml(String innerHtml)
-	{
-		return label(html(innerHtml, CARD_TEXT_W), MUTED, smallFont());
 	}
 
 	void refreshPage()

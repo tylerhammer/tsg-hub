@@ -8,6 +8,7 @@ import java.time.*;
 import java.util.*;
 import java.util.List;
 import javax.swing.*;
+import javax.swing.event.*;
 import static com.tsghub.PlayerNames.*;
 import static com.tsghub.TsgHubFormat.*;
 import static com.tsghub.TsgHubIcons.*;
@@ -24,7 +25,7 @@ final class TsgHubMembersView
 	private static final String MEMBER_KEY = "tsgHub.member";
 	private final WidthTrackingPanel membersPage = new WidthTrackingPanel();
 	final JScrollPane membersScroll = scroll(membersPage);
-	private final javax.swing.JPopupMenu memberMenu = new javax.swing.JPopupMenu();
+	private final JPopupMenu memberMenu = new JPopupMenu();
 
 	JsonArray members;
 	JsonArray offlineMembers = new JsonArray();
@@ -34,11 +35,11 @@ final class TsgHubMembersView
 	{
 		this.plugin = plugin;
 		this.shell = shell;
-		memberMenu.addPopupMenuListener(new javax.swing.event.PopupMenuListener()
+		memberMenu.addPopupMenuListener(new PopupMenuListener()
 		{
-			@Override public void popupMenuWillBecomeVisible(javax.swing.event.PopupMenuEvent e) { fillMemberMenu(); }
-			@Override public void popupMenuWillBecomeInvisible(javax.swing.event.PopupMenuEvent e) { }
-			@Override public void popupMenuCanceled(javax.swing.event.PopupMenuEvent e) { }
+			@Override public void popupMenuWillBecomeVisible(PopupMenuEvent e) { fillMemberMenu(); }
+			@Override public void popupMenuWillBecomeInvisible(PopupMenuEvent e) { }
+			@Override public void popupMenuCanceled(PopupMenuEvent e) { }
 		});
 		plain(showOffline, MUTED).setFont(smallFont());
 		showOffline.setSelected("true".equals(plugin.session().get(SHOW_OFFLINE)));
@@ -98,7 +99,7 @@ final class TsgHubMembersView
 			refresh(membersPage);
 			return;
 		}
-		if (members.size() == 0) membersPage.add(TsgHubSidebarPanel.hint("Nobody online right now."));
+		if (members.size() == 0) membersPage.add(hint("Nobody online right now."));
 		int myWorld = 0;
 		for (JsonObject member : objects(members))
 			if (samePlayer(str(member, "displayName"), plugin.clan().playerName())) myWorld = integer(member, "world", 0);
@@ -109,13 +110,12 @@ final class TsgHubMembersView
 			for (JsonObject member : objects(members)) if (activityGroup(str(member, "activity")) == g) inGroup.add(member);
 			if (inGroup.isEmpty()) continue;
 			if (membersPage.getComponentCount() > 0) membersPage.add(gap(GAP_S));
-			membersPage.add(shell.sectionHeading(groups[g] + " (" + inGroup.size() + ")", null));
+			membersPage.add(listHeading(groups[g] + " (" + inGroup.size() + ")", true, null));
 			for (JsonObject member : inGroup) addCard(membersPage, memberCard(member, myWorld));
 		}
 		if (offlineMembers.size() > 0)
 		{
-			membersPage.add(gap(GAP_S));
-			membersPage.add(shell.sectionHeading("Offline (" + offlineMembers.size() + ")", showOffline));
+			addGap(membersPage, GAP_S, listHeading("Offline (" + offlineMembers.size() + ")", true, showOffline));
 			if (showOffline.isSelected())
 			{
 				for (JsonObject member : objects(offlineMembers))
@@ -125,7 +125,7 @@ final class TsgHubMembersView
 			}
 		}
 		membersPage.add(gap(GAP_M));
-		membersPage.add(TsgHubSidebarPanel.hint(plugin.locationSharingEnabled() ? "Leave clan chat to hide yourself."
+		membersPage.add(hint(plugin.locationSharingEnabled() ? "Leave clan chat to hide yourself."
 			: "You show as Online. Turn on location sharing in settings to show what you're doing."));
 		refresh(membersPage);
 	}
@@ -161,21 +161,10 @@ final class TsgHubMembersView
 			() -> TsgHubHtml.escape(localTime(str(member, "timeZone"), clock.instant(), ZoneId.systemDefault())));
 	}
 
-	private void addMemberBadges(JPanel badges, JsonObject member, String note, boolean more)
+	private void addMemberBadges(JPanel badges, JsonObject member, String note)
 	{
-		boolean warned = TsgHubRoster.hasActiveWarning(visibleWarnings(member));
-		if (warned)
-		{
-			JLabel warning = new JLabel(icon("warning", TsgHubTheme.ERROR));
-			if (!note.isEmpty() || more) warning.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
-			badges.add(warning);
-		}
-		if (!note.isEmpty())
-		{
-			JLabel noteLabel = new JLabel(icon("note", WARNING));
-			if (more) noteLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
-			badges.add(noteLabel);
-		}
+		if (TsgHubRoster.hasActiveWarning(visibleWarnings(member))) inline(badges, new JLabel(icon("warning", TsgHubTheme.ERROR)));
+		if (!note.isEmpty()) inline(badges, new JLabel(icon("note", WARNING)));
 	}
 
 	private JPanel memberCard(JsonObject member, int myWorld)
@@ -192,11 +181,9 @@ final class TsgHubMembersView
 		JPanel top = row();
 		Color team = plugin.teamColors().colorOf(name);
 		top.add(memberName(member, name, team != null ? team : TEXT, boldFont()), BorderLayout.CENTER);
-		JPanel badges = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-		badges.setOpaque(false);
-		boolean sameWorld = !self && world > 0 && world == myWorld;
-		addMemberBadges(badges, member, note, world > 0);
-		if (world > 0) badges.add(worldChip(world, sameWorld));
+		JPanel badges = inline();
+		addMemberBadges(badges, member, note);
+		if (world > 0) inline(badges, worldChip(world, !self && world == myWorld));
 		if (badges.getComponentCount() > 0) top.add(badges, BorderLayout.EAST);
 
 		JPanel text = stack();
@@ -209,8 +196,7 @@ final class TsgHubMembersView
 			detailLabel = noFullText(shrinkable(label(detail, active ? SUCCESS : MUTED, small)));
 			JPanel bottom = row();
 			bottom.add(detailLabel, BorderLayout.CENTER);
-			text.add(gap(GAP_XS));
-			text.add(bottom);
+			addGap(text, GAP_XS, bottom);
 		}
 		card.add(text, BorderLayout.CENTER);
 		setMemberTip(card, member, note, detailLabel);
@@ -226,10 +212,9 @@ final class TsgHubMembersView
 		JPanel row = card();
 		row.setBorder(BorderFactory.createEmptyBorder(4, 7, 4, 7));
 		row.add(memberName(member, str(member, "displayName"), MUTED, small), BorderLayout.CENTER);
-		JPanel badges = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-		badges.setOpaque(false);
-		addMemberBadges(badges, member, note, !seen.isEmpty());
-		if (!seen.isEmpty()) badges.add(label(seen, MUTED, small));
+		JPanel badges = inline();
+		addMemberBadges(badges, member, note);
+		if (!seen.isEmpty()) inline(badges, label(seen, MUTED, small));
 		if (badges.getComponentCount() > 0) row.add(badges, BorderLayout.EAST);
 		setMemberTip(row, member, note, null);
 		addMemberMenu(row, member);
@@ -249,8 +234,7 @@ final class TsgHubMembersView
 	private void addMemberMenu(JComponent card, JsonObject member)
 	{
 		card.putClientProperty(MEMBER_KEY, member);
-		card.setComponentPopupMenu(memberMenu);
-		eachDeep(card, c -> { if (c != card && c instanceof JComponent) ((JComponent) c).setInheritsPopupMenu(true); });
+		withPopup(card, memberMenu);
 	}
 
 	private void fillMemberMenu()
@@ -261,9 +245,7 @@ final class TsgHubMembersView
 		if (invoker == null) return;
 		JsonObject member = (JsonObject) ((JComponent) invoker).getClientProperty(MEMBER_KEY);
 		String name = str(member, "displayName");
-		javax.swing.JMenuItem lookup = new javax.swing.JMenuItem("Lookup");
-		lookup.addActionListener(e -> shell.lookupView.showLookup(name, TsgHubPresence.accountType(member)));
-		memberMenu.add(lookup);
+		item(memberMenu, "Lookup", () -> shell.lookupView.showLookup(name, TsgHubPresence.accountType(member)));
 		if (plugin.isAdmin() && notesLoaded) shell.memberAdmin.addNoteItems(memberMenu, member);
 	}
 }

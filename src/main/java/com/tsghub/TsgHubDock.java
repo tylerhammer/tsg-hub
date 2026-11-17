@@ -1,6 +1,7 @@
 package com.tsghub;
 
 import java.awt.*;
+import java.util.Locale;
 import javax.swing.*;
 import javax.swing.plaf.basic.*;
 import static com.tsghub.TsgHubFormat.*;
@@ -182,7 +183,7 @@ final class TsgHubDock extends JPanel
 		if (applySplit || span <= 0 || split.getParent() == null) return;
 		double ratio = Math.max(MIN_SPLIT, Math.min(MAX_SPLIT, split.getDividerLocation() / (double) span));
 		split.setResizeWeight(ratio);
-		session.set(DOCK_SPLIT, String.format(java.util.Locale.ROOT, "%.3f", ratio));
+		session.set(DOCK_SPLIT, String.format(Locale.ROOT, "%.3f", ratio));
 	}
 
 	private static final class Grip extends BasicSplitPaneDivider

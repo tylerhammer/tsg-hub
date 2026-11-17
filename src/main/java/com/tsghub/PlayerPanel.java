@@ -199,7 +199,7 @@ class PlayerPanel extends JPanel
 	{
 		Color background = self ? (hovered ? SELF_CARD_HOVER : SELF_CARD) : (hovered ? CARD_HOVER : CARD);
 		setBackground(background);
-		setBorder(self ? selfBorder() : cardBorder());
+		setBorder(cardBorder());
 		repaint();
 	}
 }

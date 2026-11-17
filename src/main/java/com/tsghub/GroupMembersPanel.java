@@ -5,8 +5,10 @@
 package com.tsghub;
 
 import com.google.common.base.*;
+import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
+import java.util.List;
 import java.util.function.*;
 import java.util.stream.*;
 import javax.swing.*;
@@ -133,11 +135,10 @@ final class GroupMembersPanel extends JPanel
 		rebuild();
 	}
 
-	// Track live height so BoxLayout neither stretches nor clips us.
 	@Override
-	public java.awt.Dimension getMaximumSize()
+	public Dimension getMaximumSize()
 	{
-		return new java.awt.Dimension(Integer.MAX_VALUE, getPreferredSize().height);
+		return new Dimension(Integer.MAX_VALUE, getPreferredSize().height);
 	}
 
 	private void rebuild()
@@ -209,21 +210,13 @@ final class GroupMembersPanel extends JPanel
 		JPopupMenu menu = new JPopupMenu();
 		if (index >= 0 && order.size() >= 2)
 		{
-			JMenuItem up = new JMenuItem("Move up");
-			up.setEnabled(index > 0);
-			up.addActionListener(a -> moveMember(index, index - 1));
-			JMenuItem down = new JMenuItem("Move down");
-			down.setEnabled(index < order.size() - 1);
-			down.addActionListener(a -> moveMember(index, index + 1));
-			menu.add(up);
-			menu.add(down);
+			item(menu, "Move up", () -> moveMember(index, index - 1)).setEnabled(index > 0);
+			item(menu, "Move down", () -> moveMember(index, index + 1)).setEnabled(index < order.size() - 1);
 		}
 		if (index >= 0 && id != selfId && canKick.getAsBoolean())
 		{
-			JMenuItem remove = new JMenuItem("Remove from party");
-			remove.addActionListener(a -> kick.accept(username));
 			if (menu.getComponentCount() > 0) menu.addSeparator();
-			menu.add(remove);
+			item(menu, "Remove from party", () -> kick.accept(username));
 		}
 		if (menu.getComponentCount() == 0) return;
 		menu.show(e.getComponent(), e.getX(), e.getY());

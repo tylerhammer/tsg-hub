@@ -120,31 +120,21 @@ final class TsgHubEventsView
 		String countdown = capitalize(eventRelative(event));
 		if (!countdown.isEmpty()) lines.add(label(countdown, "Ended".equals(countdown) ? MUTED : SUCCESS, boldFont()));
 		if (attended(event, plugin.clan().playerName())) lines.add(label("You attended", SUCCESS, smallFont()));
-		lines.add(gap(GAP_S));
-		lines.add(detail("When", eventWhen(event)));
+		addGap(lines, GAP_S, detail("When", eventWhen(event)));
 		if (integer(config, "world", 0) > 0) lines.add(detail("World", String.valueOf(integer(config, "world", 0))));
 		if (!str(config, "location").isEmpty()) lines.add(detail("Where", str(config, "location")));
 		if (!str(config, "host").isEmpty()) lines.add(detail("Host", str(config, "host")));
-		JPanel prizes = prizeRow(event, smallFont());
-		if (prizes != null)
-		{
-			lines.add(gap(GAP_S));
-			lines.add(prizes);
-		}
+		addPrizes(lines, event);
 		card.add(lines, BorderLayout.CENTER);
 		shell.page.add(fitHeight(card));
 		String notes = str(config, "notes");
-		if (!notes.isEmpty())
-		{
-			shell.page.add(gap(GAP_M));
-			shell.page.add(TsgHubSidebarPanel.hint(notes));
-		}
+		if (!notes.isEmpty()) addGap(shell.page, GAP_M, hint(notes));
 		shell.refreshPage();
 	}
 
 	private JLabel detail(String label, String value)
 	{
-		JLabel line = label(html("<font color='" + toHexColor(MUTED) + "'>" + label + ":</font> " + escape(value), TsgHubSidebarPanel.CARD_TEXT_W), TEXT, plainFont());
+		JLabel line = label(html("<font color='" + toHexColor(MUTED) + "'>" + label + ":</font> " + escape(value), CARD_TEXT_W), TEXT, plainFont());
 		line.setBorder(BorderFactory.createEmptyBorder(1, 0, 1, 0));
 		return line;
 	}
@@ -153,7 +143,7 @@ final class TsgHubEventsView
 	{
 		joinButton.setEnabled(true);
 		joinButton.setText("Join event");
-		showError(joinError, message, TsgHubSidebarPanel.TEXT_W);
+		showError(joinError, message, TEXT_W);
 		codeField.requestFocusInWindow();
 		codeField.selectAll();
 	}
@@ -165,7 +155,7 @@ final class TsgHubEventsView
 		shell.page.removeAll();
 		if (clan.isEmpty())
 		{
-			shell.page.add(shell.errorPanel("No clan detected", "Join a clan in game to see its events."));
+			shell.page.add(errorPanel("No clan detected", "Join a clan in game to see its events."));
 		}
 		else if (events == null)
 		{
@@ -181,7 +171,7 @@ final class TsgHubEventsView
 				.thenComparing(TsgHubEvents::eventStart, Comparator.nullsLast(Comparator.naturalOrder())));
 			if (visible.isEmpty() && history.size() == 0)
 			{
-				shell.page.add(shell.errorPanel("No events yet", "When an admin creates an event, it will show up here."));
+				shell.page.add(errorPanel("No events yet", "When an admin creates an event, it will show up here."));
 			}
 			else if (visible.isEmpty())
 			{
@@ -193,7 +183,7 @@ final class TsgHubEventsView
 				String next = "active".equals(str(event, "status")) ? "Live" : "Upcoming";
 				if (!next.equals(section))
 				{
-					shell.page.add(listHeading(next, section == null));
+					shell.page.add(listHeading(next, section == null, null));
 					section = next;
 				}
 				addCard(shell.page, eventCard(event));
@@ -207,7 +197,7 @@ final class TsgHubEventsView
 	{
 		List<JsonObject> results = objects(history);
 		if (results.isEmpty()) return;
-		shell.page.add(listHeading("Past", false));
+		shell.page.add(listHeading("Past", false, null));
 		for (JsonObject result : results) addCard(shell.page, historyCard(result));
 		if (historyMore)
 		{
@@ -230,11 +220,7 @@ final class TsgHubEventsView
 		int prizeWidth = prizeColumn(places);
 		for (JsonObject place : places) lines.add(placeRow(result, place, prizeWidth));
 		String mvp = str(result, "mvp");
-		if (!mvp.isEmpty())
-		{
-			lines.add(gap(GAP_XS));
-			lines.add(caption("MVP " + mvp));
-		}
+		if (!mvp.isEmpty()) addGap(lines, GAP_XS, caption("MVP " + mvp));
 		card.add(lines, BorderLayout.CENTER);
 		String self = plugin.clan().playerName();
 		fullTextTooltip(card, () -> rosters(places, self));
@@ -338,22 +324,11 @@ final class TsgHubEventsView
 		JPanel card = card();
 		JPanel lines = stack();
 		lines.add(shrinkable(boldLabel(subject)));
-		lines.add(gap(GAP_XS));
-		lines.add(wrapped(goal, TEXT, smallFont(), TsgHubSidebarPanel.CARD_TEXT_W));
-		lines.add(gap(GAP_XS));
-		lines.add(TsgHubSidebarPanel.cardNote(eventWhen(event)));
+		addGap(lines, GAP_XS, wrapped(goal, TEXT, smallFont(), CARD_TEXT_W));
+		addGap(lines, GAP_XS, cardNote(eventWhen(event)));
 		String description = str(event, "description").trim();
-		if (!description.isEmpty())
-		{
-			lines.add(gap(GAP_S));
-			lines.add(TsgHubSidebarPanel.cardNote(description));
-		}
-		JPanel prizes = prizeRow(event, smallFont());
-		if (prizes != null)
-		{
-			lines.add(gap(GAP_S));
-			lines.add(prizes);
-		}
+		if (!description.isEmpty()) addGap(lines, GAP_S, cardNote(description));
+		addPrizes(lines, event);
 		card.add(lines, BorderLayout.CENTER);
 		return fitHeight(card);
 	}
@@ -368,18 +343,14 @@ final class TsgHubEventsView
 		boolean signups = signupsOpen(event);
 		if (signups)
 		{
-			shell.page.add(gap(GAP_L));
-			shell.page.add(label("Sign up for a team", TEXT, smallFont()));
-			shell.page.add(gap(GAP_XS));
-			shell.page.add(TsgHubSidebarPanel.hint(signupSummary(event, ZoneId.systemDefault())));
+			addGap(shell.page, GAP_L, label("Sign up for a team", TEXT, smallFont()));
+			addGap(shell.page, GAP_XS, hint(signupSummary(event, ZoneId.systemDefault())));
 			shell.page.add(gap(GAP_S));
 			resetNoteForm("", "Sign up");
 			addNoteForm();
-			shell.page.add(gap(GAP_S));
-			shell.page.add(TsgHubSidebarPanel.hint("No team yet? Sign up and an admin will put you on one. Your board opens here when they do."));
+			addGap(shell.page, GAP_S, hint("No team yet? Sign up and an admin will put you on one. Your board opens here when they do."));
 		}
-		shell.page.add(gap(GAP_L));
-		shell.page.add(label(signups ? "Have a team code?" : "Team code", TEXT, smallFont()));
+		addGap(shell.page, GAP_L, label(signups ? "Have a team code?" : "Team code", TEXT, smallFont()));
 		shell.page.add(gap(GAP_S));
 		codeField.setText("");
 		shell.page.add(fitHeight(codeField));
@@ -389,8 +360,7 @@ final class TsgHubEventsView
 		joinButton.setEnabled(true);
 		joinButton.setText("Join event");
 		shell.page.add(fitHeight(joinButton));
-		shell.page.add(gap(GAP_S));
-		shell.page.add(TsgHubSidebarPanel.hint("Ask an admin for your team's code. Your team can't be changed after you join."));
+		addGap(shell.page, GAP_S, hint("Ask an admin for your team's code. Your team can't be changed after you join."));
 		shell.refreshPage();
 		SwingUtilities.invokeLater((signups ? noteField : codeField)::requestFocusInWindow);
 	}
@@ -408,8 +378,7 @@ final class TsgHubEventsView
 	{
 		shell.page.add(fitHeight(noteField));
 		shell.page.add(signupError);
-		shell.page.add(gap(GAP_S));
-		shell.page.add(fitHeight(signupButton));
+		addGap(shell.page, GAP_S, fitHeight(signupButton));
 	}
 
 	void showSignedUp(JsonObject event, String note, boolean open)
@@ -435,10 +404,8 @@ final class TsgHubEventsView
 		highlightSelf(card);
 		JPanel lines = stack();
 		lines.add(label("Signed up, waiting for a team", SUCCESS, boldFont()));
-		lines.add(gap(GAP_XS));
-		lines.add(TsgHubSidebarPanel.cardNote(signedUpNote.isEmpty() ? "No note" : "Note: " + signedUpNote));
-		lines.add(gap(GAP_XS));
-		lines.add(TsgHubSidebarPanel.cardNote(signupSummary(event, ZoneId.systemDefault())));
+		addGap(lines, GAP_XS, cardNote(signedUpNote.isEmpty() ? "No note" : "Note: " + signedUpNote));
+		addGap(lines, GAP_XS, cardNote(signupSummary(event, ZoneId.systemDefault())));
 		card.add(lines, BorderLayout.CENTER);
 		shell.page.add(fitHeight(card));
 		shell.page.add(gap(GAP_M));
@@ -468,7 +435,7 @@ final class TsgHubEventsView
 			shell.page.add(fitHeight(actions));
 		}
 		shell.page.add(gap(GAP_S));
-		shell.page.add(TsgHubSidebarPanel.hint(open
+		shell.page.add(hint(open
 			? "An admin will put you on a team. Your team's board opens here when they do."
 			: "Sign-ups are closed. An admin will put you on a team, and your board opens here when they do."));
 		shell.refreshPage();
@@ -485,7 +452,7 @@ final class TsgHubEventsView
 	{
 		signupButton.setEnabled(true);
 		signupButton.setText(signupLabel);
-		showError(signupError, message, TsgHubSidebarPanel.TEXT_W);
+		showError(signupError, message, TEXT_W);
 	}
 
 	private void submitSignup()

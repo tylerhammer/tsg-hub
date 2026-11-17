@@ -315,9 +315,16 @@ final class TsgHubGroups implements GroupTracker.Listener
 		plugin.session().set(GROUP_PLAYER, "");
 	}
 
-	@Override public void memberUpdated(PartyPlayer player, boolean self) { parties(v -> v.groupMemberUpdated(player, self)); }
+	@Override public void memberUpdated(PartyPlayer player, boolean self) { parties(s -> s.groupMembers.update(player, self)); }
 
-	@Override public void memberRemoved(PartyPlayer player) { parties(v -> v.groupMemberRemoved(player)); }
+	@Override
+	public void memberRemoved(PartyPlayer player)
+	{
+		parties(s -> {
+			s.groupMembers.remove(player);
+			s.partiesView.partyAreasChanged();
+		});
+	}
 
 	List<String> liveAreas()
 	{
@@ -331,14 +338,14 @@ final class TsgHubGroups implements GroupTracker.Listener
 		if (s != null && s.wantsGroups()) loadGroups(true);
 	}
 
-	@Override public void areasChanged() { parties(v -> v.partyAreasChanged()); }
+	@Override public void areasChanged() { parties(s -> s.partiesView.partyAreasChanged()); }
 
-	@Override public void membersCleared() { parties(v -> v.groupMembersCleared()); }
+	@Override public void membersCleared() { parties(s -> s.groupMembers.clear()); }
 
-	private void parties(Consumer<TsgHubPartiesView> action)
+	private void parties(Consumer<TsgHubSidebarPanel> action)
 	{
 		TsgHubSidebarPanel s = plugin.sidebar();
-		if (s != null) action.accept(s.partiesView);
+		if (s != null) action.accept(s);
 	}
 
 	@Override
