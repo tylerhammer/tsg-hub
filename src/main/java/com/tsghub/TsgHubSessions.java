@@ -457,7 +457,7 @@ final class TsgHubSessions
 		Integer synced = syncedClanRanks.get(key);
 		if (synced != null && synced == rank) return;
 		syncedClanRanks.put(key, rank);
-		plugin.tracker().report("clan-rank", "/v1/events/" + eventId + "/clan-rank", token, TsgHubJson.obj("eventId", eventId, "displayName", displayName, "clanName", clan.name(), "clanRank", rank));
+		plugin.tracker().report("clan-rank", "POST", "/v1/events/" + eventId + "/clan-rank", token, TsgHubJson.obj("eventId", eventId, "displayName", displayName, "clanName", clan.name(), "clanRank", rank));
 	}
 
 	void forgetEvent(String eventId)

@@ -26,7 +26,6 @@ package com.tsghub;
 
 import java.util.*;
 import lombok.*;
-import net.runelite.api.*;
 import net.runelite.client.game.*;
 import net.runelite.client.party.messages.*;
 import static com.tsghub.PartyMiscChange.PartyMisc.*;
@@ -62,7 +61,6 @@ class TsgGroupUpdate extends PartyMemberMessage
 	void process(PartyPlayer player, ItemManager itemManager)
 	{
 		if (player.getStats() == null && hasStatChange()) player.setStats(new Stats());
-		if (player.getPrayers() == null && hasPrayers()) player.setPrayers(new Prayers());
 		if (i != null)
 		{
 			player.setInventory(GameItem.of(i, itemManager));
@@ -75,18 +73,7 @@ class TsgGroupUpdate extends PartyMemberMessage
 		}
 		if (s != null) s.forEach(change -> change.process(player));
 		if (m != null) m.forEach(change -> change.process(player));
-		if (hasPrayers())
-		{
-			player.getPrayers().getPrayerData().forEach((prayer, data) ->
-			{
-				data.setAvailable(false);
-				data.setEnabled(false);
-				data.setUnlocked(false);
-			});
-			for (Prayer p : unpack(ap)) player.getPrayers().getPrayerData().get(p).setAvailable(true);
-			for (Prayer p : unpack(ep)) player.getPrayers().getPrayerData().get(p).setEnabled(true);
-			for (Prayer p : unpack(up)) player.getPrayers().getPrayerData().get(p).setUnlocked(true);
-		}
+		if (hasPrayers()) player.setPrayers(new int[]{ap == null ? 0 : ap, ep == null ? 0 : ep, up == null ? 0 : up});
 		if (rp != null) player.setRunesInPouch(Arrays.stream(rp).mapToObj(r -> new GameItem(r & 0x3FFFF, r >>> 18, itemManager)).toArray(GameItem[]::new));
 		if (q != null) player.getQuiver().setQuiverAmmo(q.length == 2 ? new GameItem(q[0], q[1], itemManager) : null);
 	}
@@ -104,21 +91,6 @@ class TsgGroupUpdate extends PartyMemberMessage
 	boolean hasStatChange()
 	{
 		return (s != null && !s.isEmpty()) || (m != null && m.stream().anyMatch(change -> change.t == S || change.t == R || change.t == C || change.t == T));
-	}
-
-	static <E extends Enum<E>> int pack(Collection<E> items)
-	{
-		int packed = 0;
-		for (E item : items) packed |= 1 << item.ordinal();
-		return packed;
-	}
-
-	private static List<Prayer> unpack(Integer packed)
-	{
-		List<Prayer> out = new ArrayList<>();
-		// 32-bit packing; stop early since ruinous powers would overflow it.
-		for (Prayer p : Prayer.values()) if (packed != null && p.ordinal() < 32 && (packed & (1 << p.ordinal())) != 0) out.add(p);
-		return out;
 	}
 
 	// Qty (max 16,000) fits in the top 14 bits, item ID in the low 18.

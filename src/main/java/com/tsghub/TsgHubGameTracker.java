@@ -34,13 +34,6 @@ final class TsgHubGameTracker
 	private Set<Integer> inventoryPets = Collections.emptySet();
 
 	@Subscribe
-	public void onStatChanged(StatChanged event)
-	{
-		if (!plugin.sharingInClan() || client.getLocalPlayer() == null) return;
-		plugin.signals().xp(event.getSkill().name(), event.getXp(), client.getTickCount());
-	}
-
-	@Subscribe
 	public void onWidgetLoaded(WidgetLoaded event)
 	{
 		rewardInterface(event.getGroupId(), true);
@@ -147,16 +140,6 @@ final class TsgHubGameTracker
 		});
 	}
 
-	void report(String type, String path, JsonObject body)
-	{
-		report(type, path, null, body);
-	}
-
-	void report(String type, String path, String token, JsonObject body)
-	{
-		report(type, "POST", path, token, body);
-	}
-
 	void report(String type, String method, String path, String token, JsonObject body)
 	{
 		TsgHubOutbox outbox = plugin.outbox();
@@ -202,7 +185,7 @@ final class TsgHubGameTracker
 		JsonArray names = new JsonArray();
 		clanmates.forEach(names::add);
 		body.add("clanmates", names);
-		report("group", "/v1/group-content", body);
+		report("group", "POST", "/v1/group-content", null, body);
 	}
 
 	static List<String> clanmates(List<String> names, String self)

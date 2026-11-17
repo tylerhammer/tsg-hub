@@ -139,6 +139,7 @@ public class TsgHubPlugin extends Plugin
 		TsgHubRankIcons rankIcons = new TsgHubRankIcons(chatIconManager);
 		bingo = new TsgHubBingo(client, audioPlayer, config, configManager, overlayManager, mouseManager, new TsgHubTileIcons(this::getItemImage, spriteManager), usage::count);
 		bingo.start();
+		PrayerSprites.load(gson);
 		GroupMembersPanel groupMembers = new GroupMembersPanel(config, spriteManager, itemManager);
 		sidebar = new TsgHubSidebarPanel(this, groupMembers);
 		groups = new TsgHubGroups(this, client, partyService, executor);
@@ -158,7 +159,7 @@ public class TsgHubPlugin extends Plugin
 		poll(drops::autoRefresh, TsgHubDrops.REFRESH_SECONDS);
 		records = new TsgHubRecords(this, configManager, executor, this::api);
 		tracker = subscribe(new TsgHubGameTracker(this, client, clientThread, itemManager, executor));
-		coffer = subscribe(new TsgHubCoffer(this, client, body -> tracker.report("coffer", "/v1/coffer", body)));
+		coffer = subscribe(new TsgHubCoffer(this, client, body -> tracker.report("coffer", "POST", "/v1/coffer", null, body)));
 		sales = subscribe(new TsgHubSales(this, client, itemManager));
 		trades = subscribe(new TsgHubTrades(this, client));
 		defence = subscribe(new TsgHubDefence(this, client, clientThread, partyService, wsClient, pluginManager, infoBoxManager, overlayManager, skillIconManager, config, gson, chat::defenceSpec));
@@ -572,6 +573,7 @@ public class TsgHubPlugin extends Plugin
 	public void onStatChanged(StatChanged event)
 	{
 		if (presence != null) presence.onXp(event.getSkill(), event.getXp());
+		if (sharingInClan() && client.getLocalPlayer() != null) signals().xp(event.getSkill().name(), event.getXp(), client.getTickCount());
 	}
 
 	private void syncMemberMap()

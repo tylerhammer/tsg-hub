@@ -14,7 +14,6 @@ import net.runelite.api.coords.*;
 import net.runelite.api.events.*;
 import net.runelite.api.gameval.*;
 import net.runelite.api.gameval.InventoryID;
-import net.runelite.api.gameval.NpcID;
 import net.runelite.client.callback.*;
 import net.runelite.client.eventbus.*;
 import net.runelite.client.events.*;
@@ -31,14 +30,7 @@ final class TsgHubDefence
 {
 	private static final int PARTY_DEDUPE_TICKS = 3;
 	private static final Map<Integer, String> BY_ID = new HashMap<>();
-
-	static
-	{
-		BY_ID.put(NpcID.TFA_OCELLUS_INTRO_MET, "ocellus p1");
-		BY_ID.put(NpcID.TFA_OCELLUS_P1, "ocellus p1");
-		BY_ID.put(NpcID.TFA_OCELLUS_P2_SWORD_HITBOX, "ocellus p2");
-		BY_ID.put(NpcID.TFA_OCELLUS_P3, "ocellus p3");
-	}
+	private static final Map<SpecialWeapon, String> WEAPONS = new EnumMap<>(SpecialWeapon.class);
 
 	private final Client client;
 	private final ClientThread clientThread;
@@ -54,7 +46,7 @@ final class TsgHubDefence
 	private final Map<Boss, TsgHubDefenceTarget> retained = new HashMap<>();
 	private final Map<String, Integer> partySeen = new HashMap<>();
 	private final TsgHubDefenceOverlay overlay;
-	private final TsgHubDefencePanel panel;
+	private final TsgHubDefenceOverlay panel;
 	private final InfoBox infoBox;
 	private NPC focus;
 	private SpecialWeapon held;
@@ -82,8 +74,8 @@ final class TsgHubDefence
 		this.overlayManager = overlayManager;
 		this.config = config;
 		this.bosses = load(gson);
-		this.overlay = new TsgHubDefenceOverlay(this, config);
-		this.panel = new TsgHubDefencePanel(plugin, this, config);
+		this.overlay = new TsgHubDefenceOverlay(plugin, this, config, OverlayPosition.DYNAMIC);
+		this.panel = new TsgHubDefenceOverlay(plugin, this, config, OverlayPosition.TOP_LEFT);
 		this.infoBox = new InfoBox(skillIcons.getSkillImage(Skill.DEFENCE), plugin)
 		{
 			@Override
@@ -122,11 +114,15 @@ final class TsgHubDefence
 		if (in == null) return out;
 		try (InputStreamReader reader = new InputStreamReader(in, StandardCharsets.UTF_8))
 		{
-			for (Map.Entry<String, JsonElement> e : gson.fromJson(reader, JsonObject.class).entrySet())
+			JsonObject table = gson.fromJson(reader, JsonObject.class);
+			for (Map.Entry<String, JsonElement> e : table.getAsJsonObject("weapons").entrySet()) WEAPONS.put(SpecialWeapon.valueOf(e.getKey()), e.getValue().getAsString());
+			for (Map.Entry<String, JsonElement> e : table.getAsJsonObject("bosses").entrySet())
 			{
 				JsonArray v = e.getValue().getAsJsonArray();
-				out.put(e.getKey().toLowerCase(Locale.ROOT), new Boss(e.getKey(), v.get(0).getAsInt(), v.get(1).getAsInt(),
+				String key = e.getKey().toLowerCase(Locale.ROOT);
+				out.put(key, new Boss(e.getKey(), v.get(0).getAsInt(), v.get(1).getAsInt(),
 					v.get(2).getAsInt(), v.get(3).getAsInt(), v.get(4).getAsInt(), v.get(5).getAsInt(), v.size() > 6 ? v.get(6).getAsString() : ""));
+				if (v.size() > 7) for (JsonElement id : v.get(7).getAsJsonArray()) BY_ID.put(id.getAsInt(), key);
 			}
 		}
 		catch (Exception e) { log.debug("TSG Hub defence table unreadable", e); }
@@ -161,6 +157,7 @@ final class TsgHubDefence
 		overlayManager.add(overlay);
 		overlayManager.add(panel);
 		infoBoxManager.addInfoBox(infoBox);
+		clientThread.invokeLater(() -> held = wielded(client.getItemContainer(InventoryID.WORN)));
 	}
 
 	void stop()
@@ -189,7 +186,6 @@ final class TsgHubDefence
 		retained.clear();
 		partySeen.clear();
 		focus = null;
-		held = null;
 		clearPending();
 	}
 
@@ -274,18 +270,12 @@ final class TsgHubDefence
 
 	static String shortName(SpecialWeapon used)
 	{
-		switch (used)
-		{
-			case DRAGON_WARHAMMER: return "DWH";
-			case ELDER_MAUL: return "Maul";
-			case BANDOS_GODSWORD: return "BGS";
-			case TONALZTICS_OF_RALOS: return "Ralos";
-			case BARRELCHEST_ANCHOR: return "Anchor";
-			case DORGESHUUN_CROSSBOW: return "Dorg xbow";
-			case ACCURSED_SCEPTRE: return "Sceptre";
-			case EYE_OF_AYAK: return "Ayak";
-			default: return used.getName();
-		}
+		return WEAPONS.getOrDefault(used, used.getName());
+	}
+
+	static boolean drains(SpecialWeapon weapon)
+	{
+		return WEAPONS.containsKey(weapon);
 	}
 
 	@Subscribe
@@ -363,7 +353,7 @@ final class TsgHubDefence
 
 	private void arm(int tick)
 	{
-		SpecialWeapon used = wielded();
+		SpecialWeapon used = held;
 		if (used == null) return;
 		Player local = client.getLocalPlayer();
 		Actor interacting = local == null ? null : local.getInteracting();
@@ -387,7 +377,6 @@ final class TsgHubDefence
 	public void onGameTick(GameTick event)
 	{
 		int tick = client.getTickCount();
-		held = wielded();
 		if (!partySeen.isEmpty()) partySeen.values().removeIf(seen -> tick - seen > PARTY_DEDUPE_TICKS);
 		if (weapon == null) return;
 		if (weapon == SpecialWeapon.ELDER_MAUL)
@@ -432,7 +421,7 @@ final class TsgHubDefence
 	@Subscribe
 	public void onSpecialCounterUpdate(SpecialCounterUpdate event)
 	{
-		if (!partyService.isInParty() || !TsgHubDefenceTarget.drains(event.getWeapon())) return;
+		if (!partyService.isInParty() || !drains(event.getWeapon())) return;
 		PartyMember local = partyService.getLocalMember();
 		if (local != null && local.getMemberId() == event.getMemberId()) return;
 		clientThread.invoke(() ->
@@ -456,14 +445,18 @@ final class TsgHubDefence
 		if (event.getPlugin() instanceof SpecialCounterPlugin && !event.isLoaded()) wsClient.registerMessage(SpecialCounterUpdate.class);
 	}
 
-	private SpecialWeapon wielded()
+	@Subscribe
+	public void onItemContainerChanged(ItemContainerChanged event)
 	{
-		ItemContainer worn = client.getItemContainer(InventoryID.WORN);
+		if (event.getContainerId() == InventoryID.WORN) held = wielded(event.getItemContainer());
+	}
+
+	private static SpecialWeapon wielded(ItemContainer worn)
+	{
 		Item item = worn == null ? null : worn.getItem(EquipmentInventorySlot.WEAPON.getSlotIdx());
 		if (item == null) return null;
-		for (SpecialWeapon candidate : SpecialWeapon.values())
+		for (SpecialWeapon candidate : WEAPONS.keySet())
 		{
-			if (!TsgHubDefenceTarget.drains(candidate)) continue;
 			for (int id : candidate.getItemID()) if (id == item.getId()) return candidate;
 		}
 		return null;

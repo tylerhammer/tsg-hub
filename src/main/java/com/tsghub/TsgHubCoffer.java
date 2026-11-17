@@ -2,7 +2,6 @@ package com.tsghub;
 
 import com.google.gson.*;
 import java.util.*;
-import java.util.Deque;
 import java.util.function.*;
 import lombok.*;
 import net.runelite.api.*;
@@ -16,6 +15,7 @@ import net.runelite.client.util.*;
 @RequiredArgsConstructor
 final class TsgHubCoffer
 {
+	static final long CHAT_WINDOW_MILLIS = 15_000;
 	private static final int FIRST_READ_TICKS = 3;
 	private static final int READ_EVERY_TICKS = 2;
 	private static final Set<ChatMessageType> PLAYER_CHAT = EnumSet.of(ChatMessageType.PUBLICCHAT, ChatMessageType.MODCHAT,
@@ -26,9 +26,11 @@ final class TsgHubCoffer
 	private final TsgHubPlugin plugin;
 	private final Client client;
 	private final Consumer<JsonObject> report;
-	private final TsgHubCofferWatch watch = new TsgHubCofferWatch();
 	private boolean open;
 	private int openTicks;
+	private long balance = -1;
+	private String chatKind;
+	private long chatAt;
 
 	@Subscribe
 	public void onWidgetLoaded(WidgetLoaded event)
@@ -54,7 +56,46 @@ final class TsgHubCoffer
 		if (!open || event.getMessage() == null || PLAYER_CHAT.contains(event.getType())) return;
 		String sender = event.getName() == null ? "" : Text.removeTags(event.getName()).trim();
 		String line = Text.removeTags(event.getMessage()).trim();
-		watch.chat(sender.isEmpty() ? line : sender + " " + line, selfName(), System.currentTimeMillis());
+		chat(sender.isEmpty() ? line : sender + " " + line, selfName(), System.currentTimeMillis());
+	}
+
+	void chat(String line, String self, long now)
+	{
+		String kind = chatKind(line, self);
+		if (kind == null) return;
+		chatKind = kind;
+		chatAt = now;
+	}
+
+	JsonObject observe(long coins, long now)
+	{
+		if (coins < 0 || coins == balance) return null;
+		String kind = balance < 0 ? "snapshot" : coins > balance ? "deposit" : "withdrawal";
+		JsonObject change = new JsonObject();
+		change.addProperty("kind", kind);
+		change.addProperty("before", balance < 0 ? coins : balance);
+		change.addProperty("after", coins);
+		change.addProperty("confirmed", balance >= 0 && kind.equals(chatKind) && now >= chatAt && now - chatAt <= CHAT_WINDOW_MILLIS);
+		if (balance >= 0)
+		{
+			chatKind = null;
+			chatAt = 0;
+		}
+		balance = coins;
+		return change;
+	}
+
+	static String chatKind(String line, String self)
+	{
+		if (line == null) return null;
+		String text = PlayerNames.key(line);
+		if (!text.contains("coffer")) return null;
+		String name = PlayerNames.key(self);
+		boolean mine = text.startsWith("you ") || text.startsWith("you've ") || (!name.isEmpty() && text.startsWith(name + " "));
+		if (!mine) return null;
+		if (text.contains("deposited") || text.contains("donated")) return "deposit";
+		if (text.contains("withdrew") || text.contains("withdrawn")) return "withdrawal";
+		return null;
 	}
 
 	@Subscribe
@@ -63,21 +104,22 @@ final class TsgHubCoffer
 		if (!open) return;
 		if (!plugin.sharingInClan())
 		{
-			openTicks = 0;
-			watch.reset();
+			reset(true);
 			return;
 		}
 		openTicks++;
 		if (openTicks < FIRST_READ_TICKS || (openTicks - FIRST_READ_TICKS) % READ_EVERY_TICKS != 0) return;
-		TsgHubCofferWatch.Change change = watch.observe(readCoins(), System.currentTimeMillis());
+		JsonObject change = observe(readCoins(), System.currentTimeMillis());
 		if (change != null) send(change);
 	}
 
-	private void reset(boolean opened)
+	void reset(boolean opened)
 	{
 		open = opened;
 		openTicks = 0;
-		watch.reset();
+		balance = -1;
+		chatKind = null;
+		chatAt = 0;
 	}
 
 	private long readCoins()
@@ -89,22 +131,9 @@ final class TsgHubCoffer
 
 	static long coins(Widget root)
 	{
-		Set<Widget> seen = Collections.newSetFromMap(new IdentityHashMap<>());
-		Deque<Widget> queue = new ArrayDeque<>();
-		queue.add(root);
-		long total = 0;
-		while (!queue.isEmpty())
-		{
-			Widget widget = queue.poll();
-			if (!seen.add(widget)) continue;
-			if (widget.getItemId() == ItemID.COINS) total += Math.max(0, widget.getItemQuantity());
-			for (Widget[] children : new Widget[][]{widget.getChildren(), widget.getDynamicChildren(), widget.getStaticChildren(), widget.getNestedChildren()})
-			{
-				if (children == null) continue;
-				for (Widget child : children) if (child != null) queue.add(child);
-			}
-		}
-		return total;
+		long[] total = {0};
+		TsgHubRedaction.walk(root, false, w -> { if (w.getItemId() == ItemID.COINS) total[0] += Math.max(0, w.getItemQuantity()); });
+		return total[0];
 	}
 
 	private String selfName()
@@ -113,19 +142,14 @@ final class TsgHubCoffer
 		return self == null || self.getName() == null ? "" : Text.toJagexName(self.getName());
 	}
 
-	private void send(TsgHubCofferWatch.Change change)
+	private void send(JsonObject body)
 	{
 		long hash = client.getAccountHash();
 		String name = plugin.clan().playerName().isEmpty() ? selfName() : plugin.clan().playerName();
 		if (hash == -1 || name.isEmpty()) return;
-		JsonObject body = new JsonObject();
 		body.addProperty("clanName", plugin.clan().name());
 		body.addProperty("displayName", name);
 		body.addProperty("accountHash", Long.toString(hash));
-		body.addProperty("kind", change.kind.wire());
-		body.addProperty("before", change.before);
-		body.addProperty("after", change.after);
-		body.addProperty("confirmed", change.confirmed);
 		report.accept(body);
 	}
 }

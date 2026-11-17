@@ -8,6 +8,7 @@ import static org.junit.Assert.assertTrue;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import java.util.Map;
 import net.runelite.api.GrandExchangeOfferState;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -59,57 +60,57 @@ public class SalesTest
 	@Test
 	public void partialFillsKeepOneIdAndCumulativeTotals()
 	{
-		TsgHubSales.Update placed = TsgHubSales.update("", 26219, GrandExchangeOfferState.SELLING, 3, 20_000_000, 0, 0, "a");
-		assertNull(placed.sale);
+		Map.Entry<String, JsonObject> placed = TsgHubSales.update("", 26219, GrandExchangeOfferState.SELLING, 3, 20_000_000, 0, 0, "a");
+		assertNull(placed.getValue());
 
-		TsgHubSales.Update first = TsgHubSales.update(placed.saved, 26219, GrandExchangeOfferState.SELLING, 3, 20_000_000, 1, 21_000_000, "b");
-		assertSale(first.sale, "a", 26219, 1, 21_000_000 - 420_000, false);
+		Map.Entry<String, JsonObject> first = TsgHubSales.update(placed.getKey(), 26219, GrandExchangeOfferState.SELLING, 3, 20_000_000, 1, 21_000_000, "b");
+		assertSale(first.getValue(), "a", 26219, 1, 21_000_000 - 420_000, false);
 
-		TsgHubSales.Update rest = TsgHubSales.update(first.saved, 26219, GrandExchangeOfferState.SOLD, 3, 20_000_000, 3, 61_000_000, "c");
-		assertSale(rest.sale, "a", 26219, 3, 61_000_000 - 3 * 406_666, true);
+		Map.Entry<String, JsonObject> rest = TsgHubSales.update(first.getKey(), 26219, GrandExchangeOfferState.SOLD, 3, 20_000_000, 3, 61_000_000, "c");
+		assertSale(rest.getValue(), "a", 26219, 3, 61_000_000 - 3 * 406_666, true);
 	}
 
 	@Test
 	public void loginReplayOfUnchangedOfferSendsNothing()
 	{
-		TsgHubSales.Update sold = TsgHubSales.update("", TBOW, GrandExchangeOfferState.SOLD, 1, 1_400_000_000, 1, 1_450_000_000, "a");
-		assertSale(sold.sale, "a", TBOW, 1, 1_445_000_000, true);
+		Map.Entry<String, JsonObject> sold = TsgHubSales.update("", TBOW, GrandExchangeOfferState.SOLD, 1, 1_400_000_000, 1, 1_450_000_000, "a");
+		assertSale(sold.getValue(), "a", TBOW, 1, 1_445_000_000, true);
 
-		TsgHubSales.Update replay = TsgHubSales.update(sold.saved, TBOW, GrandExchangeOfferState.SOLD, 1, 1_400_000_000, 1, 1_450_000_000, "b");
-		assertNull(replay.sale);
-		assertEquals(sold.saved, replay.saved);
+		Map.Entry<String, JsonObject> replay = TsgHubSales.update(sold.getKey(), TBOW, GrandExchangeOfferState.SOLD, 1, 1_400_000_000, 1, 1_450_000_000, "b");
+		assertNull(replay.getValue());
+		assertEquals(sold.getKey(), replay.getKey());
 	}
 
 	@Test
 	public void fillWhileLoggedOutIsSentOnReplay()
 	{
-		TsgHubSales.Update listed = TsgHubSales.update("", TBOW, GrandExchangeOfferState.SELLING, 1, 1_400_000_000, 0, 0, "a");
-		TsgHubSales.Update replay = TsgHubSales.update(listed.saved, TBOW, GrandExchangeOfferState.SOLD, 1, 1_400_000_000, 1, 1_400_000_000, "b");
-		assertSale(replay.sale, "a", TBOW, 1, 1_395_000_000, true);
+		Map.Entry<String, JsonObject> listed = TsgHubSales.update("", TBOW, GrandExchangeOfferState.SELLING, 1, 1_400_000_000, 0, 0, "a");
+		Map.Entry<String, JsonObject> replay = TsgHubSales.update(listed.getKey(), TBOW, GrandExchangeOfferState.SOLD, 1, 1_400_000_000, 1, 1_400_000_000, "b");
+		assertSale(replay.getValue(), "a", TBOW, 1, 1_395_000_000, true);
 	}
 
 	@Test
 	public void cancelledSellWithFillsIsDone()
 	{
-		TsgHubSales.Update partial = TsgHubSales.update("", 22325, GrandExchangeOfferState.SELLING, 2, 500_000_000, 1, 500_000_000, "a");
-		TsgHubSales.Update cancelled = TsgHubSales.update(partial.saved, 22325, GrandExchangeOfferState.CANCELLED_SELL, 2, 500_000_000, 1, 500_000_000, "b");
-		assertSale(cancelled.sale, "a", 22325, 1, 495_000_000, true);
+		Map.Entry<String, JsonObject> partial = TsgHubSales.update("", 22325, GrandExchangeOfferState.SELLING, 2, 500_000_000, 1, 500_000_000, "a");
+		Map.Entry<String, JsonObject> cancelled = TsgHubSales.update(partial.getKey(), 22325, GrandExchangeOfferState.CANCELLED_SELL, 2, 500_000_000, 1, 500_000_000, "b");
+		assertSale(cancelled.getValue(), "a", 22325, 1, 495_000_000, true);
 
-		TsgHubSales.Update unsold = TsgHubSales.update("", 22325, GrandExchangeOfferState.CANCELLED_SELL, 2, 500_000_000, 0, 0, "c");
-		assertNull(unsold.sale);
+		Map.Entry<String, JsonObject> unsold = TsgHubSales.update("", 22325, GrandExchangeOfferState.CANCELLED_SELL, 2, 500_000_000, 0, 0, "c");
+		assertNull(unsold.getValue());
 	}
 
 	@Test
 	public void newOfferInSlotGetsNewId()
 	{
-		TsgHubSales.Update sold = TsgHubSales.update("", TBOW, GrandExchangeOfferState.SOLD, 1, 1_400_000_000, 1, 1_400_000_000, "a");
-		TsgHubSales.Update collected = TsgHubSales.update(sold.saved, 0, GrandExchangeOfferState.EMPTY, 0, 0, 0, 0, "b");
-		assertEquals("", collected.saved);
-		TsgHubSales.Update again = TsgHubSales.update(collected.saved, TBOW, GrandExchangeOfferState.SOLD, 1, 1_400_000_000, 1, 1_400_000_000, "c");
-		assertEquals("c", again.sale.get("id").getAsString());
+		Map.Entry<String, JsonObject> sold = TsgHubSales.update("", TBOW, GrandExchangeOfferState.SOLD, 1, 1_400_000_000, 1, 1_400_000_000, "a");
+		Map.Entry<String, JsonObject> collected = TsgHubSales.update(sold.getKey(), 0, GrandExchangeOfferState.EMPTY, 0, 0, 0, 0, "b");
+		assertEquals("", collected.getKey());
+		Map.Entry<String, JsonObject> again = TsgHubSales.update(collected.getKey(), TBOW, GrandExchangeOfferState.SOLD, 1, 1_400_000_000, 1, 1_400_000_000, "c");
+		assertEquals("c", again.getValue().get("id").getAsString());
 
-		TsgHubSales.Update other = TsgHubSales.update(sold.saved, TBOW, GrandExchangeOfferState.SELLING, 1, 1_300_000_000, 1, 1_300_000_000, "d");
-		assertEquals("d", other.sale.get("id").getAsString());
+		Map.Entry<String, JsonObject> other = TsgHubSales.update(sold.getKey(), TBOW, GrandExchangeOfferState.SELLING, 1, 1_300_000_000, 1, 1_300_000_000, "d");
+		assertEquals("d", other.getValue().get("id").getAsString());
 	}
 
 	@Test
@@ -117,9 +118,9 @@ public class SalesTest
 	{
 		for (GrandExchangeOfferState state : new GrandExchangeOfferState[] {GrandExchangeOfferState.BUYING, GrandExchangeOfferState.BOUGHT, GrandExchangeOfferState.CANCELLED_BUY})
 		{
-			TsgHubSales.Update buy = TsgHubSales.update("", TBOW, state, 1, 1_400_000_000, 1, 1_400_000_000, "a");
-			assertNull(buy.sale);
-			assertEquals("", buy.saved);
+			Map.Entry<String, JsonObject> buy = TsgHubSales.update("", TBOW, state, 1, 1_400_000_000, 1, 1_400_000_000, "a");
+			assertNull(buy.getValue());
+			assertEquals("", buy.getKey());
 		}
 	}
 

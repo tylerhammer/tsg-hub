@@ -27,45 +27,39 @@ package com.tsghub;
 import java.awt.*;
 import java.util.*;
 import javax.swing.*;
-import net.runelite.api.*;
 import net.runelite.client.game.*;
-import static com.tsghub.TsgHubTheme.*;
-import static com.tsghub.TsgHubUi.*;
 
 class PlayerPrayerPanel extends JPanel
 {
-	private final Map<Prayer, PrayerSlot> slotMap = new HashMap<>();
+	private final Map<PrayerSprites, PrayerSlot> slots = new LinkedHashMap<>();
+	private int unlocked = PrayerSprites.DEFAULT_UNLOCKED;
 
 	PlayerPrayerPanel(PartyPlayer player, SpriteManager spriteManager)
 	{
 		setOpaque(false);
 		setLayout(new GridLayout(0, 5, 2, 2));
-		for (PrayerSprites p : PrayerSprites.values()) slotMap.put(p.getPrayer(), new PrayerSlot(p, spriteManager));
+		for (PrayerSprites p : PrayerSprites.all) slots.put(p, new PrayerSlot(p, spriteManager));
 		if (player.getPrayers() != null) update(player.getPrayers());
 		else updateSlots();
 	}
 
-	void update(Prayers prayers)
+	void update(int[] prayers)
 	{
-		boolean unlockChanged = false;
-		for (Map.Entry<Prayer, PrayerSlot> entry : slotMap.entrySet())
-		{
-			PrayerData data = prayers.getPrayerData().get(entry.getKey());
-			if (data == null) continue;
-			unlockChanged |= data.isUnlocked() != entry.getValue().getData().isUnlocked();
-			entry.getValue().updatePrayerData(data);
-		}
-		if (unlockChanged || getComponentCount() == 0) updateSlots();
+		for (PrayerSlot slot : slots.values()) slot.update(prayers);
+		if (!relayout(unlocked, prayers, getComponentCount())) return;
+		unlocked = prayers[2];
+		updateSlots();
+	}
+
+	static boolean relayout(int shown, int[] prayers, int components)
+	{
+		return shown != prayers[2] || components == 0;
 	}
 
 	private void updateSlots()
 	{
 		removeAll();
-		for (PrayerSprites p : PrayerSprites.values())
-		{
-			PrayerSlot slot = slotMap.get(p.getPrayer());
-			if (slot.getData().isUnlocked()) add(slot);
-		}
+		slots.forEach((p, slot) -> { if ((unlocked & PrayerSprites.bit(p.prayer)) != 0) add(slot); });
 		revalidate();
 		repaint();
 	}

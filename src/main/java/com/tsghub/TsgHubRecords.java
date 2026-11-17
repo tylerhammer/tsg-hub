@@ -59,7 +59,7 @@ final class TsgHubRecords
 		body.addProperty("accountHash", hash);
 		body.addProperty("full", full);
 		body.add("pbs", times);
-		plugin.tracker().report("pbs", "/v1/pbs", body);
+		plugin.tracker().report("pbs", "POST", "/v1/pbs", null, body);
 		return true;
 	}
 

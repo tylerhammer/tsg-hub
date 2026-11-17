@@ -149,7 +149,7 @@ final class TsgHubDrops
 
 	private void post(JsonObject body)
 	{
-		plugin.tracker().report("broadcast", "/v1/broadcasts", body);
+		plugin.tracker().report("broadcast", "POST", "/v1/broadcasts", null, body);
 	}
 
 	static boolean fromSelf(String message, String self)

@@ -75,6 +75,7 @@ final class GroupTracker
 	private final Map<Long, PartyPlayer> partyMembers = new ConcurrentHashMap<>();
 	private volatile PartyPlayer myPlayer;
 	private boolean prayersDirty = true;
+	private int prayerLevel = -1;
 	private volatile PartyPlayer selfView;
 	private volatile Instant lastLogout = Instant.now();
 	private TsgGroupUpdate currentChange = new TsgGroupUpdate();
@@ -173,7 +174,11 @@ final class GroupTracker
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged c)
 	{
-		if (c.getGameState() == GameState.LOGIN_SCREEN) lastLogout = Instant.now();
+		if (c.getGameState() == GameState.LOGIN_SCREEN)
+		{
+			lastLogout = Instant.now();
+			prayerLevel = -1;
+		}
 		if (!isSharing()) return;
 
 		if (myPlayer == null)
@@ -254,22 +259,16 @@ final class GroupTracker
 			trackMisc(R, client.getEnergy() / 100, myPlayer.getStats().getRunEnergy(), myPlayer.getStats()::setRunEnergy);
 		}
 
-		boolean prayersChanged = false;
-		if (myPlayer.getPrayers() == null && Prayers.canRunScripts(client))
+		if ((myPlayer.getPrayers() == null || prayersDirty || client.getTickCount() % PRAYER_REFRESH_TICKS == 0) && PrayerSprites.canRunScripts(client))
 		{
-			myPlayer.setPrayers(new Prayers(client));
-			prayersChanged = true;
-		}
-		else if (prayersDirty || client.getTickCount() % PRAYER_REFRESH_TICKS == 0)
-		{
-			for (PrayerSprites p : PrayerSprites.values())
+			int[] prayers = PrayerSprites.read(client);
+			if (!Arrays.equals(prayers, myPlayer.getPrayers()))
 			{
-				prayersChanged = myPlayer.getPrayers().updatePrayerState(p, client) || prayersChanged;
+				myPlayer.setPrayers(prayers);
+				setPrayers(currentChange);
 			}
+			prayersDirty = false;
 		}
-		prayersDirty = false;
-		// Unlisted prayers count as off, so send all three sets together.
-		if (prayersChanged) setPrayers(currentChange);
 
 		if (myPlayer.getSpellbook() == -1) updateSpellbook();
 
@@ -293,7 +292,11 @@ final class GroupTracker
 	@Subscribe
 	public void onStatChanged(StatChanged event)
 	{
-		if (event.getSkill() == Skill.PRAYER) prayersDirty = true;
+		if (event.getSkill() == Skill.PRAYER && event.getLevel() != prayerLevel)
+		{
+			prayerLevel = event.getLevel();
+			prayersDirty = true;
+		}
 		if (myPlayer == null || myPlayer.getStats() == null || !isSharing()) return;
 
 		// Store the real level as virtual so the display setting can change later.
@@ -338,18 +341,18 @@ final class GroupTracker
 		if (PRAYER_VARBITS.contains(event.getVarbitId())) prayersDirty = true;
 		if (myPlayer == null || myPlayer.getStats() == null || !isSharing()) return;
 
-		trackMisc(S, client.getVarpValue(VarPlayerID.SA_ENERGY) / 10, myPlayer.getStats().getSpecialPercent(), myPlayer.getStats()::setSpecialPercent);
-		trackMisc(ST, client.getVarbitValue(VarbitID.STAMINA_DURATION), myPlayer.getStamina(), myPlayer::setStamina);
-		trackMisc(P, client.getVarpValue(VarPlayerID.POISON), myPlayer.getPoison(), myPlayer::setPoison);
-		trackMisc(D, client.getVarpValue(VarPlayerID.DISEASE), myPlayer.getDisease(), myPlayer::setDisease);
-		if (ArrayUtils.contains(RUNEPOUCH_RUNE_VARBITS, event.getVarbitId()) || ArrayUtils.contains(RUNEPOUCH_AMOUNT_VARBITS, event.getVarbitId())) updateRunePouch();
-
-		if (event.getVarpId() == VarPlayerID.DIZANAS_QUIVER_TEMP_AMMO_AMOUNT || event.getVarpId() == VarPlayerID.DIZANAS_QUIVER_TEMP_AMMO)
+		int varp = event.getVarpId();
+		int varbit = event.getVarbitId();
+		if (varbit == -1)
 		{
-			updateQuiverAmmo();
+			if (varp == VarPlayerID.SA_ENERGY) trackMisc(S, event.getValue() / 10, myPlayer.getStats().getSpecialPercent(), myPlayer.getStats()::setSpecialPercent);
+			else if (varp == VarPlayerID.POISON) trackMisc(P, event.getValue(), myPlayer.getPoison(), myPlayer::setPoison);
+			else if (varp == VarPlayerID.DISEASE) trackMisc(D, event.getValue(), myPlayer.getDisease(), myPlayer::setDisease);
+			else if (varp == VarPlayerID.DIZANAS_QUIVER_TEMP_AMMO_AMOUNT || varp == VarPlayerID.DIZANAS_QUIVER_TEMP_AMMO) updateQuiverAmmo();
 		}
-
-		if (event.getVarbitId() == VarbitID.SPELLBOOK) updateSpellbook();
+		else if (varbit == VarbitID.STAMINA_DURATION) trackMisc(ST, event.getValue(), myPlayer.getStamina(), myPlayer::setStamina);
+		else if (varbit == VarbitID.SPELLBOOK) updateSpellbook();
+		else if (ArrayUtils.contains(RUNEPOUCH_RUNE_VARBITS, varbit) || ArrayUtils.contains(RUNEPOUCH_AMOUNT_VARBITS, varbit)) updateRunePouch();
 	}
 
 	@Subscribe
@@ -451,20 +454,10 @@ final class GroupTracker
 
 	private void setPrayers(TsgGroupUpdate c)
 	{
-		Collection<Prayer> available = new ArrayList<>();
-		Collection<Prayer> enabled = new ArrayList<>();
-		Collection<Prayer> unlocked = new ArrayList<>();
-		for (PrayerSprites p : PrayerSprites.values())
-		{
-			PrayerData data = myPlayer.getPrayers().getPrayerData().get(p.getPrayer());
-			if (data == null) continue;
-			if (data.isAvailable()) available.add(p.getPrayer());
-			if (data.isEnabled()) enabled.add(p.getPrayer());
-			if (data.isUnlocked()) unlocked.add(p.getPrayer());
-		}
-		c.setAp(TsgGroupUpdate.pack(available));
-		c.setEp(TsgGroupUpdate.pack(enabled));
-		c.setUp(TsgGroupUpdate.pack(unlocked));
+		int[] prayers = myPlayer.getPrayers();
+		c.setAp(prayers[0]);
+		c.setEp(prayers[1]);
+		c.setUp(prayers[2]);
 	}
 
 	private TsgGroupUpdate partyPlayerAsBatchedChange()

@@ -2,8 +2,10 @@ package com.tsghub;
 
 import java.awt.*;
 import java.util.*;
+import java.util.List;
 import net.runelite.api.*;
 import net.runelite.api.Point;
+import net.runelite.client.plugins.*;
 import net.runelite.client.ui.*;
 import net.runelite.client.ui.overlay.*;
 
@@ -21,21 +23,31 @@ final class TsgHubDefenceOverlay extends Overlay
 
 	private final TsgHubDefence defence;
 	private final TsgHubConfig config;
+	private final boolean panel;
 
-	TsgHubDefenceOverlay(TsgHubDefence defence, TsgHubConfig config)
+	TsgHubDefenceOverlay(Plugin plugin, TsgHubDefence defence, TsgHubConfig config, OverlayPosition position)
 	{
+		super(position == OverlayPosition.TOP_LEFT ? plugin : null);
 		this.defence = defence;
 		this.config = config;
-		setPosition(OverlayPosition.DYNAMIC);
-		setLayer(OverlayLayer.ABOVE_SCENE);
+		this.panel = position == OverlayPosition.TOP_LEFT;
+		setPosition(position);
+		if (!panel) setLayer(OverlayLayer.ABOVE_SCENE);
+	}
+
+	@Override
+	public String getName()
+	{
+		return panel ? "TsgHubDefencePanel" : super.getName();
 	}
 
 	@Override
 	public Dimension render(Graphics2D g)
 	{
 		TsgHubConfig.DefenceStyle style = config.defenceStyle();
-		if (!config.defenceLabel() || style == TsgHubConfig.DefenceStyle.PANEL) return null;
+		if (!config.defenceLabel() || (style == TsgHubConfig.DefenceStyle.PANEL) != panel) return null;
 		g.setFont(FontManager.getRunescapeSmallFont());
+		if (panel) return panel(g);
 		for (Map.Entry<NPC, TsgHubDefenceTarget> e : defence.targets().entrySet())
 		{
 			NPC npc = e.getKey();
@@ -59,11 +71,6 @@ final class TsgHubDefenceOverlay extends Overlay
 		text(g, LABEL, at.getX(), baseline);
 		g.setColor(t.atFloor() ? TsgHubTheme.CAPPED : TsgHubTheme.TEXT);
 		text(g, String.valueOf(t.def), at.getX() + m.stringWidth(LABEL + " "), baseline);
-	}
-
-	static void card(Graphics2D g, int x, int y, int width, int height, boolean capped)
-	{
-		card(g, x, y, width, height, capped, true);
 	}
 
 	private static void card(Graphics2D g, int x, int y, int width, int height, boolean capped, boolean thick)
@@ -92,7 +99,7 @@ final class TsgHubDefenceOverlay extends Overlay
 		int x = at.getX() + (m.stringWidth(LABEL + " " + value) - width) / 2;
 		int y = at.getY() - m.getAscent() - PAD - (cap == null ? 0 : row);
 		Color tone = t.atFloor() ? TsgHubTheme.CAPPED : TsgHubTheme.ACCENT;
-		card(g, x, y, width, height, t.atFloor());
+		card(g, x, y, width, height, t.atFloor(), true);
 		int baseline = y + PAD + m.getAscent() - 1;
 		g.setColor(TsgHubTheme.MUTED);
 		text(g, LABEL, x + PAD, baseline);
@@ -114,16 +121,68 @@ final class TsgHubDefenceOverlay extends Overlay
 			g.setColor(TsgHubTheme.WARNING);
 			text(g, cap, x + PAD, baseline);
 		}
-		int barY = baseline + 2;
-		int barWidth = width - PAD * 2;
-		g.setColor(TRACK);
-		g.fillRect(x + PAD, barY, barWidth, BAR);
-		int filled = t.startDef <= 0 ? 0 : barWidth * Math.max(0, t.def) / t.startDef;
-		g.setColor(tone);
-		g.fillRect(x + PAD, barY, filled, BAR);
+		bar(g, t, x + PAD, baseline + 2, width - PAD * 2);
 	}
 
-	static void text(Graphics2D g, String s, int x, int y)
+	private Dimension panel(Graphics2D g)
+	{
+		List<TsgHubDefenceTarget> shown = new ArrayList<>();
+		for (Map.Entry<NPC, TsgHubDefenceTarget> e : defence.targets().entrySet())
+		{
+			if (!e.getKey().isDead()) shown.add(e.getValue());
+		}
+		if (shown.isEmpty()) return null;
+		int pad = 5;
+		int rowGap = 3;
+		FontMetrics m = g.getFontMetrics();
+		TsgHubDefenceTarget focus = defence.focused();
+		int line = m.getAscent();
+		int textWidth = 0;
+		int height = pad * 2 - rowGap;
+		List<String> caps = new ArrayList<>();
+		for (TsgHubDefenceTarget t : shown)
+		{
+			String cap = TsgHubDefence.capLabel(t, defence.held());
+			caps.add(cap);
+			textWidth = Math.max(textWidth, m.stringWidth(t.boss.name) + 10 + m.stringWidth(String.valueOf(t.def)));
+			if (cap != null) textWidth = Math.max(textWidth, m.stringWidth(cap));
+			height += line + 2 + BAR + rowGap + (cap == null ? 0 : line + 1);
+		}
+		int width = textWidth + pad * 2;
+		card(g, 0, 0, width, height, focus != null && focus.atFloor(), true);
+		int y = pad;
+		for (int i = 0; i < shown.size(); i++)
+		{
+			TsgHubDefenceTarget t = shown.get(i);
+			String value = String.valueOf(t.def);
+			int baseline = y + line - 1;
+			g.setColor(t == focus ? TsgHubTheme.TEXT : TsgHubTheme.MUTED);
+			text(g, t.boss.name, pad, baseline);
+			g.setColor(t.atFloor() ? TsgHubTheme.CAPPED : TsgHubTheme.TEXT);
+			text(g, value, width - pad - m.stringWidth(value), baseline);
+			y += line;
+			if (caps.get(i) != null)
+			{
+				y += line + 1;
+				g.setColor(TsgHubTheme.WARNING);
+				text(g, caps.get(i), pad, y - 1);
+			}
+			y += 2;
+			bar(g, t, pad, y, width - pad * 2);
+			y += BAR + rowGap;
+		}
+		return new Dimension(width, height);
+	}
+
+	private static void bar(Graphics2D g, TsgHubDefenceTarget t, int x, int y, int width)
+	{
+		g.setColor(TRACK);
+		g.fillRect(x, y, width, BAR);
+		g.setColor(t.atFloor() ? TsgHubTheme.CAPPED : TsgHubTheme.ACCENT);
+		g.fillRect(x, y, t.startDef <= 0 ? 0 : width * Math.max(0, t.def) / t.startDef, BAR);
+	}
+
+	private static void text(Graphics2D g, String s, int x, int y)
 	{
 		Color color = g.getColor();
 		g.setColor(Color.BLACK);

@@ -4,6 +4,7 @@ import java.awt.*;
 import java.awt.image.*;
 import java.util.*;
 import java.util.List;
+import java.util.function.*;
 import java.util.regex.*;
 import net.runelite.api.*;
 import net.runelite.api.gameval.InterfaceID;
@@ -47,16 +48,23 @@ final class TsgHubRedaction
 		return out;
 	}
 
-	private static List<Map.Entry<Rectangle, String>> lines(Widget widget, List<Map.Entry<Rectangle, String>> out)
+	private static List<Map.Entry<Rectangle, String>> lines(Widget root, List<Map.Entry<Rectangle, String>> out)
 	{
-		if (widget == null || widget.isHidden()) return out;
-		String text = plain(widget.getText());
-		if (!text.isEmpty()) out.add(new AbstractMap.SimpleImmutableEntry<>(widget.getBounds(), text));
+		walk(root, true, widget -> {
+			String text = plain(widget.getText());
+			if (!text.isEmpty()) out.add(new AbstractMap.SimpleImmutableEntry<>(widget.getBounds(), text));
+		});
+		return out;
+	}
+
+	static void walk(Widget widget, boolean visibleOnly, Consumer<Widget> visit)
+	{
+		if (widget == null || (visibleOnly && widget.isHidden())) return;
+		visit.accept(widget);
 		for (Widget[] children : new Widget[][] { widget.getStaticChildren(), widget.getDynamicChildren(), widget.getNestedChildren() })
 		{
-			if (children != null) for (Widget child : children) lines(child, out);
+			if (children != null) for (Widget child : children) walk(child, visibleOnly, visit);
 		}
-		return out;
 	}
 
 	static List<Rectangle> privateRows(List<Map.Entry<Rectangle, String>> lines, Collection<String> bodies)
