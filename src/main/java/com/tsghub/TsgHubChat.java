@@ -10,6 +10,7 @@ import net.runelite.client.chat.*;
 import net.runelite.client.config.*;
 import net.runelite.client.util.*;
 import static com.tsghub.TsgHubSession.EVENT_ID;
+import static com.tsghub.TsgHubJson.*;
 
 @RequiredArgsConstructor
 final class TsgHubChat
@@ -45,26 +46,26 @@ final class TsgHubChat
 
 	void reply(JsonObject message)
 	{
-		String eventId = TsgHubJson.str(message, "eventId");
-		switch (TsgHubJson.str(message, "type"))
+		String eventId = str(message, "eventId");
+		switch (str(message, "type"))
 		{
 			case "progress":
 				try
 				{
-					long gained = Long.parseLong(TsgHubJson.str(message, "gained"));
-					String rank = TsgHubJson.str(message, "rank");
+					long gained = Long.parseLong(str(message, "gained"));
+					String rank = str(message, "rank");
 					Long parsedRank = rank.isEmpty() ? null : Long.parseLong(rank);
 					plugin.ui(s -> s.competitionView.competitionProgress(eventId, gained, parsedRank));
 				}
 				catch (NumberFormatException ignored) { /* Malformed progress waits for the next report. */ }
 				break;
 			case "claimed":
-				progress(TsgHubJson.str(message, "taskTitle"), TsgHubJson.str(message, "progress"), TsgHubJson.str(message, "complete"));
+				progress(str(message, "taskTitle"), str(message, "progress"), str(message, "complete"));
 				if (!plugin.live() && eventId.equals(plugin.session().get(EVENT_ID))) plugin.sessions().refreshBoard();
 				break;
 			case "notice":
-				String text = TsgHubJson.str(message, "text");
-				if (!text.isEmpty()) plugin.memberStatus(text, "error".equals(TsgHubJson.str(message, "tone")) ? Tone.ERROR : Tone.INFO);
+				String text = str(message, "text");
+				if (!text.isEmpty()) plugin.memberStatus(text, "error".equals(str(message, "tone")) ? Tone.ERROR : Tone.INFO);
 				break;
 			default:
 		}
@@ -73,13 +74,13 @@ final class TsgHubChat
 	boolean notifications(JsonArray notifications)
 	{
 		if (notifications == null) return false;
-		for (JsonObject notification : TsgHubJson.objects(notifications))
+		for (JsonObject notification : objects(notifications))
 		{
-			if (!"task-completed".equals(TsgHubJson.str(notification, "type"))) continue;
+			if (!"task-completed".equals(str(notification, "type"))) continue;
 			local(new ChatMessageBuilder()
-				.append(ChatColorType.NORMAL).append(TsgHubJson.str(notification, "actorName") + " completed ")
-				.append(ChatColorType.HIGHLIGHT).append(TsgHubJson.str(notification, "taskTitle"))
-				.append(ChatColorType.NORMAL).append(" for " + TsgHubJson.str(notification, "teamName") + "!"));
+				.append(ChatColorType.NORMAL).append(str(notification, "actorName") + " completed ")
+				.append(ChatColorType.HIGHLIGHT).append(str(notification, "taskTitle"))
+				.append(ChatColorType.NORMAL).append(" for " + str(notification, "teamName") + "!"));
 		}
 		return notifications.size() > 0;
 	}

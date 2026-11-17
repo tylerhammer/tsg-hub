@@ -7,6 +7,7 @@ import net.runelite.client.audio.*;
 import net.runelite.client.config.*;
 import net.runelite.client.input.*;
 import net.runelite.client.ui.overlay.*;
+import static com.tsghub.TsgHubJson.*;
 
 final class TsgHubBingo
 {
@@ -84,7 +85,7 @@ final class TsgHubBingo
 
 	void apply(JsonObject event, String displayName)
 	{
-		listEventId = TsgHubBingoBoard.hasBoard(event) ? "" : TsgHubJson.str(event, "id");
+		listEventId = TsgHubBingoBoard.hasBoard(event) ? "" : str(event, "id");
 		String teamId = TsgHubEvents.teamIdFor(event, displayName);
 		TsgHubBingoView next = teamId == null || teamId.isEmpty() ? null : TsgHubBingoView.of(event, teamId);
 		view = next;

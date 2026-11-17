@@ -51,12 +51,8 @@ final class TsgHubRecords
 	private boolean send(JsonObject times, boolean full)
 	{
 		String name = plugin.clan().playerName();
-		String hash = plugin.clan().accountHash();
-		if (name.isEmpty() || hash.isEmpty()) return false;
-		JsonObject body = new JsonObject();
-		body.addProperty("clanName", plugin.clan().name());
-		body.addProperty("displayName", name);
-		body.addProperty("accountHash", hash);
+		if (name.isEmpty() || plugin.clan().accountHash().isEmpty()) return false;
+		JsonObject body = plugin.clan().identity(name);
 		body.addProperty("full", full);
 		body.add("pbs", times);
 		plugin.tracker().report("pbs", "POST", "/v1/pbs", null, body);

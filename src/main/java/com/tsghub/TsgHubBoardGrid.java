@@ -11,6 +11,7 @@ import javax.swing.*;
 import javax.swing.Timer;
 import net.runelite.client.ui.*;
 import net.runelite.client.util.*;
+import static com.tsghub.TsgHubJson.*;
 
 final class TsgHubBoardGrid extends JComponent
 {
@@ -168,9 +169,9 @@ final class TsgHubBoardGrid extends JComponent
 
 	static String status(JsonObject progress, boolean done)
 	{
-		int value = TsgHubJson.integer(progress, "progress", 0);
-		int target = Math.max(1, TsgHubJson.integer(progress, "target", 1));
-		return done ? "Done" : TsgHubJson.bool(progress, "pending") ? "Awaiting review" : target > 1 ? value + " / " + target : "Not done yet";
+		int value = integer(progress, "progress", 0);
+		int target = Math.max(1, integer(progress, "target", 1));
+		return done ? "Done" : bool(progress, "pending") ? "Awaiting review" : target > 1 ? value + " / " + target : "Not done yet";
 	}
 
 	@Override
@@ -202,8 +203,8 @@ final class TsgHubBoardGrid extends JComponent
 		JsonObject task = tasks.get(id);
 		if (task == null) return null;
 		JsonObject row = progress.get(id);
-		StringBuilder text = new StringBuilder("<html><b>").append(TsgHubHtml.escape(TsgHubJson.str(task, "title"))).append("</b>");
-		text.append("<br>").append(TsgHubJson.integer(task, "points", 1)).append(" pts");
+		StringBuilder text = new StringBuilder("<html><b>").append(TsgHubHtml.escape(str(task, "title"))).append("</b>");
+		text.append("<br>").append(integer(task, "points", 1)).append(" pts");
 		text.append("<br>").append(status(row, done.contains(id)));
 		return text.append("</html>").toString();
 	}
@@ -212,8 +213,7 @@ final class TsgHubBoardGrid extends JComponent
 	protected void paintComponent(Graphics graphics)
 	{
 		if (board == null) return;
-		Graphics2D g = (Graphics2D) graphics.create();
-		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		Graphics2D g = TsgHubTheme.smooth(graphics);
 		g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 		int cell = cell();
 		int left = offsetX();
@@ -316,15 +316,15 @@ final class TsgHubBoardGrid extends JComponent
 		g.setColor(tile.complete ? ColorUtil.colorLerp(base, TsgHubTheme.SUCCESS, 0.32) : base);
 		g.fill(shape);
 
-		int value = TsgHubJson.integer(tile.progress, "progress", 0);
-		int target = Math.max(1, TsgHubJson.integer(tile.progress, "target", 1));
-		boolean pending = TsgHubJson.bool(tile.progress, "pending");
+		int value = integer(tile.progress, "progress", 0);
+		int target = Math.max(1, integer(tile.progress, "target", 1));
+		boolean pending = bool(tile.progress, "pending");
 		Graphics2D content = (Graphics2D) g.create();
 		content.clip(shape);
 		if (tile.complete) content.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.75f));
 		int areaTop = y + 3;
 		int areaBottom = y + cell - 7;
-		String title = TsgHubJson.str(tile.task, "title");
+		String title = str(tile.task, "title");
 		content.setFont(font);
 		FontMetrics metrics = content.getFontMetrics();
 		int lineHeight = metrics.getHeight() - 2;

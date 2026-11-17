@@ -144,12 +144,10 @@ final class TsgHubCoffer
 
 	private void send(JsonObject body)
 	{
-		long hash = client.getAccountHash();
 		String name = plugin.clan().playerName().isEmpty() ? selfName() : plugin.clan().playerName();
-		if (hash == -1 || name.isEmpty()) return;
-		body.addProperty("clanName", plugin.clan().name());
-		body.addProperty("displayName", name);
-		body.addProperty("accountHash", Long.toString(hash));
-		report.accept(body);
+		if (client.getAccountHash() == -1 || name.isEmpty()) return;
+		JsonObject identity = plugin.clan().identity(name);
+		body.entrySet().forEach(e -> identity.add(e.getKey(), e.getValue()));
+		report.accept(identity);
 	}
 }

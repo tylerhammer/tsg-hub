@@ -6,6 +6,7 @@ import java.util.concurrent.*;
 import javax.swing.*;
 import lombok.*;
 import net.runelite.client.config.*;
+import static com.tsghub.TsgHubJson.*;
 
 @RequiredArgsConstructor
 final class TsgHubKeys
@@ -56,13 +57,13 @@ final class TsgHubKeys
 		if (linkStarting || linkDeadline() > System.currentTimeMillis() || executor.isShutdown()) return;
 		stopLink();
 		linkStarting = true;
-		plugin.api().call("POST", "/v1/auth/start", null, TsgHubJson.obj("clanName", plugin.clan().name()), response -> {
-			String code = TsgHubJson.str(response, "deviceCode");
-			String command = TsgHubJson.str(response, "command");
+		plugin.api().call("POST", "/v1/auth/start", null, obj("clanName", plugin.clan().name()), response -> {
+			String code = str(response, "deviceCode");
+			String command = str(response, "command");
 			if (code.isEmpty() || command.isEmpty()) throw new IllegalStateException("The server didn't return a link code.");
-			linkDeadline = System.currentTimeMillis() + Math.max(60, TsgHubJson.integer(response, "expiresIn", 600)) * 1000L;
+			linkDeadline = System.currentTimeMillis() + Math.max(60, integer(response, "expiresIn", 600)) * 1000L;
 			deviceCode = code;
-			scheduleLinkPoll(code, Math.max(2, TsgHubJson.integer(response, "interval", 5)));
+			scheduleLinkPoll(code, Math.max(2, integer(response, "interval", 5)));
 			SwingUtilities.invokeLater(() -> TsgHubUi.copyToClipboard(command));
 			plugin.memberStatus("Copied " + command + ". Paste it in the clan Discord to link.", Tone.SUCCESS);
 			plugin.joinDiscord(e -> plugin.memberError("Copied " + command + ", but couldn't open the Discord invite. ", e));
@@ -99,13 +100,13 @@ final class TsgHubKeys
 			linkExpired();
 			return;
 		}
-		plugin.api().call("POST", "/v1/auth/poll", null, TsgHubJson.obj("deviceCode", code), result -> {
+		plugin.api().call("POST", "/v1/auth/poll", null, obj("deviceCode", code), result -> {
 			if (!code.equals(deviceCode)) return;
-			String status = TsgHubJson.str(result, "status");
+			String status = str(result, "status");
 			if ("complete".equals(status))
 			{
 				stopLink();
-				String key = TsgHubJson.str(result, "key");
+				String key = str(result, "key");
 				if (key.isEmpty()) plugin.memberStatus("Linking didn't finish. Click Link Discord to try again.", Tone.ERROR);
 				else configManager.setConfiguration("tsghub", "hubKey", key);
 				plugin.discordLinkChanged();
@@ -152,8 +153,8 @@ final class TsgHubKeys
 			backoff.reset();
 			boolean admin = grantsAdmin(result);
 			if (admin != verified) setVerified(admin);
-			String linkError = TsgHubJson.str(result, "linkError");
-			boolean linked = TsgHubJson.bool(result, "linked");
+			String linkError = str(result, "linkError");
+			boolean linked = bool(result, "linked");
 			if (!linkError.isEmpty()) plugin.memberStatus(linkError, Tone.ERROR);
 			else if (announce && linked) plugin.memberStatus(admin ? "Hub key accepted. Your Discord account is linked and the admin site button is unlocked." : "Hub key accepted. Your Discord account is linked.", Tone.SUCCESS);
 			if (linked || !linkError.isEmpty()) announce = false;
@@ -166,7 +167,7 @@ final class TsgHubKeys
 
 	static boolean grantsAdmin(JsonObject me)
 	{
-		String role = TsgHubJson.str(me, "role");
+		String role = str(me, "role");
 		return role.isEmpty() || "admin".equals(role);
 	}
 

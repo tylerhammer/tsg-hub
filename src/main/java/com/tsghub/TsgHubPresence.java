@@ -17,6 +17,7 @@ import net.runelite.api.gameval.SpriteID;
 import net.runelite.client.callback.*;
 import net.runelite.client.game.*;
 import net.runelite.client.util.*;
+import static com.tsghub.TsgHubJson.*;
 
 @RequiredArgsConstructor
 final class TsgHubPresence
@@ -86,7 +87,7 @@ final class TsgHubPresence
 		if (current == null) return;
 		listed = null;
 		sentAt = 0;
-		if (!plugin.liveSync().socket().presence(null)) plugin.api().call("POST", "/v1/presence/leave", null, TsgHubJson.obj("clanName", current.get("clanName"), "accountHash", current.get("accountHash")));
+		if (!plugin.liveSync().socket().presence(null)) plugin.api().call("POST", "/v1/presence/leave", null, obj("clanName", current.get("clanName"), "accountHash", current.get("accountHash")));
 	}
 
 	void loadMembers(boolean quiet)
@@ -98,7 +99,7 @@ final class TsgHubPresence
 		CompletableFuture<JsonObject> notesCall = plugin.api().call("GET", "/v1/members?clanName=" + clan, token, null)
 			.exceptionally(error -> null);
 		plugin.api().call("GET", "/v1/presence?clanName=" + clan, token, null).thenCombineAsync(notesCall, (roster, loaded) -> {
-			apply(TsgHubJson.array(roster, "members"), loaded == null ? null : TsgHubJson.array(loaded, "members"));
+			apply(array(roster, "members"), loaded == null ? null : array(loaded, "members"));
 			return roster;
 		}, executor).whenCompleteAsync((response, error) -> {
 			if (error != null && !quiet) plugin.ui(s -> s.setStatus("Couldn't load members. " + TsgHubFormat.friendlyError(error), Tone.ERROR));
@@ -136,15 +137,15 @@ final class TsgHubPresence
 		Map<String, JsonElement> byName = new LinkedHashMap<>();
 		for (JsonElement row : base)
 		{
-			if (row.isJsonObject()) byName.put(PlayerNames.key(TsgHubJson.str(row.getAsJsonObject(), "displayName")), row);
+			if (row.isJsonObject()) byName.put(PlayerNames.key(str(row.getAsJsonObject(), "displayName")), row);
 		}
-		for (JsonElement name : TsgHubJson.array(delta, "remove"))
+		for (JsonElement name : array(delta, "remove"))
 		{
 			if (name.isJsonPrimitive()) byName.remove(PlayerNames.key(name.getAsString()));
 		}
-		for (JsonElement row : TsgHubJson.array(delta, "upsert"))
+		for (JsonElement row : array(delta, "upsert"))
 		{
-			if (row.isJsonObject()) byName.put(PlayerNames.key(TsgHubJson.str(row.getAsJsonObject(), "displayName")), row);
+			if (row.isJsonObject()) byName.put(PlayerNames.key(str(row.getAsJsonObject(), "displayName")), row);
 		}
 		JsonArray merged = new JsonArray();
 		byName.values().forEach(merged::add);
@@ -188,7 +189,7 @@ final class TsgHubPresence
 		{
 			if (!notes.get(i).isJsonObject()) continue;
 			JsonObject note = notes.get(i).getAsJsonObject();
-			byName.put(PlayerNames.key(TsgHubJson.str(note, "displayName")), note);
+			byName.put(PlayerNames.key(str(note, "displayName")), note);
 		}
 		List<JsonObject> online = new ArrayList<>();
 		Set<String> seen = new HashSet<>();
@@ -196,12 +197,12 @@ final class TsgHubPresence
 		{
 			if (!presence.get(i).isJsonObject()) continue;
 			JsonObject member = presence.get(i).getAsJsonObject();
-			if (seen.add(PlayerNames.key(TsgHubJson.str(member, "displayName")))) online.add(member);
+			if (seen.add(PlayerNames.key(str(member, "displayName")))) online.add(member);
 		}
 		for (Map.Entry<String, Integer> entry : chatWorlds.entrySet())
 		{
 			if (!seen.add(PlayerNames.key(entry.getKey()))) continue;
-			JsonObject member = TsgHubJson.obj("displayName", entry.getKey());
+			JsonObject member = obj("displayName", entry.getKey());
 			if (entry.getValue() > 0) member.addProperty("world", entry.getValue());
 			online.add(member);
 		}
@@ -209,18 +210,18 @@ final class TsgHubPresence
 		for (String name : clanNames)
 		{
 			if (!seen.add(PlayerNames.key(name))) continue;
-			offline.add(TsgHubJson.obj("displayName", name));
+			offline.add(obj("displayName", name));
 		}
 		return new JsonArray[] {sorted(online, byName), sorted(offline, byName)};
 	}
 
 	private static JsonArray sorted(List<JsonObject> members, Map<String, JsonObject> notes)
 	{
-		members.sort(Comparator.comparing(m -> TsgHubJson.str(m, "displayName").toLowerCase(Locale.ROOT)));
+		members.sort(Comparator.comparing(m -> str(m, "displayName").toLowerCase(Locale.ROOT)));
 		JsonArray out = new JsonArray();
 		for (JsonObject member : members)
 		{
-			JsonObject note = notes.get(PlayerNames.key(TsgHubJson.str(member, "displayName")));
+			JsonObject note = notes.get(PlayerNames.key(str(member, "displayName")));
 			if (note != null)
 			{
 				for (String field : new String[] {"altOf", "alts", "note", "lastSeenAt", "warnings", "accountType", "previousNames", "timeZone"})
@@ -235,12 +236,12 @@ final class TsgHubPresence
 
 	CompletableFuture<Void> saveNote(String displayName, String altOf, String note)
 	{
-		return adminWrite("PUT", "/v1/members/notes", TsgHubJson.obj("clanName", plugin.clan().name(), "displayName", displayName, "altOf", altOf, "note", note));
+		return adminWrite("PUT", "/v1/members/notes", obj("clanName", plugin.clan().name(), "displayName", displayName, "altOf", altOf, "note", note));
 	}
 
 	CompletableFuture<Void> addWarning(String displayName, String reason, int expiresInDays)
 	{
-		return adminWrite("POST", "/v1/members/warnings", TsgHubJson.obj("clanName", plugin.clan().name(), "displayName", displayName, "reason", reason, "expiresInDays", expiresInDays));
+		return adminWrite("POST", "/v1/members/warnings", obj("clanName", plugin.clan().name(), "displayName", displayName, "reason", reason, "expiresInDays", expiresInDays));
 	}
 
 	private CompletableFuture<Void> adminWrite(String method, String path, JsonObject body)
@@ -268,7 +269,7 @@ final class TsgHubPresence
 		for (int i = 0; i < members.size(); i++)
 		{
 			JsonObject member = members.get(i).getAsJsonObject();
-			ClanMember found = settings.findMember(TsgHubJson.str(member, "displayName"));
+			ClanMember found = settings.findMember(str(member, "displayName"));
 			if (found == null || found.getRank() == null) continue;
 			ClanTitle title = settings.titleForRank(found.getRank());
 			if (title == null) continue;
@@ -291,12 +292,12 @@ final class TsgHubPresence
 
 	BufferedImage nameIcon(JsonObject member)
 	{
-		BufferedImage rank = member.has("rankId") && rankIcons != null ? rankIcons.get(TsgHubJson.integer(member, "rankId", 0)) : null;
+		BufferedImage rank = member.has("rankId") && rankIcons != null ? rankIcons.get(integer(member, "rankId", 0)) : null;
 		int type = accountType(member);
 		BufferedImage account = accountIcons.get(type);
 		if (account == null) return rank;
 		if (rank == null) return account;
-		return nameIcons.computeIfAbsent(TsgHubJson.integer(member, "rankId", 0) + ":" + type, k -> sideBySide(rank, account));
+		return nameIcons.computeIfAbsent(integer(member, "rankId", 0) + ":" + type, k -> sideBySide(rank, account));
 	}
 
 	private static BufferedImage sideBySide(BufferedImage left, BufferedImage right)
@@ -311,7 +312,7 @@ final class TsgHubPresence
 
 	static int accountType(JsonObject member)
 	{
-		int type = TsgHubJson.integer(member, "accountType", 0);
+		int type = integer(member, "accountType", 0);
 		return type > 0 && type < ACCOUNT_ICONS.length ? type : 0;
 	}
 
@@ -325,7 +326,7 @@ final class TsgHubPresence
 		if (player == null || player.getLocalLocation() == null || hash == -1 || name.isEmpty()) return null;
 		boolean detailed = plugin.locationSharingEnabled();
 		AreaNames.Area area = this.area;
-		JsonObject payload = TsgHubJson.obj("clanName", plugin.clan().name(), "displayName", name, "accountHash", Long.toString(hash), "world", client.getWorld(),
+		JsonObject payload = obj("clanName", plugin.clan().name(), "displayName", name, "accountHash", Long.toString(hash), "world", client.getWorld(),
 			"version", TsgHubVersion.VERSION, "accountType", client.getVarbitValue(VarbitID.IRONMAN), "timeZone", ZoneId.systemDefault().getId());
 		int clanRank = plugin.clan().rank();
 		if (clanRank >= 0) payload.addProperty("clanRank", clanRank);

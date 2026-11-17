@@ -15,6 +15,7 @@ import net.runelite.client.input.MouseAdapter;
 import net.runelite.client.ui.*;
 import net.runelite.client.ui.overlay.*;
 import net.runelite.client.util.ColorUtil;
+import static com.tsghub.TsgHubJson.*;
 
 final class TsgHubRevealOverlay extends Overlay
 {
@@ -391,14 +392,14 @@ final class TsgHubRevealOverlay extends Overlay
 			if (since < 0) continue;
 			if (at == null)
 			{
-				if (since < FLOAT_MS) paintFloat(g, panelW / 2.0, panelH - PAD - 6, cell, since / (double) FLOAT_MS, TsgHubJson.integer(moment.tasks.get(moment.tiles.get(i)), "points", 1));
+				if (since < FLOAT_MS) paintFloat(g, panelW / 2.0, panelH - PAD - 6, cell, since / (double) FLOAT_MS, integer(moment.tasks.get(moment.tiles.get(i)), "points", 1));
 				continue;
 			}
 			double cx = left + at[1] * (cell + GAP) + cell / 2.0;
 			double cy = top + at[0] * (cell + GAP) + cell / 2.0;
 			paintSpray(g, cx, cy, cell, since, moment.tiles.get(i).hashCode());
 			if (since < RING_MS) paintRing(g, cx, cy, cell, since / (double) RING_MS);
-			if (since < FLOAT_MS) paintFloat(g, cx, cy, cell, since / (double) FLOAT_MS, TsgHubJson.integer(moment.tasks.get(moment.tiles.get(i)), "points", 1));
+			if (since < FLOAT_MS) paintFloat(g, cx, cy, cell, since / (double) FLOAT_MS, integer(moment.tasks.get(moment.tiles.get(i)), "points", 1));
 		}
 
 		for (int i = 0; i < moment.lines.size(); i++)
@@ -635,8 +636,8 @@ final class TsgHubRevealOverlay extends Overlay
 			long impact = FIRST_TILE_MS + (long) i * TILE_MS + DROP_MS;
 			if (t < impact) continue;
 			JsonObject task = moment.tasks.get(moment.tiles.get(i));
-			int points = TsgHubJson.integer(task, "points", 1);
-			String text = TsgHubJson.str(task, "title") + "  +" + TsgHubFormat.plural(points, "pt");
+			int points = integer(task, "points", 1);
+			String text = str(task, "title") + "  +" + TsgHubFormat.plural(points, "pt");
 			int more = moment.hiddenTiles.size();
 			if (more > 0 && i == moment.tiles.size() - 1 && t >= impact + MORE_CAPTION_MS) text = "+" + TsgHubFormat.plural(more, "more tile") + "  +" + TsgHubFormat.plural(moment.hiddenPoints(), "pt");
 			Font font = bold(16f);

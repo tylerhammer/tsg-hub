@@ -2,6 +2,7 @@ package com.tsghub;
 
 import com.google.gson.*;
 import java.util.*;
+import static com.tsghub.TsgHubJson.*;
 
 final class TsgHubBingoBoard
 {
@@ -86,13 +87,13 @@ final class TsgHubBingoBoard
 	static TsgHubBingoBoard of(JsonObject event)
 	{
 		List<String> taskIds = new ArrayList<>();
-		JsonArray tasks = TsgHubJson.array(event, "tasks");
-		for (int i = 0; i < tasks.size(); i++) taskIds.add(TsgHubJson.str(tasks.get(i).getAsJsonObject(), "id"));
+		JsonArray tasks = array(event, "tasks");
+		for (int i = 0; i < tasks.size(); i++) taskIds.add(str(tasks.get(i).getAsJsonObject(), "id"));
 		JsonObject board = event != null && event.has("board") && event.get("board").isJsonObject() ? event.getAsJsonObject("board") : null;
 		if (board == null) return resolve(defaultSize(taskIds.size()), new JsonArray(), taskIds, new JsonObject());
-		int size = TsgHubJson.integer(board, "size", 0);
+		int size = integer(board, "size", 0);
 		if (size < MIN_SIZE || size > MAX_SIZE) size = defaultSize(taskIds.size());
-		return resolve(size, TsgHubJson.array(board, "tiles"), taskIds, board);
+		return resolve(size, array(board, "tiles"), taskIds, board);
 	}
 
 	private static TsgHubBingoBoard resolve(int size, JsonArray tiles, List<String> taskIds, JsonObject board)
@@ -112,9 +113,9 @@ final class TsgHubBingoBoard
 		{
 			if (!tiles.get(i).isJsonObject()) continue;
 			JsonObject tile = tiles.get(i).getAsJsonObject();
-			String id = TsgHubJson.str(tile, "taskId");
-			int row = TsgHubJson.integer(tile, "row", -1);
-			int col = TsgHubJson.integer(tile, "col", -1);
+			String id = str(tile, "taskId");
+			int row = integer(tile, "row", -1);
+			int col = integer(tile, "col", -1);
 			if (!known.contains(id) || placed.contains(id) || row < 0 || col < 0 || row >= size || col >= size || cells[row][col] != null) continue;
 			cells[row][col] = id;
 			placed.add(id);
@@ -134,7 +135,7 @@ final class TsgHubBingoBoard
 			placed.add(id);
 		}
 		return new TsgHubBingoBoard(size, cells, unplaced,
-			Math.max(0, TsgHubJson.integer(board, "lineBonus", 0)), Math.max(0, TsgHubJson.integer(board, "randomMin", 0)), Math.max(0, TsgHubJson.integer(board, "randomMax", 0)), bonuses);
+			Math.max(0, integer(board, "lineBonus", 0)), Math.max(0, integer(board, "randomMin", 0)), Math.max(0, integer(board, "randomMax", 0)), bonuses);
 	}
 
 	boolean hasBonus()

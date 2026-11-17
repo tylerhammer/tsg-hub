@@ -2,6 +2,7 @@ package com.tsghub;
 
 import com.google.gson.*;
 import java.util.*;
+import static com.tsghub.TsgHubJson.*;
 
 final class TsgHubBingoView
 {
@@ -18,25 +19,25 @@ final class TsgHubBingoView
 	private TsgHubBingoView(JsonObject event, String teamId)
 	{
 		this.event = event;
-		key = TsgHubJson.str(event, "id") + ":" + teamId;
-		name = TsgHubJson.str(event, "name");
+		key = str(event, "id") + ":" + teamId;
+		name = str(event, "name");
 		board = TsgHubBingoBoard.of(event);
 		Map<String, JsonObject> byId = new LinkedHashMap<>();
-		for (JsonObject task : TsgHubJson.objects(TsgHubJson.array(event, "tasks"))) byId.put(TsgHubJson.str(task, "id"), task);
-		JsonObject score = TsgHubEvents.scoreFor(TsgHubJson.array(event, "teamScores"), teamId);
+		for (JsonObject task : objects(array(event, "tasks"))) byId.put(str(task, "id"), task);
+		JsonObject score = TsgHubEvents.scoreFor(array(event, "teamScores"), teamId);
 		Map<String, JsonObject> rows = new HashMap<>();
 		Set<String> completed = new HashSet<>();
-		for (JsonObject row : TsgHubJson.objects(TsgHubJson.array(score, "tasks")))
+		for (JsonObject row : objects(array(score, "tasks")))
 		{
-			String taskId = TsgHubJson.str(row, "taskId");
+			String taskId = str(row, "taskId");
 			rows.put(taskId, row);
-			if (TsgHubJson.bool(row, "completed")) completed.add(taskId);
+			if (bool(row, "completed")) completed.add(taskId);
 		}
 		tasks = Collections.unmodifiableMap(byId);
 		progress = Collections.unmodifiableMap(rows);
 		done = Collections.unmodifiableSet(completed);
 		lines = Collections.unmodifiableList(board.completedLines(completed));
-		points = TsgHubJson.integer(score, "points", 0);
+		points = integer(score, "points", 0);
 	}
 
 	static TsgHubBingoView of(JsonObject event, String teamId)

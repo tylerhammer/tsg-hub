@@ -9,6 +9,7 @@ import net.runelite.api.gameval.*;
 import net.runelite.client.game.*;
 import net.runelite.client.hiscore.*;
 import net.runelite.client.util.*;
+import static com.tsghub.TsgHubJson.*;
 
 final class TsgHubTileIcons
 {
@@ -83,14 +84,14 @@ final class TsgHubTileIcons
 
 	static int itemFor(JsonObject task)
 	{
-		if (task == null || !"drop".equals(TsgHubJson.str(task, "type"))) return 0;
+		if (task == null || !"drop".equals(str(task, "type"))) return 0;
 		JsonObject config = config(task);
-		JsonArray groups = TsgHubJson.array(config, "itemGroups");
+		JsonArray groups = array(config, "itemGroups");
 		if (groups.size() > 0 && groups.get(0).isJsonArray() && groups.get(0).getAsJsonArray().size() > 0 && groups.get(0).getAsJsonArray().get(0).isJsonObject())
-			return TsgHubJson.integer(groups.get(0).getAsJsonArray().get(0).getAsJsonObject(), "id", 0);
-		if ("pet".equals(TsgHubJson.str(config, "itemGroup"))) return ItemID.MOLEPET;
-		if ("jar".equals(TsgHubJson.str(config, "itemGroup"))) return ItemID.JAR_OF_SWAMP;
-		JsonArray ids = TsgHubJson.array(config, "itemIds");
+			return integer(groups.get(0).getAsJsonArray().get(0).getAsJsonObject(), "id", 0);
+		if ("pet".equals(str(config, "itemGroup"))) return ItemID.MOLEPET;
+		if ("jar".equals(str(config, "itemGroup"))) return ItemID.JAR_OF_SWAMP;
+		JsonArray ids = array(config, "itemIds");
 		for (int i = 0; i < ids.size(); i++) if (ids.get(i).isJsonPrimitive() && ids.get(i).getAsJsonPrimitive().isNumber() && ids.get(i).getAsInt() > 0) return ids.get(i).getAsInt();
 		return 0;
 	}
@@ -99,17 +100,17 @@ final class TsgHubTileIcons
 	{
 		if (task == null) return 0;
 		JsonObject config = config(task);
-		switch (TsgHubJson.str(task, "type"))
+		switch (str(task, "type"))
 		{
 			case "kill":
-				String npc = TsgHubJson.str(config, "npcName");
+				String npc = str(config, "npcName");
 				int sprite = sprite(npc, HiscoreSkillType.BOSS);
 				return sprite > 0 ? sprite : sprite(ActivityDetector.bossFor(npc), HiscoreSkillType.BOSS);
 			case "raid":
-				JsonArray modes = TsgHubJson.array(config, "modes");
+				JsonArray modes = array(config, "modes");
 				return sprite(raidName(modes.size() > 0 && modes.get(0).isJsonPrimitive() ? modes.get(0).getAsString() : ""), HiscoreSkillType.BOSS);
 			case "xp":
-				return sprite(TsgHubJson.str(config, "skill"), HiscoreSkillType.SKILL);
+				return sprite(str(config, "skill"), HiscoreSkillType.SKILL);
 			default:
 				return 0;
 		}

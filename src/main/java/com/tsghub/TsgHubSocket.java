@@ -7,6 +7,7 @@ import java.util.function.*;
 import lombok.*;
 import lombok.extern.slf4j.*;
 import okhttp3.*;
+import static com.tsghub.TsgHubJson.*;
 
 @Slf4j
 final class TsgHubSocket implements TsgHubOutbox.Link
@@ -140,12 +141,12 @@ final class TsgHubSocket implements TsgHubOutbox.Link
 
 	synchronized boolean xp(String skill, int xp, int tick)
 	{
-		return emit("xp", TsgHubJson.obj("skill", skill, "xp", xp, "tick", tick));
+		return emit("xp", obj("skill", skill, "xp", xp, "tick", tick));
 	}
 
 	synchronized void rewardInterface(int group, boolean open, int tick)
 	{
-		emit("interface", TsgHubJson.obj("group", group, "open", open, "tick", tick));
+		emit("interface", obj("group", group, "open", open, "tick", tick));
 	}
 
 	synchronized void watch(Set<String> topics)
@@ -159,7 +160,7 @@ final class TsgHubSocket implements TsgHubOutbox.Link
 	{
 		JsonArray topics = new JsonArray();
 		watching.forEach(topics::add);
-		emit("watch", TsgHubJson.obj("topics", topics, "deltas", true, "sets", true));
+		emit("watch", obj("topics", topics, "deltas", true, "sets", true));
 	}
 
 	synchronized void admin(String token)
@@ -172,7 +173,7 @@ final class TsgHubSocket implements TsgHubOutbox.Link
 
 	private void sendAdmin()
 	{
-		emit("admin", TsgHubJson.obj("token", adminToken));
+		emit("admin", obj("token", adminToken));
 	}
 
 	private void sendPresence()
@@ -200,7 +201,7 @@ final class TsgHubSocket implements TsgHubOutbox.Link
 
 	private void send(String type, String eventId, String token, boolean inClanChat)
 	{
-		emit(type, token == null ? TsgHubJson.obj("eventId", eventId) : TsgHubJson.obj("eventId", eventId, "token", token, "inClanChat", inClanChat));
+		emit(type, token == null ? obj("eventId", eventId) : obj("eventId", eventId, "token", token, "inClanChat", inClanChat));
 	}
 
 	private synchronized void opened(WebSocket ws, JsonObject message)
@@ -229,7 +230,7 @@ final class TsgHubSocket implements TsgHubOutbox.Link
 
 	private synchronized void subscribed(WebSocket ws, JsonObject message)
 	{
-		String eventId = TsgHubJson.str(message, "eventId");
+		String eventId = str(message, "eventId");
 		if (ws != socket || !subscriptions.containsKey(eventId)) return;
 		confirmed.add(eventId);
 		dispatch(ws, message);
@@ -238,7 +239,7 @@ final class TsgHubSocket implements TsgHubOutbox.Link
 	private synchronized void adminRevoked(WebSocket ws)
 	{
 		if (ws != socket || adminToken.isEmpty()) return;
-		dispatch(ws, TsgHubJson.obj("type", "admin.revoked", "token", adminToken));
+		dispatch(ws, obj("type", "admin.revoked", "token", adminToken));
 		adminToken = "";
 	}
 
@@ -293,8 +294,8 @@ final class TsgHubSocket implements TsgHubOutbox.Link
 				message = element.getAsJsonObject();
 			}
 			catch (RuntimeException e) { return; }
-			String eventId = TsgHubJson.str(message, "eventId");
-			switch (TsgHubJson.str(message, "type"))
+			String eventId = str(message, "eventId");
+			switch (str(message, "type"))
 			{
 				case "ready":
 					opened(ws, message);
@@ -306,10 +307,10 @@ final class TsgHubSocket implements TsgHubOutbox.Link
 					adminRevoked(ws);
 					break;
 				case "error":
-					log.debug("TSG Hub socket error: {}", TsgHubJson.str(message, "message"));
-					boolean answer = !TsgHubJson.str(message, "id").isEmpty();
+					log.debug("TSG Hub socket error: {}", str(message, "message"));
+					boolean answer = !str(message, "id").isEmpty();
 					if (!answer && !eventId.isEmpty()) rejected(ws, eventId);
-					else if (!answer && "admin".equals(TsgHubJson.str(message, "topic")) && TsgHubJson.integer(message, "status", 0) == 401) adminRevoked(ws);
+					else if (!answer && "admin".equals(str(message, "topic")) && integer(message, "status", 0) == 401) adminRevoked(ws);
 					else dispatch(ws, message);
 					break;
 				default:
@@ -340,7 +341,7 @@ final class TsgHubSocket implements TsgHubOutbox.Link
 
 	private synchronized void dispatch(WebSocket ws, JsonObject message)
 	{
-		Consumer<JsonObject> handler = handlers.get(TsgHubJson.str(message, "type"));
+		Consumer<JsonObject> handler = handlers.get(str(message, "type"));
 		if (handler != null && ws == socket && !executor.isShutdown()) executor.execute(() -> handler.accept(message));
 	}
 }

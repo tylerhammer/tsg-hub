@@ -37,6 +37,7 @@ import net.runelite.client.util.*;
 import okhttp3.*;
 import static com.tsghub.TsgHubSession.EVENT_ID;
 import static com.tsghub.TsgHubSession.TOKEN;
+import static com.tsghub.TsgHubJson.*;
 
 @Slf4j
 @Accessors(fluent = true)
@@ -307,7 +308,7 @@ public class TsgHubPlugin extends Plugin
 	private JsonObject usageIdentity()
 	{
 		long hash = client.getAccountHash();
-		return hash == -1 ? null : TsgHubJson.obj("clanName", clan.name(), "accountHash", Long.toString(hash));
+		return hash == -1 ? null : obj("clanName", clan.name(), "accountHash", Long.toString(hash));
 	}
 
 	boolean sharingInClan()

@@ -244,7 +244,7 @@ final class TsgHubDrops
 
 	static String dropAge(String iso, Instant now)
 	{
-		Instant then = TsgHubJson.instant(iso);
+		Instant then = instant(iso);
 		if (then == null) return "";
 		String elapsed = TsgHubFormat.elapsed(then, now);
 		return elapsed.isEmpty() ? "now" : elapsed;
