@@ -1,26 +1,14 @@
 package com.tsghub;
 
+import java.awt.*;
+import javax.swing.*;
+import javax.swing.plaf.basic.*;
 import static com.tsghub.TsgHubFormat.*;
 import static com.tsghub.TsgHubIcons.*;
 import static com.tsghub.TsgHubSession.DOCK_COLLAPSED;
 import static com.tsghub.TsgHubSession.DOCK_SPLIT;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-
-import java.awt.BorderLayout;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JSplitPane;
-import javax.swing.Timer;
-import javax.swing.plaf.basic.BasicSplitPaneDivider;
-import javax.swing.plaf.basic.BasicSplitPaneUI;
 
 final class TsgHubDock extends JPanel
 {

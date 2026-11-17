@@ -24,29 +24,16 @@
  */
 package com.tsghub;
 
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.image.*;
+import javax.swing.*;
+import lombok.*;
+import net.runelite.client.game.*;
+import net.runelite.client.ui.components.materialtabs.*;
+import net.runelite.client.util.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Cursor;
-import java.awt.Dimension;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.awt.image.BufferedImage;
-import javax.swing.BoxLayout;
-import javax.swing.JComponent;
-import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
-import lombok.Getter;
-import lombok.Setter;
-import net.runelite.client.game.AlternateSprites;
-import net.runelite.client.game.ItemManager;
-import net.runelite.client.game.SpriteManager;
-import net.runelite.client.ui.components.materialtabs.MaterialTab;
-import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
-import net.runelite.client.util.ImageUtil;
 
 class PlayerPanel extends JPanel
 {

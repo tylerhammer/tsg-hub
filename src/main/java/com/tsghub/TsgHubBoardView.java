@@ -1,5 +1,13 @@
 package com.tsghub;
 
+import com.google.gson.*;
+import com.tsghub.TsgHubSidebarPanel.*;
+import java.awt.*;
+import java.time.*;
+import java.util.*;
+import java.util.List;
+import javax.swing.*;
+import net.runelite.client.ui.components.materialtabs.*;
 import static com.tsghub.PlayerNames.*;
 import static com.tsghub.TsgHubEvents.*;
 import static com.tsghub.TsgHubHtml.*;
@@ -10,28 +18,6 @@ import static com.tsghub.TsgHubSession.HIDE_COMPLETED;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 import static net.runelite.client.util.ColorUtil.toHexColor;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.tsghub.TsgHubSidebarPanel.View;
-import java.awt.BorderLayout;
-import java.awt.Component;
-import java.awt.GridLayout;
-import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.List;
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
-import net.runelite.client.ui.components.materialtabs.MaterialTab;
-import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
 
 final class TsgHubBoardView
 {

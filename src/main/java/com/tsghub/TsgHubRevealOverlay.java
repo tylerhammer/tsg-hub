@@ -1,44 +1,18 @@
 package com.tsghub;
 
-import com.google.gson.JsonObject;
-import java.awt.AlphaComposite;
-import java.awt.BasicStroke;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.FontMetrics;
-import java.awt.GradientPaint;
-import java.awt.Graphics2D;
-import java.awt.Rectangle;
-import java.awt.RenderingHints;
-import java.awt.Shape;
-import java.awt.event.MouseEvent;
-import java.awt.geom.Area;
-import java.awt.geom.Ellipse2D;
-import java.awt.geom.Path2D;
-import java.awt.geom.Rectangle2D;
-import java.awt.geom.RoundRectangle2D;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
+import com.google.gson.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.*;
+import java.util.*;
 import java.util.Deque;
-import java.util.EnumSet;
 import java.util.List;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import javax.swing.SwingUtilities;
-import net.runelite.api.Client;
-import net.runelite.api.GameState;
-import net.runelite.api.WorldType;
-import net.runelite.api.gameval.VarbitID;
+import javax.swing.*;
+import net.runelite.api.*;
+import net.runelite.api.gameval.*;
 import net.runelite.client.input.MouseListener;
-import net.runelite.client.ui.FontManager;
-import net.runelite.client.ui.overlay.Overlay;
-import net.runelite.client.ui.overlay.OverlayLayer;
-import net.runelite.client.ui.overlay.OverlayPosition;
+import net.runelite.client.ui.*;
+import net.runelite.client.ui.overlay.*;
 
 final class TsgHubRevealOverlay extends Overlay implements MouseListener
 {

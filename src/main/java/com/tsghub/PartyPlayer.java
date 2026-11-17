@@ -24,16 +24,12 @@
  */
 package com.tsghub;
 
-import lombok.Data;
-import net.runelite.api.Client;
-import net.runelite.api.EquipmentInventorySlot;
-import net.runelite.api.ItemContainer;
-import net.runelite.api.Skill;
+import lombok.*;
+import net.runelite.api.*;
+import net.runelite.api.gameval.*;
 import net.runelite.api.gameval.InventoryID;
-import net.runelite.api.gameval.VarPlayerID;
-import net.runelite.api.gameval.VarbitID;
-import net.runelite.client.game.ItemManager;
-import net.runelite.client.party.PartyMember;
+import net.runelite.client.game.*;
+import net.runelite.client.party.*;
 
 @Data
 class PartyPlayer

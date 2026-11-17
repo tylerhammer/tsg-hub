@@ -1,29 +1,15 @@
 package com.tsghub;
 
+import com.google.gson.*;
+import java.awt.*;
+import java.time.*;
+import java.time.format.*;
+import java.util.*;
+import java.util.function.*;
+import net.runelite.api.*;
+import net.runelite.client.ui.overlay.*;
 import static com.tsghub.TsgHubEvents.*;
 import static com.tsghub.TsgHubJson.*;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.FontMetrics;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.HashSet;
-import java.util.Locale;
-import java.util.Set;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
-import net.runelite.api.Client;
-import net.runelite.api.MenuAction;
-import net.runelite.client.ui.overlay.Overlay;
-import net.runelite.client.ui.overlay.OverlayPosition;
 
 final class TsgHubCountdown extends Overlay
 {

@@ -24,7 +24,7 @@
  */
 package com.tsghub;
 
-import lombok.Data;
+import lombok.*;
 
 @Data
 class PartyMiscChange

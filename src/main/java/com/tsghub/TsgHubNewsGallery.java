@@ -1,37 +1,18 @@
 package com.tsghub;
 
+import com.google.gson.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.*;
+import java.awt.image.*;
+import java.util.*;
+import java.util.List;
+import java.util.concurrent.*;
+import java.util.function.*;
+import javax.swing.*;
 import static com.tsghub.TsgHubJson.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-import com.google.gson.JsonObject;
-import java.awt.AlphaComposite;
-import java.awt.BasicStroke;
-import java.awt.BorderLayout;
-import java.awt.Cursor;
-import java.awt.Dimension;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.GraphicsEnvironment;
-import java.awt.Rectangle;
-import java.awt.RenderingHints;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.geom.RoundRectangle2D;
-import java.awt.image.BufferedImage;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
 
 final class TsgHubNewsGallery extends JPanel
 {

@@ -1,25 +1,20 @@
 package com.tsghub;
 
+import com.google.gson.*;
+import com.tsghub.TsgHubSidebarPanel.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.time.*;
+import java.util.*;
+import java.util.List;
+import javax.swing.*;
+import lombok.*;
 import static com.tsghub.PlayerNames.*;
 import static com.tsghub.TsgHubEvents.*;
 import static com.tsghub.TsgHubFormat.*;
 import static com.tsghub.TsgHubJson.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.tsghub.TsgHubSidebarPanel.View;
-import java.awt.BorderLayout;
-import java.awt.event.ActionListener;
-import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
-import javax.swing.JButton;
-import javax.swing.JPanel;
-import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 final class TsgHubCompetitionView

@@ -1,36 +1,19 @@
 package com.tsghub;
 
+import com.google.gson.*;
+import com.tsghub.TsgHubSidebarPanel.*;
+import java.awt.*;
+import java.time.*;
+import java.util.*;
+import java.util.List;
+import java.util.function.*;
+import javax.swing.*;
+import javax.swing.Timer;
 import static com.tsghub.TsgHubHtml.*;
 import static com.tsghub.TsgHubIcons.*;
 import static com.tsghub.TsgHubJson.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.tsghub.TsgHubSidebarPanel.View;
-import java.awt.AlphaComposite;
-import java.awt.BorderLayout;
-import java.awt.Component;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.BooleanSupplier;
-import java.util.function.Supplier;
-import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
-import javax.swing.Icon;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.Timer;
 
 final class TsgHubHomeView
 {

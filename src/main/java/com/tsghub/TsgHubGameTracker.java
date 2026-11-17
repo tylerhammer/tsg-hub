@@ -1,40 +1,18 @@
 package com.tsghub;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledExecutorService;
-import lombok.RequiredArgsConstructor;
-import net.runelite.api.ChatMessageType;
-import net.runelite.api.Client;
-import net.runelite.api.Item;
-import net.runelite.api.ItemContainer;
-import net.runelite.api.NPC;
-import net.runelite.api.Player;
-import net.runelite.api.Skill;
-import net.runelite.api.WorldView;
-import net.runelite.api.events.ChatMessage;
-import net.runelite.api.events.GameTick;
-import net.runelite.api.events.ItemContainerChanged;
-import net.runelite.api.events.StatChanged;
-import net.runelite.api.events.WidgetClosed;
-import net.runelite.api.events.WidgetLoaded;
+import com.google.gson.*;
+import java.util.*;
+import java.util.concurrent.*;
+import lombok.*;
+import net.runelite.api.*;
+import net.runelite.api.events.*;
 import net.runelite.api.gameval.InventoryID;
-import net.runelite.client.callback.ClientThread;
-import net.runelite.client.eventbus.Subscribe;
-import net.runelite.client.events.ServerNpcLoot;
-import net.runelite.client.game.ItemManager;
-import net.runelite.client.game.ItemStack;
-import net.runelite.client.plugins.loottracker.LootReceived;
-import net.runelite.client.util.Text;
+import net.runelite.client.callback.*;
+import net.runelite.client.eventbus.*;
+import net.runelite.client.events.*;
+import net.runelite.client.game.*;
+import net.runelite.client.plugins.loottracker.*;
+import net.runelite.client.util.*;
 
 @RequiredArgsConstructor
 final class TsgHubGameTracker

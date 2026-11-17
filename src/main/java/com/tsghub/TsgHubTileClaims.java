@@ -1,11 +1,8 @@
 package com.tsghub;
 
+import com.google.gson.*;
+import java.util.*;
 import static com.tsghub.TsgHubJson.*;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import java.util.ArrayList;
-import java.util.List;
 
 final class TsgHubTileClaims
 {

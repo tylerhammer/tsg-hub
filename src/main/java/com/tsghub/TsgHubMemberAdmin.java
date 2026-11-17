@@ -1,26 +1,15 @@
 package com.tsghub;
 
+import com.google.gson.*;
+import com.tsghub.TsgHubUi.*;
+import java.awt.*;
+import java.util.*;
+import java.util.List;
+import java.util.concurrent.*;
+import javax.swing.*;
 import static com.tsghub.TsgHubJson.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.tsghub.TsgHubUi.Tone;
-import java.awt.Component;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import javax.swing.JComboBox;
-import javax.swing.JLabel;
-import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.SwingUtilities;
 
 final class TsgHubMemberAdmin
 {

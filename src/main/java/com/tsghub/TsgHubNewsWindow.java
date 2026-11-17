@@ -1,27 +1,20 @@
 package com.tsghub;
 
+import com.google.gson.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.image.*;
+import java.time.*;
+import java.util.*;
+import java.util.List;
+import java.util.concurrent.*;
+import java.util.function.*;
+import javax.swing.*;
 import static com.tsghub.TsgHubFormat.*;
 import static com.tsghub.TsgHubHtml.*;
 import static com.tsghub.TsgHubJson.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import java.awt.BorderLayout;
-import java.awt.Component;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
-import java.awt.image.BufferedImage;
-import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import javax.swing.BorderFactory;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.SwingUtilities;
 
 final class TsgHubNewsWindow extends JPanel
 {

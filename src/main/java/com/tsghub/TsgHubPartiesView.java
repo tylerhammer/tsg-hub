@@ -1,5 +1,13 @@
 package com.tsghub;
 
+import com.google.gson.*;
+import com.tsghub.TsgHubSidebarPanel.*;
+import java.awt.*;
+import java.text.*;
+import java.util.*;
+import java.util.List;
+import javax.swing.*;
+import net.runelite.client.util.*;
 import static com.tsghub.PlayerNames.*;
 import static com.tsghub.TsgHubHtml.*;
 import static com.tsghub.TsgHubIcons.*;
@@ -7,28 +15,6 @@ import static com.tsghub.TsgHubJson.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 import static net.runelite.client.util.ColorUtil.toHexColor;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.tsghub.TsgHubSidebarPanel.View;
-import java.awt.BorderLayout;
-import java.awt.GridLayout;
-import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
-import javax.swing.JScrollPane;
-import net.runelite.client.util.QuantityFormatter;
 
 final class TsgHubPartiesView
 {

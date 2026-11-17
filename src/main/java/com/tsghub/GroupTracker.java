@@ -4,51 +4,29 @@
  */
 package com.tsghub;
 
-import static com.tsghub.PartyMiscChange.PartyMisc.*;
-
-import com.google.common.collect.ImmutableSet;
-import com.tsghub.PartyMiscChange.PartyMisc;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.IntConsumer;
-import java.util.function.Predicate;
-import javax.swing.SwingUtilities;
-import lombok.RequiredArgsConstructor;
-import net.runelite.api.Client;
-import net.runelite.api.EnumComposition;
-import net.runelite.api.EnumID;
-import net.runelite.api.Experience;
-import net.runelite.api.GameState;
-import net.runelite.api.Prayer;
-import net.runelite.api.Skill;
-import net.runelite.api.events.GameStateChanged;
-import net.runelite.api.events.GameTick;
-import net.runelite.api.events.ItemContainerChanged;
-import net.runelite.api.events.StatChanged;
-import net.runelite.api.events.VarbitChanged;
+import com.google.common.collect.*;
+import com.tsghub.PartyMiscChange.*;
+import java.time.*;
+import java.time.temporal.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.function.*;
+import javax.swing.*;
+import lombok.*;
+import net.runelite.api.*;
+import net.runelite.api.events.*;
+import net.runelite.api.gameval.*;
 import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.gameval.ItemID;
-import net.runelite.api.gameval.VarPlayerID;
-import net.runelite.api.gameval.VarbitID;
-import net.runelite.client.callback.ClientThread;
-import net.runelite.client.eventbus.Subscribe;
-import net.runelite.client.events.PartyChanged;
-import net.runelite.client.game.ItemManager;
-import net.runelite.client.party.PartyService;
-import net.runelite.client.party.WSClient;
-import net.runelite.client.party.events.UserJoin;
-import net.runelite.client.party.events.UserPart;
-import net.runelite.client.party.messages.UserSync;
-import org.apache.commons.lang3.ArrayUtils;
+import net.runelite.client.callback.*;
+import net.runelite.client.eventbus.*;
+import net.runelite.client.events.*;
+import net.runelite.client.game.*;
+import net.runelite.client.party.*;
+import net.runelite.client.party.events.*;
+import net.runelite.client.party.messages.*;
+import org.apache.commons.lang3.*;
+import static com.tsghub.PartyMiscChange.PartyMisc.*;
 
 @RequiredArgsConstructor
 final class GroupTracker

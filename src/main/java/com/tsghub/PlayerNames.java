@@ -1,8 +1,6 @@
 package com.tsghub;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 
 public final class PlayerNames
 {

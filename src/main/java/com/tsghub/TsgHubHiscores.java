@@ -1,33 +1,19 @@
 package com.tsghub;
 
+import java.awt.*;
+import java.awt.image.*;
+import java.util.*;
+import java.util.List;
+import java.util.stream.*;
+import javax.swing.*;
+import net.runelite.api.*;
+import net.runelite.client.game.*;
+import net.runelite.client.hiscore.*;
+import net.runelite.client.hiscore.Skill;
+import net.runelite.client.util.*;
 import static com.tsghub.TsgHubHtml.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-
-import java.awt.BorderLayout;
-import java.awt.Dimension;
-import java.awt.GridLayout;
-import java.awt.image.BufferedImage;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import javax.swing.BorderFactory;
-import javax.swing.ImageIcon;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.SwingConstants;
-import javax.swing.SwingUtilities;
-import net.runelite.api.Experience;
-import net.runelite.client.game.SpriteManager;
-import net.runelite.client.hiscore.HiscoreEndpoint;
-import net.runelite.client.hiscore.HiscoreResult;
-import net.runelite.client.hiscore.HiscoreSkill;
-import net.runelite.client.hiscore.HiscoreSkillType;
-import net.runelite.client.hiscore.Skill;
-import net.runelite.client.util.ImageUtil;
 
 final class TsgHubHiscores
 {

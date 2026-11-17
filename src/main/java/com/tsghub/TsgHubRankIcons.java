@@ -1,11 +1,11 @@
 package com.tsghub;
 
-import java.awt.image.BufferedImage;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import lombok.RequiredArgsConstructor;
-import net.runelite.api.clan.ClanTitle;
-import net.runelite.client.game.ChatIconManager;
+import java.awt.image.*;
+import java.util.*;
+import java.util.concurrent.*;
+import lombok.*;
+import net.runelite.api.clan.*;
+import net.runelite.client.game.*;
 
 @RequiredArgsConstructor
 final class TsgHubRankIcons

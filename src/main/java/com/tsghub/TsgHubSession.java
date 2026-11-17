@@ -1,9 +1,8 @@
 package com.tsghub;
 
-import java.util.ArrayList;
-import java.util.List;
-import lombok.RequiredArgsConstructor;
-import net.runelite.client.config.ConfigManager;
+import java.util.*;
+import lombok.*;
+import net.runelite.client.config.*;
 
 @RequiredArgsConstructor
 class TsgHubSession

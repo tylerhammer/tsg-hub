@@ -24,18 +24,12 @@
  */
 package com.tsghub;
 
+import java.util.*;
+import lombok.*;
+import net.runelite.api.*;
+import net.runelite.client.game.*;
+import net.runelite.client.party.messages.*;
 import static com.tsghub.PartyMiscChange.PartyMisc.*;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
-import net.runelite.api.Prayer;
-import net.runelite.client.game.ItemManager;
-import net.runelite.client.party.messages.PartyMemberMessage;
 
 @Data
 @NoArgsConstructor

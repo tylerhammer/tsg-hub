@@ -1,22 +1,17 @@
 package com.tsghub;
 
+import com.google.gson.*;
+import com.tsghub.TsgHubSidebarPanel.*;
+import java.awt.*;
+import java.time.*;
+import javax.swing.*;
+import lombok.*;
 import static com.tsghub.TsgHubFormat.*;
 import static com.tsghub.TsgHubHtml.*;
 import static com.tsghub.TsgHubIcons.*;
 import static com.tsghub.TsgHubJson.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.tsghub.TsgHubSidebarPanel.View;
-import java.awt.BorderLayout;
-import java.awt.FlowLayout;
-import java.time.Instant;
-import java.time.ZoneId;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 final class TsgHubNewsView

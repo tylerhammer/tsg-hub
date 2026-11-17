@@ -24,16 +24,13 @@
  */
 package com.tsghub;
 
-import com.google.common.collect.ImmutableSet;
-import java.util.Set;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import net.runelite.api.Client;
-import net.runelite.api.EquipmentInventorySlot;
+import com.google.common.collect.*;
+import java.util.*;
+import lombok.*;
+import net.runelite.api.*;
+import net.runelite.api.gameval.*;
 import net.runelite.api.gameval.ItemID;
-import net.runelite.api.gameval.VarPlayerID;
-import net.runelite.client.game.ItemManager;
-import net.runelite.client.game.ItemVariationMapping;
+import net.runelite.client.game.*;
 
 @AllArgsConstructor
 @Data

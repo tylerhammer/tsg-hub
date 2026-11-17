@@ -1,15 +1,10 @@
 package com.tsghub;
 
-import java.awt.AlphaComposite;
-import java.awt.Dimension;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.image.BufferedImage;
-import javax.swing.ImageIcon;
-import javax.swing.JLabel;
-import javax.swing.SwingUtilities;
-import net.runelite.client.game.ItemManager;
-import net.runelite.client.util.AsyncBufferedImage;
+import java.awt.*;
+import java.awt.image.*;
+import javax.swing.*;
+import net.runelite.client.game.*;
+import net.runelite.client.util.*;
 
 class ItemSlot extends JLabel
 {

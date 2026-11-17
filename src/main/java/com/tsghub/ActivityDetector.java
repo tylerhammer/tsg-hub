@@ -1,14 +1,9 @@
 package com.tsghub;
 
-import java.util.ArrayDeque;
+import java.util.*;
 import java.util.Deque;
-import java.util.EnumMap;
-import java.util.EnumSet;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import net.runelite.api.Skill;
-import net.runelite.client.util.Text;
+import net.runelite.api.*;
+import net.runelite.client.util.*;
 
 final class ActivityDetector
 {

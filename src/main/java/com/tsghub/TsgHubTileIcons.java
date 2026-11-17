@@ -1,21 +1,15 @@
 package com.tsghub;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import java.awt.image.BufferedImage;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.IntFunction;
-import javax.swing.JLabel;
-import javax.swing.SwingUtilities;
-import net.runelite.api.gameval.ItemID;
-import net.runelite.client.game.SpriteManager;
-import net.runelite.client.hiscore.HiscoreSkill;
-import net.runelite.client.hiscore.HiscoreSkillType;
-import net.runelite.client.util.AsyncBufferedImage;
+import com.google.gson.*;
+import java.awt.image.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.function.*;
+import javax.swing.*;
+import net.runelite.api.gameval.*;
+import net.runelite.client.game.*;
+import net.runelite.client.hiscore.*;
+import net.runelite.client.util.*;
 
 final class TsgHubTileIcons
 {

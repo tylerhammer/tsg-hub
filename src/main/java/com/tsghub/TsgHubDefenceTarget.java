@@ -1,6 +1,6 @@
 package com.tsghub;
 
-import net.runelite.client.plugins.specialcounter.SpecialWeapon;
+import net.runelite.client.plugins.specialcounter.*;
 
 final class TsgHubDefenceTarget
 {

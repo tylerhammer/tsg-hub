@@ -1,17 +1,12 @@
 package com.tsghub;
 
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.FontMetrics;
-import java.awt.Graphics2D;
-import java.util.ArrayList;
+import java.awt.*;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
-import net.runelite.api.NPC;
-import net.runelite.client.plugins.Plugin;
-import net.runelite.client.ui.FontManager;
-import net.runelite.client.ui.overlay.Overlay;
-import net.runelite.client.ui.overlay.OverlayPosition;
+import net.runelite.api.*;
+import net.runelite.client.plugins.*;
+import net.runelite.client.ui.*;
+import net.runelite.client.ui.overlay.*;
 
 final class TsgHubDefencePanel extends Overlay
 {

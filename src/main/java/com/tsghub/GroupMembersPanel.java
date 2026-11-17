@@ -4,30 +4,16 @@
  */
 package com.tsghub;
 
+import com.google.common.base.*;
+import java.awt.event.*;
+import java.util.*;
+import java.util.function.*;
+import java.util.stream.*;
+import javax.swing.*;
+import net.runelite.client.game.*;
+import net.runelite.client.ui.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-
-import com.google.common.base.Strings;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.BooleanSupplier;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-import javax.swing.JLabel;
-import javax.swing.JMenuItem;
-import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
-import net.runelite.client.game.ItemManager;
-import net.runelite.client.game.SpriteManager;
-import net.runelite.client.ui.DynamicGridLayout;
 
 // Swing thread only.
 final class GroupMembersPanel extends JPanel

@@ -24,13 +24,12 @@
  */
 package com.tsghub;
 
-import java.awt.GridLayout;
-import java.util.Arrays;
-import java.util.Objects;
-import java.util.stream.Collectors;
-import javax.swing.JPanel;
-import net.runelite.client.game.ItemManager;
-import org.apache.commons.lang3.ArrayUtils;
+import java.awt.*;
+import java.util.*;
+import java.util.stream.*;
+import javax.swing.*;
+import net.runelite.client.game.*;
+import org.apache.commons.lang3.*;
 
 class PlayerInventoryPanel extends JPanel
 {

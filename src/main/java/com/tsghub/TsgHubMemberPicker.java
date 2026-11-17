@@ -1,10 +1,8 @@
 package com.tsghub;
 
-import java.awt.Window;
+import java.awt.*;
 import java.util.List;
-import javax.swing.JButton;
-import javax.swing.JTextField;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
 
 final class TsgHubMemberPicker extends TsgHubSearchField
 {

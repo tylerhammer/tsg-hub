@@ -1,41 +1,25 @@
 package com.tsghub;
 
+import com.google.gson.*;
+import java.awt.*;
+import java.awt.Point;
+import java.awt.event.*;
+import java.awt.geom.*;
+import java.awt.image.*;
+import java.time.*;
+import java.util.List;
+import javax.swing.*;
+import javax.swing.Timer;
+import net.runelite.api.*;
+import net.runelite.api.gameval.InterfaceID;
+import net.runelite.api.widgets.*;
+import net.runelite.client.input.MouseListener;
+import net.runelite.client.input.MouseWheelListener;
+import net.runelite.client.ui.overlay.*;
 import static com.tsghub.TsgHubHtml.*;
 import static com.tsghub.TsgHubJson.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-
-import com.google.gson.JsonObject;
-import java.awt.AlphaComposite;
-import java.awt.BorderLayout;
-import java.awt.Component;
-import java.awt.Container;
-import java.awt.Dimension;
-import java.awt.Graphics2D;
-import java.awt.Point;
-import java.awt.Rectangle;
-import java.awt.RenderingHints;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseWheelEvent;
-import java.awt.geom.RoundRectangle2D;
-import java.awt.image.BufferedImage;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.util.List;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
-import javax.swing.Timer;
-import net.runelite.api.Client;
-import net.runelite.api.GameState;
-import net.runelite.api.gameval.InterfaceID;
-import net.runelite.api.widgets.Widget;
-import net.runelite.client.input.MouseListener;
-import net.runelite.client.input.MouseWheelListener;
-import net.runelite.client.ui.overlay.Overlay;
-import net.runelite.client.ui.overlay.OverlayLayer;
-import net.runelite.client.ui.overlay.OverlayPosition;
 
 final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWheelListener
 {

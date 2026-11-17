@@ -1,12 +1,12 @@
 package com.tsghub;
 
-import com.google.gson.JsonObject;
-import java.util.function.Consumer;
-import net.runelite.api.Client;
-import net.runelite.client.audio.AudioPlayer;
-import net.runelite.client.config.ConfigManager;
-import net.runelite.client.input.MouseManager;
-import net.runelite.client.ui.overlay.OverlayManager;
+import com.google.gson.*;
+import java.util.function.*;
+import net.runelite.api.*;
+import net.runelite.client.audio.*;
+import net.runelite.client.config.*;
+import net.runelite.client.input.*;
+import net.runelite.client.ui.overlay.*;
 
 final class TsgHubBingo
 {
