@@ -3,6 +3,7 @@ package com.tsghub;
 import com.google.gson.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.*;
 import lombok.*;
 import lombok.extern.slf4j.*;
 import okhttp3.*;
@@ -11,43 +12,6 @@ import okhttp3.*;
 final class TsgHubSocket implements TsgHubOutbox.Link
 {
 	enum State { DISCONNECTED, CONNECTING, CONNECTED }
-
-	interface Listener
-	{
-		void onConnection(State state);
-
-		void onSnapshot(JsonObject message);
-
-		void onReady(String rulesVersion);
-
-		void onRulesChanged(String version);
-
-		void onChanged(String topic, String eventId);
-
-		void onAdminRevoked(String token);
-
-		void onAnnouncement(String text);
-
-		void onUpdateAvailable(String version);
-
-		void onChatMessage(String tag, String text);
-
-		void onAck(String id);
-
-		void onRejected(String id, int status, String message);
-
-		void onSubscribed();
-
-		void onReply(JsonObject message);
-
-		void onXpRequest(String skills);
-
-		void onScreenshotRequest(String id, String token);
-
-		void onGroupHeartbeat(JsonObject message);
-
-		void onGroupRejected(int status);
-	}
 
 	private static final int CLOSE_NORMAL = 1000;
 	private static final int CLOSE_GOING_AWAY = 1001;
@@ -66,7 +30,8 @@ final class TsgHubSocket implements TsgHubOutbox.Link
 	private final Gson gson;
 	private final HttpUrl url;
 	private final ScheduledExecutorService executor;
-	private final Listener listener;
+	private final Map<String, Consumer<JsonObject>> handlers;
+	private final Consumer<State> connection;
 	private final Map<String, Subscription> subscriptions = new HashMap<>();
 	private final Map<String, String> rejectedTokens = new HashMap<>();
 	private final Set<String> confirmed = new HashSet<>();
@@ -78,29 +43,23 @@ final class TsgHubSocket implements TsgHubOutbox.Link
 	private String clanName = "";
 	private String rejectedClan = "";
 	private boolean ready;
-	private int protocol;
 	private final TsgHubBackoff backoff = new TsgHubBackoff(1_000, 60_000);
 	private State state = State.DISCONNECTED;
 
-	TsgHubSocket(OkHttpClient http, Gson gson, String baseUrl, ScheduledExecutorService executor, Listener listener)
+	TsgHubSocket(OkHttpClient http, Gson gson, String baseUrl, ScheduledExecutorService executor, Map<String, Consumer<JsonObject>> handlers, Consumer<State> connection)
 	{
 		this.gson = gson;
 		this.http = http.newBuilder().pingInterval(PING_SECONDS, TimeUnit.SECONDS).build();
 		this.url = HttpUrl.get(baseUrl.replaceAll("/+$", "") + "/v1/ws");
 		this.executor = executor;
-		this.listener = listener;
+		this.handlers = handlers;
+		this.connection = connection;
 	}
 
 	@Override
 	public synchronized boolean isLive()
 	{
 		return ready;
-	}
-
-	@Override
-	public synchronized int protocol()
-	{
-		return ready ? protocol : 0;
 	}
 
 	synchronized void connect(String clan)
@@ -181,20 +140,12 @@ final class TsgHubSocket implements TsgHubOutbox.Link
 
 	synchronized boolean xp(String skill, int xp, int tick)
 	{
-		JsonObject message = new JsonObject();
-		message.addProperty("skill", skill);
-		message.addProperty("xp", xp);
-		message.addProperty("tick", tick);
-		return emit("xp", message);
+		return emit("xp", TsgHubJson.obj("skill", skill, "xp", xp, "tick", tick));
 	}
 
 	synchronized void rewardInterface(int group, boolean open, int tick)
 	{
-		JsonObject message = new JsonObject();
-		message.addProperty("group", group);
-		message.addProperty("open", open);
-		message.addProperty("tick", tick);
-		emit("interface", message);
+		emit("interface", TsgHubJson.obj("group", group, "open", open, "tick", tick));
 	}
 
 	synchronized void watch(Set<String> topics)
@@ -208,11 +159,7 @@ final class TsgHubSocket implements TsgHubOutbox.Link
 	{
 		JsonArray topics = new JsonArray();
 		watching.forEach(topics::add);
-		JsonObject message = new JsonObject();
-		message.add("topics", topics);
-		message.addProperty("deltas", true);
-		message.addProperty("sets", true);
-		emit("watch", message);
+		emit("watch", TsgHubJson.obj("topics", topics, "deltas", true, "sets", true));
 	}
 
 	synchronized void admin(String token)
@@ -225,9 +172,7 @@ final class TsgHubSocket implements TsgHubOutbox.Link
 
 	private void sendAdmin()
 	{
-		JsonObject message = new JsonObject();
-		message.addProperty("token", adminToken);
-		emit("admin", message);
+		emit("admin", TsgHubJson.obj("token", adminToken));
 	}
 
 	private void sendPresence()
@@ -238,7 +183,7 @@ final class TsgHubSocket implements TsgHubOutbox.Link
 	private void open()
 	{
 		retry = null;
-		Request request = new Request.Builder().url(url.newBuilder().addQueryParameter("clanName", clanName).addQueryParameter("version", TsgHubVersion.VERSION).addQueryParameter("protocol", String.valueOf(TsgHubOutbox.ANSWERING_PROTOCOL)).build()).build();
+		Request request = new Request.Builder().url(url.newBuilder().addQueryParameter("clanName", clanName).addQueryParameter("version", TsgHubVersion.VERSION).addQueryParameter("protocol", "2").build()).build();
 		socket = http.newWebSocket(request, new Handler());
 		changed();
 	}
@@ -255,21 +200,13 @@ final class TsgHubSocket implements TsgHubOutbox.Link
 
 	private void send(String type, String eventId, String token, boolean inClanChat)
 	{
-		JsonObject message = new JsonObject();
-		message.addProperty("eventId", eventId);
-		if (token != null)
-		{
-			message.addProperty("token", token);
-			message.addProperty("inClanChat", inClanChat);
-		}
-		emit(type, message);
+		emit(type, token == null ? TsgHubJson.obj("eventId", eventId) : TsgHubJson.obj("eventId", eventId, "token", token, "inClanChat", inClanChat));
 	}
 
 	private synchronized void opened(WebSocket ws, JsonObject message)
 	{
 		if (ws != socket) return;
 		ready = true;
-		protocol = TsgHubJson.integer(message, "protocol", 1);
 		backoff.reset();
 		for (Map.Entry<String, Subscription> entry : subscriptions.entrySet())
 		{
@@ -279,8 +216,7 @@ final class TsgHubSocket implements TsgHubOutbox.Link
 		if (!adminToken.isEmpty()) sendAdmin();
 		if (!watching.isEmpty()) sendWatch();
 		changed();
-		String rulesVersion = TsgHubJson.str(message, "rules");
-		executor.execute(() -> listener.onReady(rulesVersion));
+		dispatch(ws, message);
 	}
 
 	private synchronized void rejected(WebSocket ws, String eventId)
@@ -291,19 +227,19 @@ final class TsgHubSocket implements TsgHubOutbox.Link
 		if (subscription != null) rejectedTokens.put(eventId, subscription.token);
 	}
 
-	private synchronized void subscribed(WebSocket ws, String eventId)
+	private synchronized void subscribed(WebSocket ws, JsonObject message)
 	{
+		String eventId = TsgHubJson.str(message, "eventId");
 		if (ws != socket || !subscriptions.containsKey(eventId)) return;
 		confirmed.add(eventId);
-		if (listener != null) executor.execute(listener::onSubscribed);
+		dispatch(ws, message);
 	}
 
 	private synchronized void adminRevoked(WebSocket ws)
 	{
 		if (ws != socket || adminToken.isEmpty()) return;
-		String token = adminToken;
+		dispatch(ws, TsgHubJson.obj("type", "admin.revoked", "token", adminToken));
 		adminToken = "";
-		executor.execute(() -> listener.onAdminRevoked(token));
 	}
 
 	private synchronized void dropped(WebSocket ws, int code, int status)
@@ -330,7 +266,7 @@ final class TsgHubSocket implements TsgHubOutbox.Link
 		State next = ready ? State.CONNECTED : socket != null || retry != null ? State.CONNECTING : State.DISCONNECTED;
 		if (next == state) return;
 		state = next;
-		if (listener != null && !executor.isShutdown()) executor.execute(() -> listener.onConnection(next));
+		if (!executor.isShutdown()) executor.execute(() -> connection.accept(next));
 	}
 
 	private synchronized void reopen()
@@ -357,77 +293,27 @@ final class TsgHubSocket implements TsgHubOutbox.Link
 				message = element.getAsJsonObject();
 			}
 			catch (RuntimeException e) { return; }
-			String type = TsgHubJson.str(message, "type");
 			String eventId = TsgHubJson.str(message, "eventId");
-			switch (type)
+			switch (TsgHubJson.str(message, "type"))
 			{
 				case "ready":
 					opened(ws, message);
 					break;
-				case "changed":
-					String topic = TsgHubJson.str(message, "topic");
-					dispatch(ws, () -> listener.onChanged(topic, eventId));
-					break;
-				case "rules":
-					String rules = TsgHubJson.str(message, "rules");
-					if (!rules.isEmpty()) dispatch(ws, () -> listener.onRulesChanged(rules));
-					break;
 				case "subscribed":
-					subscribed(ws, eventId);
-					break;
-				case "progress":
-				case "claimed":
-				case "notice":
-					dispatch(ws, () -> listener.onReply(message));
-					break;
-				case "state":
-					dispatch(ws, () -> listener.onSnapshot(message));
-					break;
-				case "group.heartbeat":
-				case "group.split":
-					dispatch(ws, () -> listener.onGroupHeartbeat(message));
-					break;
-				case "ack":
-					String id = TsgHubJson.str(message, "id");
-					if (!id.isEmpty()) dispatch(ws, () -> listener.onAck(id));
-					break;
-				case "xp.request":
-					String skills = TsgHubJson.str(message, "skills");
-					if (!skills.isEmpty()) dispatch(ws, () -> listener.onXpRequest(skills));
-					break;
-				case "drop.screenshot":
-					String shot = TsgHubJson.str(message, "id");
-					String token = TsgHubJson.str(message, "token");
-					if (!shot.isEmpty() && !token.isEmpty()) dispatch(ws, () -> listener.onScreenshotRequest(shot, token));
+					subscribed(ws, message);
 					break;
 				case "admin.revoked":
 					adminRevoked(ws);
 					break;
-				case "announcement":
-					String announcement = TsgHubJson.str(message, "text");
-					if (!announcement.isEmpty()) dispatch(ws, () -> listener.onAnnouncement(announcement));
-					break;
-				case "update":
-					String version = TsgHubJson.str(message, "version");
-					if (!version.isEmpty()) dispatch(ws, () -> listener.onUpdateAvailable(version));
-					break;
-				case "chat.message":
-					String chatTag = TsgHubJson.str(message, "tag");
-					String chatText = TsgHubJson.str(message, "text");
-					if (!chatText.isEmpty()) dispatch(ws, () -> listener.onChatMessage(chatTag, chatText));
-					break;
 				case "error":
-					String failed = TsgHubJson.str(message, "id");
-					int status = TsgHubJson.integer(message, "status", 0);
-					String reason = TsgHubJson.str(message, "message");
-					String errorTopic = TsgHubJson.str(message, "topic");
-					if (!failed.isEmpty()) dispatch(ws, () -> listener.onRejected(failed, status, reason));
-					else if (!eventId.isEmpty()) rejected(ws, eventId);
-					else if ("admin".equals(errorTopic) && status == 401) adminRevoked(ws);
-					else if ("group".equals(errorTopic)) dispatch(ws, () -> listener.onGroupRejected(status));
-					log.debug("TSG Hub socket error: {}", reason);
+					log.debug("TSG Hub socket error: {}", TsgHubJson.str(message, "message"));
+					boolean answer = !TsgHubJson.str(message, "id").isEmpty();
+					if (!answer && !eventId.isEmpty()) rejected(ws, eventId);
+					else if (!answer && "admin".equals(TsgHubJson.str(message, "topic")) && TsgHubJson.integer(message, "status", 0) == 401) adminRevoked(ws);
+					else dispatch(ws, message);
 					break;
 				default:
+					dispatch(ws, message);
 			}
 		}
 
@@ -452,9 +338,9 @@ final class TsgHubSocket implements TsgHubOutbox.Link
 		}
 	}
 
-	private synchronized void dispatch(WebSocket ws, Runnable action)
+	private synchronized void dispatch(WebSocket ws, JsonObject message)
 	{
-		if (ws != socket || executor.isShutdown()) return;
-		executor.execute(action);
+		Consumer<JsonObject> handler = handlers.get(TsgHubJson.str(message, "type"));
+		if (handler != null && ws == socket && !executor.isShutdown()) executor.execute(() -> handler.accept(message));
 	}
 }

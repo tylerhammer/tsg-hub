@@ -2,6 +2,7 @@ package com.tsghub;
 
 import com.google.gson.*;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.function.*;
 import lombok.extern.slf4j.*;
 
@@ -12,20 +13,17 @@ final class TsgHubOutbox
 	static final long MAX_RETRY_MILLIS = 120_000;
 	static final long MAX_AGE_MILLIS = 600_000;
 	static final int MAX_PENDING = 200;
-	static final int ANSWERING_PROTOCOL = 2;
 
 	interface Link
 	{
 		boolean send(String type, JsonObject body);
 
 		boolean isLive();
-
-		int protocol();
 	}
 
 	interface Poster
 	{
-		void post(String method, String path, String token, JsonObject body) throws Exception;
+		CompletableFuture<?> post(String method, String path, String token, JsonObject body);
 	}
 
 	interface Rejection
@@ -49,8 +47,8 @@ final class TsgHubOutbox
 		final Set<String> deliveredTo = new HashSet<>();
 		long nextAt;
 		int attempts;
-		boolean socketTried;
 		boolean restOnly;
+		boolean posting;
 
 		Pending(String id, String type, JsonObject body, Kind kind, String method, String path, String token, Rejection rejection, long now)
 		{
@@ -118,7 +116,6 @@ final class TsgHubOutbox
 
 	synchronized boolean request(String type, JsonObject body, Rejection rejection)
 	{
-		if (link.protocol() < ANSWERING_PROTOCOL) return false;
 		Pending entry = add(type, body, Kind.REQUEST, null, null, null, rejection);
 		if (sendSocket(entry, clock.getAsLong())) return true;
 		pending.remove(entry.id);
@@ -150,7 +147,7 @@ final class TsgHubOutbox
 			entry = pending.get(id);
 			if (entry == null) return;
 			long now = clock.getAsLong();
-			if (status == 429 || status >= 500 || (status == 0 && link.protocol() < ANSWERING_PROTOCOL))
+			if (status == 429 || status >= 500)
 			{
 				entry.nextAt = now + retryDelay(entry.attempts);
 				return;
@@ -170,7 +167,6 @@ final class TsgHubOutbox
 	synchronized void resend()
 	{
 		long now = clock.getAsLong();
-		if (link.protocol() < ANSWERING_PROTOCOL) pending.values().removeIf(entry -> entry.kind == Kind.REQUEST);
 		for (Pending entry : pending.values()) if (!entry.restOnly) sendSocket(entry, now);
 	}
 
@@ -203,40 +199,40 @@ final class TsgHubOutbox
 		{
 			expire(now);
 			boolean live = link.isLive();
-			boolean answering = live && link.protocol() >= ANSWERING_PROTOCOL;
 			for (Pending entry : pending.values())
 			{
-				if (entry.nextAt > now) continue;
-				if (entry.kind == Kind.REQUEST && !answering) continue;
-				if (live && !entry.restOnly && (answering || entry.kind != Kind.REPORT || !entry.socketTried) && sendSocket(entry, now)) continue;
-				if (entry.kind == Kind.REPORT) due.add(entry);
+				if (entry.nextAt > now || entry.posting) continue;
+				if (live && !entry.restOnly && sendSocket(entry, now)) continue;
+				if (entry.kind != Kind.REPORT) continue;
+				entry.posting = true;
+				due.add(entry);
 			}
 		}
-		for (Pending entry : due)
-		{
-			try
+		post(due.iterator(), now);
+	}
+
+	private void post(Iterator<Pending> due, long now)
+	{
+		if (!due.hasNext()) return;
+		Pending entry = due.next();
+		poster.post(entry.method, entry.path, entry.token, entry.body).whenComplete((result, error) -> {
+			int status = TsgHubApi.status(error);
+			if (error == null || (status >= 400 && status < 500 && status != 429))
 			{
-				poster.post(entry.method, entry.path, entry.token, entry.body);
+				if (error != null) log.debug("TSG Hub {} rejected: {}", entry.type, error.getMessage());
 				acked(entry.id);
-			}
-			catch (TsgHubApi.HttpError e)
-			{
-				if (e.status >= 400 && e.status < 500 && e.status != 429)
-				{
-					log.debug("TSG Hub {} rejected: {}", entry.type, e.getMessage());
-					acked(entry.id);
-					continue;
-				}
-				retryLater(entry, now);
+				post(due, now);
 				return;
 			}
-			catch (Exception e)
+			log.debug("TSG Hub {} not sent", entry.type, error);
+			synchronized (this)
 			{
-				log.debug("TSG Hub {} not sent", entry.type, e);
-				retryLater(entry, now);
-				return;
+				entry.attempts++;
+				entry.nextAt = now + retryDelay(entry.attempts);
+				entry.posting = false;
+				due.forEachRemaining(skipped -> skipped.posting = false);
 			}
-		}
+		});
 	}
 
 	synchronized List<JsonObject> signalBatch(int max, String eventId)
@@ -264,12 +260,6 @@ final class TsgHubOutbox
 		pending.values().removeIf(entry -> entry.kind == Kind.SIGNAL && !entry.deliveredTo.isEmpty() && entry.deliveredTo.containsAll(eventIds));
 	}
 
-	private synchronized void retryLater(Pending entry, long now)
-	{
-		entry.attempts++;
-		entry.nextAt = now + retryDelay(entry.attempts);
-	}
-
 	private void expire(long now)
 	{
 		for (Iterator<Pending> it = pending.values().iterator(); it.hasNext(); )
@@ -281,7 +271,6 @@ final class TsgHubOutbox
 	private boolean sendSocket(Pending entry, long now)
 	{
 		if (!link.isLive() || !link.send(entry.type, entry.body)) return false;
-		entry.socketTried = true;
 		entry.attempts++;
 		entry.nextAt = now + retryDelay(entry.attempts);
 		return true;
