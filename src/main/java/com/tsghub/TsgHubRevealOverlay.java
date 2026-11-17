@@ -7,14 +7,16 @@ import java.awt.geom.*;
 import java.util.*;
 import java.util.Deque;
 import java.util.List;
+import java.util.concurrent.*;
 import javax.swing.*;
 import net.runelite.api.*;
 import net.runelite.api.gameval.*;
-import net.runelite.client.input.MouseListener;
+import net.runelite.client.input.MouseAdapter;
 import net.runelite.client.ui.*;
 import net.runelite.client.ui.overlay.*;
+import net.runelite.client.util.ColorUtil;
 
-final class TsgHubRevealOverlay extends Overlay implements MouseListener
+final class TsgHubRevealOverlay extends Overlay
 {
 	static final int ENTER_MS = 350;
 	static final int FIRST_TILE_MS = 450;
@@ -47,20 +49,67 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	private static final Set<WorldType> PVP_WORLDS = EnumSet.of(WorldType.DEADMAN, WorldType.PVP_ARENA, WorldType.LAST_MAN_STANDING);
 	private static final Color INK = new Color(200, 28, 36);
 	private static final Color STAMP = new Color(214, 44, 58);
-	private static final Color DOT = new Color(INK.getRed(), INK.getGreen(), INK.getBlue(), 175);
+	private static final Color DOT = ColorUtil.colorWithAlpha(INK, 175);
 	private static final Color DOT_SHINE = new Color(255, 120, 110, 70);
+	private static final Map<Float, Font> BOLD = new ConcurrentHashMap<>();
+	private static final Map<Float, Font> SMALL = new ConcurrentHashMap<>();
 
 	static final class Cue
 	{
 		final int at;
 		final TsgHubSounds.Sound sound;
-		final double pitch;
+		final int step;
 
-		Cue(int at, TsgHubSounds.Sound sound, double pitch)
+		Cue(int at, TsgHubSounds.Sound sound, int step)
 		{
 			this.at = at;
 			this.sound = sound;
-			this.pitch = pitch;
+			this.step = step;
+		}
+	}
+
+	private static final class Layout
+	{
+		final TsgHubReveals.Moment moment;
+		final int[][] tileCells;
+		final int[] tileAtCell;
+		final long[][] waves;
+
+		Layout(TsgHubReveals.Moment moment)
+		{
+			this.moment = moment;
+			int n = moment.board.size;
+			tileCells = new int[moment.tiles.size()][];
+			tileAtCell = new int[n * n];
+			Arrays.fill(tileAtCell, -1);
+			for (int i = 0; i < tileCells.length; i++)
+			{
+				int[] at = moment.board.cellOf(moment.tiles.get(i));
+				tileCells[i] = at;
+				if (at != null && tileAtCell[at[0] * n + at[1]] < 0) tileAtCell[at[0] * n + at[1]] = i;
+			}
+			waves = new long[n * n][0];
+			for (int i = 0; i < moment.lines.size(); i++)
+			{
+				for (int k = 0; k < n; k++)
+				{
+					int[] at = moment.lines.get(i).cell(k, n);
+					long[] starts = Arrays.copyOf(waves[at[0] * n + at[1]], waves[at[0] * n + at[1]].length + 1);
+					starts[starts.length - 1] = lineAt(moment, i) + (long) k * WAVE_STEP_MS;
+					waves[at[0] * n + at[1]] = starts;
+				}
+			}
+		}
+
+		long wave(int cell, long t)
+		{
+			long best = -1;
+			for (long start : waves[cell])
+			{
+				long since = t - start;
+				if (since >= 0 && (best < 0 || since < best)) best = since;
+			}
+			return best;
 		}
 	}
 
@@ -89,6 +138,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	private volatile Rectangle panelBounds = new Rectangle();
 	private final Map<String, Area> dots = new HashMap<>();
 	private int dotCell;
+	private Layout layout;
 
 	private final Runnable onSkip;
 
@@ -289,65 +339,55 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	{
 		TsgHubBingoBoard board = moment.board;
 		int n = board.size;
+		if (layout == null || layout.moment != moment) layout = new Layout(moment);
+		Layout layout = this.layout;
 		g.setColor(new Color(24, 24, 24, 240));
 		g.fill(new RoundRectangle2D.Double(0, 0, panelW, panelH, 16, 16));
 		g.setStroke(new BasicStroke(2f));
 		g.setColor(TsgHubBoardGrid.GOLD);
 		g.draw(new RoundRectangle2D.Double(1, 1, panelW - 2, panelH - 2, 16, 16));
 
-		Font title = FontManager.getRunescapeBoldFont().deriveFont(18f);
-		centered(g, fit(g, moment.eventName, title, gridW), title, TsgHubBoardGrid.GOLD, panelW / 2.0, PAD + 16);
+		Font title = bold(18f);
+		centered(g, TsgHubBoardGrid.ellipsize(g.getFontMetrics(title), moment.eventName, gridW), title, TsgHubBoardGrid.GOLD, panelW / 2.0, PAD + 16);
 
 		int left = PAD;
 		int top = PAD + HEADER;
 		Font small = FontManager.getRunescapeSmallFont();
 		boolean names = cell >= 56;
-		for (int row = 0; row < n; row++)
-		{
-			for (int col = 0; col < n; col++)
+		TsgHubBoardGrid.paintCells(g, board, left, top, cell, GAP, (row, col, x, y, id) -> {
+			JsonObject task = moment.tasks.get(id);
+			int index = layout.tileAtCell[row * n + col];
+			long since = index >= 0 && t >= FIRST_TILE_MS + (long) index * TILE_MS + DROP_MS ? t - (FIRST_TILE_MS + (long) index * TILE_MS + DROP_MS) : -1;
+			boolean daubed = moment.before.contains(id) || since >= 0;
+			TsgHubBoardGrid.Tile tile = new TsgHubBoardGrid.Tile(task, daubed ? null : moment.progress.get(id), false, false, false, false, icons == null ? null : icons.icon(task));
+			double cx = x + cell / 2.0;
+			double cy = y + cell / 2.0;
+			long wave = layout.wave(row * n + col, t);
+			double pop = 1;
+			if (since >= 0 && since < POP_MS) pop *= 1 + 0.14 * Math.sin(Math.PI * since / (double) POP_MS);
+			if (wave >= 0 && wave < WAVE_POP_MS) pop *= 1 + 0.16 * Math.sin(Math.PI * wave / (double) WAVE_POP_MS);
+			Graphics2D s = (Graphics2D) g.create();
+			if (pop != 1)
 			{
-				int x = left + col * (cell + GAP);
-				int y = top + row * (cell + GAP);
-				String id = board.taskAt(row, col);
-				if (id == null)
-				{
-					TsgHubBoardGrid.paintEmpty(g, x, y, cell);
-					continue;
-				}
-				JsonObject task = moment.tasks.get(id);
-				int index = moment.tiles.indexOf(id);
-				long since = index >= 0 && t >= FIRST_TILE_MS + (long) index * TILE_MS + DROP_MS ? t - (FIRST_TILE_MS + (long) index * TILE_MS + DROP_MS) : -1;
-				boolean daubed = moment.before.contains(id) || since >= 0;
-				TsgHubBoardGrid.Tile tile = new TsgHubBoardGrid.Tile(task, daubed ? null : moment.progress.get(id), false, false, false, false, icons == null ? null : icons.icon(task));
-				double cx = x + cell / 2.0;
-				double cy = y + cell / 2.0;
-				long wave = wave(moment, row, col, t);
-				double pop = 1;
-				if (since >= 0 && since < POP_MS) pop *= 1 + 0.14 * Math.sin(Math.PI * since / (double) POP_MS);
-				if (wave >= 0 && wave < WAVE_POP_MS) pop *= 1 + 0.16 * Math.sin(Math.PI * wave / (double) WAVE_POP_MS);
-				Graphics2D s = (Graphics2D) g.create();
-				if (pop != 1)
-				{
-					s.translate(cx, cy);
-					s.scale(pop, pop);
-					s.translate(-cx, -cy);
-				}
-				TsgHubBoardGrid.paintTile(s, x, y, cell, tile, small, names);
-				if (daubed) paintDot(s, id, cx, cy, cell, since < 0 ? 1 : Math.min(1, since / (double) SPLAT_MS));
-				if (since >= 0 && since < FLASH_MS)
-				{
-					s.setColor(new Color(255, 255, 255, (int) (190 * (1 - since / (double) FLASH_MS))));
-					s.fill(new RoundRectangle2D.Double(x, y, cell, cell, 6, 6));
-				}
-				if (wave >= 0) paintCelebrated(s, x, y, cell, wave);
-				s.dispose();
+				s.translate(cx, cy);
+				s.scale(pop, pop);
+				s.translate(-cx, -cy);
 			}
-		}
+			TsgHubBoardGrid.paintTile(s, x, y, cell, tile, small, names);
+			if (daubed) paintDot(s, id, cx, cy, cell, since < 0 ? 1 : Math.min(1, since / (double) SPLAT_MS));
+			if (since >= 0 && since < FLASH_MS)
+			{
+				s.setColor(new Color(255, 255, 255, (int) (190 * (1 - since / (double) FLASH_MS))));
+				s.fill(new RoundRectangle2D.Double(x, y, cell, cell, 6, 6));
+			}
+			if (wave >= 0) paintCelebrated(s, x, y, cell, wave);
+			s.dispose();
+		});
 
 		for (int i = 0; i < moment.tiles.size(); i++)
 		{
 			long since = t - (FIRST_TILE_MS + (long) i * TILE_MS + DROP_MS);
-			int[] at = find(board, moment.tiles.get(i));
+			int[] at = layout.tileCells[i];
 			if (since < 0) continue;
 			if (at == null)
 			{
@@ -372,7 +412,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 		{
 			long start = FIRST_TILE_MS + (long) i * TILE_MS;
 			if (t < start || t > start + DROP_MS + LIFT_MS) continue;
-			int[] at = find(board, moment.tiles.get(i));
+			int[] at = layout.tileCells[i];
 			if (at == null) continue;
 			paintDauber(g, left + at[1] * (cell + GAP) + cell / 2.0, top + at[0] * (cell + GAP) + cell / 2.0, cell, t - start);
 		}
@@ -380,24 +420,6 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 		paintCaption(g, moment, t, panelW, panelH);
 		int stampAt = stampAt(moment);
 		if (!moment.lines.isEmpty() && t >= stampAt) paintStamp(g, moment, Math.min(1, (t - stampAt) / (double) STAMP_MS), panelW / 2.0, top + gridW / 2.0, cell);
-	}
-
-	private static long wave(TsgHubReveals.Moment moment, int row, int col, long t)
-	{
-		int n = moment.board.size;
-		long best = -1;
-		for (int i = 0; i < moment.lines.size(); i++)
-		{
-			TsgHubBingoBoard.Line line = moment.lines.get(i);
-			for (int k = 0; k < n; k++)
-			{
-				int[] at = line.cell(k, n);
-				if (at[0] != row || at[1] != col) continue;
-				long since = t - (lineAt(moment, i) + (long) k * WAVE_STEP_MS);
-				if (since >= 0 && (best < 0 || since < best)) best = since;
-			}
-		}
-		return best;
 	}
 
 	private static void paintCelebrated(Graphics2D g, int x, int y, int cell, long wave)
@@ -409,7 +431,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 			double glow = Math.sin(Math.PI * p);
 			for (int i = 3; i >= 1; i--)
 			{
-				g.setColor(new Color(gold.getRed(), gold.getGreen(), gold.getBlue(), (int) (60 * glow / i)));
+				g.setColor(ColorUtil.colorWithAlpha(gold, (int) (60 * glow / i)));
 				g.setStroke(new BasicStroke(i * 3f));
 				g.draw(new RoundRectangle2D.Double(x - i, y - i, cell + i * 2, cell + i * 2, 8, 8));
 			}
@@ -456,7 +478,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	{
 		if (sounds == null) return;
 		long last = heard;
-		for (Cue cue : cues) if (cue.at > last && cue.at <= t) sounds.play(cue.sound, cue.pitch);
+		for (Cue cue : cues) if (cue.at > last && cue.at <= t) sounds.play(cue.sound, cue.step);
 		heard = Math.max(last, t);
 	}
 
@@ -471,35 +493,27 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	static List<Cue> cues(TsgHubReveals.Moment moment)
 	{
 		List<Cue> cues = new ArrayList<>();
-		cues.add(new Cue(0, TsgHubSounds.Sound.BOARD_IN, 1));
+		cues.add(new Cue(0, TsgHubSounds.Sound.BOARD_IN, 0));
 		for (int i = 0; i < moment.tiles.size(); i++)
 		{
 			int start = FIRST_TILE_MS + i * TILE_MS;
-			if (find(moment.board, moment.tiles.get(i)) != null)
+			if (moment.board.cellOf(moment.tiles.get(i)) != null)
 			{
-				cues.add(new Cue(start, TsgHubSounds.Sound.DAUBER_DROP, 1));
-				cues.add(new Cue(start + DROP_MS, TsgHubSounds.Sound.DAUBER_HIT, 1));
+				cues.add(new Cue(start, TsgHubSounds.Sound.DAUBER_DROP, 0));
+				cues.add(new Cue(start + DROP_MS, TsgHubSounds.Sound.DAUBER_HIT, 0));
 			}
-			cues.add(new Cue(start + DROP_MS + POINTS_SOUND_MS, TsgHubSounds.Sound.POINTS, 1));
+			cues.add(new Cue(start + DROP_MS + POINTS_SOUND_MS, TsgHubSounds.Sound.POINTS, 0));
 		}
 		int[] steps = noteSteps(moment.board.size);
 		for (int i = 0; i < moment.lines.size(); i++)
 		{
 			for (int k = 0; k < moment.board.size; k++)
-				cues.add(new Cue(lineAt(moment, i) + k * WAVE_STEP_MS, TsgHubSounds.Sound.LINE_NOTE, Math.pow(2, steps[Math.min(k, steps.length - 1)] / 12.0)));
-			cues.add(new Cue(strikeAt(moment, i), TsgHubSounds.Sound.STRIKE, 1));
+				cues.add(new Cue(lineAt(moment, i) + k * WAVE_STEP_MS, TsgHubSounds.Sound.LINE_NOTE, steps[Math.min(k, steps.length - 1)]));
+			cues.add(new Cue(strikeAt(moment, i), TsgHubSounds.Sound.STRIKE, 0));
 		}
-		if (!moment.lines.isEmpty()) cues.add(new Cue(stampAt(moment) + STAMP_MS / 2 - STAMP_SOUND_LEAD_MS, TsgHubSounds.Sound.BINGO_STAMP, 1));
+		if (!moment.lines.isEmpty()) cues.add(new Cue(stampAt(moment) + STAMP_MS / 2 - STAMP_SOUND_LEAD_MS, TsgHubSounds.Sound.BINGO_STAMP, 0));
 		cues.sort(Comparator.comparingInt(cue -> cue.at));
 		return cues;
-	}
-
-	private static int[] find(TsgHubBingoBoard board, String id)
-	{
-		for (int row = 0; row < board.size; row++)
-			for (int col = 0; col < board.size; col++)
-				if (id.equals(board.taskAt(row, col))) return new int[]{row, col};
-		return null;
 	}
 
 	private static void paintDauber(Graphics2D g, double tx, double ty, double cell, long t)
@@ -534,7 +548,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 		d.setColor(new Color(245, 240, 230));
 		d.fill(new Rectangle2D.Double(-w / 2, -h * 0.62, w, h * 0.2));
 		d.setColor(INK.darker());
-		d.setFont(FontManager.getRunescapeSmallFont().deriveFont((float) Math.max(9, w * 0.32)));
+		d.setFont(font(SMALL, FontManager.getRunescapeSmallFont(), (float) Math.max(9, w * 0.32)));
 		FontMetrics metrics = d.getFontMetrics();
 		d.drawString("TSG", (float) (-metrics.stringWidth("TSG") / 2.0), (float) (-h * 0.52 + metrics.getAscent() / 2.5));
 		d.setColor(new Color(40, 40, 40));
@@ -583,7 +597,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	private static void paintSpray(Graphics2D g, double cx, double cy, double cell, long since, int seed)
 	{
 		double p = easeOutCubic(Math.min(1, since / (double) SPRAY_MS));
-		g.setColor(new Color(INK.getRed(), INK.getGreen(), INK.getBlue(), 175));
+		g.setColor(DOT);
 		for (int i = 0; i < 9; i++)
 		{
 			double variance = ((seed >>> (i * 3 + 1)) & 7) / 7.0;
@@ -598,7 +612,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 	{
 		double r = cell * (0.35 + 0.55 * easeOutCubic(p));
 		Color gold = TsgHubBoardGrid.GOLD;
-		g.setColor(new Color(gold.getRed(), gold.getGreen(), gold.getBlue(), (int) (220 * (1 - p))));
+		g.setColor(ColorUtil.colorWithAlpha(gold, (int) (220 * (1 - p))));
 		g.setStroke(new BasicStroke((float) (1 + 3 * (1 - p))));
 		g.draw(new Ellipse2D.Double(cx - r, cy - r, r * 2, r * 2));
 	}
@@ -610,7 +624,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 		double scale = p < 0.15 ? 0.6 + 0.4 * easeOutBack(p / 0.15) : 1;
 		f.translate(cx, cy - cell * 0.35 - easeOutCubic(p) * cell * 0.45);
 		f.scale(scale, scale);
-		centered(f, "+" + points, FontManager.getRunescapeBoldFont().deriveFont((float) Math.max(18, cell * 0.36)), TsgHubBoardGrid.GOLD, 0, 0);
+		centered(f, "+" + points, bold((float) Math.max(18, cell * 0.36)), TsgHubBoardGrid.GOLD, 0, 0);
 		f.dispose();
 	}
 
@@ -622,15 +636,11 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 			if (t < impact) continue;
 			JsonObject task = moment.tasks.get(moment.tiles.get(i));
 			int points = TsgHubJson.integer(task, "points", 1);
-			String text = TsgHubJson.str(task, "title") + "  +" + points + (points == 1 ? " pt" : " pts");
+			String text = TsgHubJson.str(task, "title") + "  +" + TsgHubFormat.plural(points, "pt");
 			int more = moment.hiddenTiles.size();
-			if (more > 0 && i == moment.tiles.size() - 1 && t >= impact + MORE_CAPTION_MS)
-			{
-				int extra = moment.hiddenPoints();
-				text = "+" + more + (more == 1 ? " more tile" : " more tiles") + "  +" + extra + (extra == 1 ? " pt" : " pts");
-			}
-			Font font = FontManager.getRunescapeBoldFont().deriveFont(16f);
-			centered(g, fit(g, text, font, panelW - PAD * 2), font, TsgHubTheme.TEXT, panelW / 2.0, panelH - PAD - 6);
+			if (more > 0 && i == moment.tiles.size() - 1 && t >= impact + MORE_CAPTION_MS) text = "+" + TsgHubFormat.plural(more, "more tile") + "  +" + TsgHubFormat.plural(moment.hiddenPoints(), "pt");
+			Font font = bold(16f);
+			centered(g, TsgHubBoardGrid.ellipsize(g.getFontMetrics(font), text, panelW - PAD * 2), font, TsgHubTheme.TEXT, panelW / 2.0, panelH - PAD - 6);
 			return;
 		}
 	}
@@ -643,8 +653,8 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 		s.translate(cx, cy);
 		s.rotate(Math.toRadians(-9));
 		s.scale(scale, scale);
-		Font big = FontManager.getRunescapeBoldFont().deriveFont((float) Math.max(26, cell * 0.62));
-		Font subFont = FontManager.getRunescapeBoldFont().deriveFont((float) Math.max(15, cell * 0.28));
+		Font big = bold((float) Math.max(26, cell * 0.62));
+		Font subFont = bold((float) Math.max(15, cell * 0.28));
 		int bonus = moment.bonus();
 		int count = moment.lineCount();
 		String sub = bonus > 0 ? (count > 1 ? count + " lines · +" : "+") + bonus + " bonus pts" : count == 1 ? "Line complete" : count + " lines";
@@ -665,12 +675,14 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 		s.dispose();
 	}
 
-	private static String fit(Graphics2D g, String text, Font font, int width)
+	private static Font bold(float size)
 	{
-		FontMetrics metrics = g.getFontMetrics(font);
-		String fitted = text;
-		while (metrics.stringWidth(fitted) > width && fitted.length() > 2) fitted = fitted.substring(0, fitted.length() - 2) + "…";
-		return fitted;
+		return font(BOLD, FontManager.getRunescapeBoldFont(), size);
+	}
+
+	private static Font font(Map<Float, Font> cache, Font base, float size)
+	{
+		return cache.computeIfAbsent(size, base::deriveFont);
 	}
 
 	private static void centered(Graphics2D g, String text, Font font, Color color, double cx, double baseline)
@@ -685,7 +697,7 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 		g.drawString(text, x, y);
 	}
 
-	private static double easeOutCubic(double p)
+	static double easeOutCubic(double p)
 	{
 		return 1 - Math.pow(1 - p, 3);
 	}
@@ -696,26 +708,23 @@ final class TsgHubRevealOverlay extends Overlay implements MouseListener
 		return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2);
 	}
 
-	@Override public MouseEvent mousePressed(MouseEvent event)
+	final MouseAdapter mouse = new MouseAdapter()
 	{
-		TsgHubReveals.Moment moment = current;
-		if (moment != null && pausedAt == 0 && SwingUtilities.isLeftMouseButton(event) && panelBounds.contains(event.getPoint()))
+		@Override public MouseEvent mousePressed(MouseEvent event)
 		{
-			long now = System.currentTimeMillis();
-			if (now - startedAt < exitAt(moment))
+			TsgHubReveals.Moment moment = current;
+			if (moment != null && pausedAt == 0 && SwingUtilities.isLeftMouseButton(event) && panelBounds.contains(event.getPoint()))
 			{
-				onSkip.run();
-				heard = exitAt(moment);
-				startedAt = now - exitAt(moment);
+				long now = System.currentTimeMillis();
+				if (now - startedAt < exitAt(moment))
+				{
+					onSkip.run();
+					heard = exitAt(moment);
+					startedAt = now - exitAt(moment);
+				}
+				event.consume();
 			}
-			event.consume();
+			return event;
 		}
-		return event;
-	}
-	@Override public MouseEvent mouseClicked(MouseEvent event) { return event; }
-	@Override public MouseEvent mouseReleased(MouseEvent event) { return event; }
-	@Override public MouseEvent mouseEntered(MouseEvent event) { return event; }
-	@Override public MouseEvent mouseExited(MouseEvent event) { return event; }
-	@Override public MouseEvent mouseDragged(MouseEvent event) { return event; }
-	@Override public MouseEvent mouseMoved(MouseEvent event) { return event; }
+	};
 }

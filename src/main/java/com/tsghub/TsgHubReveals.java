@@ -21,11 +21,6 @@ final class TsgHubReveals
 		final List<String> hiddenTiles;
 		final List<TsgHubBingoBoard.Line> hiddenLines;
 
-		Moment(String eventName, TsgHubBingoBoard board, Map<String, JsonObject> tasks, Map<String, JsonObject> progress, Set<String> before, List<String> tiles, List<TsgHubBingoBoard.Line> lines)
-		{
-			this("", eventName, board, tasks, progress, before, tiles, lines, Collections.emptyList(), Collections.emptyList());
-		}
-
 		Moment(String key, String eventName, TsgHubBingoBoard board, Map<String, JsonObject> tasks, Map<String, JsonObject> progress, Set<String> before, List<String> tiles,
 			List<TsgHubBingoBoard.Line> lines, List<String> hiddenTiles, List<TsgHubBingoBoard.Line> hiddenLines)
 		{

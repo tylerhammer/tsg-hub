@@ -180,6 +180,14 @@ final class TsgHubBingoBoard
 		return cells[row][col];
 	}
 
+	int[] cellOf(String id)
+	{
+		for (int row = 0; row < size; row++)
+			for (int col = 0; col < size; col++)
+				if (id.equals(cells[row][col])) return new int[]{row, col};
+		return null;
+	}
+
 	List<Line> completedLines(Set<String> done)
 	{
 		List<Line> complete = new ArrayList<>();
@@ -197,5 +205,4 @@ final class TsgHubBingoBoard
 		}
 		return true;
 	}
-
 }
