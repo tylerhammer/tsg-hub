@@ -4,13 +4,11 @@ import com.google.gson.*;
 import java.util.*;
 import java.util.regex.*;
 import lombok.*;
-import lombok.extern.slf4j.*;
 import net.runelite.api.*;
 import net.runelite.api.events.*;
 import net.runelite.client.eventbus.*;
 import net.runelite.client.game.*;
 
-@Slf4j
 @RequiredArgsConstructor
 final class TsgHubSales
 {
@@ -54,7 +52,6 @@ final class TsgHubSales
 		Map.Entry<String, JsonObject> update = unique ? update(saved, offer.getItemId(), offer.getState(), offer.getTotalQuantity(), offer.getPrice(), offer.getQuantitySold(), offer.getSpent(), TsgHubSignals.newId()) : result("", null);
 		if (!update.getKey().equals(saved)) session.set(key, update.getKey());
 		if (update.getValue() == null) return;
-		log.info("TSG Hub GE sale {}", update.getValue());
 		plugin.signals().send("sale", update.getValue());
 	}
 
