@@ -1,36 +1,15 @@
 package com.tsghub;
 
-import com.google.gson.JsonObject;
-import java.awt.AlphaComposite;
-import java.awt.BasicStroke;
-import java.awt.Color;
-import java.awt.Cursor;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.FontMetrics;
-import java.awt.GradientPaint;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.Insets;
-import java.awt.Point;
-import java.awt.RenderingHints;
-import java.awt.Shape;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.geom.Line2D;
-import java.awt.geom.Path2D;
-import java.awt.geom.RoundRectangle2D;
-import java.awt.image.BufferedImage;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
+import com.google.gson.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.*;
+import java.awt.image.*;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import javax.swing.JComponent;
+import javax.swing.*;
 import javax.swing.Timer;
-import net.runelite.client.ui.FontManager;
+import net.runelite.client.ui.*;
 
 final class TsgHubBoardGrid extends JComponent
 {

@@ -1,29 +1,13 @@
 package com.tsghub;
 
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.GridLayout;
-import java.awt.Insets;
-import java.awt.Rectangle;
-import java.awt.RenderingHints;
-import java.awt.geom.Area;
-import java.awt.geom.RoundRectangle2D;
-import javax.swing.BorderFactory;
-import java.awt.event.MouseEvent;
-import javax.swing.Icon;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.ToolTipManager;
-import javax.swing.border.AbstractBorder;
-import javax.swing.border.Border;
-import net.runelite.client.ui.FontManager;
-import net.runelite.client.ui.components.materialtabs.MaterialTab;
-import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
-import net.runelite.client.util.ColorUtil;
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.*;
+import javax.swing.*;
+import javax.swing.border.*;
+import net.runelite.client.ui.*;
+import net.runelite.client.ui.components.materialtabs.*;
+import net.runelite.client.util.*;
 
 public final class TsgHubTheme
 {

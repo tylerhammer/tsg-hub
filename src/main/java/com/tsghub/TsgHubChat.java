@@ -1,21 +1,15 @@
 package com.tsghub;
 
+import com.google.gson.*;
+import com.tsghub.TsgHubUi.*;
+import java.util.*;
+import java.util.concurrent.*;
+import lombok.*;
+import net.runelite.api.*;
+import net.runelite.client.chat.*;
+import net.runelite.client.config.*;
+import net.runelite.client.util.*;
 import static com.tsghub.TsgHubSession.EVENT_ID;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.tsghub.TsgHubUi.Tone;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import lombok.RequiredArgsConstructor;
-import net.runelite.api.ChatMessageType;
-import net.runelite.client.chat.ChatColorType;
-import net.runelite.client.chat.ChatMessageBuilder;
-import net.runelite.client.chat.ChatMessageManager;
-import net.runelite.client.chat.QueuedMessage;
-import net.runelite.client.config.ConfigManager;
-import net.runelite.client.util.ColorUtil;
-import net.runelite.client.util.Text;
 
 @RequiredArgsConstructor
 final class TsgHubChat

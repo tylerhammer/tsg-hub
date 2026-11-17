@@ -1,7 +1,7 @@
 package com.tsghub;
 
-import lombok.RequiredArgsConstructor;
-import net.runelite.api.coords.WorldPoint;
+import lombok.*;
+import net.runelite.api.coords.*;
 
 final class AreaNames
 {

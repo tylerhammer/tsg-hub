@@ -24,15 +24,13 @@
  */
 package com.tsghub;
 
+import java.awt.*;
+import java.util.*;
+import javax.swing.*;
+import net.runelite.api.*;
+import net.runelite.client.game.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-
-import java.awt.GridLayout;
-import java.util.HashMap;
-import java.util.Map;
-import javax.swing.JPanel;
-import net.runelite.api.Prayer;
-import net.runelite.client.game.SpriteManager;
 
 class PlayerPrayerPanel extends JPanel
 {

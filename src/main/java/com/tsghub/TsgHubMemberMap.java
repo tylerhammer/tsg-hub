@@ -1,32 +1,20 @@
 package com.tsghub;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import java.awt.Color;
-import java.awt.FontMetrics;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
-import java.awt.image.BufferedImage;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
+import com.google.gson.*;
+import java.awt.*;
+import java.awt.image.*;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import lombok.RequiredArgsConstructor;
-import net.runelite.api.Client;
+import java.util.concurrent.*;
+import java.util.function.*;
+import lombok.*;
+import net.runelite.api.*;
 import net.runelite.api.Point;
-import net.runelite.api.coords.WorldPoint;
-import net.runelite.api.worldmap.WorldMap;
-import net.runelite.client.callback.ClientThread;
-import net.runelite.client.ui.FontManager;
-import net.runelite.client.ui.overlay.worldmap.WorldMapPoint;
-import net.runelite.client.ui.overlay.worldmap.WorldMapPointManager;
+import net.runelite.api.coords.*;
+import net.runelite.api.worldmap.*;
+import net.runelite.client.callback.*;
+import net.runelite.client.ui.*;
+import net.runelite.client.ui.overlay.worldmap.*;
 
 final class TsgHubMemberMap
 {

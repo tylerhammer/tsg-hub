@@ -1,23 +1,15 @@
 package com.tsghub;
 
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.FontMetrics;
-import java.awt.Graphics2D;
-import java.awt.Rectangle;
-import java.awt.RenderingHints;
-import java.awt.image.BufferedImage;
+import java.awt.*;
+import java.awt.image.*;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
-import net.runelite.api.Client;
+import net.runelite.api.*;
 import net.runelite.api.Point;
-import net.runelite.api.gameval.InterfaceID;
-import net.runelite.client.ui.FontManager;
-import net.runelite.client.ui.overlay.Overlay;
-import net.runelite.client.ui.overlay.OverlayLayer;
-import net.runelite.client.ui.overlay.OverlayPosition;
-import net.runelite.client.ui.overlay.worldmap.WorldMapOverlay;
-import net.runelite.client.ui.overlay.worldmap.WorldMapPoint;
+import net.runelite.api.gameval.*;
+import net.runelite.client.ui.*;
+import net.runelite.client.ui.overlay.*;
+import net.runelite.client.ui.overlay.worldmap.*;
 
 final class TsgHubMapOverlay extends Overlay
 {

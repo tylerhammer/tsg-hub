@@ -1,16 +1,13 @@
 package com.tsghub;
 
+import com.tsghub.TsgHubSidebarPanel.*;
+import java.util.*;
+import javax.swing.*;
+import lombok.*;
+import net.runelite.client.hiscore.*;
 import static com.tsghub.TsgHubFormat.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-
-import com.tsghub.TsgHubSidebarPanel.View;
-import java.util.List;
-import javax.swing.SwingUtilities;
-import lombok.RequiredArgsConstructor;
-import net.runelite.client.hiscore.HiscoreResult;
-import net.runelite.client.hiscore.HiscoreSkill;
-import net.runelite.client.hiscore.HiscoreSkillType;
 
 @RequiredArgsConstructor
 final class TsgHubLookupView

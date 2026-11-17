@@ -1,10 +1,7 @@
 package com.tsghub;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.List;
-import lombok.Value;
+import java.util.*;
+import lombok.*;
 
 // Holds server chat messages until the player has been logged in for a few ticks, so they land after
 // the login and clan chat lines instead of among them.

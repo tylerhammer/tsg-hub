@@ -1,17 +1,10 @@
 package com.tsghub;
 
+import java.awt.*;
+import java.awt.image.*;
+import javax.swing.*;
+import net.runelite.client.util.*;
 import static com.tsghub.TsgHubTheme.*;
-
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Graphics2D;
-import java.awt.Graphics;
-import java.awt.RenderingHints;
-import java.awt.image.BufferedImage;
-import javax.swing.AbstractButton;
-import javax.swing.Icon;
-import javax.swing.Timer;
-import net.runelite.client.util.ImageUtil;
 
 final class TsgHubIcons
 {

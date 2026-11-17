@@ -24,12 +24,10 @@
  */
 package com.tsghub;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import net.runelite.api.Client;
-import net.runelite.api.Prayer;
+import lombok.*;
+import net.runelite.api.*;
+import net.runelite.api.gameval.*;
 import net.runelite.api.gameval.SpriteID;
-import net.runelite.api.gameval.VarbitID;
 
 @AllArgsConstructor
 @Getter

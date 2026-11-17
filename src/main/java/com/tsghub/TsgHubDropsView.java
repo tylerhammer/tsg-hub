@@ -1,5 +1,13 @@
 package com.tsghub;
 
+import com.google.gson.*;
+import com.tsghub.TsgHubSidebarPanel.*;
+import java.awt.*;
+import java.time.*;
+import java.util.*;
+import javax.swing.*;
+import lombok.*;
+import net.runelite.client.util.*;
 import static com.tsghub.PlayerNames.*;
 import static com.tsghub.TsgHubFormat.*;
 import static com.tsghub.TsgHubJson.*;
@@ -7,28 +15,6 @@ import static com.tsghub.TsgHubSession.DROP_TYPE;
 import static com.tsghub.TsgHubSession.DROP_VALUE;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.tsghub.TsgHubSidebarPanel.View;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.GridLayout;
-import java.awt.RenderingHints;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.util.Objects;
-import javax.swing.JComboBox;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import lombok.RequiredArgsConstructor;
-import net.runelite.client.util.AsyncBufferedImage;
-import net.runelite.client.util.ColorUtil;
 
 @RequiredArgsConstructor
 final class TsgHubDropsView

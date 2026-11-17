@@ -24,18 +24,13 @@
  */
 package com.tsghub;
 
+import java.awt.*;
+import java.awt.image.*;
+import javax.swing.*;
+import javax.swing.border.*;
+import net.runelite.client.util.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-
-import java.awt.Graphics;
-import java.awt.image.BufferedImage;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.ImageIcon;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.border.EmptyBorder;
-import net.runelite.client.util.ImageUtil;
 
 class SkillPanelSlot extends JPanel
 {

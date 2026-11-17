@@ -1,5 +1,10 @@
 package com.tsghub;
 
+import com.google.gson.*;
+import java.awt.*;
+import java.time.format.*;
+import javax.swing.*;
+import net.runelite.client.ui.*;
 import static com.tsghub.TsgHubEvents.*;
 import static com.tsghub.TsgHubFormat.*;
 import static com.tsghub.TsgHubHtml.*;
@@ -8,24 +13,6 @@ import static com.tsghub.TsgHubJson.*;
 import static com.tsghub.TsgHubSession.DOCK_VIEW;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-
-import com.google.gson.JsonObject;
-import java.awt.BorderLayout;
-import java.awt.CardLayout;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.FlowLayout;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.time.format.DateTimeFormatter;
-import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
-import javax.swing.JButton;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.Timer;
-import net.runelite.client.ui.PluginPanel;
 
 final class TsgHubSidebarPanel extends PluginPanel
 {

@@ -24,24 +24,16 @@
  */
 package com.tsghub;
 
+import com.google.common.base.*;
+import java.awt.*;
+import java.awt.image.*;
+import javax.swing.*;
+import net.runelite.api.*;
+import net.runelite.api.gameval.SpriteID;
+import net.runelite.client.game.*;
+import net.runelite.client.util.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-
-import com.google.common.base.Strings;
-import java.awt.Dimension;
-import java.awt.Graphics;
-import java.awt.GridLayout;
-import java.awt.image.BufferedImage;
-import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
-import javax.swing.ImageIcon;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
-import net.runelite.api.Skill;
-import net.runelite.api.gameval.SpriteID;
-import net.runelite.client.game.SpriteManager;
-import net.runelite.client.util.ImageUtil;
 
 class PlayerBanner extends JPanel
 {

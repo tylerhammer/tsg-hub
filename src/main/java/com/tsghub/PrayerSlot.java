@@ -24,21 +24,15 @@
  */
 package com.tsghub;
 
+import java.awt.*;
+import java.awt.image.*;
+import javax.swing.*;
+import lombok.*;
+import net.runelite.client.game.*;
+import net.runelite.client.util.*;
 import static com.tsghub.Prayers.isUnlockedByDefault;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-
-import java.awt.AlphaComposite;
-import java.awt.Dimension;
-import java.awt.Graphics2D;
-import java.awt.Graphics;
-import java.awt.RenderingHints;
-import java.awt.image.BufferedImage;
-import javax.swing.JComponent;
-import javax.swing.SwingUtilities;
-import lombok.Getter;
-import net.runelite.client.game.SpriteManager;
-import net.runelite.client.util.Text;
 
 class PrayerSlot extends JComponent
 {

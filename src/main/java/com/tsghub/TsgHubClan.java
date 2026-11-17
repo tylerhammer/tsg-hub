@@ -1,11 +1,9 @@
 package com.tsghub;
 
-import com.google.gson.JsonObject;
-import lombok.RequiredArgsConstructor;
-import net.runelite.api.Client;
-import net.runelite.api.clan.ClanChannel;
-import net.runelite.api.clan.ClanMember;
-import net.runelite.api.clan.ClanSettings;
+import com.google.gson.*;
+import lombok.*;
+import net.runelite.api.*;
+import net.runelite.api.clan.*;
 
 @RequiredArgsConstructor
 class TsgHubClan

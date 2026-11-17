@@ -24,9 +24,8 @@
  */
 package com.tsghub;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import net.runelite.api.Prayer;
+import lombok.*;
+import net.runelite.api.*;
 
 @Data
 @AllArgsConstructor

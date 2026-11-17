@@ -1,22 +1,11 @@
 package com.tsghub;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import lombok.extern.slf4j.Slf4j;
-import net.runelite.client.util.Filepath;
+import com.google.gson.*;
+import java.io.*;
+import java.nio.charset.*;
+import java.util.*;
+import lombok.extern.slf4j.*;
+import net.runelite.client.util.*;
 
 @Slf4j
 final class TsgHubRules

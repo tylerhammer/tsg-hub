@@ -1,13 +1,12 @@
 package com.tsghub;
 
+import java.awt.*;
+import java.util.List;
+import javax.swing.text.html.*;
 import static com.tsghub.PlayerNames.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 import static net.runelite.client.util.ColorUtil.toHexColor;
-
-import java.awt.Color;
-import java.util.List;
-import javax.swing.text.html.HTML;
 
 final class TsgHubHtml
 {

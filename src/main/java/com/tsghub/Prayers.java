@@ -24,12 +24,9 @@
  */
 package com.tsghub;
 
-import java.util.HashMap;
-import java.util.Map;
-import lombok.Getter;
-import net.runelite.api.Client;
-import net.runelite.api.GameState;
-import net.runelite.api.Prayer;
+import java.util.*;
+import lombok.*;
+import net.runelite.api.*;
 
 class Prayers
 {

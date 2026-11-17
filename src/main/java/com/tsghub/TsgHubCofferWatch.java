@@ -1,6 +1,6 @@
 package com.tsghub;
 
-import java.util.Locale;
+import java.util.*;
 
 final class TsgHubCofferWatch
 {

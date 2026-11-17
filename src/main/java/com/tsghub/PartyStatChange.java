@@ -24,8 +24,8 @@
  */
 package com.tsghub;
 
-import lombok.Value;
-import net.runelite.api.Skill;
+import lombok.*;
+import net.runelite.api.*;
 
 @Value
 class PartyStatChange

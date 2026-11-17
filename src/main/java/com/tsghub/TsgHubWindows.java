@@ -1,16 +1,10 @@
 package com.tsghub;
 
-import java.awt.Container;
-import java.awt.Dialog;
-import java.awt.Dimension;
-import java.awt.Window;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-import javax.swing.JDialog;
-import javax.swing.SwingUtilities;
-import javax.swing.WindowConstants;
-import lombok.RequiredArgsConstructor;
-import net.runelite.api.Client;
+import java.awt.*;
+import java.util.function.*;
+import javax.swing.*;
+import lombok.*;
+import net.runelite.api.*;
 
 @RequiredArgsConstructor
 final class TsgHubWindows

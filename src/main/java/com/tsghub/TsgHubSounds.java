@@ -1,20 +1,13 @@
 package com.tsghub;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.function.BooleanSupplier;
-import java.util.function.IntSupplier;
-import lombok.extern.slf4j.Slf4j;
-import net.runelite.client.audio.AudioPlayer;
+import java.io.*;
+import java.nio.*;
+import java.nio.charset.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.function.*;
+import lombok.extern.slf4j.*;
+import net.runelite.client.audio.*;
 
 @Slf4j
 final class TsgHubSounds

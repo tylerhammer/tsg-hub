@@ -24,16 +24,11 @@
  */
 package com.tsghub;
 
+import java.awt.*;
+import javax.swing.*;
+import net.runelite.api.gameval.SpriteID.*;
+import net.runelite.client.game.*;
 import static net.runelite.api.EquipmentInventorySlot.*;
-
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
-import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
-import net.runelite.api.gameval.SpriteID.Wornicons;
-import net.runelite.client.game.ItemManager;
-import net.runelite.client.game.SpriteManager;
 
 class PlayerEquipmentPanel extends JPanel
 {

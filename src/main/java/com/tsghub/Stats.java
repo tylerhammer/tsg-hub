@@ -24,14 +24,10 @@
  */
 package com.tsghub;
 
-import java.util.HashMap;
-import java.util.Map;
-import lombok.Getter;
-import lombok.Setter;
-import net.runelite.api.Client;
-import net.runelite.api.Experience;
-import net.runelite.api.Skill;
-import net.runelite.api.gameval.VarPlayerID;
+import java.util.*;
+import lombok.*;
+import net.runelite.api.*;
+import net.runelite.api.gameval.*;
 
 @Getter
 @Setter

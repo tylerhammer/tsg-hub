@@ -1,22 +1,18 @@
 package com.tsghub;
 
+import com.google.gson.*;
+import com.tsghub.TsgHubSidebarPanel.*;
+import java.awt.*;
+import java.util.*;
+import java.util.List;
+import javax.swing.*;
+import lombok.*;
+import net.runelite.client.hiscore.*;
 import static com.tsghub.PlayerNames.*;
 import static com.tsghub.TsgHubHtml.*;
 import static com.tsghub.TsgHubJson.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.tsghub.TsgHubSidebarPanel.View;
-import java.awt.BorderLayout;
-import java.util.ArrayList;
-import java.util.List;
-import javax.swing.BorderFactory;
-import javax.swing.JPanel;
-import lombok.RequiredArgsConstructor;
-import net.runelite.client.hiscore.HiscoreSkill;
-import net.runelite.client.hiscore.HiscoreSkillType;
 
 @RequiredArgsConstructor
 final class TsgHubRecordsView

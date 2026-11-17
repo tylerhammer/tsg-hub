@@ -1,17 +1,13 @@
 package com.tsghub;
 
-import com.google.gson.JsonObject;
-import java.awt.Color;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import lombok.RequiredArgsConstructor;
-import net.runelite.api.ChatMessageType;
-import net.runelite.api.MessageNode;
-import net.runelite.api.events.ChatMessage;
-import net.runelite.client.eventbus.Subscribe;
-import net.runelite.client.util.ColorUtil;
-import net.runelite.client.util.Text;
+import com.google.gson.*;
+import java.awt.*;
+import java.util.*;
+import lombok.*;
+import net.runelite.api.*;
+import net.runelite.api.events.*;
+import net.runelite.client.eventbus.*;
+import net.runelite.client.util.*;
 
 @RequiredArgsConstructor
 final class TsgHubTeamColors

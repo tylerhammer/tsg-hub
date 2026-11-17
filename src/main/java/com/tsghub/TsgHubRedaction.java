@@ -1,24 +1,14 @@
 package com.tsghub;
 
-import java.awt.Color;
-import java.awt.Graphics2D;
-import java.awt.Rectangle;
-import java.awt.image.BufferedImage;
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashSet;
+import java.awt.*;
+import java.awt.image.*;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.regex.Pattern;
-import net.runelite.api.ChatMessageType;
-import net.runelite.api.Client;
-import net.runelite.api.MessageNode;
+import java.util.regex.*;
+import net.runelite.api.*;
 import net.runelite.api.gameval.InterfaceID;
-import net.runelite.api.widgets.Widget;
-import net.runelite.client.util.Text;
+import net.runelite.api.widgets.*;
+import net.runelite.client.util.*;
 
 final class TsgHubRedaction
 {

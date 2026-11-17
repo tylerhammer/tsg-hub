@@ -24,23 +24,17 @@
  */
 package com.tsghub;
 
+import com.google.common.collect.*;
+import java.awt.*;
+import java.util.*;
+import java.util.List;
+import javax.swing.*;
+import net.runelite.api.Skill;
+import net.runelite.client.game.*;
+import net.runelite.client.hiscore.*;
+import net.runelite.client.util.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
-
-import com.google.common.collect.ImmutableList;
-import java.awt.BorderLayout;
-import java.awt.GridLayout;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import javax.swing.BorderFactory;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
-import net.runelite.api.Skill;
-import net.runelite.client.game.SpriteManager;
-import net.runelite.client.hiscore.HiscoreSkill;
-import net.runelite.client.util.QuantityFormatter;
 
 class PlayerSkillsPanel extends JPanel
 {

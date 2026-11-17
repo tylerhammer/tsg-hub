@@ -1,14 +1,8 @@
 package com.tsghub;
 
-import com.google.gson.JsonObject;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.BooleanSupplier;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
+import com.google.gson.*;
+import java.util.*;
+import java.util.function.*;
 
 /**
  * Counts how often features are used, so the clan can see which ones members rely on before
