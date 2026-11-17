@@ -3,11 +3,9 @@ package com.tsghub;
 import com.google.gson.*;
 import com.tsghub.TsgHubSidebarPanel.*;
 import java.awt.*;
-import java.text.*;
 import java.util.*;
 import java.util.List;
 import javax.swing.*;
-import net.runelite.client.util.*;
 import static com.tsghub.PlayerNames.*;
 import static com.tsghub.TsgHubHtml.*;
 import static com.tsghub.TsgHubIcons.*;
@@ -149,7 +147,7 @@ final class TsgHubPartiesView
 
 		groupsPage.add(shell.groupMembers);
 		groupsPage.add(gap(GAP_L));
-		addSplit(group);
+		addPanels(group);
 
 		JButton title = button("Set title");
 		title.setToolTipText("Name the party. Leave blank to title it by location.");
@@ -196,213 +194,17 @@ final class TsgHubPartiesView
 		groupsPage.add(groupError);
 	}
 
-	private void addSplit(JsonObject group)
+	private void addPanels(JsonObject group)
 	{
-		if (group == null || !group.has("split")) return;
-		JsonObject split = object(group, "split");
-		boolean running = bool(split, "active");
-		JPanel buttons = panel(new GridLayout(1, 0, 4, 0));
-		if (split.size() > 0)
-		{
-			JPanel lines = stack();
-			String state = running ? "Running" : "Ended";
-			lines.add(row(boldLabel("Loot split"), label(state + " · " + splitGp(longValue(split, "total", 0)), running ? SUCCESS : MUTED, smallFont())));
-			addGap(lines, GAP_M, row(caption("Members"), caption("looted / share")));
-			for (JsonObject member : objects(array(split, "members")))
-			{
-				lines.add(gap(GAP_XS));
-				lines.add(row(shrinkable(label(str(member, "displayName"), TEXT, smallFont())),
-					label(splitGp(longValue(member, "looted", 0)) + " / " + splitGp(longValue(member, "share", 0)), TEXT, smallFont())));
-			}
-			List<JsonObject> drops = objects(array(split, "drops"));
-			if (!drops.isEmpty())
-			{
-				addGap(lines, GAP_M, row(caption("Drops"), caption("right-click to edit")));
-			}
-			for (JsonObject drop : drops)
-			{
-				addGap(lines, GAP_S, dropRow(drop));
-			}
-			List<JsonObject> transfers = objects(array(split, "transfers"));
-			if (!transfers.isEmpty())
-			{
-				lines.add(gap(GAP_M));
-				String heading = "Settle up";
-				String me = plugin.session().get(TsgHubSession.GROUP_PLAYER);
-				boolean canMark = plugin.groups().isLeader() || transfers.stream().anyMatch(t -> samePlayer(str(t, "to"), me));
-				lines.add(canMark ? row(caption(heading), caption("right-click when paid")) : caption(heading));
-			}
-			String payer = null;
-			for (JsonObject transfer : transfers)
-			{
-				String from = str(transfer, "from");
-				if (!from.equals(payer))
-				{
-					payer = from;
-					addGap(lines, GAP_XS, shrinkable(label(from + " pays", TEXT, smallFont())));
-				}
-				JPanel line = row(shrinkable(label(str(transfer, "to"), TEXT, smallFont())), label((bool(split, "estimated") ? "~" : "") + splitGp(longValue(transfer, "amount", 0)), WARNING, smallFont()));
-				line.setBorder(BorderFactory.createEmptyBorder(0, GAP_M, 0, 0));
-				withMenu(line, transferMenu(transfer));
-				addGap(lines, GAP_XS, line);
-			}
-			List<JsonObject> payments = objects(array(split, "payments"));
-			if (!payments.isEmpty())
-			{
-				addGap(lines, GAP_M, caption("Paid"));
-			}
-			for (JsonObject payment : payments)
-			{
-				JPanel line = row(shrinkable(label(str(payment, "from") + " paid " + str(payment, "to"), TEXT, smallFont())), label(splitGp(longValue(payment, "gp", 0)), SUCCESS, smallFont()));
-				withMenu(line, paymentMenu(payment));
-				addGap(lines, GAP_XS, line);
-			}
-			if (!running && transfers.isEmpty() && !payments.isEmpty())
-			{
-				addGap(lines, GAP_S, label("All settled", SUCCESS, smallFont()));
-			}
-			JPanel card = card();
-			card.add(lines, BorderLayout.CENTER);
-			addCard(groupsPage, fitHeight(card));
-			String self = plugin.session().get(TsgHubSession.GROUP_PLAYER);
-			if (objects(array(split, "members")).stream().anyMatch(m -> samePlayer(str(m, "displayName"), self)))
-			{
-				boolean skipping = strings(array(split, "skippers")).stream().anyMatch(n -> samePlayer(n, self));
-				JButton skip = button(skipping ? "Rejoin split" : "Skip split");
-				skip.setToolTipText(skipping ? "Take your share of every drop in this split again" : "Give up your share of every drop in this split, including later ones");
-				skip.addActionListener(e -> {
-					if (!skipping && !confirm(shell, "Loot split", "Skip your share of every drop in this split?", "Skip", false)) return;
-					skip.setEnabled(false);
-					plugin.groups().setSplitSkip(self, !skipping);
-				});
-				buttons.add(skip);
-			}
-		}
-		if (plugin.groups().isLeader())
-		{
-			JButton toggle = button(running ? "End split" : split.size() > 0 ? "New split" : "Start loot split");
-			toggle.setToolTipText(running ? "Stop counting loot and settle up" : "Split tradeable raid purples at GE prices, counting each member's from now on");
-			toggle.addActionListener(e -> {
-				if (split.size() > 0 && !confirm(shell, "Loot split", running ? "End the loot split?" : "Start a new split? This clears the last one.", running ? "End" : "Start", false)) return;
-				toggle.setEnabled(false);
-				plugin.groups().setSplit(!running);
-			});
-			buttons.add(toggle);
-		}
-		if (buttons.getComponentCount() == 0) return;
-		groupsPage.add(fitHeight(buttons));
-		groupsPage.add(gap(GAP_L));
-	}
-
-	private JPanel dropRow(JsonObject drop)
-	{
-		boolean estimated = bool(drop, "estimated");
-		JLabel name = label(str(drop, "name"), TEXT, smallFont());
-		JLabel value = label((estimated ? "~" : "") + splitGp(longValue(drop, "value", 0)), estimated ? MUTED : TEXT, smallFont());
-		List<String> skipped = strings(array(drop, "skipped"));
-		String status = bool(drop, "agreed") ? "agreed" : estimated ? "estimated" : "sold";
-		JPanel row = stack();
-		row.add(row(shrinkable(name), value));
-		row.add(shrinkable(caption(str(drop, "player") + " · " + status)));
-		if (!skipped.isEmpty()) row.add(shrinkable(caption("Skipped by " + String.join(", ", skipped))));
-		withMenu(row, dropMenu(drop, skipped));
-		return row;
-	}
-
-	private static void withMenu(JPanel row, JPopupMenu menu)
-	{
-		if (menu.getComponentCount() > 0) withPopup(row, menu);
-	}
-
-	private JPopupMenu transferMenu(JsonObject transfer)
-	{
-		JPopupMenu menu = new JPopupMenu();
-		String from = str(transfer, "from");
-		String to = str(transfer, "to");
-		if (!plugin.groups().isLeader() && !samePlayer(to, plugin.session().get(TsgHubSession.GROUP_PLAYER))) return menu;
-		item(menu, "Mark paid", () -> plugin.groups().markPaid(from, to, 0));
-		item(menu, "Mark part paid", () -> promptPaid(from, to));
-		return menu;
-	}
-
-	private JPopupMenu paymentMenu(JsonObject payment)
-	{
-		JPopupMenu menu = new JPopupMenu();
-		if (!plugin.groups().isLeader() && !samePlayer(str(payment, "to"), plugin.session().get(TsgHubSession.GROUP_PLAYER))) return menu;
-		item(menu, "Undo payment", () -> plugin.groups().unpay(str(payment, "id")));
-		return menu;
-	}
-
-	private void promptPaid(String from, String to)
-	{
-		Object input = JOptionPane.showInputDialog(shell, "How much did " + from + " pay " + to + "? (e.g. 200m)", "Mark part paid", JOptionPane.PLAIN_MESSAGE);
-		if (input == null) return;
-		long gp = parseGp(input.toString());
-		if (gp <= 0)
-		{
-			groupActionFailed("Enter an amount like 200m or 2500000.");
-			return;
-		}
-		groupError.setVisible(false);
-		plugin.groups().markPaid(from, to, gp);
-	}
-
-	private JPopupMenu dropMenu(JsonObject drop, List<String> skipped)
-	{
-		JPopupMenu menu = new JPopupMenu();
-		String id = str(drop, "id");
-		if (id.isEmpty()) return menu;
-		TsgHubGroups groups = plugin.groups();
-		boolean leader = groups.isLeader();
-		if (leader)
-		{
-			item(menu, "Set agreed value", () -> promptDropValue(drop));
-			if (bool(drop, "agreed")) item(menu, "Clear agreed value", () -> groups.setSplitValue(id, 0));
-		}
 		String self = plugin.session().get(TsgHubSession.GROUP_PLAYER);
-		for (String name : dropSharers(drop, skipped))
-		{
-			boolean me = samePlayer(name, self);
-			if (!me && !leader) continue;
-			boolean sharing = skipped.stream().noneMatch(n -> samePlayer(n, name));
-			String who = me ? "my" : name + "'s";
-			item(menu, sharing ? "Skip " + who + " share" : "Restore " + who + " share", () -> groups.setSplitShare(id, name, !sharing));
-		}
-		return menu;
+		for (JsonObject panel : objects(array(group, "panels")))
+			TsgHubPanelView.render(groupsPage, panel, self, shell, this::panelAction, this::groupActionFailed);
 	}
 
-	static List<String> dropSharers(JsonObject drop, List<String> skipped)
+	private void panelAction(String op, JsonObject args)
 	{
-		List<String> names = new ArrayList<>();
-		for (String name : strings(array(drop, "sharers"))) if (names.stream().noneMatch(n -> samePlayer(n, name))) names.add(name);
-		for (String name : skipped) if (names.stream().noneMatch(n -> samePlayer(n, name))) names.add(name);
-		return names;
-	}
-
-	private void promptDropValue(JsonObject drop)
-	{
-		Object input = JOptionPane.showInputDialog(shell, "Agreed value for " + str(drop, "name") + " (e.g. 1.4b, 350m)", "Set agreed value",
-			JOptionPane.PLAIN_MESSAGE, null, null, splitGp(longValue(drop, "value", 0)));
-		if (input == null) return;
-		long gp = parseGp(input.toString());
-		if (gp <= 0)
-		{
-			groupActionFailed("Enter an amount like 1.4b, 350m or 2500000.");
-			return;
-		}
 		groupError.setVisible(false);
-		plugin.groups().setSplitValue(str(drop, "id"), gp);
-	}
-
-	static long parseGp(String text)
-	{
-		try { return QuantityFormatter.parseQuantity(text.trim().replace(",", "").replace(" ", "")); }
-		catch (ParseException | RuntimeException e) { return -1; }
-	}
-
-	static String splitGp(long value)
-	{
-		return value > 0 ? TsgHubFormat.formatGp(value) : "0";
+		plugin.groups().panelAction(op, args);
 	}
 
 	private void renderGroupList(JsonObject current)
