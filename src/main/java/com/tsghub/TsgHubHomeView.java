@@ -88,7 +88,7 @@ final class TsgHubHomeView
 		renderPolls();
 		if (liveEvent != null)
 		{
-			shell.page.add(listHeading("Happening now", true));
+			shell.page.add(listHeading("Happening now", true, null));
 			addCard(shell.page, shell.eventsView.eventCard(liveEvent));
 			shell.page.add(gap(GAP_S));
 		}
@@ -130,7 +130,7 @@ final class TsgHubHomeView
 		}
 		if (polls.getComponentCount() > 0)
 		{
-			polls.add(listHeading("Vote now", true), 0);
+			polls.add(listHeading("Vote now", true, null), 0);
 			polls.add(gap(GAP_S));
 		}
 		shownPolls.clear();

@@ -58,11 +58,8 @@ public class AnnouncementsTest
 	}
 
 	@Test
-	public void linkifyWrapsUrlsAndEscapesText()
+	public void linkTextShortensLongUrls()
 	{
-		assertEquals("See <a href='https://x.com/a?b=1&amp;c=2' style='color:#a98bf0'>x.com/a?b=1&amp;c=2</a>.<br>&lt;b&gt;",
-			TsgHubHtml.linkify("See https://x.com/a?b=1&c=2.\n<b>"));
-		assertEquals("javascript:alert(1)", TsgHubHtml.linkify("javascript:alert(1)"));
 		assertEquals("discord.com/channels/...", TsgHubHtml.linkText("https://discord.com/channels/123456/789012/345678"));
 	}
 

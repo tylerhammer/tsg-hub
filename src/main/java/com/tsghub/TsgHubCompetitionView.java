@@ -8,6 +8,7 @@ import java.time.*;
 import java.util.*;
 import java.util.List;
 import javax.swing.*;
+import javax.swing.Timer;
 import lombok.*;
 import static com.tsghub.PlayerNames.*;
 import static com.tsghub.TsgHubEvents.*;
@@ -26,6 +27,7 @@ final class TsgHubCompetitionView
 	String competitionName = "";
 	volatile String openCompetitionId;
 	private final JButton competitionJoinButton = primaryButton("Join");
+	private final Timer progressRender = new Timer(500, e -> renderProgress());
 
 	String openCompetitionId()
 	{
@@ -61,7 +63,7 @@ final class TsgHubCompetitionView
 		shell.eventsView.joinError.setVisible(false);
 		shell.page.add(shell.eventsView.joinError);
 		shell.page.add(gap(GAP_S));
-		shell.page.add(TsgHubSidebarPanel.hint(skill
+		shell.page.add(hint(skill
 			? "Your XP counts from the first time TSG Hub sees you after joining. Gains on other devices count the next time you log in with it."
 			: !"loot".equals(str(config, "signal"))
 				? "Kills count from your kill count message, so kills while TSG Hub isn't running still count at your next kill."
@@ -73,7 +75,7 @@ final class TsgHubCompetitionView
 	{
 		competitionJoinButton.setEnabled(true);
 		competitionJoinButton.setText("Join");
-		showError(shell.eventsView.joinError, message, TsgHubSidebarPanel.TEXT_W);
+		showError(shell.eventsView.joinError, message, TEXT_W);
 	}
 
 	void showCompetition(JsonObject event, String displayName, boolean open)
@@ -82,6 +84,12 @@ final class TsgHubCompetitionView
 		if (!open && event.equals(competitionEvent) && Objects.equals(displayName == null ? "" : displayName, competitionName)) return;
 		competitionEvent = event;
 		competitionName = displayName == null ? "" : displayName;
+		render();
+	}
+
+	private void render()
+	{
+		JsonObject event = competitionEvent;
 		shell.setView(View.COMPETITION);
 		openCompetitionId = str(event, "id");
 		shell.refresh.setToolTipText("Refresh (updated " + LocalTime.now().format(TsgHubSidebarPanel.TIME) + ")");
@@ -110,30 +118,21 @@ final class TsgHubCompetitionView
 		if (!started)
 		{
 			String start = eventStartWhen(event);
-			lines.add(TsgHubSidebarPanel.cardNote(start.isEmpty() ? "Counting starts when the event begins." : "Counting starts " + start + "."));
+			lines.add(cardNote(start.isEmpty() ? "Counting starts when the event begins." : "Counting starts " + start + "."));
 		}
 		else
 		{
-			lines.add(label("+" + TsgHubFormat.number(mine == null ? 0 : integer(mine, "gained", 0)) + " " + unit(), SUCCESS, boldFont()));
-			if (!tracking)
-			{
-				lines.add(gap(GAP_XS));
-				lines.add(TsgHubSidebarPanel.cardNote(skill ? "Starts counting the next time you gain XP." : "Starts counting at your next kill."));
-			}
+			lines.add(label("+" + number(mine == null ? 0 : integer(mine, "gained", 0)) + " " + unit(), SUCCESS, boldFont()));
+			if (!tracking) addGap(lines, GAP_XS, cardNote(skill ? "Starts counting the next time you gain XP." : "Starts counting at your next kill."));
 		}
-		JPanel prizes = prizeRow(event, smallFont());
-		if (prizes != null)
-		{
-			lines.add(gap(GAP_S));
-			lines.add(prizes);
-		}
+		addPrizes(lines, event);
 		summary.add(lines, BorderLayout.CENTER);
 		shell.page.add(fitHeight(summary));
 		shell.page.add(gap(GAP_M));
 
 		if (hidden)
 		{
-			shell.page.add(shell.errorPanel("Scores are hidden", "The admins are keeping the leaderboard secret for now."));
+			shell.page.add(errorPanel("Scores are hidden", "The admins are keeping the leaderboard secret for now."));
 		}
 		else
 		{
@@ -149,7 +148,7 @@ final class TsgHubCompetitionView
 				if (me) highlightSelf(card);
 				if (started) card.add(rankLabel(rank, boldFont(), 18), BorderLayout.WEST);
 				card.add(wrapped(str(row, "displayName"), TEXT, plainFont(), 110), BorderLayout.CENTER);
-				String gained = bool(row, "tracking") ? TsgHubFormat.number(integer(row, "gained", 0)) : "-";
+				String gained = bool(row, "tracking") ? number(integer(row, "gained", 0)) : "-";
 				if (started) card.add(label(gained, rank == 1 ? ACCENT : TEXT, boldFont()), BorderLayout.EAST);
 				addCard(shell.page, fitHeight(card));
 			}
@@ -185,6 +184,12 @@ final class TsgHubCompetitionView
 			mine.addProperty("rank", rank);
 			competitionEvent.add("leaderboard", sorted);
 		}
-		showCompetition(competitionEvent, competitionName, false);
+		if (!progressRender.isRunning()) progressRender.start();
+	}
+
+	private void renderProgress()
+	{
+		progressRender.stop();
+		if (shell.view == View.COMPETITION && competitionEvent != null) render();
 	}
 }

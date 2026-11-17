@@ -36,7 +36,6 @@ public final class TsgHubTheme
 	public static final Color SELF_CARD_HOVER = new Color(0x332D41);
 	public static final Color SELF_BORDER = new Color(0x4A3D6E);
 	public static final Color SELF_BORDER_HOVER = new Color(0x5E4D8C);
-	public static final Color SELF_TEXT = ACCENT;
 	public static final Color LOW = new Color(255, 90, 74);
 	public static final Color SLOT = new Color(0x141318);
 	public static final Color PRAYER_ACTIVE = new Color(90, 67, 18);
@@ -77,7 +76,6 @@ public final class TsgHubTheme
 	}
 
 	private static final Border CARD_EDGE = new RoundEdge(new Insets(CARD_PAD_V + 1, CARD_PAD_H + 1, CARD_PAD_V, CARD_PAD_H + 1));
-	private static final Border SELF_EDGE = CARD_EDGE;
 
 	static final class RoundEdge extends AbstractBorder
 	{
@@ -98,8 +96,7 @@ public final class TsgHubTheme
 		@Override
 		public void paintBorder(Component c, Graphics g, int x, int y, int w, int h)
 		{
-			Graphics2D g2 = (Graphics2D) g.create();
-			g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			Graphics2D g2 = smooth(g);
 			RoundRectangle2D shape = new RoundRectangle2D.Float(x + .5f, y + .5f, w - 1, h - 1, RADIUS * 2, RADIUS * 2);
 			Area corners = new Area(new Rectangle(x, y, w, h));
 			corners.subtract(new Area(new RoundRectangle2D.Float(x, y, w, h, RADIUS * 2, RADIUS * 2)));
@@ -122,11 +119,6 @@ public final class TsgHubTheme
 	public static Border cardBorder()
 	{
 		return CARD_EDGE;
-	}
-
-	public static Border selfBorder()
-	{
-		return SELF_EDGE;
 	}
 
 	public static boolean truncated(JLabel label)
@@ -157,12 +149,12 @@ public final class TsgHubTheme
 	public static void highlightSelf(JComponent card)
 	{
 		card.setBackground(SELF_CARD);
-		card.setBorder(selfBorder());
+		card.setBorder(CARD_EDGE);
 	}
 
 	public static String selfName(String escapedName)
 	{
-		return "<font color='" + ColorUtil.toHexColor(SELF_TEXT) + "'>" + escapedName + "</font>";
+		return "<font color='" + ColorUtil.toHexColor(ACCENT) + "'>" + escapedName + "</font>";
 	}
 
 	public static MaterialTab themedTab(String name, MaterialTabGroup group, JComponent content)
@@ -189,8 +181,7 @@ public final class TsgHubTheme
 			{
 				if (isSelected())
 				{
-					Graphics2D g2 = (Graphics2D) g.create();
-					g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+					Graphics2D g2 = smooth(g);
 					g2.setColor(CARD);
 					g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, RADIUS, RADIUS);
 					g2.setColor(BORDER);
@@ -219,8 +210,7 @@ public final class TsgHubTheme
 			@Override
 			protected void paintComponent(Graphics g)
 			{
-				Graphics2D g2 = (Graphics2D) g.create();
-				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+				Graphics2D g2 = smooth(g);
 				g2.setColor(SLOT);
 				g2.fillRoundRect(0, 0, getWidth(), getHeight(), RADIUS * 2, RADIUS * 2);
 				g2.dispose();
@@ -232,10 +222,16 @@ public final class TsgHubTheme
 		return group;
 	}
 
-	public static void paintSlot(Graphics g, JComponent c, Color fill)
+	public static Graphics2D smooth(Graphics g)
 	{
 		Graphics2D g2 = (Graphics2D) g.create();
 		g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		return g2;
+	}
+
+	public static void paintSlot(Graphics g, JComponent c, Color fill)
+	{
+		Graphics2D g2 = smooth(g);
 		g2.setColor(fill);
 		g2.fillRoundRect(0, 0, c.getWidth(), c.getHeight(), RADIUS, RADIUS);
 		g2.dispose();

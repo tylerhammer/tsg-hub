@@ -422,13 +422,13 @@ public class TsgHubPlugin extends Plugin
 		if ("partyShowSelf".equals(event.getKey()))
 		{
 			if (config.partyShowSelf()) groupTracker.refreshSelf();
-			else ui(s -> s.partiesView.groupSelfHidden());
+			else ui(s -> s.groupMembers.removeSelf());
 			return;
 		}
 		if (event.getKey().startsWith("party"))
 		{
 			boolean expand = "partyExpandMembers".equals(event.getKey());
-			ui(s -> s.partiesView.groupSettingsChanged(expand));
+			ui(s -> s.groupMembers.settingsChanged(expand));
 			return;
 		}
 		if (event.getKey().startsWith("bingo"))
