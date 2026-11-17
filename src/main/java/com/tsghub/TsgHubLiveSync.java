@@ -11,6 +11,7 @@ import static com.tsghub.TsgHubSession.EVENT_ID;
 import static com.tsghub.TsgHubSession.MEMBER_NAME;
 import static com.tsghub.TsgHubSession.MEMBER_TOKEN;
 import static com.tsghub.TsgHubSession.TOKEN;
+import static com.tsghub.TsgHubJson.*;
 
 final class TsgHubLiveSync
 {
@@ -35,44 +36,44 @@ final class TsgHubLiveSync
 		this.gson = gson;
 		Map<String, Consumer<JsonObject>> handlers = new HashMap<>();
 		handlers.put("ready", m -> {
-			refreshRules(TsgHubJson.str(m, "rules"));
+			refreshRules(str(m, "rules"));
 			plugin.outbox().resend();
 		});
-		handlers.put("rules", m -> refreshRules(TsgHubJson.str(m, "rules")));
-		handlers.put("changed", m -> changed(TsgHubJson.str(m, "topic"), TsgHubJson.str(m, "eventId")));
+		handlers.put("rules", m -> refreshRules(str(m, "rules")));
+		handlers.put("changed", m -> changed(str(m, "topic"), str(m, "eventId")));
 		handlers.put("state", this::snapshot);
-		handlers.put("admin.revoked", m -> plugin.keys().recheck(TsgHubJson.str(m, "token")));
+		handlers.put("admin.revoked", m -> plugin.keys().recheck(str(m, "token")));
 		handlers.put("announcement", when("text", text -> plugin.chat().announce(text)));
 		handlers.put("update", when("version", version -> plugin.chat().updateAvailable(version)));
 		handlers.put("chat.message", m -> {
-			String text = TsgHubJson.str(m, "text");
-			if (!text.isEmpty()) plugin.chat().message(TsgHubJson.str(m, "tag"), text);
+			String text = str(m, "text");
+			if (!text.isEmpty()) plugin.chat().message(str(m, "tag"), text);
 		});
-		handlers.put("ack", m -> plugin.outbox().acked(TsgHubJson.str(m, "id")));
+		handlers.put("ack", m -> plugin.outbox().acked(str(m, "id")));
 		handlers.put("subscribed", m -> plugin.outbox().resendSignals());
 		handlers.put("xp.request", when("skills", skills -> plugin.tracker().reportXp(skills)));
 		handlers.put("drop.screenshot", m -> {
-			String id = TsgHubJson.str(m, "id");
-			String token = TsgHubJson.str(m, "token");
+			String id = str(m, "id");
+			String token = str(m, "token");
 			if (!id.isEmpty() && !token.isEmpty()) plugin.drops().sendScreenshot(id, token);
 		});
 		handlers.put("error", m -> {
-			String id = TsgHubJson.str(m, "id");
-			int status = TsgHubJson.integer(m, "status", 0);
-			if (!id.isEmpty()) plugin.outbox().failed(id, status, TsgHubJson.str(m, "message"));
-			else if ("group".equals(TsgHubJson.str(m, "topic"))) plugin.groups().beatRejected(status);
+			String id = str(m, "id");
+			int status = integer(m, "status", 0);
+			if (!id.isEmpty()) plugin.outbox().failed(id, status, str(m, "message"));
+			else if ("group".equals(str(m, "topic"))) plugin.groups().beatRejected(status);
 		});
 		for (String type : new String[] {"progress", "claimed", "notice"}) handlers.put(type, m -> plugin.chat().reply(m));
 		for (String type : new String[] {"group.heartbeat", "group.split"}) handlers.put(type, m -> plugin.groups().beaten(m));
 		socket = new TsgHubSocket(http, gson, serviceUrl, executor, handlers, state -> plugin.ui(s -> s.setConnection(state)));
-		topics.put("groups", new Topic((data, eventId) -> plugin.groups().apply(TsgHubJson.array(data, "groups")), eventId -> plugin.groups().autoRefresh()));
+		topics.put("groups", new Topic((data, eventId) -> plugin.groups().apply(array(data, "groups")), eventId -> plugin.groups().autoRefresh()));
 		topics.put("presence", new Topic(this::presence, eventId -> plugin.presence().autoRefresh()));
-		topics.put("positions", new Topic((data, eventId) -> plugin.memberMap().apply(TsgHubJson.array(data, "members")), eventId -> { }));
-		topics.put("drops", new Topic((data, eventId) -> plugin.drops().onSnapshot(TsgHubJson.array(data, "drops")), eventId -> plugin.drops().autoRefresh()));
-		topics.put("announcements", new Topic((data, eventId) -> plugin.announcements().apply(TsgHubJson.array(data, "announcements")), eventId -> plugin.announcements().load()));
+		topics.put("positions", new Topic((data, eventId) -> plugin.memberMap().apply(array(data, "members")), eventId -> { }));
+		topics.put("drops", new Topic((data, eventId) -> plugin.drops().onSnapshot(array(data, "drops")), eventId -> plugin.drops().autoRefresh()));
+		topics.put("announcements", new Topic((data, eventId) -> plugin.announcements().apply(array(data, "announcements")), eventId -> plugin.announcements().load()));
 		topics.put("events", new Topic((data, eventId) -> plugin.sessions().applyClanEvents(data), eventId -> plugin.sessions().loadClanEvents()));
 		topics.put("notifications", new Topic((data, eventId) -> {
-			if (isActiveEvent(eventId)) plugin.chat().notifications(TsgHubJson.array(data, "notifications"));
+			if (isActiveEvent(eventId)) plugin.chat().notifications(array(data, "notifications"));
 		}, eventId -> {
 			if (isActiveEvent(eventId)) plugin.sessions().pollNotifications();
 		}));
@@ -82,7 +83,7 @@ final class TsgHubLiveSync
 	private static Consumer<JsonObject> when(String key, Consumer<String> action)
 	{
 		return m -> {
-			String value = TsgHubJson.str(m, key);
+			String value = str(m, key);
 			if (!value.isEmpty()) action.accept(value);
 		};
 	}
@@ -155,8 +156,8 @@ final class TsgHubLiveSync
 
 	private void snapshot(JsonObject message)
 	{
-		Topic topic = topics.get(TsgHubJson.str(message, "topic"));
-		if (topic != null) topic.snapshot.accept(TsgHubJson.object(message, "data"), TsgHubJson.str(message, "eventId"));
+		Topic topic = topics.get(str(message, "topic"));
+		if (topic != null) topic.snapshot.accept(object(message, "data"), str(message, "eventId"));
 	}
 
 	private void changed(String name, String eventId)
@@ -169,12 +170,12 @@ final class TsgHubLiveSync
 	{
 		if (data.has("delta"))
 		{
-			plugin.presence().applyDelta(data.has("presence") ? TsgHubJson.object(data, "presence") : null, data.has("members") ? TsgHubJson.object(data, "members") : null);
+			plugin.presence().applyDelta(data.has("presence") ? object(data, "presence") : null, data.has("members") ? object(data, "members") : null);
 			return;
 		}
 		if (!data.has("presence") || !data.get("presence").isJsonObject()) return;
 		JsonObject notes = data.has("members") && data.get("members").isJsonObject() ? data.getAsJsonObject("members") : null;
-		plugin.presence().apply(TsgHubJson.array(data.getAsJsonObject("presence"), "members"), notes == null ? null : TsgHubJson.array(notes, "members"));
+		plugin.presence().apply(array(data.getAsJsonObject("presence"), "members"), notes == null ? null : array(notes, "members"));
 	}
 
 	private void eventSnapshot(JsonObject data, String eventId)

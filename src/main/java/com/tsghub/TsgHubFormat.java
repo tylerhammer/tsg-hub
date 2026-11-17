@@ -6,6 +6,7 @@ import java.time.format.*;
 import java.util.*;
 import java.util.concurrent.*;
 import lombok.extern.slf4j.*;
+import static com.tsghub.TsgHubJson.*;
 
 @Slf4j
 final class TsgHubFormat
@@ -92,7 +93,7 @@ final class TsgHubFormat
 
 	static String shortDate(String iso, Instant now, ZoneId zone)
 	{
-		Instant at = TsgHubJson.instant(iso);
+		Instant at = instant(iso);
 		if (at == null) return "";
 		ZonedDateTime day = at.atZone(zone);
 		return day.format(day.getYear() == now.atZone(zone).getYear() ? SHORT_DATE : DATE_WITH_YEAR);

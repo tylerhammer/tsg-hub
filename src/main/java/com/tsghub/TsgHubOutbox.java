@@ -5,6 +5,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.*;
 import lombok.extern.slf4j.*;
+import static com.tsghub.TsgHubJson.*;
 
 @Slf4j
 final class TsgHubOutbox
@@ -250,7 +251,7 @@ final class TsgHubOutbox
 	{
 		for (JsonObject message : messages)
 		{
-			Pending entry = pending.get(TsgHubJson.str(message, "id"));
+			Pending entry = pending.get(str(message, "id"));
 			if (entry != null) entry.deliveredTo.add(eventId);
 		}
 	}

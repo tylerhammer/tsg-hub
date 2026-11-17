@@ -4,6 +4,7 @@ import com.google.gson.*;
 import lombok.*;
 import net.runelite.api.*;
 import net.runelite.api.clan.*;
+import static com.tsghub.TsgHubJson.*;
 
 @RequiredArgsConstructor
 class TsgHubClan
@@ -85,6 +86,11 @@ class TsgHubClan
 	{
 		String hash = accountHash();
 		if (!hash.isEmpty()) body.addProperty("accountHash", hash);
+	}
+
+	JsonObject identity(String displayName)
+	{
+		return obj("clanName", clanName, "displayName", displayName, "accountHash", accountHash());
 	}
 
 	JsonObject memberBody(String displayName)

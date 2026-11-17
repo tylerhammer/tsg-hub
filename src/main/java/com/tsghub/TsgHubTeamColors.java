@@ -8,6 +8,7 @@ import net.runelite.api.*;
 import net.runelite.api.events.*;
 import net.runelite.client.eventbus.*;
 import net.runelite.client.util.*;
+import static com.tsghub.TsgHubJson.*;
 
 @RequiredArgsConstructor
 final class TsgHubTeamColors
@@ -30,7 +31,7 @@ final class TsgHubTeamColors
 		if (teamColors == null) return out;
 		for (String name : teamColors.keySet())
 		{
-			String hex = TsgHubJson.str(teamColors, name);
+			String hex = str(teamColors, name);
 			if (hex.matches("#[0-9a-fA-F]{6}")) out.put(PlayerNames.key(name), ColorUtil.fromHex(hex));
 		}
 		return out;

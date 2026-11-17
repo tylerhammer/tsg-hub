@@ -11,6 +11,7 @@ import javax.swing.*;
 import net.runelite.client.input.MouseAdapter;
 import net.runelite.client.ui.*;
 import net.runelite.client.ui.overlay.*;
+import static com.tsghub.TsgHubJson.*;
 
 final class TsgHubBoardOverlay extends Overlay
 {
@@ -91,8 +92,7 @@ final class TsgHubBoardOverlay extends Overlay
 		int width = gridW + PAD * 2;
 		int height = HEADER + gridW + FOOTER + PAD * 2;
 		long now = System.currentTimeMillis();
-		Graphics2D g = (Graphics2D) graphics.create();
-		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		Graphics2D g = TsgHubTheme.smooth(graphics);
 		g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 		if (flips.isEmpty())
 		{
@@ -222,7 +222,7 @@ final class TsgHubBoardOverlay extends Overlay
 		Font small = FontManager.getRunescapeSmallFont();
 		text.setFont(bold);
 		FontMetrics metrics = text.getFontMetrics();
-		for (String line : TsgHubBoardGrid.wrapLines(metrics, TsgHubJson.str(task, "title"), width, 3))
+		for (String line : TsgHubBoardGrid.wrapLines(metrics, str(task, "title"), width, 3))
 		{
 			y += metrics.getAscent();
 			text.setColor(TsgHubTheme.TEXT);
@@ -232,11 +232,11 @@ final class TsgHubBoardOverlay extends Overlay
 		text.setFont(small);
 		metrics = text.getFontMetrics();
 		y += 2;
-		int value = TsgHubJson.integer(progress, "progress", 0);
-		int target = Math.max(1, TsgHubJson.integer(progress, "target", 1));
+		int value = integer(progress, "progress", 0);
+		int target = Math.max(1, integer(progress, "target", 1));
 		String status = TsgHubBoardGrid.status(progress, done);
 		y += metrics.getHeight();
-		text.setColor(done ? TsgHubTheme.SUCCESS : TsgHubJson.bool(progress, "pending") ? TsgHubTheme.WARNING : TsgHubTheme.TEXT);
+		text.setColor(done ? TsgHubTheme.SUCCESS : bool(progress, "pending") ? TsgHubTheme.WARNING : TsgHubTheme.TEXT);
 		text.drawString(status, x, y);
 		if (!done && target > 1)
 		{
@@ -246,7 +246,7 @@ final class TsgHubBoardOverlay extends Overlay
 			text.setColor(TsgHubTheme.ACCENT);
 			text.fillRoundRect(x, barY, (int) Math.round(width * Math.min(1.0, value / (double) target)), 4, 4, 4);
 		}
-		String points = TsgHubJson.integer(task, "points", 1) + " pts";
+		String points = integer(task, "points", 1) + " pts";
 		text.setColor(TsgHubBoardGrid.GOLD);
 		text.drawString(points, (int) (rect.x + rect.width) - inset - metrics.stringWidth(points), (int) (rect.y + rect.height) - inset);
 		text.dispose();

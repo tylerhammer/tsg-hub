@@ -15,6 +15,7 @@ import net.runelite.api.worldmap.*;
 import net.runelite.client.callback.*;
 import net.runelite.client.ui.*;
 import net.runelite.client.ui.overlay.worldmap.*;
+import static com.tsghub.TsgHubJson.*;
 
 final class TsgHubMemberMap
 {
@@ -64,7 +65,7 @@ final class TsgHubMemberMap
 		if (!open || !plugin.canUseHub() || executor.isShutdown()) return;
 		String clan = TsgHubApi.encode(plugin.clan().name());
 		api.get().call("GET", "/v1/presence/positions?clanName=" + clan, null, null)
-			.thenAcceptAsync(result -> apply(TsgHubJson.array(result, "members")), executor);
+			.thenAcceptAsync(result -> apply(array(result, "members")), executor);
 	}
 
 	void apply(JsonArray members)
@@ -73,13 +74,13 @@ final class TsgHubMemberMap
 		String self = PlayerNames.key(plugin.clan().playerName());
 		List<Member> next = new ArrayList<>();
 		Set<String> seen = new HashSet<>();
-		for (JsonObject member : TsgHubJson.objects(members))
+		for (JsonObject member : objects(members))
 		{
-			String name = TsgHubJson.str(member, "displayName");
+			String name = str(member, "displayName");
 			String key = PlayerNames.key(name);
 			if (key.isEmpty() || key.equals(self) || !seen.add(key)) continue;
-			WorldPoint at = new WorldPoint(TsgHubJson.integer(member, "x", 0), TsgHubJson.integer(member, "y", 0), TsgHubJson.integer(member, "plane", 0));
-			next.add(new Member(name, key, TsgHubJson.integer(member, "world", 0), at));
+			WorldPoint at = new WorldPoint(integer(member, "x", 0), integer(member, "y", 0), integer(member, "plane", 0));
+			next.add(new Member(name, key, integer(member, "world", 0), at));
 		}
 		next.sort(Comparator.comparing(m -> m.key));
 		clientThread.invokeLater(() -> {

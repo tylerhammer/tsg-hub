@@ -55,7 +55,7 @@ final class TsgHubGroups implements GroupTracker.Listener
 	boolean isLeader()
 	{
 		JsonObject current = group;
-		return inGroup() && current != null && PlayerNames.samePlayer(TsgHubJson.str(current, "leaderName"), plugin.session().get(GROUP_PLAYER));
+		return inGroup() && current != null && PlayerNames.samePlayer(str(current, "leaderName"), plugin.session().get(GROUP_PLAYER));
 	}
 
 	boolean inOtherParty()
@@ -83,7 +83,7 @@ final class TsgHubGroups implements GroupTracker.Listener
 		JsonObject current = group;
 		if (current != null && inGroup())
 		{
-			JsonObject next = TsgHubJson.byId(groups, TsgHubJson.str(current, "id"));
+			JsonObject next = byId(groups, str(current, "id"));
 			if (next != null) adopt(next);
 			if ((next == null || !memberNames(next).equals(memberNames(current))) && !executor.isShutdown()) executor.submit(this::heartbeat);
 		}

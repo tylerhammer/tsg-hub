@@ -11,6 +11,7 @@ import static com.tsghub.TsgHubSession.MEMBER_NAME;
 import static com.tsghub.TsgHubSession.MEMBER_TOKEN;
 import static com.tsghub.TsgHubSession.SIGNUP_NOTE;
 import static com.tsghub.TsgHubSession.TOKEN;
+import static com.tsghub.TsgHubJson.*;
 
 @RequiredArgsConstructor
 final class TsgHubSessions
@@ -113,7 +114,7 @@ final class TsgHubSessions
 		api().call("POST", "/v1/events/" + eventId + "/signup", null, payload, result ->
 		{
 			String memberToken = saveMember(eventId, result);
-			session().set(SIGNUP_NOTE + eventId, TsgHubJson.str(result.getAsJsonObject("member"), "note"));
+			session().set(SIGNUP_NOTE + eventId, str(result.getAsJsonObject("member"), "note"));
 			setActiveEvent(eventId);
 			plugin.memberStatus("Signed up! An admin will put you on a team.", Tone.SUCCESS);
 			applyBoard(eventId, memberToken, result.getAsJsonObject("event"), true);
@@ -124,9 +125,9 @@ final class TsgHubSessions
 	{
 		String token = session().memberToken(eventId);
 		if (token.isEmpty()) return;
-		api().call("PATCH", "/v1/events/" + eventId + "/signup", token, TsgHubJson.obj("note", note.trim()), result ->
+		api().call("PATCH", "/v1/events/" + eventId + "/signup", token, obj("note", note.trim()), result ->
 		{
-			session().set(SIGNUP_NOTE + eventId, TsgHubJson.str(result.getAsJsonObject("member"), "note"));
+			session().set(SIGNUP_NOTE + eventId, str(result.getAsJsonObject("member"), "note"));
 			plugin.memberStatus("Note saved.", Tone.SUCCESS);
 			applyBoard(eventId, token, result.getAsJsonObject("event"), true);
 		}, e ->
@@ -345,9 +346,9 @@ final class TsgHubSessions
 		if (!session.get(TOKEN).isEmpty()) memberTokens.add(session.get(TOKEN));
 		for (String key : session.keysWithPrefix(MEMBER_NAME)) renameStored(key, name);
 		renameStored(DISPLAY_NAME, name);
-		api().call("POST", "/v1/identity", null, TsgHubJson.obj("displayName", name, "clanName", clan.name(), "accountHash", hash, "memberTokens", memberTokens), result ->
+		api().call("POST", "/v1/identity", null, obj("displayName", name, "clanName", clan.name(), "accountHash", hash, "memberTokens", memberTokens), result ->
 		{
-			if (TsgHubJson.bool(result, "updated") && !session().get(EVENT_ID).isEmpty() && !plugin.live()) refreshBoard();
+			if (bool(result, "updated") && !session().get(EVENT_ID).isEmpty() && !plugin.live()) refreshBoard();
 		}, e -> syncedIdentity = "");
 	}
 
@@ -375,8 +376,8 @@ final class TsgHubSessions
 
 	void applyClanEvents(JsonObject response)
 	{
-		plugin.teamColors().apply(TsgHubJson.object(response, "teamColors"));
-		JsonArray events = TsgHubJson.array(response, "events");
+		plugin.teamColors().apply(object(response, "teamColors"));
+		JsonArray events = array(response, "events");
 		clanEvents = events;
 		joinedCompetitions = joinedCompetitionIds(events);
 		plugin.ui(s -> {
@@ -392,8 +393,8 @@ final class TsgHubSessions
 		String path = "/v1/events/history?clanName=" + TsgHubApi.encode(clanName) + "&limit=" + HISTORY_PAGE + (before.isEmpty() ? "" : "&before=" + TsgHubApi.encode(before));
 		api().call("GET", path, null, null, response ->
 		{
-			JsonArray rows = TsgHubJson.array(response, "events");
-			boolean more = TsgHubJson.bool(response, "more");
+			JsonArray rows = array(response, "events");
+			boolean more = bool(response, "more");
 			plugin.ui(s -> s.eventsView.setHistory(rows, more, !before.isEmpty()));
 		}, e -> plugin.ui(s -> s.eventsView.setHistory(new JsonArray(), false, !before.isEmpty())));
 	}
@@ -401,11 +402,11 @@ final class TsgHubSessions
 	private List<String> joinedCompetitionIds(JsonArray events)
 	{
 		List<String> ids = new ArrayList<>();
-		for (JsonObject event : TsgHubJson.objects(events))
+		for (JsonObject event : objects(events))
 		{
-			String type = TsgHubJson.str(event, "type");
-			if (!("skill".equals(type) || "boss".equals(type)) || "ended".equals(TsgHubJson.str(event, "status"))) continue;
-			String id = TsgHubJson.str(event, "id");
+			String type = str(event, "type");
+			if (!("skill".equals(type) || "boss".equals(type)) || "ended".equals(str(event, "status"))) continue;
+			String id = str(event, "id");
 			if (!session().get(MEMBER_TOKEN + id).isEmpty()) ids.add(id);
 		}
 		return ids;
@@ -449,7 +450,7 @@ final class TsgHubSessions
 		TsgHubClan clan = plugin.clan();
 		String displayName = clan.playerName();
 		String memberName = session().get(DISPLAY_NAME);
-		String eventClan = TsgHubJson.str(event, "clanName");
+		String eventClan = str(event, "clanName");
 		if (token.isEmpty() || displayName.isEmpty() || !PlayerNames.samePlayer(displayName, memberName)
 			|| eventClan.isEmpty() || !eventClan.equalsIgnoreCase(clan.name())) return;
 		int rank = clan.rank();
@@ -457,7 +458,7 @@ final class TsgHubSessions
 		Integer synced = syncedClanRanks.get(key);
 		if (synced != null && synced == rank) return;
 		syncedClanRanks.put(key, rank);
-		plugin.tracker().report("clan-rank", "POST", "/v1/events/" + eventId + "/clan-rank", token, TsgHubJson.obj("eventId", eventId, "displayName", displayName, "clanName", clan.name(), "clanRank", rank));
+		plugin.tracker().report("clan-rank", "POST", "/v1/events/" + eventId + "/clan-rank", token, obj("eventId", eventId, "displayName", displayName, "clanName", clan.name(), "clanRank", rank));
 	}
 
 	void forgetEvent(String eventId)

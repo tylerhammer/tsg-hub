@@ -7,6 +7,7 @@ import java.util.concurrent.*;
 import java.util.function.*;
 import javax.swing.*;
 import net.runelite.client.util.*;
+import static com.tsghub.TsgHubJson.*;
 
 final class TsgHubAnnouncements
 {
@@ -71,7 +72,7 @@ final class TsgHubAnnouncements
 		String hash = plugin.clan().accountHash();
 		String query = "/v1/announcements?clanName=" + clan + (hash.isEmpty() ? "" : "&accountHash=" + hash);
 		plugin.api().call("GET", query, null, null)
-			.thenAcceptAsync(result -> apply(TsgHubJson.array(result, "announcements")), executor);
+			.thenAcceptAsync(result -> apply(array(result, "announcements")), executor);
 	}
 
 	void apply(JsonArray all)
@@ -88,8 +89,8 @@ final class TsgHubAnnouncements
 	static JsonArray published(JsonArray all)
 	{
 		JsonArray out = new JsonArray();
-		for (JsonObject announcement : TsgHubJson.objects(all))
-			if (!TsgHubJson.bool(announcement, "draft") && !TsgHubJson.bool(announcement, "expired")) out.add(announcement);
+		for (JsonObject announcement : objects(all))
+			if (!bool(announcement, "draft") && !bool(announcement, "expired")) out.add(announcement);
 		return out;
 	}
 
@@ -100,9 +101,9 @@ final class TsgHubAnnouncements
 		List<JsonObject> fresh = unread(announcements, skip);
 		if (fresh.isEmpty()) return;
 		Set<String> alerted = new LinkedHashSet<>();
-		for (JsonObject announcement : TsgHubJson.objects(announcements))
+		for (JsonObject announcement : objects(announcements))
 		{
-			String id = TsgHubJson.str(announcement, "id");
+			String id = str(announcement, "id");
 			if (skip.contains(id) || fresh.contains(announcement)) alerted.add(id);
 		}
 		plugin.session().set(TsgHubSession.ANNOUNCEMENTS_ALERTED, String.join(",", alerted));
@@ -133,7 +134,7 @@ final class TsgHubAnnouncements
 		JsonArray current = list;
 		if (current == null) return;
 		Set<String> ids = new LinkedHashSet<>();
-		for (JsonObject announcement : TsgHubJson.objects(current)) ids.add(TsgHubJson.str(announcement, "id"));
+		for (JsonObject announcement : objects(current)) ids.add(str(announcement, "id"));
 		plugin.session().set(TsgHubSession.ANNOUNCEMENTS_READ, String.join(",", ids));
 		plugin.newsOverlay().refresh();
 	}
@@ -161,8 +162,8 @@ final class TsgHubAnnouncements
 	static List<JsonObject> unread(JsonArray announcements, Set<String> read)
 	{
 		List<JsonObject> out = new ArrayList<>();
-		for (JsonObject announcement : TsgHubJson.objects(announcements))
-			if (!read.contains(TsgHubJson.str(announcement, "id"))) out.add(announcement);
+		for (JsonObject announcement : objects(announcements))
+			if (!read.contains(str(announcement, "id"))) out.add(announcement);
 		return out;
 	}
 
@@ -170,7 +171,7 @@ final class TsgHubAnnouncements
 	{
 		List<String> lines = new ArrayList<>();
 		for (int i = 0; i < fresh.size() && i < MAX_CHAT_LINES; i++)
-			lines.add(TsgHubJson.str(fresh.get(i), "title"));
+			lines.add(str(fresh.get(i), "title"));
 		int more = fresh.size() - MAX_CHAT_LINES;
 		if (more > 0) lines.add("+" + TsgHubFormat.plural(more, "more announcement") + " in the TSG Hub sidebar.");
 		return lines;
@@ -183,25 +184,25 @@ final class TsgHubAnnouncements
 
 	static boolean pollOnly(JsonObject announcement)
 	{
-		return TsgHubJson.bool(announcement, "pollOnly") && poll(announcement) != null;
+		return bool(announcement, "pollOnly") && poll(announcement) != null;
 	}
 
 	static List<JsonObject> homePolls(JsonArray announcements)
 	{
 		List<JsonObject> out = new ArrayList<>();
-		for (JsonObject announcement : TsgHubJson.objects(announcements)) if (homePoll(announcement)) out.add(announcement);
+		for (JsonObject announcement : objects(announcements)) if (homePoll(announcement)) out.add(announcement);
 		return out;
 	}
 
 	static boolean homePoll(JsonObject announcement)
 	{
-		return pollOnly(announcement) && TsgHubJson.bool(announcement, "pinned") && myVote(poll(announcement)).isEmpty();
+		return pollOnly(announcement) && bool(announcement, "pinned") && myVote(poll(announcement)).isEmpty();
 	}
 
 	static List<Integer> myVote(JsonObject poll)
 	{
 		List<Integer> picks = new ArrayList<>();
-		for (JsonElement pick : TsgHubJson.array(poll, "myVote")) if (pick.isJsonPrimitive()) picks.add(pick.getAsInt());
+		for (JsonElement pick : array(poll, "myVote")) if (pick.isJsonPrimitive()) picks.add(pick.getAsInt());
 		return picks;
 	}
 
@@ -215,7 +216,7 @@ final class TsgHubAnnouncements
 		}
 		JsonArray picks = new JsonArray();
 		for (int option : options) picks.add(option);
-		sendVote("POST", path(id) + "/vote", TsgHubJson.obj("clanName", plugin.clan().name(), "accountHash", hash, "options", picks), failed);
+		sendVote("POST", path(id) + "/vote", obj("clanName", plugin.clan().name(), "accountHash", hash, "options", picks), failed);
 	}
 
 	void unvote(String id, Consumer<String> failed)

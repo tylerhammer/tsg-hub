@@ -177,10 +177,7 @@ final class TsgHubGameTracker
 		List<String> clanmates = clanmates(nearby, self.getName());
 		if (clanmates.isEmpty()) return;
 		TsgHubClan clan = plugin.clan();
-		JsonObject body = new JsonObject();
-		body.addProperty("clanName", clan.name());
-		body.addProperty("displayName", clan.playerName().isEmpty() ? Text.toJagexName(self.getName()) : clan.playerName());
-		body.addProperty("accountHash", Long.toString(hash));
+		JsonObject body = clan.identity(clan.playerName().isEmpty() ? Text.toJagexName(self.getName()) : clan.playerName());
 		body.addProperty("message", text);
 		JsonArray names = new JsonArray();
 		clanmates.forEach(names::add);

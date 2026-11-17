@@ -2,6 +2,7 @@ package com.tsghub;
 
 import com.google.gson.*;
 import java.util.*;
+import static com.tsghub.TsgHubJson.*;
 
 final class TsgHubReveals
 {
@@ -49,7 +50,7 @@ final class TsgHubReveals
 		int hiddenPoints()
 		{
 			int points = 0;
-			for (String id : hiddenTiles) points += TsgHubJson.integer(tasks.get(id), "points", 1);
+			for (String id : hiddenTiles) points += integer(tasks.get(id), "points", 1);
 			return points;
 		}
 
@@ -76,7 +77,7 @@ final class TsgHubReveals
 			ranked.sort((a, b) -> {
 				boolean lineA = inLine(a), lineB = inLine(b);
 				if (lineA != lineB) return lineA ? -1 : 1;
-				int points = TsgHubJson.integer(tasks.get(b), "points", 1) - TsgHubJson.integer(tasks.get(a), "points", 1);
+				int points = integer(tasks.get(b), "points", 1) - integer(tasks.get(a), "points", 1);
 				return points != 0 ? points : tiles.indexOf(a) - tiles.indexOf(b);
 			});
 			List<String> shown = new ArrayList<>();
@@ -144,9 +145,9 @@ final class TsgHubReveals
 		Set<String> nowMine = new HashSet<>();
 		for (JsonObject row : view.progress.values())
 		{
-			for (JsonObject member : TsgHubJson.objects(TsgHubJson.array(row, "members")))
+			for (JsonObject member : objects(array(row, "members")))
 			{
-				if (TsgHubJson.bool(member, "completed") && PlayerNames.samePlayer(TsgHubJson.str(member, "displayName"), playerName)) nowMine.add(TsgHubJson.str(row, "taskId"));
+				if (bool(member, "completed") && PlayerNames.samePlayer(str(member, "displayName"), playerName)) nowMine.add(str(row, "taskId"));
 			}
 		}
 		Set<String> nowLines = new HashSet<>();
@@ -185,10 +186,10 @@ final class TsgHubReveals
 
 	private boolean byMe(JsonObject task, JsonObject progress, Set<String> nowDone, Set<String> nowMine, String playerName)
 	{
-		String id = TsgHubJson.str(task, "id");
+		String id = str(task, "id");
 		if (task == null || !nowDone.contains(id) || done.contains(id)) return false;
-		if ("individual".equals(TsgHubJson.str(task, "scope"))) return nowMine.contains(id) && !mine.contains(id);
-		return !playerName.isEmpty() && PlayerNames.samePlayer(TsgHubJson.str(progress, "completedBy"), playerName);
+		if ("individual".equals(str(task, "scope"))) return nowMine.contains(id) && !mine.contains(id);
+		return !playerName.isEmpty() && PlayerNames.samePlayer(str(progress, "completedBy"), playerName);
 	}
 
 	private static boolean touches(TsgHubBingoBoard board, TsgHubBingoBoard.Line line, List<String> tasks)

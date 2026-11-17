@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.*;
 import java.util.function.*;
 import lombok.*;
 import lombok.extern.slf4j.*;
+import static com.tsghub.TsgHubJson.*;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -56,7 +57,7 @@ final class TsgHubSignals
 
 	static boolean socketOnly(JsonObject message)
 	{
-		String type = TsgHubJson.str(message, "type");
+		String type = str(message, "type");
 		return "sale".equals(type) || "payment".equals(type);
 	}
 
@@ -77,7 +78,7 @@ final class TsgHubSignals
 				offlineXp.clear();
 				return CompletableFuture.completedFuture(null);
 			}
-			offlineXp.forEach((skill, total) -> xp.add(TsgHubJson.obj("type", "xp", "skill", skill, "xp", total)));
+			offlineXp.forEach((skill, total) -> xp.add(obj("type", "xp", "skill", skill, "xp", total)));
 			offlineXp.clear();
 			flushing = true;
 		}
@@ -102,7 +103,7 @@ final class TsgHubSignals
 		JsonArray signals = new JsonArray();
 		xp.forEach(signals::add);
 		undelivered.forEach(signals::add);
-		return api.call("POST", "/v1/events/" + eventId + "/signals", token, TsgHubJson.obj("signals", signals)).handle((result, error) -> {
+		return api.call("POST", "/v1/events/" + eventId + "/signals", token, obj("signals", signals)).handle((result, error) -> {
 			int status = TsgHubApi.status(error);
 			if (error == null || status == 401 || status == 403 || status == 404) outbox.delivered(undelivered, eventId);
 			else
@@ -110,7 +111,7 @@ final class TsgHubSignals
 				retryXp.set(true);
 				log.debug("TSG Hub signal fallback failed", error);
 			}
-			if (result != null) TsgHubJson.objects(TsgHubJson.array(result, "messages")).forEach(receiver);
+			if (result != null) objects(array(result, "messages")).forEach(receiver);
 			return null;
 		});
 	}
