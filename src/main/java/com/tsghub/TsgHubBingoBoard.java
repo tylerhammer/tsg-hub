@@ -6,9 +6,6 @@ import static com.tsghub.TsgHubJson.*;
 
 final class TsgHubBingoBoard
 {
-	static final int MIN_SIZE = 3;
-	static final int MAX_SIZE = 9;
-
 	enum Direction { ROW, COLUMN, DIAGONAL, ANTI_DIAGONAL }
 
 	static final class Line
@@ -31,6 +28,12 @@ final class TsgHubBingoBoard
 				case DIAGONAL: return new int[]{i, i};
 				default: return new int[]{i, size - 1 - i};
 			}
+		}
+
+		static Line of(String key)
+		{
+			String[] parts = key.split(":");
+			return new Line(Direction.valueOf(parts[0]), Integer.parseInt(parts[1]));
 		}
 
 		String key()
@@ -73,12 +76,6 @@ final class TsgHubBingoBoard
 		this.unplaced = Collections.unmodifiableList(unplaced);
 	}
 
-	static int defaultSize(int tasks)
-	{
-		int size = (int) Math.ceil(Math.sqrt(tasks));
-		return Math.max(MIN_SIZE, Math.min(MAX_SIZE, size));
-	}
-
 	static boolean hasBoard(JsonObject event)
 	{
 		return event != null && event.has("board") && event.get("board").isJsonObject();
@@ -86,18 +83,7 @@ final class TsgHubBingoBoard
 
 	static TsgHubBingoBoard of(JsonObject event)
 	{
-		List<String> taskIds = new ArrayList<>();
-		JsonArray tasks = array(event, "tasks");
-		for (int i = 0; i < tasks.size(); i++) taskIds.add(str(tasks.get(i).getAsJsonObject(), "id"));
-		JsonObject board = event != null && event.has("board") && event.get("board").isJsonObject() ? event.getAsJsonObject("board") : null;
-		if (board == null) return resolve(defaultSize(taskIds.size()), new JsonArray(), taskIds, new JsonObject());
-		int size = integer(board, "size", 0);
-		if (size < MIN_SIZE || size > MAX_SIZE) size = defaultSize(taskIds.size());
-		return resolve(size, array(board, "tiles"), taskIds, board);
-	}
-
-	private static TsgHubBingoBoard resolve(int size, JsonArray tiles, List<String> taskIds, JsonObject board)
-	{
+		JsonObject board = hasBoard(event) ? event.getAsJsonObject("board") : new JsonObject();
 		Map<String, Integer> bonuses = new HashMap<>();
 		if (board.has("bonuses") && board.get("bonuses").isJsonObject())
 		{
@@ -106,35 +92,10 @@ final class TsgHubBingoBoard
 				if (entry.getValue().isJsonPrimitive() && entry.getValue().getAsJsonPrimitive().isNumber()) bonuses.put(entry.getKey(), entry.getValue().getAsInt());
 			}
 		}
+		int size = integer(board, "size", 0);
 		String[][] cells = new String[size][size];
-		Set<String> known = new HashSet<>(taskIds);
-		Set<String> placed = new HashSet<>();
-		for (int i = 0; i < tiles.size(); i++)
-		{
-			if (!tiles.get(i).isJsonObject()) continue;
-			JsonObject tile = tiles.get(i).getAsJsonObject();
-			String id = str(tile, "taskId");
-			int row = integer(tile, "row", -1);
-			int col = integer(tile, "col", -1);
-			if (!known.contains(id) || placed.contains(id) || row < 0 || col < 0 || row >= size || col >= size || cells[row][col] != null) continue;
-			cells[row][col] = id;
-			placed.add(id);
-		}
-		List<String> unplaced = new ArrayList<>();
-		int next = 0;
-		for (String id : taskIds)
-		{
-			if (placed.contains(id)) continue;
-			while (next < size * size && cells[next / size][next % size] != null) next++;
-			if (next >= size * size)
-			{
-				unplaced.add(id);
-				continue;
-			}
-			cells[next / size][next % size] = id;
-			placed.add(id);
-		}
-		return new TsgHubBingoBoard(size, cells, unplaced,
+		for (JsonObject tile : objects(array(board, "tiles"))) cells[integer(tile, "row", 0)][integer(tile, "col", 0)] = str(tile, "taskId");
+		return new TsgHubBingoBoard(size, cells, strings(array(board, "unplaced")),
 			Math.max(0, integer(board, "lineBonus", 0)), Math.max(0, integer(board, "randomMin", 0)), Math.max(0, integer(board, "randomMax", 0)), bonuses);
 	}
 
@@ -154,16 +115,6 @@ final class TsgHubBingoBoard
 		int total = 0;
 		for (Line line : lines) total += bonusFor(line);
 		return total;
-	}
-
-	List<Line> allLines()
-	{
-		List<Line> lines = new ArrayList<>();
-		for (int i = 0; i < size; i++) lines.add(new Line(Direction.ROW, i));
-		for (int i = 0; i < size; i++) lines.add(new Line(Direction.COLUMN, i));
-		lines.add(new Line(Direction.DIAGONAL, 0));
-		lines.add(new Line(Direction.ANTI_DIAGONAL, 0));
-		return lines;
 	}
 
 	String bonusRule()
@@ -187,23 +138,5 @@ final class TsgHubBingoBoard
 			for (int col = 0; col < size; col++)
 				if (id.equals(cells[row][col])) return new int[]{row, col};
 		return null;
-	}
-
-	List<Line> completedLines(Set<String> done)
-	{
-		List<Line> complete = new ArrayList<>();
-		for (Line line : allLines()) if (full(line, done)) complete.add(line);
-		return complete;
-	}
-
-	private boolean full(Line line, Set<String> done)
-	{
-		for (int i = 0; i < size; i++)
-		{
-			int[] at = line.cell(i, size);
-			String id = cells[at[0]][at[1]];
-			if (id == null || !done.contains(id)) return false;
-		}
-		return true;
 	}
 }

@@ -5,7 +5,6 @@ import java.awt.image.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.*;
-import net.runelite.api.gameval.*;
 import net.runelite.client.game.*;
 import net.runelite.client.hiscore.*;
 import net.runelite.client.util.*;
@@ -46,7 +45,7 @@ final class TsgHubTileIcons
 		if (id == null)
 		{
 			if (resolved.size() > 1000) resolved.clear();
-			int itemId = itemFor(task);
+			int itemId = integer(task, "iconItemId", 0);
 			id = itemId > 0 ? itemId : -spriteFor(task);
 			resolved.put(task, id);
 		}
@@ -82,57 +81,14 @@ final class TsgHubTileIcons
 		return sprite;
 	}
 
-	static int itemFor(JsonObject task)
-	{
-		if (task == null || !"drop".equals(str(task, "type"))) return 0;
-		JsonObject config = config(task);
-		JsonArray groups = array(config, "itemGroups");
-		if (groups.size() > 0 && groups.get(0).isJsonArray() && groups.get(0).getAsJsonArray().size() > 0 && groups.get(0).getAsJsonArray().get(0).isJsonObject())
-			return integer(groups.get(0).getAsJsonArray().get(0).getAsJsonObject(), "id", 0);
-		if ("pet".equals(str(config, "itemGroup"))) return ItemID.MOLEPET;
-		if ("jar".equals(str(config, "itemGroup"))) return ItemID.JAR_OF_SWAMP;
-		JsonArray ids = array(config, "itemIds");
-		for (int i = 0; i < ids.size(); i++) if (ids.get(i).isJsonPrimitive() && ids.get(i).getAsJsonPrimitive().isNumber() && ids.get(i).getAsInt() > 0) return ids.get(i).getAsInt();
-		return 0;
-	}
-
 	static int spriteFor(JsonObject task)
 	{
-		if (task == null) return 0;
-		JsonObject config = config(task);
-		switch (str(task, "type"))
+		for (JsonElement name : array(task, "iconBosses"))
 		{
-			case "kill":
-				String npc = str(config, "npcName");
-				int sprite = sprite(npc, HiscoreSkillType.BOSS);
-				return sprite > 0 ? sprite : sprite(ActivityDetector.bossFor(npc), HiscoreSkillType.BOSS);
-			case "raid":
-				JsonArray modes = array(config, "modes");
-				return sprite(raidName(modes.size() > 0 && modes.get(0).isJsonPrimitive() ? modes.get(0).getAsString() : ""), HiscoreSkillType.BOSS);
-			case "xp":
-				return sprite(str(config, "skill"), HiscoreSkillType.SKILL);
-			default:
-				return 0;
+			int sprite = name.isJsonPrimitive() ? sprite(name.getAsString(), HiscoreSkillType.BOSS) : 0;
+			if (sprite > 0) return sprite;
 		}
-	}
-
-	static String raidName(String mode)
-	{
-		switch (mode)
-		{
-			case "cox": return "Chambers of Xeric";
-			case "cox_cm": return "Chambers of Xeric: Challenge Mode";
-			case "tob": case "tob_entry": return "Theatre of Blood";
-			case "tob_hm": return "Theatre of Blood: Hard Mode";
-			case "toa": case "toa_entry": return "Tombs of Amascut";
-			case "toa_expert": return "Tombs of Amascut: Expert Mode";
-			default: return "";
-		}
-	}
-
-	private static JsonObject config(JsonObject task)
-	{
-		return task.has("config") && task.get("config").isJsonObject() ? task.getAsJsonObject("config") : new JsonObject();
+		return sprite(str(task, "iconSkill"), HiscoreSkillType.SKILL);
 	}
 
 	private static int sprite(String name, HiscoreSkillType type)

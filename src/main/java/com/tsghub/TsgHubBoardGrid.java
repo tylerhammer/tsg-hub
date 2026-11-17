@@ -143,7 +143,7 @@ final class TsgHubBoardGrid extends JComponent
 
 	private int cellFor(int width)
 	{
-		int n = board == null ? TsgHubBingoBoard.MIN_SIZE : board.size;
+		int n = board == null ? 3 : board.size;
 		return Math.max(12, (width - GAP * (n - 1)) / n);
 	}
 
@@ -177,7 +177,7 @@ final class TsgHubBoardGrid extends JComponent
 	@Override
 	public Dimension getPreferredSize()
 	{
-		int n = board == null ? TsgHubBingoBoard.MIN_SIZE : board.size;
+		int n = board == null ? 3 : board.size;
 		int width = 205;
 		if (getParent() != null && getParent().getWidth() > 0)
 		{
