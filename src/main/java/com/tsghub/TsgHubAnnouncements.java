@@ -15,7 +15,6 @@ final class TsgHubAnnouncements
 
 	private final TsgHubPlugin plugin;
 	private final ScheduledExecutorService executor;
-	private final Supplier<TsgHubApi> api;
 	private final BiConsumer<String, String> chat;
 	private final TsgHubNewsPoll polls;
 	private volatile JsonArray list;
@@ -28,11 +27,10 @@ final class TsgHubAnnouncements
 		}
 	};
 
-	TsgHubAnnouncements(TsgHubPlugin plugin, ScheduledExecutorService executor, Supplier<TsgHubApi> api, BiConsumer<String, String> chat)
+	TsgHubAnnouncements(TsgHubPlugin plugin, ScheduledExecutorService executor, BiConsumer<String, String> chat)
 	{
 		this.plugin = plugin;
 		this.executor = executor;
-		this.api = api;
 		this.chat = chat;
 		this.polls = new TsgHubNewsPoll(plugin, this, () -> {
 			plugin.ui(s -> s.newsView.setAnnouncements(list));
@@ -52,7 +50,7 @@ final class TsgHubAnnouncements
 
 	void openImage(String path)
 	{
-		if (TsgHubApi.isNewsImage(path)) LinkBrowser.browse(api.get().url(path));
+		if (TsgHubApi.isNewsImage(path)) LinkBrowser.browse(plugin.api().url(path));
 	}
 
 	synchronized CompletableFuture<BufferedImage> image(String path)
@@ -60,7 +58,7 @@ final class TsgHubAnnouncements
 		CompletableFuture<BufferedImage> image = images.get(path);
 		if (image == null || image.isCompletedExceptionally())
 		{
-			image = api.get().newsImage(path);
+			image = plugin.api().newsImage(path);
 			images.put(path, image);
 		}
 		return image;
@@ -72,7 +70,7 @@ final class TsgHubAnnouncements
 		String clan = TsgHubApi.encode(plugin.clan().name());
 		String hash = plugin.clan().accountHash();
 		String query = "/v1/announcements?clanName=" + clan + (hash.isEmpty() ? "" : "&accountHash=" + hash);
-		api.get().call("GET", query, null, null)
+		plugin.api().call("GET", query, null, null)
 			.thenAcceptAsync(result -> apply(TsgHubJson.array(result, "announcements")), executor);
 	}
 
@@ -215,12 +213,9 @@ final class TsgHubAnnouncements
 			failed.accept("Log in to vote.");
 			return;
 		}
-		JsonObject request = clanBody();
-		request.addProperty("accountHash", hash);
 		JsonArray picks = new JsonArray();
 		for (int option : options) picks.add(option);
-		request.add("options", picks);
-		sendVote("POST", path(id) + "/vote", request, failed);
+		sendVote("POST", path(id) + "/vote", TsgHubJson.obj("clanName", plugin.clan().name(), "accountHash", hash, "options", picks), failed);
 	}
 
 	void unvote(String id, Consumer<String> failed)
@@ -236,29 +231,16 @@ final class TsgHubAnnouncements
 
 	private void sendVote(String method, String path, JsonObject request, Consumer<String> failed)
 	{
-		api.get().call(method, path, null, request).whenCompleteAsync((response, error) -> {
-			try
-			{
-				TsgHubApi.result(response, error);
-				if (!plugin.live()) load();
-			}
-			catch (Exception e)
-			{
-				String message = "Couldn't vote. " + TsgHubFormat.friendlyError(e);
-				SwingUtilities.invokeLater(() -> failed.accept(message));
-			}
-		}, executor);
+		plugin.api().call(method, path, null, request, response -> {
+			if (!plugin.live()) load();
+		}, e -> {
+			String message = "Couldn't vote. " + TsgHubFormat.friendlyError(e);
+			SwingUtilities.invokeLater(() -> failed.accept(message));
+		});
 	}
 
 	private static String path(String id)
 	{
 		return "/v1/announcements/" + TsgHubApi.encode(id);
-	}
-
-	private JsonObject clanBody()
-	{
-		JsonObject body = new JsonObject();
-		body.addProperty("clanName", plugin.clan().name());
-		return body;
 	}
 }

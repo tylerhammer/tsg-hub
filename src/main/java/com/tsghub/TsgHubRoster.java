@@ -33,8 +33,13 @@ final class TsgHubRoster
 
 	static List<JsonObject> activeWarnings(JsonArray warnings)
 	{
+		return active(objects(warnings));
+	}
+
+	private static List<JsonObject> active(List<JsonObject> warnings)
+	{
 		List<JsonObject> active = new ArrayList<>();
-		for (JsonObject warning : objects(warnings)) if (bool(warning, "active")) active.add(warning);
+		for (JsonObject warning : warnings) if (bool(warning, "active")) active.add(warning);
 		return active;
 	}
 
@@ -76,14 +81,15 @@ final class TsgHubRoster
 
 	static String warningSummary(List<JsonObject> warnings)
 	{
-		int active = activeWarningCount(warnings), expired = warnings.size() - active;
+		int active = active(warnings).size(), expired = warnings.size() - active;
 		return active + " active" + (expired > 0 ? " · " + expired + " expired" : "");
 	}
 
 	static String warningCards(List<JsonObject> warnings, Instant now, ZoneId zone)
 	{
-		List<JsonObject> all = activeFirst(warnings);
-		int current = activeWarningCount(warnings);
+		List<JsonObject> all = active(warnings);
+		int current = all.size();
+		for (JsonObject warning : warnings) if (!bool(warning, "active")) all.add(warning);
 		int inactive = all.size() - current;
 		List<JsonObject> ordered = all.subList(0, current + Math.min(inactive, MAX_PAST_WARNINGS));
 		StringBuilder out = new StringBuilder();
@@ -96,22 +102,6 @@ final class TsgHubRoster
 		}
 		if (inactive > MAX_PAST_WARNINGS) out.append(tipLine(DIM, "+" + (inactive - MAX_PAST_WARNINGS) + " older"));
 		return out.toString();
-	}
-
-	static List<JsonObject> activeFirst(List<JsonObject> warnings)
-	{
-		List<JsonObject> ordered = new ArrayList<>();
-		List<JsonObject> past = new ArrayList<>();
-		for (JsonObject warning : warnings) (bool(warning, "active") ? ordered : past).add(warning);
-		ordered.addAll(past);
-		return ordered;
-	}
-
-	private static int activeWarningCount(List<JsonObject> warnings)
-	{
-		int count = 0;
-		for (JsonObject warning : warnings) if (bool(warning, "active")) count++;
-		return count;
 	}
 
 	static String warningMeta(JsonObject warning, Instant now, ZoneId zone)
