@@ -11,6 +11,8 @@ import java.util.function.*;
 import javax.inject.*;
 import javax.inject.Inject;
 import javax.swing.*;
+import lombok.*;
+import lombok.experimental.*;
 import lombok.extern.slf4j.*;
 import net.runelite.api.*;
 import net.runelite.api.events.*;
@@ -37,6 +39,7 @@ import static com.tsghub.TsgHubSession.EVENT_ID;
 import static com.tsghub.TsgHubSession.TOKEN;
 
 @Slf4j
+@Accessors(fluent = true)
 @PluginDescriptor(name = "TSG Hub", internalName = "tsg-hub", description = "TypeShii Gaming clan events and progress tracking", tags = {"tsg", "clan", "bingo", "events"})
 public class TsgHubPlugin extends Plugin
 {
@@ -67,39 +70,41 @@ public class TsgHubPlugin extends Plugin
 	@Inject private InfoBoxManager infoBoxManager;
 	@Inject private SkillIconManager skillIconManager;
 	@Inject @Named("developerMode") private boolean developerMode;
-	private TsgHubSession session;
-	private TsgHubClan clan;
-	private TsgHubKeys keys;
-	private TsgHubChat chat;
-	private TsgHubSessions sessions;
-	private TsgHubLiveSync liveSync;
-	private TsgHubGameTracker tracker;
+	@Getter private TsgHubSession session;
+	@Getter private TsgHubClan clan;
+	@Getter private TsgHubKeys keys;
+	@Getter private TsgHubChat chat;
+	@Getter private TsgHubSessions sessions;
+	@Getter private TsgHubLiveSync liveSync;
+	@Getter private TsgHubGameTracker tracker;
+	@Getter private TsgHubTeamColors teamColors;
+	@Getter private TsgHubSidebarPanel sidebar;
+	@Getter private TsgHubBingo bingo;
+	@Getter private volatile TsgHubApi api;
+	@Getter private TsgHubSignals signals;
+	@Getter private TsgHubOutbox outbox;
+	@Getter private TsgHubUsage usage;
+	@Getter private TsgHubGroups groups;
+	@Getter private TsgHubPresence presence;
+	@Getter private TsgHubMemberMap memberMap;
+	@Getter private TsgHubDrops drops;
+	@Getter private TsgHubRecords records;
+	@Getter private TsgHubAnnouncements announcements;
+	@Getter private TsgHubNewsOverlay newsOverlay;
 	private TsgHubCoffer coffer;
 	private TsgHubSales sales;
 	private TsgHubTrades trades;
-	private TsgHubTeamColors teamColors;
-	private TsgHubSidebarPanel sidebar;
-	private TsgHubBingo bingo;
 	private NavigationButton navigationButton;
 	private ScheduledExecutorService executor;
 	private final List<ScheduledFuture<?>> tasks = new ArrayList<>();
+	private final List<Object> subscribers = new ArrayList<>();
+	private final List<Overlay> overlays = new ArrayList<>();
 	private volatile boolean sidebarRouted;
 	private volatile boolean routedAsHubMember;
 	private volatile boolean routedClanPending;
-	private volatile TsgHubApi api;
-	private TsgHubSignals signals;
-	private TsgHubOutbox outbox;
-	private TsgHubUsage usage;
-	private TsgHubGroups groups;
-	private TsgHubPresence presence;
-	private TsgHubMemberMap memberMap;
 	private TsgHubMapOverlay mapOverlay;
 	private TsgHubCountdown countdown;
 	private boolean worldMapOpen;
-	private TsgHubDrops drops;
-	private TsgHubRecords records;
-	private TsgHubAnnouncements announcements;
-	private TsgHubNewsOverlay newsOverlay;
 	private GroupTracker groupTracker;
 	private TsgHubDefence defence;
 
@@ -107,68 +112,58 @@ public class TsgHubPlugin extends Plugin
 	protected void startUp()
 	{
 		session = new TsgHubSession(configManager);
-		TsgHubRules.loadBundled(gson);
+		executor = Executors.newSingleThreadScheduledExecutor(daemon("tsg-hub-api"));
+		executor.execute(() -> TsgHubRules.loadBundled(gson));
 		String clanOverride = System.getProperty("tsghub.clanName", "").trim();
 		clan = new TsgHubClan(client, developerMode && !clanOverride.isEmpty() ? clanOverride : "TSGaming");
 		String serviceOverride = System.getProperty("tsghub.serviceUrl", "").trim();
 		String serviceUrl = developerMode && !serviceOverride.isEmpty() ? serviceOverride : SERVICE_URL;
-		api = new TsgHubApi(okHttpClient, gson, serviceUrl);
-		executor = Executors.newSingleThreadScheduledExecutor(daemon("tsg-hub-api"));
+		api = new TsgHubApi(okHttpClient, gson, serviceUrl, executor);
 		keys = new TsgHubKeys(this, config, configManager, executor);
 		chat = new TsgHubChat(this, config, configManager, chatMessageManager);
 		sessions = new TsgHubSessions(this, executor);
 		liveSync = new TsgHubLiveSync(this, okHttpClient, gson, serviceUrl, executor);
 		TsgHubSocket socket = liveSync.socket();
-		outbox = new TsgHubOutbox(socket, (method, path, token, body) -> api().request(method, path, token, body));
-		signals = new TsgHubSignals(socket, outbox, this::api, chat::reply);
+		outbox = new TsgHubOutbox(socket, api::call);
+		signals = new TsgHubSignals(socket, outbox, api, chat::reply);
 		usage = new TsgHubUsage(this::sharingInClan, this::usageIdentity, body -> outbox.report("usage", "/v1/usage", body), () -> TsgHubUsage.enabledSettings(config));
-		every(usage::flush, TsgHubUsage.FLUSH_SECONDS, TsgHubUsage.FLUSH_SECONDS, TimeUnit.SECONDS);
+		every(usage::flush, TsgHubUsage.FLUSH_SECONDS, TsgHubUsage.FLUSH_SECONDS);
 		executor.execute(this::loadCachedRules);
-		every(liveSync::tick, 2, 5, TimeUnit.SECONDS);
-		every(liveSync.unlessLive(() -> sessions.autoRefreshBoard(sidebar)), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
-		every(liveSync.unlessLive(sessions::pollNotifications), BOARD_AUTO_REFRESH_SECONDS, BOARD_AUTO_REFRESH_SECONDS, TimeUnit.SECONDS);
-		newsOverlay = new TsgHubNewsOverlay(this, config, client);
-		overlayManager.add(newsOverlay);
+		every(liveSync::tick, 2, 5);
+		poll(() -> sessions.autoRefreshBoard(sidebar), BOARD_AUTO_REFRESH_SECONDS);
+		poll(sessions::pollNotifications, BOARD_AUTO_REFRESH_SECONDS);
+		newsOverlay = overlay(new TsgHubNewsOverlay(this, config, client));
 		mouseManager.registerMouseListener(newsOverlay);
 		mouseManager.registerMouseWheelListener(newsOverlay);
-		announcements = new TsgHubAnnouncements(this, executor, this::api, chat::clanAnnouncement);
+		announcements = new TsgHubAnnouncements(this, executor, chat::clanAnnouncement);
 		TsgHubRankIcons rankIcons = new TsgHubRankIcons(chatIconManager);
 		bingo = new TsgHubBingo(client, audioPlayer, config, configManager, overlayManager, mouseManager, new TsgHubTileIcons(this::getItemImage, spriteManager), usage::count);
 		bingo.start();
 		GroupMembersPanel groupMembers = new GroupMembersPanel(config, spriteManager, itemManager);
 		sidebar = new TsgHubSidebarPanel(this, groupMembers);
-		groups = new TsgHubGroups(this, client, partyService, executor, this::api, () -> sidebar, socket);
-		groupTracker = new GroupTracker(client, clientThread, partyService, wsClient, itemManager, groups::isGroupParty, config::partyShowSelf, this::currentArea, groups);
+		groups = new TsgHubGroups(this, client, partyService, executor);
+		groupTracker = subscribe(new GroupTracker(client, clientThread, partyService, wsClient, itemManager, groups::isGroupParty, config::partyShowSelf, this::currentArea, groups));
 		groups.setTracker(groupTracker);
-		eventBus.register(groupTracker);
 		groupTracker.start();
-		every(groups::heartbeat, 5, TsgHubGroups.HEARTBEAT_SECONDS, TimeUnit.SECONDS);
-		every(groupTracker::keepAlive, GroupTracker.KEEPALIVE_SECONDS, GroupTracker.KEEPALIVE_SECONDS, TimeUnit.SECONDS);
-		every(liveSync.unlessLive(groups::autoRefresh), TsgHubGroups.REFRESH_SECONDS, TsgHubGroups.REFRESH_SECONDS, TimeUnit.SECONDS);
-		presence = new TsgHubPresence(this, client, clientThread, rankIcons, spriteManager, executor, this::api, () -> sidebar, socket, keys::adminKey);
-		every(liveSync.unlessLive(presence::autoRefresh), TsgHubPresence.REFRESH_SECONDS, TsgHubPresence.REFRESH_SECONDS, TimeUnit.SECONDS);
+		every(groups::heartbeat, 5, TsgHubGroups.HEARTBEAT_SECONDS);
+		every(groupTracker::keepAlive, GroupTracker.KEEPALIVE_SECONDS, GroupTracker.KEEPALIVE_SECONDS);
+		poll(groups::autoRefresh, TsgHubGroups.REFRESH_SECONDS);
+		presence = new TsgHubPresence(this, client, clientThread, rankIcons, spriteManager, executor);
+		poll(presence::autoRefresh, TsgHubPresence.REFRESH_SECONDS);
 		memberMap = new TsgHubMemberMap(this, client, clientThread, worldMapPointManager, executor, this::api);
-		mapOverlay = new TsgHubMapOverlay(client, worldMapOverlay, memberMap);
-		overlayManager.add(mapOverlay);
-		countdown = new TsgHubCountdown(client, config, sessions::clanEvents, id -> !session.memberToken(id).isEmpty());
-		overlayManager.add(countdown);
-		every(liveSync.unlessLive(memberMap::autoRefresh), TsgHubMemberMap.REFRESH_SECONDS, TsgHubMemberMap.REFRESH_SECONDS, TimeUnit.SECONDS);
+		mapOverlay = overlay(new TsgHubMapOverlay(client, worldMapOverlay, memberMap));
+		countdown = overlay(new TsgHubCountdown(client, config, sessions::clanEvents, id -> !session.memberToken(id).isEmpty()));
+		poll(memberMap::autoRefresh, TsgHubMemberMap.REFRESH_SECONDS);
 		drops = new TsgHubDrops(this, client, drawManager, executor, this::api, () -> sidebar);
-		every(liveSync.unlessLive(drops::autoRefresh), TsgHubDrops.REFRESH_SECONDS, TsgHubDrops.REFRESH_SECONDS, TimeUnit.SECONDS);
+		poll(drops::autoRefresh, TsgHubDrops.REFRESH_SECONDS);
 		records = new TsgHubRecords(this, configManager, executor, this::api);
-		tracker = new TsgHubGameTracker(this, client, clientThread, itemManager, executor);
-		eventBus.register(tracker);
-		coffer = new TsgHubCoffer(this, client, body -> tracker.report("coffer", "/v1/coffer", body));
-		eventBus.register(coffer);
-		sales = new TsgHubSales(this, client, itemManager);
-		eventBus.register(sales);
-		trades = new TsgHubTrades(this, client);
-		eventBus.register(trades);
-		defence = new TsgHubDefence(this, client, clientThread, partyService, wsClient, pluginManager, infoBoxManager, overlayManager, skillIconManager, config, gson, chat::defenceSpec);
-		eventBus.register(defence);
+		tracker = subscribe(new TsgHubGameTracker(this, client, clientThread, itemManager, executor));
+		coffer = subscribe(new TsgHubCoffer(this, client, body -> tracker.report("coffer", "/v1/coffer", body)));
+		sales = subscribe(new TsgHubSales(this, client, itemManager));
+		trades = subscribe(new TsgHubTrades(this, client));
+		defence = subscribe(new TsgHubDefence(this, client, clientThread, partyService, wsClient, pluginManager, infoBoxManager, overlayManager, skillIconManager, config, gson, chat::defenceSpec));
 		defence.start();
-		teamColors = new TsgHubTeamColors(config, () -> ui(s -> s.membersView.refreshIfShown()));
-		eventBus.register(teamColors);
+		teamColors = subscribe(new TsgHubTeamColors(config, () -> ui(s -> s.membersView.refreshIfShown())));
 		navigationButton = NavigationButton.builder()
 			.tooltip("TSG Hub")
 			.icon(ImageUtil.loadImageResource(getClass(), "icon.png"))
@@ -181,9 +176,30 @@ public class TsgHubPlugin extends Plugin
 		clientThread.invokeLater(this::refreshDetectedClan);
 	}
 
-	private void every(Runnable task, long initialDelay, long period, TimeUnit unit)
+	private <T> T subscribe(T subscriber)
 	{
-		tasks.add(executor.scheduleAtFixedRate(task, initialDelay, period, unit));
+		eventBus.register(subscriber);
+		subscribers.add(subscriber);
+		return subscriber;
+	}
+
+	private <T extends Overlay> T overlay(T overlay)
+	{
+		overlayManager.add(overlay);
+		overlays.add(overlay);
+		return overlay;
+	}
+
+	private void every(Runnable task, long initialDelay, long period)
+	{
+		tasks.add(executor.scheduleAtFixedRate(task, initialDelay, period, TimeUnit.SECONDS));
+	}
+
+	private void poll(Runnable task, long seconds)
+	{
+		every(() -> {
+			if (!live()) task.run();
+		}, seconds, seconds);
 	}
 
 	private static ThreadFactory daemon(String name)
@@ -199,31 +215,18 @@ public class TsgHubPlugin extends Plugin
 	protected void shutDown()
 	{
 		if (navigationButton != null) clientToolbar.removeNavigation(navigationButton);
-		if (tracker != null) eventBus.unregister(tracker);
-		if (coffer != null) eventBus.unregister(coffer);
-		if (sales != null) eventBus.unregister(sales);
-		if (trades != null) eventBus.unregister(trades);
-		if (teamColors != null) eventBus.unregister(teamColors);
-		if (defence != null)
-		{
-			eventBus.unregister(defence);
-			defence.stop();
-		}
-		if (groupTracker != null)
-		{
-			groupTracker.stop();
-			eventBus.unregister(groupTracker);
-		}
-		// Stay listed across a brief restart, but leave the RuneLite party.
+		if (defence != null) defence.stop();
+		if (groupTracker != null) groupTracker.stop();
+		subscribers.forEach(eventBus::unregister);
+		subscribers.clear();
 		if (groups != null && groupTracker != null && groupTracker.isSharing()) partyService.changeParty(null);
-		if (presence != null) presence.shutDown();
+		if (presence != null) presence.leave();
 		if (memberMap != null) memberMap.setOpen(false);
-		if (mapOverlay != null) overlayManager.remove(mapOverlay);
 		if (bingo != null) bingo.stop();
-		if (countdown != null) overlayManager.remove(countdown);
+		overlays.forEach(overlayManager::remove);
+		overlays.clear();
 		if (newsOverlay != null)
 		{
-			overlayManager.remove(newsOverlay);
 			mouseManager.unregisterMouseListener(newsOverlay);
 			mouseManager.unregisterMouseWheelListener(newsOverlay);
 			newsOverlay.closeReader();
@@ -264,17 +267,17 @@ public class TsgHubPlugin extends Plugin
 		JsonObject body = new JsonObject();
 		body.addProperty("displayName", clan.playerName());
 		clan.addAccountHash(body);
-		api().call("POST", "/v1/admin/login-link", key, body).whenCompleteAsync(TsgHubApi.handle(response ->
+		api().call("POST", "/v1/admin/login-link", key, body, response ->
 			LinkBrowser.browse(response.get("url").getAsString()),
 			e -> {
-				int status = e instanceof TsgHubApi.HttpError ? ((TsgHubApi.HttpError) e).status : 0;
+				int status = TsgHubApi.status(e);
 				if (status == 401) keys.rejected(key);
 				else
 				{
 					if (status == 403) keys.recheck(key);
 					memberError("Couldn't open the admin site. ", e);
 				}
-			}, () -> SwingUtilities.invokeLater(done)), executor);
+			}, () -> SwingUtilities.invokeLater(done));
 	}
 
 	@Provides
@@ -283,32 +286,11 @@ public class TsgHubPlugin extends Plugin
 		return configManager.getConfig(TsgHubConfig.class);
 	}
 
-	TsgHubSession session() { return session; }
-	TsgHubClan clan() { return clan; }
-	TsgHubKeys keys() { return keys; }
-	TsgHubChat chat() { return chat; }
-	TsgHubSessions sessions() { return sessions; }
-	TsgHubLiveSync liveSync() { return liveSync; }
-	TsgHubGameTracker tracker() { return tracker; }
-	TsgHubSignals signals() { return signals; }
-	TsgHubOutbox outbox() { return outbox; }
-	TsgHubApi api() { return api; }
-	TsgHubSidebarPanel sidebar() { return sidebar; }
-	TsgHubBingo bingo() { return bingo; }
-	TsgHubGroups groups() { return groups; }
-	TsgHubPresence presence() { return presence; }
-	TsgHubMemberMap memberMap() { return memberMap; }
-	TsgHubDrops drops() { return drops; }
-	TsgHubRecords records() { return records; }
-	TsgHubAnnouncements announcements() { return announcements; }
-	TsgHubNewsOverlay newsOverlay() { return newsOverlay; }
-
 	void openNews(String id)
 	{
 		newsOverlay.openReader(id);
 	}
-	TsgHubTeamColors teamColors() { return teamColors; }
-	TsgHubUsage usage() { return usage; }
+
 	SpriteManager sprites() { return spriteManager; }
 
 	boolean live() { return liveSync != null && liveSync.live(); }
@@ -324,11 +306,7 @@ public class TsgHubPlugin extends Plugin
 	private JsonObject usageIdentity()
 	{
 		long hash = client.getAccountHash();
-		if (hash == -1) return null;
-		JsonObject body = new JsonObject();
-		body.addProperty("clanName", clan.name());
-		body.addProperty("accountHash", Long.toString(hash));
-		return body;
+		return hash == -1 ? null : TsgHubJson.obj("clanName", clan.name(), "accountHash", Long.toString(hash));
 	}
 
 	boolean sharingInClan()
@@ -422,13 +400,13 @@ public class TsgHubPlugin extends Plugin
 		if ("partyShowSelf".equals(event.getKey()))
 		{
 			if (config.partyShowSelf()) groupTracker.refreshSelf();
-			else ui(s -> s.partiesView.groupSelfHidden());
+			else ui(s -> s.groupMembers.removeSelf());
 			return;
 		}
 		if (event.getKey().startsWith("party"))
 		{
 			boolean expand = "partyExpandMembers".equals(event.getKey());
-			ui(s -> s.partiesView.groupSettingsChanged(expand));
+			ui(s -> s.groupMembers.settingsChanged(expand));
 			return;
 		}
 		if (event.getKey().startsWith("bingo"))
@@ -560,8 +538,8 @@ public class TsgHubPlugin extends Plugin
 		body.addProperty("displayName", clan.playerName());
 		body.addProperty("clanName", clan.name());
 		clan.addAccountHash(body);
-		api().call("POST", "/v1/discord/invite", null, body).whenCompleteAsync(TsgHubApi.handle(response ->
-			LinkBrowser.browse(response.get("url").getAsString()), onError, done), executor);
+		api().call("POST", "/v1/discord/invite", null, body, response ->
+			LinkBrowser.browse(response.get("url").getAsString()), onError, done);
 	}
 
 	void discordLinkChanged()

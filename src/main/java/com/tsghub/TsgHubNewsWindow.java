@@ -26,6 +26,7 @@ final class TsgHubNewsWindow extends JPanel
 	private final TsgHubNewsPoll polls;
 	private final Function<String, CompletableFuture<BufferedImage>> images;
 	private final Consumer<String> open;
+	private final Runnable loaded;
 	private final TsgHubNewsGallery.Memory memory = new TsgHubNewsGallery.Memory();
 	private final JPanel page = new WidthTrackingPanel();
 	private final JScrollPane scroll = scroll(page);
@@ -34,12 +35,13 @@ final class TsgHubNewsWindow extends JPanel
 	private int width = TEXT_W;
 	private Component byline;
 
-	TsgHubNewsWindow(TsgHubNewsPoll polls, Function<String, CompletableFuture<BufferedImage>> images, Consumer<String> open)
+	TsgHubNewsWindow(TsgHubNewsPoll polls, Function<String, CompletableFuture<BufferedImage>> images, Consumer<String> open, Runnable loaded)
 	{
 		super(new BorderLayout());
 		this.polls = polls;
 		this.images = images;
 		this.open = open;
+		this.loaded = loaded;
 		setBackground(BACKGROUND);
 		page.setBorder(BorderFactory.createEmptyBorder(GAP_L, PAD_H, GAP_L, PAD_H));
 		add(scroll, BorderLayout.CENTER);
@@ -92,7 +94,7 @@ final class TsgHubNewsWindow extends JPanel
 		{
 			page.add(wrapped(str(announcement, "title"), TEXT, headingFont(), width));
 			page.add(gap(GAP_XS));
-			byline = wrapped(str(announcement, "postedBy") + " · " + TsgHubFormat.shortDate(str(announcement, "postedAt"), clock.instant(), ZoneId.systemDefault()), MUTED, smallFont(), width);
+			byline = wrapped(str(announcement, "postedBy") + " · " + shortDate(str(announcement, "postedAt"), clock.instant(), ZoneId.systemDefault()), MUTED, smallFont(), width);
 			page.add(byline);
 			JsonArray blocks = array(announcement, "blocks");
 			String body = str(announcement, "body");
@@ -110,8 +112,7 @@ final class TsgHubNewsWindow extends JPanel
 			{
 				JPanel card = card();
 				card.add(polls.block(id, poll, width - 2 * CARD_PAD_H), BorderLayout.CENTER);
-				page.add(gap(GAP_L));
-				page.add(fitHeight(card));
+				addGap(page, GAP_L, fitHeight(card));
 			}
 		}
 		page.revalidate();
@@ -123,15 +124,13 @@ final class TsgHubNewsWindow extends JPanel
 		List<JsonObject> photos = new ArrayList<>();
 		for (JsonObject photo : objects(list)) if (TsgHubApi.isNewsImage(str(photo, "url")) && photos.size() < MAX_PHOTOS) photos.add(photo);
 		if (photos.isEmpty()) return;
-		page.add(gap(GAP_S));
-		page.add(new TsgHubNewsGallery(photos, width, images, open, memory));
+		addGap(page, GAP_S, new TsgHubNewsGallery(photos, width, images, open, memory, loaded));
 		page.add(gap(GAP_M));
 	}
 
 	private static JPanel divider()
 	{
-		JPanel line = new JPanel();
-		line.setOpaque(false);
+		JPanel line = panel(new FlowLayout());
 		line.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createEmptyBorder(GAP_L, 0, GAP_L - 1, 0), BorderFactory.createMatteBorder(1, 0, 0, 0, BORDER)));
 		return fitHeight(line);
 	}

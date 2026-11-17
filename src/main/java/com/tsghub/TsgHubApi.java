@@ -24,17 +24,25 @@ final class TsgHubApi
 		}
 	}
 
+	private static final class Flight
+	{
+		final CompletableFuture<JsonObject> result = new CompletableFuture<>();
+		volatile int waiters;
+	}
+
 	private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
 	private static final MediaType JPEG = MediaType.parse("image/jpeg");
 	private static final long MAX_IMAGE_BYTES = 8 << 20;
 	private final String baseUrl;
 	private final OkHttpClient http;
 	private final Gson gson;
-	private final Map<String, CompletableFuture<JsonObject>> inFlight = new ConcurrentHashMap<>();
+	private final Executor executor;
+	private final Map<String, Flight> inFlight = new ConcurrentHashMap<>();
 
-	TsgHubApi(OkHttpClient http, Gson gson, String baseUrl)
+	TsgHubApi(OkHttpClient http, Gson gson, String baseUrl, Executor executor)
 	{
 		this.gson = gson;
+		this.executor = executor;
 		this.baseUrl = baseUrl.replaceAll("/+$", "");
 		this.http = http.newBuilder()
 			.connectTimeout(5, TimeUnit.SECONDS)
@@ -42,39 +50,44 @@ final class TsgHubApi
 			.build();
 	}
 
-	JsonObject request(String method, String path, String token, JsonObject payload) throws Exception
-	{
-		try (Response response = http.newCall(build(method, path, token, payload)).execute())
-		{
-			return read(response);
-		}
-	}
-
 	CompletableFuture<JsonObject> call(String method, String path, String token, JsonObject payload)
 	{
 		if (!"GET".equals(method)) return send(method, path, token, payload);
 		String key = path + " " + (token == null ? "" : token);
-		CompletableFuture<JsonObject> shared = inFlight.computeIfAbsent(key, k -> {
-			CompletableFuture<JsonObject> started = send(method, path, token, null);
-			started.whenComplete((result, error) -> inFlight.remove(k, started));
-			return started;
+		boolean[] started = {false};
+		Flight flight = inFlight.compute(key, (k, current) -> {
+			Flight next = current == null ? new Flight() : current;
+			started[0] = current == null;
+			next.waiters++;
+			return next;
 		});
-		return shared.thenApply(JsonObject::deepCopy);
+		if (started[0]) send(method, path, token, null).whenComplete((value, error) -> {
+			inFlight.remove(key, flight);
+			if (error == null) flight.result.complete(value);
+			else flight.result.completeExceptionally(error);
+		});
+		return flight.result.thenApply(value -> flight.waiters > 1 ? value.deepCopy() : value);
 	}
 
-	static BiConsumer<JsonObject, Throwable> handle(Consumer<JsonObject> onResult, Consumer<Exception> onError)
+	CompletableFuture<JsonObject> call(String method, String path, String token, JsonObject payload, Consumer<JsonObject> onResult, Consumer<Exception> onError)
 	{
-		return handle(onResult, onError, () -> { });
+		return call(method, path, token, payload, onResult, onError, () -> { });
 	}
 
-	static BiConsumer<JsonObject, Throwable> handle(Consumer<JsonObject> onResult, Consumer<Exception> onError, Runnable after)
+	CompletableFuture<JsonObject> call(String method, String path, String token, JsonObject payload, Consumer<JsonObject> onResult, Consumer<Exception> onError, Runnable after)
 	{
-		return (response, error) ->
+		return call(method, path, token, payload).whenCompleteAsync((response, error) ->
 		{
 			try { onResult.accept(result(response, error)); }
 			catch (Exception e) { onError.accept(e); }
 			finally { after.run(); }
-		};
+		}, executor);
+	}
+
+	static int status(Throwable error)
+	{
+		Throwable cause = error instanceof CompletionException && error.getCause() != null ? error.getCause() : error;
+		return cause instanceof HttpError ? ((HttpError) cause).status : 0;
 	}
 
 	static JsonObject result(JsonObject value, Throwable error) throws Exception
@@ -171,7 +184,6 @@ final class TsgHubApi
 			.header(TsgHubVersion.HEADER, TsgHubVersion.VERSION);
 		if (token != null && !token.isEmpty()) builder.header("Authorization", "Bearer " + token);
 		RequestBody body = payload == null ? null : RequestBody.create(JSON, payload.toString());
-		// OkHttp requires a body for POST/PATCH/PUT.
 		if (body == null && !"GET".equals(method) && !"DELETE".equals(method)) body = RequestBody.create(JSON, "{}");
 		return builder.method(method, body).build();
 	}

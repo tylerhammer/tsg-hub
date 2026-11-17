@@ -55,8 +55,8 @@ final class TsgHubLookupView
 		if (!lookupError.isEmpty())
 		{
 			shell.page.add("Not found".equals(lookupError)
-				? shell.errorPanel("Not on the hiscores", lookupName + " isn't ranked on the " + TsgHubHiscores.endpoint(lookupType).getName() + " hiscores.")
-				: shell.errorPanel("Lookup failed", lookupError));
+				? errorPanel("Not on the hiscores", lookupName + " isn't ranked on the " + TsgHubHiscores.endpoint(lookupType).getName() + " hiscores.")
+				: errorPanel("Lookup failed", lookupError));
 		}
 		else if (result == null)
 		{
@@ -64,10 +64,9 @@ final class TsgHubLookupView
 		}
 		else
 		{
-			shell.page.add(shell.sectionHeading("Skills", null));
+			shell.page.add(listHeading("Skills", true, null));
 			shell.page.add(TsgHubHiscores.skillGrid(result));
-			shell.page.add(gap(GAP_XS));
-			shell.page.add(TsgHubHiscores.totalRow(result));
+			addGap(shell.page, GAP_XS, TsgHubHiscores.totalRow(result));
 			addScores("Bosses", result, HiscoreSkillType.BOSS);
 			addScores("Activities", result, HiscoreSkillType.ACTIVITY);
 		}
@@ -78,8 +77,7 @@ final class TsgHubLookupView
 	{
 		List<HiscoreSkill> scored = TsgHubHiscores.scored(result, type);
 		if (scored.isEmpty()) return;
-		shell.page.add(gap(GAP_L));
-		shell.page.add(shell.sectionHeading(heading + " (" + scored.size() + ")", null));
+		addGap(shell.page, GAP_L, listHeading(heading + " (" + scored.size() + ")", true, null));
 		for (HiscoreSkill skill : scored)
 		{
 			shell.page.add(TsgHubHiscores.scoreRow(result, skill, plugin.sprites()));

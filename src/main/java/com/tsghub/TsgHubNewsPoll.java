@@ -4,6 +4,7 @@ import com.google.gson.*;
 import java.awt.*;
 import java.util.*;
 import java.util.List;
+import java.util.function.*;
 import javax.swing.*;
 import lombok.*;
 import net.runelite.client.util.*;
@@ -49,8 +50,7 @@ final class TsgHubNewsPoll
 		JButton vote = primaryButton(mine.isEmpty() ? "Vote" : "Change vote");
 		Runnable sync = () -> vote.setEnabled(canVote && !chosen.isEmpty() && !chosen.equals(mine) && !voting.contains(id));
 		ButtonGroup group = new ButtonGroup();
-		block.add(gap(GAP_S));
-		block.add(wrapped(summary(poll), MUTED, smallFont(), widthPx));
+		addGap(block, GAP_S, wrapped(summary(poll), MUTED, smallFont(), widthPx));
 		List<JsonObject> options = objects(array(poll, "options"));
 		for (int i = 0; i < options.size(); i++)
 		{
@@ -79,29 +79,18 @@ final class TsgHubNewsPoll
 			if (!multi) group.add(toggle);
 			List<String> names = strings(array(option, "voters"));
 			if (!names.isEmpty()) toggle.setToolTipText(html(escape(String.join(", ", names)), 200));
-			block.add(gap(GAP_S));
-			block.add(fitHeight(row(toggle, north(caption(count)))));
+			addGap(block, GAP_S, fitHeight(row(toggle, north(caption(count)))));
 			JPanel bar = progressBar(votes, Math.max(voters, 1), null, null);
 			bar.setBorder(BorderFactory.createEmptyBorder(0, toggle.getPreferredSize().height - 2, 0, 0));
 			block.add(bar);
 		}
 		String error = errors.get(id);
 		if (error != null) block.add(label(html(escape(error), widthPx), TsgHubTheme.ERROR, smallFont()));
-		Runnable cast = () -> {
-			voting.add(id);
-			errors.remove(id);
-			vote.setEnabled(false);
-			announcements.vote(id, new ArrayList<>(chosen), message -> {
-				voting.remove(id);
-				errors.put(id, message);
-				changed.run();
-			});
-		};
+		Runnable cast = () -> announcements.vote(id, new ArrayList<>(chosen), submit(id, vote));
 		vote.addActionListener(e -> cast.run());
 		pressable(vote, point -> cast.run());
 		sync.run();
-		block.add(gap(GAP_M));
-		block.add(fitHeight(row(canVote && !mine.isEmpty() ? removeVote(id) : label(canVote ? "" : "Log in to vote.", MUTED, smallFont()), vote)));
+		addGap(block, GAP_M, fitHeight(row(canVote && !mine.isEmpty() ? removeVote(id) : label(canVote ? "" : "Log in to vote.", MUTED, smallFont()), vote)));
 		return block;
 	}
 
@@ -116,17 +105,22 @@ final class TsgHubNewsPoll
 		remove.setBorder(BorderFactory.createEmptyBorder());
 		remove.setEnabled(!voting.contains(id));
 		Runnable undo = () -> {
-			voting.add(id);
-			errors.remove(id);
 			picks.remove(id);
-			remove.setEnabled(false);
-			announcements.unvote(id, message -> {
-				voting.remove(id);
-				errors.put(id, message);
-				changed.run();
-			});
+			announcements.unvote(id, submit(id, remove));
 		};
 		remove.addActionListener(e -> undo.run());
 		return pressable(remove, point -> undo.run());
+	}
+
+	private Consumer<String> submit(String id, AbstractButton button)
+	{
+		voting.add(id);
+		errors.remove(id);
+		button.setEnabled(false);
+		return message -> {
+			voting.remove(id);
+			errors.put(id, message);
+			changed.run();
+		};
 	}
 }

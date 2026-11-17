@@ -18,7 +18,8 @@ final class TsgHubChat
 	private final TsgHubConfig config;
 	private final ConfigManager configManager;
 	private final ChatMessageManager chatMessageManager;
-	private final Set<String> localMessages = ConcurrentHashMap.newKeySet();
+	private static final int MAX_ECHOES = 20;
+	private final Queue<String> localMessages = new ConcurrentLinkedDeque<>();
 	private volatile String notifiedUpdate = "";
 	private volatile boolean mapNoticeChecked;
 	private final TsgHubChatQueue queued = new TsgHubChatQueue();
@@ -170,6 +171,7 @@ final class TsgHubChat
 		}
 		String message = new ChatMessageBuilder().append(config.chatColor(), "[" + tag + "] ").build() + body.build().replace("<colHIGHLIGHT>", ColorUtil.colorTag(config.chatColor()));
 		localMessages.add(Text.removeTags(message));
+		while (localMessages.size() > MAX_ECHOES) localMessages.poll();
 		chatMessageManager.queue(QueuedMessage.builder().type(ChatMessageType.CLAN_MESSAGE).sender(clan.name()).runeLiteFormattedMessage(message).build());
 	}
 }

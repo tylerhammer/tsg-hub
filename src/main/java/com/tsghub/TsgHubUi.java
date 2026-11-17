@@ -25,6 +25,8 @@ import static com.tsghub.TsgHubTheme.*;
 
 final class TsgHubUi
 {
+	static final int TEXT_W = 215;
+	static final int CARD_TEXT_W = 185;
 	private static final String LAZY_TOOLTIP = "tsgHub.lazyTooltip";
 	private static final String NO_FULL_TEXT = "tsgHub.noFullText";
 	private static final int COIN_ICON_W = 18;
@@ -115,11 +117,37 @@ final class TsgHubUi
 		return label(text, MUTED, smallFont());
 	}
 
-	static JLabel listHeading(String text, boolean first)
+	static JComponent listHeading(String text, boolean first, JComponent right)
 	{
-		JLabel heading = caption(text.toUpperCase());
+		JLabel label = caption(text.toUpperCase());
+		JComponent heading = right == null ? label : fitHeight(row(label, right));
 		heading.setBorder(BorderFactory.createEmptyBorder(first ? 0 : 6, 2, 4, 0));
 		return heading;
+	}
+
+	static JLabel hint(String text)
+	{
+		return wrapped(text, MUTED, smallFont(), TEXT_W);
+	}
+
+	static JLabel cardNote(String text)
+	{
+		return wrapped(text, MUTED, smallFont(), CARD_TEXT_W);
+	}
+
+	static JLabel cardNoteHtml(String innerHtml)
+	{
+		return label(html(innerHtml, CARD_TEXT_W), MUTED, smallFont());
+	}
+
+	static JPanel fillWidth(Component content)
+	{
+		JPanel slot = panel(new GridBagLayout());
+		GridBagConstraints fill = new GridBagConstraints();
+		fill.weightx = 1;
+		fill.fill = GridBagConstraints.HORIZONTAL;
+		slot.add(content, fill);
+		return slot;
 	}
 
 	static JLabel rankLabel(int rank, Font font, int width)
@@ -129,7 +157,7 @@ final class TsgHubUi
 		return label;
 	}
 
-	static JPanel emptyState(String heading, String body, int widthPx)
+	static JPanel errorPanel(String heading, String body)
 	{
 		JPanel panel = new JPanel();
 		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
@@ -137,12 +165,11 @@ final class TsgHubUi
 		panel.setBorder(BorderFactory.createEmptyBorder(40, 0, 20, 0));
 		JLabel title = boldLabel(heading);
 		title.setAlignmentX(Component.CENTER_ALIGNMENT);
-		JLabel text = caption(html("<div style='text-align:center'>" + escape(body) + "</div>", widthPx));
+		JLabel text = caption(html("<div style='text-align:center'>" + escape(body) + "</div>", TEXT_W - 20));
 		text.setAlignmentX(Component.CENTER_ALIGNMENT);
 		text.setHorizontalAlignment(JLabel.CENTER);
 		panel.add(title);
-		panel.add(gap(GAP_M));
-		panel.add(text);
+		addGap(panel, GAP_M, text);
 		panel.setAlignmentX(Component.LEFT_ALIGNMENT);
 		panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, panel.getPreferredSize().height));
 		return panel;
@@ -156,8 +183,7 @@ final class TsgHubUi
 			@Override
 			protected void paintComponent(Graphics g)
 			{
-				Graphics2D g2 = (Graphics2D) g.create();
-				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+				Graphics2D g2 = smooth(g);
 				g2.setColor(fill);
 				g2.fillRoundRect(0, 0, getWidth(), getHeight(), getHeight(), getHeight());
 				g2.dispose();
@@ -194,6 +220,26 @@ final class TsgHubUi
 	{
 		list.add(card);
 		list.add(gap(LIST_GAP));
+	}
+
+	static void addGap(Container list, int height, Component part)
+	{
+		list.add(gap(height));
+		list.add(part);
+	}
+
+	static <T extends JComponent> T withPopup(T component, JPopupMenu menu)
+	{
+		component.setComponentPopupMenu(menu);
+		eachDeep(component, c -> {
+			if (c != component && c instanceof JComponent) ((JComponent) c).setInheritsPopupMenu(true);
+		});
+		return component;
+	}
+
+	static JMenuItem item(JPopupMenu menu, String text, Runnable action)
+	{
+		return menu.add(onClick(new JMenuItem(text), action));
 	}
 
 	static JPanel stack()
@@ -244,8 +290,7 @@ final class TsgHubUi
 	{
 		JPanel text = stack();
 		text.add(top);
-		text.add(gap(GAP_XS));
-		text.add(bottom);
+		addGap(text, GAP_XS, bottom);
 		return text;
 	}
 
@@ -253,7 +298,7 @@ final class TsgHubUi
 	{
 		boolean active = "active".equals(str(event, "status"));
 		Instant start = eventStart(event), end = eventEnd(event);
-		boolean dated = !active && start != null && start.toEpochMilli() > TsgHubFormat.clock.millis();
+		boolean dated = !active && start != null && start.toEpochMilli() > clock.millis();
 		JPanel extras = inline();
 		if (bool(event, "hidden")) inline(extras, badge("Hidden", MUTED));
 		JLabel prize = prizeLabel(event, null, coins);
@@ -262,11 +307,11 @@ final class TsgHubUi
 		lines.add(fitHeight(dated ? row(shrinkable(boldLabel(eventName(event))), new JLabel()) : row(shrinkable(boldLabel(eventName(event))), extras)));
 		if (active && start != null && end != null && end.isAfter(start))
 		{
-			long now = TsgHubFormat.clock.millis();
+			long now = clock.millis();
 			lines.add(progressBar((int) ((now - start.toEpochMilli()) / 60000), (int) ((end.toEpochMilli() - start.toEpochMilli()) / 60000), null, null));
 		}
 		lines.add(gap(GAP_XS));
-		boolean soon = dated && start.toEpochMilli() - TsgHubFormat.clock.millis() < 86_400_000L;
+		boolean soon = dated && start.toEpochMilli() - clock.millis() < 86_400_000L;
 		JLabel countdown = label(eventCountdown(event), active ? SUCCESS : soon ? ACCENT : MUTED, smallFont());
 		if (dated) inline(extras, countdown);
 		lines.add(fitHeight(row(shrinkable(caption(eventDetail(event))), dated ? extras : countdown)));
@@ -390,7 +435,7 @@ final class TsgHubUi
 			if (more != null && !more.isEmpty()) parts.add(more);
 			String side = corner == null ? "" : corner.get();
 			if (parts.isEmpty() && side.isEmpty()) return null;
-			String body = TsgHubHtml.withCorner(String.join("<br>", parts), side);
+			String body = withCorner(String.join("<br>", parts), side);
 			return tooltipHtml(body);
 		});
 	}
@@ -454,8 +499,7 @@ final class TsgHubUi
 			@Override
 			protected void paintComponent(Graphics g)
 			{
-				Graphics2D g2 = (Graphics2D) g.create();
-				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+				Graphics2D g2 = smooth(g);
 				int y = (getHeight() - 4) / 2;
 				g2.setColor(SLOT);
 				g2.fillRoundRect(0, y, getWidth(), 4, 4, 4);
@@ -506,8 +550,7 @@ final class TsgHubUi
 			protected void paintThumb(Graphics g, JComponent c, Rectangle thumb)
 			{
 				if (thumb.isEmpty()) return;
-				Graphics2D g2 = (Graphics2D) g.create();
-				g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+				Graphics2D g2 = smooth(g);
 				g2.setColor(isThumbRollover() || isDragging ? DIM : BORDER_HOVER);
 				g2.fillRoundRect(thumb.x + 3, thumb.y, thumb.width - 3, thumb.height, 5, 5);
 				g2.dispose();
@@ -743,6 +786,12 @@ final class TsgHubUi
 			row.add(label(formatGp(prizes.get(i)), coinColor(prizes.get(i)), font));
 		}
 		return fitHeight(row);
+	}
+
+	static void addPrizes(Container lines, JsonObject event)
+	{
+		JPanel prizes = prizeRow(event, smallFont());
+		if (prizes != null) addGap(lines, GAP_S, prizes);
 	}
 
 	static Color levelColor(int current, int max)

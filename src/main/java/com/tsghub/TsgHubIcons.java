@@ -2,12 +2,17 @@ package com.tsghub;
 
 import java.awt.*;
 import java.awt.image.*;
+import java.util.*;
+import java.util.concurrent.*;
 import javax.swing.*;
+import javax.swing.Timer;
 import net.runelite.client.util.*;
 import static com.tsghub.TsgHubTheme.*;
 
 final class TsgHubIcons
 {
+	private static final Map<String, BufferedImage> CACHE = new ConcurrentHashMap<>();
+
 	private TsgHubIcons()
 	{
 	}
@@ -19,8 +24,7 @@ final class TsgHubIcons
 
 	static Glyph icon(String name, Color color, int height)
 	{
-		BufferedImage mask = mask(name);
-		return new Glyph(ImageUtil.fillImage(mask, color), null, null, height, mask);
+		return new Glyph(tint(name, color), null, null, height, mask(name));
 	}
 
 	static Glyph hover(String name)
@@ -30,13 +34,18 @@ final class TsgHubIcons
 
 	static Glyph hover(String name, Color hover)
 	{
-		BufferedImage mask = mask(name);
-		return new Glyph(ImageUtil.fillImage(mask, MUTED), ImageUtil.fillImage(mask, hover), ImageUtil.fillImage(mask, BORDER), 0, mask);
+		return new Glyph(tint(name, MUTED), tint(name, hover), tint(name, BORDER), 0, mask(name));
 	}
 
 	private static BufferedImage mask(String name)
 	{
-		return ImageUtil.loadImageResource(TsgHubIcons.class, "icons/" + name + ".png");
+		return CACHE.computeIfAbsent(name, n -> ImageUtil.loadImageResource(TsgHubIcons.class, "icons/" + n + ".png"));
+	}
+
+	private static BufferedImage tint(String name, Color color)
+	{
+		BufferedImage mask = mask(name);
+		return CACHE.computeIfAbsent(name + "#" + color.getRGB(), k -> ImageUtil.fillImage(mask, color));
 	}
 
 	static final class Glyph implements Icon
