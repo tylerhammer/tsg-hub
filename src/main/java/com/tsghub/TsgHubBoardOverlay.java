@@ -4,14 +4,15 @@ import com.google.gson.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.*;
+import java.awt.image.*;
 import java.util.*;
 import java.util.concurrent.*;
 import javax.swing.*;
-import net.runelite.client.input.MouseListener;
+import net.runelite.client.input.MouseAdapter;
 import net.runelite.client.ui.*;
 import net.runelite.client.ui.overlay.*;
 
-final class TsgHubBoardOverlay extends Overlay implements MouseListener
+final class TsgHubBoardOverlay extends Overlay
 {
 	private static final int PAD = 8;
 	private static final int GAP = 3;
@@ -31,6 +32,9 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 	private volatile long peekOpened;
 	private volatile long peekClosing;
 	private volatile int[] hover;
+	private volatile int version;
+	private BufferedImage cache;
+	private int cacheVersion;
 
 	private final Runnable onPeek;
 
@@ -38,6 +42,7 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 	{
 		this.icons = icons;
 		this.onPeek = onPeek;
+		icons.onLoaded(() -> version++);
 		setPosition(OverlayPosition.TOP_LEFT);
 		setLayer(OverlayLayer.ABOVE_WIDGETS);
 		setPriority(Overlay.PRIORITY_LOW);
@@ -55,6 +60,7 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 		flips.clear();
 		peekId = null;
 		hover = null;
+		version++;
 	}
 
 	void setView(TsgHubBingoView view)
@@ -69,75 +75,78 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 		else TsgHubBoardGrid.queueFlips(flips, view.board, previous.done, view.done);
 		inLines = TsgHubBoardGrid.cellsInLines(view.board, view.lines);
 		snapshot = view;
+		version++;
 	}
 
 	@Override
 	public Dimension render(Graphics2D graphics)
 	{
 		TsgHubBingoView data = snapshot;
-		Set<Integer> lit = inLines;
 		if (!visible || data == null || data.tasks.isEmpty()) return null;
-		TsgHubBingoBoard board = data.board;
-		int n = board.size;
+		int n = data.board.size;
 		int cell = n <= 4 ? 44 : n <= 5 ? 38 : n <= 7 ? 32 : 26;
 		int gridW = cell * n + GAP * (n - 1);
 		layoutCell = cell;
 		layoutSize = n;
 		int width = gridW + PAD * 2;
 		int height = HEADER + gridW + FOOTER + PAD * 2;
+		long now = System.currentTimeMillis();
 		Graphics2D g = (Graphics2D) graphics.create();
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+		if (flips.isEmpty())
+		{
+			int v = version;
+			if (cache == null || cacheVersion != v || cache.getWidth() != width || cache.getHeight() != height)
+			{
+				cache = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+				Graphics2D c = cache.createGraphics();
+				c.setRenderingHints(g.getRenderingHints());
+				paintBoard(c, data, cell, gridW, width, height, now);
+				c.dispose();
+				cacheVersion = v;
+			}
+			g.drawImage(cache, 0, 0, null);
+		}
+		else paintBoard(g, data, cell, gridW, width, height, now);
+		paintPeek(g, data, now, cell, PAD + HEADER, gridW, FontManager.getRunescapeSmallFont());
+		g.dispose();
+		return new Dimension(width, height);
+	}
+
+	private void paintBoard(Graphics2D g, TsgHubBingoView data, int cell, int gridW, int width, int height, long now)
+	{
+		int n = data.board.size;
+		Set<Integer> lit = inLines;
 		g.setColor(new Color(20, 20, 20, 215));
 		g.fill(new RoundRectangle2D.Double(0, 0, width, height, 10, 10));
 		g.setColor(new Color(90, 90, 90, 200));
 		g.draw(new RoundRectangle2D.Double(0.5, 0.5, width - 1, height - 1, 10, 10));
 
-		Font bold = FontManager.getRunescapeBoldFont();
-		g.setFont(bold);
+		g.setFont(FontManager.getRunescapeBoldFont());
 		FontMetrics metrics = g.getFontMetrics();
-		String name = data.name;
-		while (metrics.stringWidth(name) > gridW && name.length() > 3) name = name.substring(0, name.length() - 2) + "…";
 		g.setColor(TsgHubBoardGrid.GOLD);
-		g.drawString(name, PAD, PAD + metrics.getAscent() - 2);
+		g.drawString(TsgHubBoardGrid.ellipsize(metrics, data.name, gridW), PAD, PAD + metrics.getAscent() - 2);
 
-		long now = System.currentTimeMillis();
 		Font small = FontManager.getRunescapeSmallFont();
 		int top = PAD + HEADER;
-		boolean flipping = false;
+		boolean[] flipping = {false};
 		int[] hovered = hover;
-		for (int row = 0; row < n; row++)
-		{
-			for (int col = 0; col < n; col++)
-			{
-				int x = PAD + col * (cell + GAP);
-				int y = top + row * (cell + GAP);
-				String id = board.taskAt(row, col);
-				if (id == null)
-				{
-					TsgHubBoardGrid.paintEmpty(g, x, y, cell);
-					continue;
-				}
-				JsonObject task = data.tasks.get(id);
-				TsgHubBoardGrid.Tile tile = new TsgHubBoardGrid.Tile(task, data.progress.get(id), data.done.contains(id), lit.contains(row * n + col), false, hovered != null && hovered[0] == row && hovered[1] == col, icons.icon(task));
-				if (TsgHubBoardGrid.paintFlip(g, x, y, cell, tile, small, false, flips.get(id), now)) flipping = true;
-				else flips.remove(id);
-			}
-		}
-		if (!flipping) for (TsgHubBingoBoard.Line line : data.lines) TsgHubBoardGrid.paintLine(g, PAD, top, cell, GAP, n, line, 1, false);
-		paintPeek(g, data, now, cell, top, gridW, small);
+		TsgHubBoardGrid.paintCells(g, data.board, PAD, top, cell, GAP, (row, col, x, y, id) -> {
+			JsonObject task = data.tasks.get(id);
+			TsgHubBoardGrid.Tile tile = new TsgHubBoardGrid.Tile(task, data.progress.get(id), data.done.contains(id), lit.contains(row * n + col), false, hovered != null && hovered[0] == row && hovered[1] == col, icons.icon(task));
+			if (TsgHubBoardGrid.paintFlip(g, x, y, cell, tile, small, false, flips.get(id), now)) flipping[0] = true;
+			else flips.remove(id);
+		});
+		if (!flipping[0]) for (TsgHubBingoBoard.Line line : data.lines) TsgHubBoardGrid.paintLine(g, PAD, top, cell, GAP, n, line, 1, false);
 
 		g.setFont(small);
 		metrics = g.getFontMetrics();
-		int left = data.left();
-		String status = left + " left · " + data.lines.size() + (data.lines.size() == 1 ? " line" : " lines");
 		g.setColor(TsgHubTheme.MUTED);
-		g.drawString(status, PAD, height - PAD - 2);
+		g.drawString(data.left() + " left · " + TsgHubFormat.plural(data.lines.size(), "line"), PAD, height - PAD - 2);
 		String points = data.points + " pts";
 		g.setColor(TsgHubTheme.TEXT);
 		g.drawString(points, width - PAD - metrics.stringWidth(points), height - PAD - 2);
-		g.dispose();
-		return new Dimension(width, height);
 	}
 
 	private double peekProgress(long now)
@@ -154,14 +163,14 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 
 	private Rectangle2D.Double peekRect(String id, TsgHubBingoView data, int cell, int top, int gridW, double p)
 	{
-		int[] at = data.cellOf(id);
+		int[] at = data.board.cellOf(id);
 		if (at == null) return null;
 		double x = PAD + at[1] * (cell + GAP);
 		double y = top + at[0] * (cell + GAP);
 		double size = Math.min(gridW, Math.max(cell * 2.6, 112));
 		double cx = Math.max(PAD + size / 2, Math.min(PAD + gridW - size / 2, x + cell / 2.0));
 		double cy = Math.max(top + size / 2, Math.min(top + gridW - size / 2, y + cell / 2.0));
-		double e = 1 - Math.pow(1 - p, 3);
+		double e = TsgHubRevealOverlay.easeOutCubic(p);
 		double w = cell + (size - cell) * e;
 		double mx = (x + cell / 2.0) + (cx - (x + cell / 2.0)) * e;
 		double my = (y + cell / 2.0) + (cy - (y + cell / 2.0)) * e;
@@ -260,59 +269,66 @@ final class TsgHubBoardOverlay extends Overlay implements MouseListener
 		return visible && snapshot != null && !event.isAltDown() && SwingUtilities.isLeftMouseButton(event);
 	}
 
-	@Override public MouseEvent mousePressed(MouseEvent event)
+	final MouseAdapter mouse = new MouseAdapter()
 	{
-		TsgHubBingoView data = snapshot;
-		if (data == null || !active(event)) return event;
-		Point point = local(event);
-		if (point == null) return event;
-		event.consume();
-		long now = System.currentTimeMillis();
-		String open = peekId;
-		if (open != null && peekClosing == 0)
+		@Override public MouseEvent mousePressed(MouseEvent event)
 		{
-			Rectangle2D.Double rect = peekRect(open, data, layoutCell, PAD + HEADER, layoutCell * layoutSize + GAP * (layoutSize - 1), 1);
-			if (rect != null && rect.contains(point))
+			TsgHubBingoView data = snapshot;
+			if (data == null || !active(event)) return event;
+			Point point = local(event);
+			if (point == null) return event;
+			event.consume();
+			long now = System.currentTimeMillis();
+			String open = peekId;
+			if (open != null && peekClosing == 0)
 			{
-				peekClosing = now;
-				return event;
+				Rectangle2D.Double rect = peekRect(open, data, layoutCell, PAD + HEADER, layoutCell * layoutSize + GAP * (layoutSize - 1), 1);
+				if (rect != null && rect.contains(point))
+				{
+					peekClosing = now;
+					return event;
+				}
 			}
+			int[] at = tileAt(point);
+			String id = at == null ? null : data.board.taskAt(at[0], at[1]);
+			if (id == null) return event;
+			onPeek.run();
+			peekId = id;
+			peekOpened = now;
+			peekClosing = 0;
+			return event;
 		}
-		int[] at = tileAt(point);
-		String id = at == null ? null : data.board.taskAt(at[0], at[1]);
-		if (id == null) return event;
-		onPeek.run();
-		peekId = id;
-		peekOpened = now;
-		peekClosing = 0;
-		return event;
-	}
 
-	@Override public MouseEvent mouseReleased(MouseEvent event)
+		@Override public MouseEvent mouseReleased(MouseEvent event)
+		{
+			if (active(event) && local(event) != null) event.consume();
+			return event;
+		}
+
+		@Override public MouseEvent mouseClicked(MouseEvent event)
+		{
+			if (active(event) && local(event) != null) event.consume();
+			return event;
+		}
+
+		@Override public MouseEvent mouseMoved(MouseEvent event)
+		{
+			Point point = visible ? local(event) : null;
+			setHover(point == null ? null : tileAt(point));
+			return event;
+		}
+
+		@Override public MouseEvent mouseExited(MouseEvent event)
+		{
+			setHover(null);
+			return event;
+		}
+	};
+
+	private void setHover(int[] at)
 	{
-		if (active(event) && local(event) != null) event.consume();
-		return event;
+		if (Arrays.equals(at, hover)) return;
+		hover = at;
+		version++;
 	}
-
-	@Override public MouseEvent mouseClicked(MouseEvent event)
-	{
-		if (active(event) && local(event) != null) event.consume();
-		return event;
-	}
-
-	@Override public MouseEvent mouseMoved(MouseEvent event)
-	{
-		Point point = visible ? local(event) : null;
-		hover = point == null ? null : tileAt(point);
-		return event;
-	}
-
-	@Override public MouseEvent mouseExited(MouseEvent event)
-	{
-		hover = null;
-		return event;
-	}
-
-	@Override public MouseEvent mouseEntered(MouseEvent event) { return event; }
-	@Override public MouseEvent mouseDragged(MouseEvent event) { return event; }
 }

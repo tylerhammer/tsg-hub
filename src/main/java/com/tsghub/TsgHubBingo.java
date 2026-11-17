@@ -40,9 +40,9 @@ final class TsgHubBingo
 	{
 		boardOverlay.setVisible(config.bingoOverlay());
 		overlayManager.add(boardOverlay);
-		mouseManager.registerMouseListener(boardOverlay);
+		mouseManager.registerMouseListener(boardOverlay.mouse);
 		overlayManager.add(revealOverlay);
-		mouseManager.registerMouseListener(revealOverlay);
+		mouseManager.registerMouseListener(revealOverlay.mouse);
 	}
 
 	void stop()
@@ -50,9 +50,9 @@ final class TsgHubBingo
 		clear();
 		boardOverlay.setVisible(false);
 		overlayManager.remove(boardOverlay);
-		mouseManager.unregisterMouseListener(boardOverlay);
+		mouseManager.unregisterMouseListener(boardOverlay.mouse);
 		overlayManager.remove(revealOverlay);
-		mouseManager.unregisterMouseListener(revealOverlay);
+		mouseManager.unregisterMouseListener(revealOverlay.mouse);
 		sounds.shutdown();
 	}
 

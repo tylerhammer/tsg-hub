@@ -5,7 +5,6 @@ import java.awt.image.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.*;
-import javax.swing.*;
 import net.runelite.api.gameval.*;
 import net.runelite.client.game.*;
 import net.runelite.client.hiscore.*;
@@ -18,17 +17,10 @@ final class TsgHubTileIcons
 	private final IntFunction<AsyncBufferedImage> items;
 	private final SpriteManager spriteManager;
 	private final Map<Integer, AsyncBufferedImage> itemCache = new ConcurrentHashMap<>();
-	private final Set<Integer> watched = ConcurrentHashMap.newKeySet();
 	private final Map<Integer, BufferedImage> spriteCache = new ConcurrentHashMap<>();
 	private final Set<Integer> requested = ConcurrentHashMap.newKeySet();
 	private final List<Runnable> listeners = new CopyOnWriteArrayList<>();
-	private final JLabel repainter = new JLabel()
-	{
-		@Override public void repaint()
-		{
-			loaded();
-		}
-	};
+	private final Map<JsonObject, Integer> resolved = Collections.synchronizedMap(new IdentityHashMap<>());
 
 	TsgHubTileIcons(IntFunction<AsyncBufferedImage> items, SpriteManager spriteManager)
 	{
@@ -48,20 +40,34 @@ final class TsgHubTileIcons
 
 	BufferedImage icon(JsonObject task)
 	{
-		int itemId = itemFor(task);
-		if (itemId > 0 && items != null)
+		if (task == null) return null;
+		Integer id = resolved.get(task);
+		if (id == null)
 		{
-			AsyncBufferedImage image = itemCache.get(itemId);
-			if (image == null)
-			{
-				image = items.apply(itemId);
-				if (image == null) return null;
-				itemCache.put(itemId, image);
-			}
-			if (SwingUtilities.isEventDispatchThread() && watched.add(itemId)) image.addTo(repainter);
-			return image;
+			if (resolved.size() > 1000) resolved.clear();
+			int itemId = itemFor(task);
+			id = itemId > 0 ? itemId : -spriteFor(task);
+			resolved.put(task, id);
 		}
-		int spriteId = spriteFor(task);
+		return id > 0 ? item(id) : sprite(-id);
+	}
+
+	private BufferedImage item(int itemId)
+	{
+		if (items == null) return null;
+		AsyncBufferedImage image = itemCache.get(itemId);
+		if (image == null)
+		{
+			image = items.apply(itemId);
+			if (image == null) return null;
+			itemCache.put(itemId, image);
+			image.onLoaded(this::loaded);
+		}
+		return image;
+	}
+
+	private BufferedImage sprite(int spriteId)
+	{
 		if (spriteId <= 0 || spriteManager == null) return null;
 		BufferedImage sprite = spriteCache.get(spriteId);
 		if (sprite == null && requested.add(spriteId))

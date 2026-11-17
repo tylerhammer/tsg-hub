@@ -51,12 +51,4 @@ final class TsgHubBingoView
 		for (String id : tasks.keySet()) if (!done.contains(id)) left++;
 		return left;
 	}
-
-	int[] cellOf(String id)
-	{
-		for (int row = 0; row < board.size; row++)
-			for (int col = 0; col < board.size; col++)
-				if (id.equals(board.taskAt(row, col))) return new int[]{row, col};
-		return null;
-	}
 }
