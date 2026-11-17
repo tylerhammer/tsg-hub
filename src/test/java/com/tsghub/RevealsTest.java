@@ -10,6 +10,7 @@ import com.google.gson.JsonObject;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Set;
 import net.runelite.client.hiscore.HiscoreSkill;
 import org.junit.Test;
 
@@ -203,6 +204,7 @@ public class RevealsTest
 		row.addProperty("completedBy", "Crab Legs");
 		row.addProperty("completed", completed);
 		event.getAsJsonArray("teamScores").get(0).getAsJsonObject().getAsJsonArray("tasks").add(row);
+		event.getAsJsonObject("board").getAsJsonArray("unplaced").add("t9");
 	}
 
 	@Test
@@ -249,33 +251,28 @@ public class RevealsTest
 	}
 
 	@Test
-	public void bossRaidAndSkillTasksUseHiscoreSprites()
+	public void tileSpritesComeFromServerHiscoreNames()
 	{
-		assertEquals(HiscoreSkill.VORKATH.getSpriteId(), TsgHubTileIcons.spriteFor(task("kill", "npcName", "Vorkath")));
-		assertEquals(HiscoreSkill.ALCHEMICAL_HYDRA.getSpriteId(), TsgHubTileIcons.spriteFor(task("kill", "npcName", "alchemical hydra")));
-		assertEquals(HiscoreSkill.MINING.getSpriteId(), TsgHubTileIcons.spriteFor(task("xp", "skill", "MINING")));
-		JsonObject raid = task("raid", "npcName", "");
-		JsonArray modes = new JsonArray();
-		modes.add("tob_hm");
-		raid.getAsJsonObject("config").add("modes", modes);
-		assertEquals(HiscoreSkill.THEATRE_OF_BLOOD_HARD_MODE.getSpriteId(), TsgHubTileIcons.spriteFor(raid));
-		assertEquals(0, TsgHubTileIcons.spriteFor(task("kill", "npcName", "Goblin")));
-		assertEquals(0, TsgHubTileIcons.spriteFor(task("manual", "npcName", "")));
+		assertEquals(HiscoreSkill.VORKATH.getSpriteId(), TsgHubTileIcons.spriteFor(icon("iconBosses", "Vorkath")));
+		assertEquals(HiscoreSkill.ALCHEMICAL_HYDRA.getSpriteId(), TsgHubTileIcons.spriteFor(icon("iconBosses", "alchemical hydra")));
+		assertEquals(HiscoreSkill.DAGANNOTH_PRIME.getSpriteId(), TsgHubTileIcons.spriteFor(icon("iconBosses", "Goblin", "Dagannoth Prime")));
+		assertEquals(HiscoreSkill.THEATRE_OF_BLOOD_HARD_MODE.getSpriteId(), TsgHubTileIcons.spriteFor(icon("iconBosses", "Theatre of Blood: Hard Mode")));
+		assertEquals(HiscoreSkill.MINING.getSpriteId(), TsgHubTileIcons.spriteFor(icon("iconSkill", "MINING")));
+		assertEquals(0, TsgHubTileIcons.spriteFor(icon("iconBosses", "Goblin")));
+		assertEquals(0, TsgHubTileIcons.spriteFor(new JsonObject()));
 	}
 
-	@Test
-	public void malformedItemConfigHasNoIcon()
+	private static JsonObject icon(String key, String... names)
 	{
-		JsonObject task = task("drop", "itemGroup", "");
-		JsonArray groups = new JsonArray();
-		JsonArray first = new JsonArray();
-		first.add(4151);
-		groups.add(first);
-		JsonArray ids = new JsonArray();
-		ids.add("abc");
-		task.getAsJsonObject("config").add("itemGroups", groups);
-		task.getAsJsonObject("config").add("itemIds", ids);
-		assertEquals(0, TsgHubTileIcons.itemFor(task));
+		JsonObject task = new JsonObject();
+		if (key.equals("iconSkill")) task.addProperty(key, names[0]);
+		else
+		{
+			JsonArray list = new JsonArray();
+			for (String name : names) list.add(name);
+			task.add(key, list);
+		}
+		return task;
 	}
 
 	@Test
@@ -291,16 +288,6 @@ public class RevealsTest
 		JsonObject list = event("red");
 		list.remove("board");
 		assertNull(TsgHubBingoView.of(list, "red"));
-	}
-
-	private static JsonObject task(String type, String key, String value)
-	{
-		JsonObject task = new JsonObject();
-		task.addProperty("type", type);
-		JsonObject config = new JsonObject();
-		config.addProperty(key, value);
-		task.add("config", config);
-		return task;
 	}
 
 	private static JsonObject event(String teamId, String... done)
@@ -328,14 +315,47 @@ public class RevealsTest
 		JsonObject board = new JsonObject();
 		board.addProperty("size", 3);
 		board.addProperty("lineBonus", 5);
+		JsonArray tiles = new JsonArray();
+		for (int i = 0; i < 9; i++)
+		{
+			JsonObject tile = new JsonObject();
+			tile.addProperty("taskId", "t" + i);
+			tile.addProperty("row", i / 3);
+			tile.addProperty("col", i % 3);
+			tiles.add(tile);
+		}
+		board.add("tiles", tiles);
+		board.add("unplaced", new JsonArray());
 		event.add("board", board);
 		JsonObject score = new JsonObject();
 		score.addProperty("teamId", teamId);
 		score.add("tasks", rows);
+		score.add("lineKeys", lineKeys(new HashSet<>(Arrays.asList(done))));
 		JsonArray scores = new JsonArray();
 		scores.add(score);
 		event.add("teamScores", scores);
 		return event;
+	}
+
+	private static JsonArray lineKeys(Set<String> done)
+	{
+		JsonArray keys = new JsonArray();
+		String[] names = {"ROW", "COLUMN", "DIAGONAL", "ANTI_DIAGONAL"};
+		for (int d = 0; d < 4; d++)
+		{
+			for (int index = 0; index < (d < 2 ? 3 : 1); index++)
+			{
+				boolean full = true;
+				for (int i = 0; i < 3; i++)
+				{
+					int row = d == 0 ? index : i;
+					int col = d == 0 ? i : d == 1 ? index : d == 2 ? i : 2 - i;
+					full &= done.contains("t" + (row * 3 + col));
+				}
+				if (full) keys.add(names[d] + ":" + index);
+			}
+		}
+		return keys;
 	}
 
 	private static TsgHubReveals.Moment update(TsgHubReveals reveals, JsonObject event, String teamId, String playerName)

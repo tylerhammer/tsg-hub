@@ -97,13 +97,11 @@ final class TsgHubNewsWindow extends JPanel
 			byline = wrapped(str(announcement, "postedBy") + " · " + shortDate(str(announcement, "postedAt"), clock.instant(), ZoneId.systemDefault()), MUTED, smallFont(), width);
 			page.add(byline);
 			JsonArray blocks = array(announcement, "blocks");
-			String body = str(announcement, "body");
-			if (blocks.size() > 0 || !body.isEmpty()) page.add(gap(GAP_L));
-			if (blocks.size() == 0 && !body.isEmpty()) page.add(linkedHtml(postHtml(body), TEXT, plainFont(), width));
+			if (blocks.size() > 0) page.add(gap(GAP_L));
 			for (JsonObject block : objects(blocks))
 			{
 				String type = str(block, "type");
-				if (type.equals("text")) page.add(linkedHtml(postHtml(str(block, "text")), TEXT, plainFont(), width));
+				if (type.equals("text")) page.add(linkedHtml(medals(str(block, "html")), TEXT, plainFont(), width));
 				else if (type.equals("divider")) page.add(divider());
 				else if (type.equals("images")) addImages(array(block, "images"));
 			}

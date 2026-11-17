@@ -9,23 +9,29 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 import org.junit.Test;
 
 public class BingoBoardTest
 {
 	@Test
-	public void oldEventWithoutBoardFillsTasksInOrder()
+	public void boardUsesTheServerLayout()
 	{
-		TsgHubBingoBoard board = TsgHubBingoBoard.of(event(5));
-		assertEquals(3, board.size);
-		assertEquals("t0", board.taskAt(0, 0));
-		assertEquals("t3", board.taskAt(1, 0));
-		assertEquals("t4", board.taskAt(1, 1));
-		assertNull(board.taskAt(2, 2));
-		assertTrue(board.unplaced.isEmpty());
+		JsonObject event = event(11);
+		JsonObject board = new JsonObject();
+		board.addProperty("size", 3);
+		board.add("tiles", tiles(tile("t0", 2, 2), tile("t1", 0, 0), tile("t2", 0, 1)));
+		JsonArray unplaced = new JsonArray();
+		unplaced.add("t9");
+		unplaced.add("t10");
+		board.add("unplaced", unplaced);
+		event.add("board", board);
+		TsgHubBingoBoard resolved = TsgHubBingoBoard.of(event);
+		assertEquals(3, resolved.size);
+		assertEquals("t0", resolved.taskAt(2, 2));
+		assertEquals("t1", resolved.taskAt(0, 0));
+		assertEquals("t2", resolved.taskAt(0, 1));
+		assertNull(resolved.taskAt(1, 1));
+		assertEquals(Arrays.asList("t9", "t10"), resolved.unplaced);
 	}
 
 	@Test
@@ -39,63 +45,11 @@ public class BingoBoardTest
 	}
 
 	@Test
-	public void defaultSizeFitsTasks()
+	public void lineKeysRoundTrip()
 	{
-		assertEquals(3, TsgHubBingoBoard.defaultSize(0));
-		assertEquals(3, TsgHubBingoBoard.defaultSize(9));
-		assertEquals(4, TsgHubBingoBoard.defaultSize(10));
-		assertEquals(5, TsgHubBingoBoard.defaultSize(25));
-		assertEquals(9, TsgHubBingoBoard.defaultSize(500));
-	}
-
-	@Test
-	public void savedLayoutIsUsedAndRepaired()
-	{
-		JsonObject event = event(4);
-		JsonObject board = new JsonObject();
-		board.addProperty("type", "grid");
-		board.addProperty("size", 3);
-		board.addProperty("mode", "shared");
-		board.addProperty("locked", true);
-		board.add("tiles", tiles(tile("t0", 2, 2), tile("gone", 0, 0), tile("t1", 2, 2), tile("t2", 7, 0)));
-		event.add("board", board);
-		TsgHubBingoBoard resolved = TsgHubBingoBoard.of(event);
-		assertEquals("t0", resolved.taskAt(2, 2));
-		assertEquals("t1", resolved.taskAt(0, 0));
-		assertEquals("t2", resolved.taskAt(0, 1));
-		assertEquals("t3", resolved.taskAt(0, 2));
-	}
-
-	@Test
-	public void tasksThatDoNotFitAreUnplaced()
-	{
-		JsonObject event = event(11);
-		JsonObject board = new JsonObject();
-		board.addProperty("size", 3);
-		event.add("board", board);
-		assertEquals(Arrays.asList("t9", "t10"), TsgHubBingoBoard.of(event).unplaced);
-	}
-
-	@Test
-	public void detectsRowsColumnsAndDiagonals()
-	{
-		TsgHubBingoBoard board = TsgHubBingoBoard.of(event(9));
-		assertEquals(Collections.emptyList(), board.completedLines(done()));
-		assertEquals(keys("ROW:0"), keys(board.completedLines(done("t0", "t1", "t2"))));
-		assertEquals(keys("COLUMN:1"), keys(board.completedLines(done("t1", "t4", "t7"))));
-		assertEquals(keys("DIAGONAL:0"), keys(board.completedLines(done("t0", "t4", "t8"))));
-		assertEquals(keys("ANTI_DIAGONAL:0"), keys(board.completedLines(done("t2", "t4", "t6"))));
-		assertEquals(keys("ROW:0", "COLUMN:0", "DIAGONAL:0", "ANTI_DIAGONAL:0"), keys(board.completedLines(done("t0", "t1", "t2", "t3", "t6", "t4", "t8"))));
-		assertEquals(keys("ROW:0", "COLUMN:0"), keys(board.completedLines(done("t0", "t1", "t2", "t3", "t6"))));
-		assertEquals(8, board.completedLines(done("t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8")).size());
-	}
-
-	@Test
-	public void emptyCellsBlockLines()
-	{
-		TsgHubBingoBoard board = TsgHubBingoBoard.of(event(8));
-		assertEquals(keys("ROW:0", "ROW:1", "COLUMN:0", "COLUMN:1", "ANTI_DIAGONAL:0"),
-			keys(board.completedLines(done("t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7"))));
+		for (String key : Arrays.asList("ROW:2", "COLUMN:0", "DIAGONAL:0", "ANTI_DIAGONAL:0")) assertEquals(key, TsgHubBingoBoard.Line.of(key).key());
+		assertEquals(TsgHubBingoBoard.Direction.COLUMN, TsgHubBingoBoard.Line.of("COLUMN:4").direction);
+		assertEquals(4, TsgHubBingoBoard.Line.of("COLUMN:4").index);
 	}
 
 	@Test
@@ -112,40 +66,19 @@ public class BingoBoardTest
 		board.add("bonuses", bonuses);
 		event.add("board", board);
 		TsgHubBingoBoard resolved = TsgHubBingoBoard.of(event);
-		List<TsgHubBingoBoard.Line> lines = resolved.completedLines(done("t0", "t1", "t2", "t3", "t6"));
-		assertEquals(2, lines.size());
-		assertEquals(17, resolved.bonusFor(lines));
+		assertEquals(17, resolved.bonusFor(Arrays.asList(TsgHubBingoBoard.Line.of("ROW:0"), TsgHubBingoBoard.Line.of("COLUMN:0"))));
 		assertEquals("Each line: +5, plus a hidden 1 to 9 pts", resolved.bonusRule());
-		assertEquals(8, resolved.allLines().size());
 	}
 
 	@Test
 	public void noBonusByDefault()
 	{
-		TsgHubBingoBoard board = TsgHubBingoBoard.of(event(9));
+		JsonObject event = event(9);
+		event.add("board", new JsonObject());
+		TsgHubBingoBoard board = TsgHubBingoBoard.of(event);
 		assertFalse(board.hasBonus());
 		assertEquals("", board.bonusRule());
-		assertEquals(0, board.bonusFor(board.completedLines(done("t0", "t1", "t2"))));
-	}
-
-	@Test
-	public void iconsComeFromItemTasks()
-	{
-		JsonObject set = new JsonObject();
-		set.addProperty("type", "drop");
-		JsonObject config = new JsonObject();
-		JsonArray groups = new JsonArray();
-		JsonArray group = new JsonArray();
-		JsonObject item = new JsonObject();
-		item.addProperty("id", 4716);
-		group.add(item);
-		groups.add(group);
-		config.add("itemGroups", groups);
-		set.add("config", config);
-		assertEquals(4716, TsgHubTileIcons.itemFor(set));
-		JsonObject manual = new JsonObject();
-		manual.addProperty("type", "manual");
-		assertEquals(0, TsgHubTileIcons.itemFor(manual));
+		assertEquals(0, board.bonusFor(Collections.singletonList(TsgHubBingoBoard.Line.of("ROW:0"))));
 	}
 
 	private static JsonObject event(int tasks)
@@ -177,22 +110,5 @@ public class BingoBoardTest
 		JsonArray array = new JsonArray();
 		for (JsonObject tile : tiles) array.add(tile);
 		return array;
-	}
-
-	private static Set<String> done(String... ids)
-	{
-		return new HashSet<>(Arrays.asList(ids));
-	}
-
-	private static Set<String> keys(String... keys)
-	{
-		return new HashSet<>(Arrays.asList(keys));
-	}
-
-	private static Set<String> keys(List<TsgHubBingoBoard.Line> lines)
-	{
-		Set<String> keys = new HashSet<>();
-		for (TsgHubBingoBoard.Line line : lines) keys.add(line.key());
-		return keys;
 	}
 }

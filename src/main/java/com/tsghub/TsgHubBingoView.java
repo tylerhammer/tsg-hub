@@ -36,7 +36,9 @@ final class TsgHubBingoView
 		tasks = Collections.unmodifiableMap(byId);
 		progress = Collections.unmodifiableMap(rows);
 		done = Collections.unmodifiableSet(completed);
-		lines = Collections.unmodifiableList(board.completedLines(completed));
+		List<TsgHubBingoBoard.Line> found = new ArrayList<>();
+		for (String line : strings(array(score, "lineKeys"))) found.add(TsgHubBingoBoard.Line.of(line));
+		lines = Collections.unmodifiableList(found);
 		points = integer(score, "points", 0);
 	}
 

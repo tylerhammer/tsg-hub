@@ -112,6 +112,16 @@ public class RevealSoundsTest
 		event.add("tasks", list);
 		JsonObject board = new JsonObject();
 		board.addProperty("size", size);
+		JsonArray cells = new JsonArray();
+		for (int i = 0; i < size * size; i++)
+		{
+			JsonObject tile = new JsonObject();
+			tile.addProperty("taskId", "t" + i);
+			tile.addProperty("row", i / size);
+			tile.addProperty("col", i % size);
+			cells.add(tile);
+		}
+		board.add("tiles", cells);
 		event.add("board", board);
 		List<TsgHubBingoBoard.Line> lines = line ? Collections.singletonList(new TsgHubBingoBoard.Line(TsgHubBingoBoard.Direction.ROW, 1)) : Collections.emptyList();
 		return new TsgHubReveals.Moment("", "Test", TsgHubBingoBoard.of(event), tasks, new HashMap<>(), new HashSet<>(), tiles, lines, Collections.emptyList(), Collections.emptyList());
