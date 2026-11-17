@@ -35,7 +35,6 @@ final class TsgHubAnnouncements
 		this.api = api;
 		this.chat = chat;
 		this.polls = new TsgHubNewsPoll(plugin, this, () -> {
-			plugin.windows().news(TsgHubNewsWindow::render);
 			plugin.ui(s -> s.newsView.setAnnouncements(list));
 			plugin.newsOverlay().refresh();
 		});
@@ -84,7 +83,6 @@ final class TsgHubAnnouncements
 		list = announcements;
 		SwingUtilities.invokeLater(() -> polls.reset(announcements));
 		plugin.ui(s -> s.newsView.setAnnouncements(announcements));
-		plugin.windows().news(w -> w.setAnnouncements(announcements));
 		alert(announcements);
 		plugin.newsOverlay().refresh();
 	}
