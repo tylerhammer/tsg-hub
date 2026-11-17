@@ -8,6 +8,7 @@ import com.google.gson.JsonObject;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import org.junit.Test;
 
 public class OutboxTest
@@ -18,7 +19,6 @@ public class OutboxTest
 	private final List<String> methods = new ArrayList<>();
 	private final List<Object[]> rejections = new ArrayList<>();
 	private boolean live = true;
-	private int protocol = 1;
 	private int status = 200;
 	private long now = 1_000;
 
@@ -41,19 +41,16 @@ public class OutboxTest
 			{
 				return live;
 			}
-
-			@Override
-			public int protocol()
-			{
-				return live ? protocol : 0;
-			}
 		};
 		return new TsgHubOutbox(link, (method, path, token, body) -> {
 			methods.add(method);
 			posted.add(body.deepCopy());
 			tokens.add(token);
-			if (status == -1) throw new IOException("offline");
-			if (status != 200) throw new TsgHubApi.HttpError(status, "HTTP " + status);
+			CompletableFuture<JsonObject> result = new CompletableFuture<>();
+			if (status == -1) result.completeExceptionally(new IOException("offline"));
+			else if (status != 200) result.completeExceptionally(new TsgHubApi.HttpError(status, "HTTP " + status));
+			else result.complete(new JsonObject());
+			return result;
 		}, () -> now);
 	}
 
@@ -87,6 +84,7 @@ public class OutboxTest
 		reports.flush();
 		assertTrue(posted.isEmpty());
 
+		live = false;
 		now += TsgHubOutbox.RETRY_MILLIS;
 		reports.flush();
 		assertEquals(1, posted.size());
@@ -130,6 +128,7 @@ public class OutboxTest
 		reports.failed(id, 429, "");
 		assertEquals(1, reports.size());
 
+		live = false;
 		now += TsgHubOutbox.RETRY_MILLIS;
 		status = 429;
 		reports.flush();
@@ -250,7 +249,6 @@ public class OutboxTest
 	@Test
 	public void answeringServerResendsUnansweredReportsOverSocket()
 	{
-		protocol = 2;
 		TsgHubOutbox reports = reports();
 		reports.report("broadcast", "/v1/broadcasts", drop());
 		now += TsgHubOutbox.RETRY_MILLIS;
@@ -276,7 +274,6 @@ public class OutboxTest
 	@Test
 	public void rateLimitedSignalIsResentAfterBackoff()
 	{
-		protocol = 2;
 		TsgHubOutbox outbox = reports();
 		assertTrue(outbox.signal("loot", signal(), false));
 		String id = lastId();
@@ -303,7 +300,6 @@ public class OutboxTest
 	@Test
 	public void clientErrorsDropAnyMessage()
 	{
-		protocol = 2;
 		TsgHubOutbox outbox = reports();
 		outbox.signal("chat", signal(), false);
 		outbox.failed(lastId(), 400, "Unknown message type");
@@ -322,29 +318,11 @@ public class OutboxTest
 	}
 
 	@Test
-	public void oldServerKeepsResendingUnackedSignals()
-	{
-		TsgHubOutbox outbox = reports();
-		outbox.signal("loot", signal(), false);
-		now += TsgHubOutbox.RETRY_MILLIS;
-		outbox.flush();
-		assertEquals(2, socketSent.size());
-		assertTrue(posted.isEmpty());
-		outbox.acked(lastId());
-		assertEquals(0, outbox.size());
-	}
-
-	@Test
-	public void requestsNeedAnsweringServer()
+	public void requestsNeedLiveSocket()
 	{
 		TsgHubOutbox outbox = reports();
 		JsonObject split = new JsonObject();
 		split.addProperty("active", true);
-		assertFalse(outbox.request("group.split", split, (status, message) -> rejections.add(new Object[] {status, message})));
-		assertEquals(0, outbox.size());
-		assertTrue(socketSent.isEmpty());
-
-		protocol = 2;
 		assertTrue(outbox.request("group.split", split, (status, message) -> rejections.add(new Object[] {status, message})));
 		assertEquals("group.split", socketSent.get(0).get("type").getAsString());
 		assertTrue(socketSent.get(0).has("id"));
@@ -359,7 +337,6 @@ public class OutboxTest
 	@Test
 	public void requestErrorsReachCaller()
 	{
-		protocol = 2;
 		TsgHubOutbox outbox = reports();
 		JsonObject split = new JsonObject();
 		split.addProperty("active", true);
@@ -380,34 +357,12 @@ public class OutboxTest
 	}
 
 	@Test
-	public void missingStatusIsFinalOnlyForAnsweringServer()
+	public void missingStatusIsFinal()
 	{
 		TsgHubOutbox outbox = reports();
 		outbox.signal("loot", signal(), false);
 		outbox.failed(lastId(), 0, "");
-		assertEquals(1, outbox.size());
-
-		protocol = 2;
-		outbox.signal("loot", signal(), false);
-		outbox.failed(lastId(), 0, "");
-		assertEquals(1, outbox.size());
-	}
-
-	@Test
-	public void reconnectToOldServerDropsRequests()
-	{
-		protocol = 2;
-		TsgHubOutbox outbox = reports();
-		outbox.request("group.split", new JsonObject(), (status, message) -> { });
-		outbox.signal("loot", signal(), false);
-		live = false;
-		now += TsgHubOutbox.MAX_RETRY_MILLIS;
-		outbox.flush();
-		live = true;
-		protocol = 1;
-		outbox.resend();
-		assertEquals(1, outbox.size());
-		assertEquals("loot", socketSent.get(socketSent.size() - 1).get("type").getAsString());
+		assertEquals(0, outbox.size());
 	}
 
 	@Test

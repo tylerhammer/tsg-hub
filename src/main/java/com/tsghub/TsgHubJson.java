@@ -10,6 +10,18 @@ final class TsgHubJson
 	{
 	}
 
+	static JsonObject obj(Object... keyValues)
+	{
+		JsonObject out = new JsonObject();
+		for (int i = 0; i < keyValues.length; i += 2)
+		{
+			Object value = keyValues[i + 1];
+			out.add((String) keyValues[i], value == null ? JsonNull.INSTANCE : value instanceof JsonElement ? (JsonElement) value
+				: value instanceof Number ? new JsonPrimitive((Number) value) : value instanceof Boolean ? new JsonPrimitive((Boolean) value) : new JsonPrimitive(value.toString()));
+		}
+		return out;
+	}
+
 	static List<String> strings(JsonArray array)
 	{
 		List<String> out = new ArrayList<>();

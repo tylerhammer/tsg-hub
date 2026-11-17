@@ -17,11 +17,14 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import okhttp3.OkHttpClient;
 import org.junit.After;
 import org.junit.Test;
@@ -47,7 +50,7 @@ public class SocketTest
 	private void connect(String ready) throws Exception
 	{
 		server = new ServerSocket(0);
-		socket = new TsgHubSocket(new OkHttpClient(), new Gson(), "http://127.0.0.1:" + server.getLocalPort(), executor, new Recorder());
+		socket = new TsgHubSocket(new OkHttpClient(), new Gson(), "http://127.0.0.1:" + server.getLocalPort(), executor, handlers(), state -> { });
 		socket.connect("TSGaming");
 		peer = server.accept();
 		peer.setSoTimeout(5_000);
@@ -60,15 +63,8 @@ public class SocketTest
 	public void readyCarriesProtocol() throws Exception
 	{
 		connect("{\"type\":\"ready\",\"rules\":\"v1\",\"protocol\":\"2\"}");
-		assertEquals(2, socket.protocol());
+		assertTrue(socket.isLive());
 		assertTrue(requestLine, requestLine.contains("protocol=2"));
-	}
-
-	@Test
-	public void oldServerIsProtocolOne() throws Exception
-	{
-		connect("{\"type\":\"ready\",\"rules\":\"v1\"}");
-		assertEquals(1, socket.protocol());
 	}
 
 	@Test
@@ -171,24 +167,18 @@ public class SocketTest
 		}
 	}
 
-	private final class Recorder implements TsgHubSocket.Listener
+	private Map<String, Consumer<JsonObject>> handlers()
 	{
-		@Override public void onConnection(TsgHubSocket.State state) { }
-		@Override public void onSnapshot(JsonObject message) { }
-		@Override public void onReady(String rulesVersion) { events.add("ready"); }
-		@Override public void onRulesChanged(String version) { }
-		@Override public void onChanged(String topic, String eventId) { }
-		@Override public void onAdminRevoked(String token) { }
-		@Override public void onAnnouncement(String text) { }
-		@Override public void onUpdateAvailable(String version) { }
-		@Override public void onChatMessage(String tag, String text) { events.add("chat [" + tag + "] " + text); }
-		@Override public void onAck(String id) { events.add("ack " + id); }
-		@Override public void onRejected(String id, int status, String message) { events.add("rejected " + id + " " + status + " " + message); }
-		@Override public void onSubscribed() { }
-		@Override public void onReply(JsonObject message) { }
-		@Override public void onXpRequest(String skills) { }
-		@Override public void onScreenshotRequest(String id, String token) { }
-		@Override public void onGroupHeartbeat(JsonObject message) { }
-		@Override public void onGroupRejected(int status) { events.add("group " + status); }
+		Map<String, Consumer<JsonObject>> handlers = new HashMap<>();
+		handlers.put("ready", m -> events.add("ready"));
+		handlers.put("chat.message", m -> {
+			if (!m.get("text").getAsString().isEmpty()) events.add("chat [" + m.get("tag").getAsString() + "] " + m.get("text").getAsString());
+		});
+		handlers.put("ack", m -> events.add("ack " + m.get("id").getAsString()));
+		handlers.put("error", m -> {
+			if (m.has("id")) events.add("rejected " + m.get("id").getAsString() + " " + m.get("status").getAsString() + " " + m.get("message").getAsString());
+			else events.add("group " + m.get("status").getAsString());
+		});
+		return handlers;
 	}
 }

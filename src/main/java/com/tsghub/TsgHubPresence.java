@@ -8,7 +8,7 @@ import java.time.*;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.*;
-import java.util.function.*;
+import lombok.*;
 import net.runelite.api.*;
 import net.runelite.api.clan.*;
 import net.runelite.api.coords.*;
@@ -18,6 +18,7 @@ import net.runelite.client.callback.*;
 import net.runelite.client.game.*;
 import net.runelite.client.util.*;
 
+@RequiredArgsConstructor
 final class TsgHubPresence
 {
 	static final int REFRESH_SECONDS = 30;
@@ -31,14 +32,10 @@ final class TsgHubPresence
 	private final ClientThread clientThread;
 	private final TsgHubRankIcons rankIcons;
 	private final SpriteManager sprites;
+	private final ScheduledExecutorService executor;
 	private final Map<Integer, BufferedImage> accountIcons = new ConcurrentHashMap<>();
 	private final Map<String, BufferedImage> nameIcons = new ConcurrentHashMap<>();
-	private final ScheduledExecutorService executor;
 	private final Set<NPC> attackers = new HashSet<>();
-	private final Supplier<TsgHubApi> api;
-	private final Supplier<TsgHubSidebarPanel> sidebar;
-	private final TsgHubSocket socket;
-	private final Supplier<String> key;
 	private final ActivityDetector activity = new ActivityDetector();
 	private volatile JsonObject listed;
 	private volatile JsonArray online;
@@ -46,21 +43,6 @@ final class TsgHubPresence
 	private volatile long sentAt;
 	private volatile AreaNames.Area area;
 	private boolean slayerDirty = true;
-
-	TsgHubPresence(TsgHubPlugin plugin, Client client, ClientThread clientThread, TsgHubRankIcons rankIcons, SpriteManager sprites, ScheduledExecutorService executor,
-		Supplier<TsgHubApi> api, Supplier<TsgHubSidebarPanel> sidebar, TsgHubSocket socket, Supplier<String> key)
-	{
-		this.key = key;
-		this.socket = socket;
-		this.plugin = plugin;
-		this.client = client;
-		this.clientThread = clientThread;
-		this.rankIcons = rankIcons;
-		this.sprites = sprites;
-		this.executor = executor;
-		this.api = api;
-		this.sidebar = sidebar;
-	}
 
 	void onXp(Skill skill, int xp)
 	{
@@ -86,7 +68,7 @@ final class TsgHubPresence
 		long now = System.currentTimeMillis();
 		JsonObject current = listed;
 		boolean changed = current == null || !next.equals(current);
-		boolean due = !socket.isLive() && now - sentAt >= HEARTBEAT_MILLIS;
+		boolean due = !plugin.live() && now - sentAt >= HEARTBEAT_MILLIS;
 		if ((changed && now - sentAt >= MIN_GAP_MILLIS) || due) send(next, now);
 	}
 
@@ -100,16 +82,11 @@ final class TsgHubPresence
 
 	void leave()
 	{
-		JsonObject body = leaveBody();
-		if (body == null || socket.presence(null)) return;
-		api.get().call("POST", "/v1/presence/leave", null, body);
-	}
-
-	void shutDown()
-	{
-		JsonObject body = leaveBody();
-		if (body == null || socket.presence(null)) return;
-		api.get().call("POST", "/v1/presence/leave", null, body);
+		JsonObject current = listed;
+		if (current == null) return;
+		listed = null;
+		sentAt = 0;
+		if (!plugin.liveSync().socket().presence(null)) plugin.api().call("POST", "/v1/presence/leave", null, TsgHubJson.obj("clanName", current.get("clanName"), "accountHash", current.get("accountHash")));
 	}
 
 	void loadMembers(boolean quiet)
@@ -117,10 +94,10 @@ final class TsgHubPresence
 		if (!plugin.canUseHub() || executor.isShutdown()) return;
 		String clan = TsgHubApi.encode(plugin.clan().name());
 		if (!quiet) plugin.ui(s -> s.setBusy(true));
-		String token = key.get();
-		CompletableFuture<JsonObject> notesCall = api.get().call("GET", "/v1/members?clanName=" + clan, token, null)
+		String token = plugin.keys().adminKey();
+		CompletableFuture<JsonObject> notesCall = plugin.api().call("GET", "/v1/members?clanName=" + clan, token, null)
 			.exceptionally(error -> null);
-		api.get().call("GET", "/v1/presence?clanName=" + clan, token, null).thenCombineAsync(notesCall, (roster, loaded) -> {
+		plugin.api().call("GET", "/v1/presence?clanName=" + clan, token, null).thenCombineAsync(notesCall, (roster, loaded) -> {
 			apply(TsgHubJson.array(roster, "members"), loaded == null ? null : TsgHubJson.array(loaded, "members"));
 			return roster;
 		}, executor).whenCompleteAsync((response, error) -> {
@@ -133,10 +110,7 @@ final class TsgHubPresence
 	{
 		if (!plugin.canUseHub()) return;
 		online = members;
-		if (loaded != null)
-		{
-			notes = loaded;
-		}
+		if (loaded != null) notes = loaded;
 		JsonArray known = notes;
 		JsonArray rows = members.deepCopy();
 		clientThread.invokeLater(() -> {
@@ -179,7 +153,7 @@ final class TsgHubPresence
 
 	void open(boolean quiet)
 	{
-		if (socket.isLive()) plugin.liveSync().syncNow();
+		if (plugin.live()) plugin.liveSync().syncNow();
 		else loadMembers(quiet);
 	}
 
@@ -227,8 +201,7 @@ final class TsgHubPresence
 		for (Map.Entry<String, Integer> entry : chatWorlds.entrySet())
 		{
 			if (!seen.add(PlayerNames.key(entry.getKey()))) continue;
-			JsonObject member = new JsonObject();
-			member.addProperty("displayName", entry.getKey());
+			JsonObject member = TsgHubJson.obj("displayName", entry.getKey());
 			if (entry.getValue() > 0) member.addProperty("world", entry.getValue());
 			online.add(member);
 		}
@@ -236,9 +209,7 @@ final class TsgHubPresence
 		for (String name : clanNames)
 		{
 			if (!seen.add(PlayerNames.key(name))) continue;
-			JsonObject member = new JsonObject();
-			member.addProperty("displayName", name);
-			offline.add(member);
+			offline.add(TsgHubJson.obj("displayName", name));
 		}
 		return new JsonArray[] {sorted(online, byName), sorted(offline, byName)};
 	}
@@ -264,44 +235,29 @@ final class TsgHubPresence
 
 	CompletableFuture<Void> saveNote(String displayName, String altOf, String note)
 	{
-		JsonObject body = adminBody();
-		body.addProperty("displayName", displayName);
-		body.addProperty("altOf", altOf);
-		body.addProperty("note", note);
-		return adminWrite("PUT", "/v1/members/notes", body);
+		return adminWrite("PUT", "/v1/members/notes", TsgHubJson.obj("clanName", plugin.clan().name(), "displayName", displayName, "altOf", altOf, "note", note));
 	}
 
 	CompletableFuture<Void> addWarning(String displayName, String reason, int expiresInDays)
 	{
-		JsonObject body = adminBody();
-		body.addProperty("displayName", displayName);
-		body.addProperty("reason", reason);
-		body.addProperty("expiresInDays", expiresInDays);
-		return adminWrite("POST", "/v1/members/warnings", body);
-	}
-
-	private JsonObject adminBody()
-	{
-		JsonObject body = new JsonObject();
-		body.addProperty("clanName", plugin.clan().name());
-		return body;
+		return adminWrite("POST", "/v1/members/warnings", TsgHubJson.obj("clanName", plugin.clan().name(), "displayName", displayName, "reason", reason, "expiresInDays", expiresInDays));
 	}
 
 	private CompletableFuture<Void> adminWrite(String method, String path, JsonObject body)
 	{
-		String token = key.get();
+		String token = plugin.keys().adminKey();
 		if (token.isEmpty() || executor.isShutdown())
 		{
 			CompletableFuture<Void> failed = new CompletableFuture<>();
 			failed.completeExceptionally(new IllegalStateException("Member notes need a hub key with admin access."));
 			return failed;
 		}
-		return api.get().call(method, path, token, body).thenAccept(response -> loadMembers(true));
+		return plugin.api().call(method, path, token, body).thenAccept(response -> loadMembers(true));
 	}
 
 	void autoRefresh()
 	{
-		TsgHubSidebarPanel s = sidebar.get();
+		TsgHubSidebarPanel s = plugin.sidebar();
 		if (s != null && s.wantsMembers()) loadMembers(true);
 	}
 
@@ -369,14 +325,8 @@ final class TsgHubPresence
 		if (player == null || player.getLocalLocation() == null || hash == -1 || name.isEmpty()) return null;
 		boolean detailed = plugin.locationSharingEnabled();
 		AreaNames.Area area = this.area;
-		JsonObject payload = new JsonObject();
-		payload.addProperty("clanName", plugin.clan().name());
-		payload.addProperty("displayName", name);
-		payload.addProperty("accountHash", Long.toString(hash));
-		payload.addProperty("world", client.getWorld());
-		payload.addProperty("version", TsgHubVersion.VERSION);
-		payload.addProperty("accountType", client.getVarbitValue(VarbitID.IRONMAN));
-		payload.addProperty("timeZone", ZoneId.systemDefault().getId());
+		JsonObject payload = TsgHubJson.obj("clanName", plugin.clan().name(), "displayName", name, "accountHash", Long.toString(hash), "world", client.getWorld(),
+			"version", TsgHubVersion.VERSION, "accountType", client.getVarbitValue(VarbitID.IRONMAN), "timeZone", ZoneId.systemDefault().getId());
 		int clanRank = plugin.clan().rank();
 		if (clanRank >= 0) payload.addProperty("clanRank", clanRank);
 		payload.addProperty("area", area == null ? "" : area.name);
@@ -468,18 +418,6 @@ final class TsgHubPresence
 	{
 		listed = payload;
 		sentAt = now;
-		if (!socket.presence(payload)) api.get().call("POST", "/v1/presence", null, payload);
-	}
-
-	private JsonObject leaveBody()
-	{
-		JsonObject current = listed;
-		if (current == null) return null;
-		listed = null;
-		sentAt = 0;
-		JsonObject body = new JsonObject();
-		body.add("clanName", current.get("clanName"));
-		body.add("accountHash", current.get("accountHash"));
-		return body;
+		if (!plugin.liveSync().socket().presence(payload)) plugin.api().call("POST", "/v1/presence", null, payload);
 	}
 }
