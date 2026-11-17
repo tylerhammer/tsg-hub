@@ -2,6 +2,8 @@ package com.tsghub;
 
 import com.google.gson.*;
 import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
 import java.util.function.*;
 import lombok.*;
 import lombok.extern.slf4j.*;
@@ -14,9 +16,10 @@ final class TsgHubSignals
 
 	private final TsgHubSocket socket;
 	private final TsgHubOutbox outbox;
-	private final Supplier<TsgHubApi> api;
+	private final TsgHubApi api;
 	private final Consumer<JsonObject> receiver;
 	private final Map<String, Integer> offlineXp = new HashMap<>();
+	private boolean flushing;
 
 	boolean wantsChat(String message)
 	{
@@ -63,58 +66,52 @@ final class TsgHubSignals
 		offlineXp.clear();
 	}
 
-	void flush(Map<String, String> tokens)
+	CompletableFuture<Void> flush(Map<String, String> tokens)
 	{
 		List<JsonObject> xp = new ArrayList<>();
 		synchronized (this)
 		{
+			if (flushing) return CompletableFuture.completedFuture(null);
 			if (socket.isLive() || tokens.isEmpty())
 			{
 				offlineXp.clear();
-				return;
+				return CompletableFuture.completedFuture(null);
 			}
-			for (Map.Entry<String, Integer> entry : offlineXp.entrySet())
-			{
-				JsonObject total = new JsonObject();
-				total.addProperty("type", "xp");
-				total.addProperty("skill", entry.getKey());
-				total.addProperty("xp", entry.getValue());
-				xp.add(total);
-			}
+			offlineXp.forEach((skill, total) -> xp.add(TsgHubJson.obj("type", "xp", "skill", skill, "xp", total)));
 			offlineXp.clear();
+			flushing = true;
 		}
-		boolean retryXp = false;
-		for (Map.Entry<String, String> event : tokens.entrySet())
-		{
-			List<JsonObject> undelivered = outbox.signalBatch(MAX_BATCH - xp.size(), event.getKey());
-			if (undelivered.isEmpty() && xp.isEmpty()) continue;
-			JsonArray signals = new JsonArray();
-			xp.forEach(signals::add);
-			undelivered.forEach(signals::add);
-			JsonObject body = new JsonObject();
-			body.add("signals", signals);
-			try
+		AtomicBoolean retryXp = new AtomicBoolean();
+		CompletableFuture<Void> chain = CompletableFuture.completedFuture(null);
+		for (Map.Entry<String, String> event : tokens.entrySet()) chain = chain.thenCompose(done -> post(event.getKey(), event.getValue(), xp, retryXp));
+		return chain.handle((done, error) -> {
+			outbox.deliveredEverywhere(tokens.keySet());
+			synchronized (this)
 			{
-				JsonObject result = api.get().request("POST", "/v1/events/" + event.getKey() + "/signals", event.getValue(), body);
-				outbox.delivered(undelivered, event.getKey());
-				for (JsonObject message : TsgHubJson.objects(TsgHubJson.array(result, "messages"))) receiver.accept(message);
+				flushing = false;
+				if (retryXp.get()) for (JsonObject total : xp) offlineXp.merge(total.get("skill").getAsString(), total.get("xp").getAsInt(), Math::max);
 			}
-			catch (TsgHubApi.HttpError e)
+			return null;
+		});
+	}
+
+	private CompletableFuture<Void> post(String eventId, String token, List<JsonObject> xp, AtomicBoolean retryXp)
+	{
+		List<JsonObject> undelivered = outbox.signalBatch(MAX_BATCH - xp.size(), eventId);
+		if (undelivered.isEmpty() && xp.isEmpty()) return CompletableFuture.completedFuture(null);
+		JsonArray signals = new JsonArray();
+		xp.forEach(signals::add);
+		undelivered.forEach(signals::add);
+		return api.call("POST", "/v1/events/" + eventId + "/signals", token, TsgHubJson.obj("signals", signals)).handle((result, error) -> {
+			int status = TsgHubApi.status(error);
+			if (error == null || status == 401 || status == 403 || status == 404) outbox.delivered(undelivered, eventId);
+			else
 			{
-				if (e.status == 401 || e.status == 403 || e.status == 404) outbox.delivered(undelivered, event.getKey());
-				else retryXp = true;
+				retryXp.set(true);
+				log.debug("TSG Hub signal fallback failed", error);
 			}
-			catch (Exception e)
-			{
-				retryXp = true;
-				log.debug("TSG Hub signal fallback failed", e);
-			}
-		}
-		outbox.deliveredEverywhere(tokens.keySet());
-		if (!retryXp) return;
-		synchronized (this)
-		{
-			for (JsonObject total : xp) offlineXp.merge(total.get("skill").getAsString(), total.get("xp").getAsInt(), Math::max);
-		}
+			if (result != null) TsgHubJson.objects(TsgHubJson.array(result, "messages")).forEach(receiver);
+			return null;
+		});
 	}
 }

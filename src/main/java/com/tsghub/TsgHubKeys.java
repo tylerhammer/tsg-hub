@@ -56,9 +56,7 @@ final class TsgHubKeys
 		if (linkStarting || linkDeadline() > System.currentTimeMillis() || executor.isShutdown()) return;
 		stopLink();
 		linkStarting = true;
-		JsonObject body = new JsonObject();
-		body.addProperty("clanName", plugin.clan().name());
-		plugin.api().call("POST", "/v1/auth/start", null, body).whenCompleteAsync(TsgHubApi.handle(response -> {
+		plugin.api().call("POST", "/v1/auth/start", null, TsgHubJson.obj("clanName", plugin.clan().name()), response -> {
 			String code = TsgHubJson.str(response, "deviceCode");
 			String command = TsgHubJson.str(response, "command");
 			if (code.isEmpty() || command.isEmpty()) throw new IllegalStateException("The server didn't return a link code.");
@@ -71,7 +69,7 @@ final class TsgHubKeys
 		}, e -> plugin.memberError("Couldn't start linking. ", e), () -> {
 			linkStarting = false;
 			plugin.discordLinkChanged();
-		}), executor);
+		});
 	}
 
 	void cancelLink()
@@ -101,32 +99,22 @@ final class TsgHubKeys
 			linkExpired();
 			return;
 		}
-		JsonObject body = new JsonObject();
-		body.addProperty("deviceCode", code);
-		plugin.api().call("POST", "/v1/auth/poll", null, body).whenCompleteAsync((response, error) -> {
+		plugin.api().call("POST", "/v1/auth/poll", null, TsgHubJson.obj("deviceCode", code), result -> {
 			if (!code.equals(deviceCode)) return;
-			try
+			String status = TsgHubJson.str(result, "status");
+			if ("complete".equals(status))
 			{
-				JsonObject result = TsgHubApi.result(response, error);
-				String status = TsgHubJson.str(result, "status");
-				if ("complete".equals(status))
-				{
-					stopLink();
-					String key = TsgHubJson.str(result, "key");
-					if (key.isEmpty()) plugin.memberStatus("Linking didn't finish. Click Link Discord to try again.", Tone.ERROR);
-					else configManager.setConfiguration("tsghub", "hubKey", key);
-					plugin.discordLinkChanged();
-					return;
-				}
-				if ("expired".equals(status))
-				{
-					linkExpired();
-					return;
-				}
+				stopLink();
+				String key = TsgHubJson.str(result, "key");
+				if (key.isEmpty()) plugin.memberStatus("Linking didn't finish. Click Link Discord to try again.", Tone.ERROR);
+				else configManager.setConfiguration("tsghub", "hubKey", key);
+				plugin.discordLinkChanged();
 			}
-			catch (Exception ignored) { }
-			scheduleLinkPoll(code, seconds);
-		}, executor);
+			else if ("expired".equals(status)) linkExpired();
+			else scheduleLinkPoll(code, seconds);
+		}, e -> {
+			if (code.equals(deviceCode)) scheduleLinkPoll(code, seconds);
+		});
 	}
 
 	private void linkExpired()
@@ -159,28 +147,21 @@ final class TsgHubKeys
 		if (identity.equals(checkedIdentity) || key.equals(rejected) || executor.isShutdown()) return;
 		checkedIdentity = identity;
 		String query = "/v1/me?displayName=" + TsgHubApi.encode(name) + (hash.isEmpty() ? "" : "&accountHash=" + hash);
-		plugin.api().call("GET", query, key, null).whenCompleteAsync((response, error) -> {
-			try
-			{
-				JsonObject result = TsgHubApi.result(response, error);
-				if (!identity.equals(checkedIdentity)) return;
-				backoff.reset();
-				boolean admin = grantsAdmin(result);
-				if (admin != verified) setVerified(admin);
-				String linkError = TsgHubJson.str(result, "linkError");
-				boolean linked = TsgHubJson.bool(result, "linked");
-				if (!linkError.isEmpty()) plugin.memberStatus(linkError, Tone.ERROR);
-				else if (announce && linked) plugin.memberStatus(admin ? "Hub key accepted. Your Discord account is linked and the admin site button is unlocked." : "Hub key accepted. Your Discord account is linked.", Tone.SUCCESS);
-				if (linked || !linkError.isEmpty()) announce = false;
-				if (!linked && hash.isEmpty()) retry(identity);
-			}
-			catch (TsgHubApi.HttpError e)
-			{
-				if (e.status == 401) rejected(key);
-				else retry(identity);
-			}
-			catch (Exception e) { retry(identity); }
-		}, executor);
+		plugin.api().call("GET", query, key, null, result -> {
+			if (!identity.equals(checkedIdentity)) return;
+			backoff.reset();
+			boolean admin = grantsAdmin(result);
+			if (admin != verified) setVerified(admin);
+			String linkError = TsgHubJson.str(result, "linkError");
+			boolean linked = TsgHubJson.bool(result, "linked");
+			if (!linkError.isEmpty()) plugin.memberStatus(linkError, Tone.ERROR);
+			else if (announce && linked) plugin.memberStatus(admin ? "Hub key accepted. Your Discord account is linked and the admin site button is unlocked." : "Hub key accepted. Your Discord account is linked.", Tone.SUCCESS);
+			if (linked || !linkError.isEmpty()) announce = false;
+			if (!linked && hash.isEmpty()) retry(identity);
+		}, e -> {
+			if (TsgHubApi.status(e) == 401) rejected(key);
+			else retry(identity);
+		});
 	}
 
 	static boolean grantsAdmin(JsonObject me)
