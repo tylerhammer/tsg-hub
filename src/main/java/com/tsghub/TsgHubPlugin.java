@@ -71,7 +71,6 @@ public class TsgHubPlugin extends Plugin
 	private TsgHubClan clan;
 	private TsgHubKeys keys;
 	private TsgHubChat chat;
-	private TsgHubWindows windows;
 	private TsgHubSessions sessions;
 	private TsgHubLiveSync liveSync;
 	private TsgHubGameTracker tracker;
@@ -134,7 +133,6 @@ public class TsgHubPlugin extends Plugin
 		mouseManager.registerMouseWheelListener(newsOverlay);
 		announcements = new TsgHubAnnouncements(this, executor, this::api, chat::clanAnnouncement);
 		TsgHubRankIcons rankIcons = new TsgHubRankIcons(chatIconManager);
-		windows = new TsgHubWindows(client, () -> announcements);
 		bingo = new TsgHubBingo(client, audioPlayer, config, configManager, overlayManager, mouseManager, new TsgHubTileIcons(this::getItemImage, spriteManager), usage::count);
 		bingo.start();
 		GroupMembersPanel groupMembers = new GroupMembersPanel(config, spriteManager, itemManager);
@@ -218,7 +216,6 @@ public class TsgHubPlugin extends Plugin
 		}
 		// Stay listed across a brief restart, but leave the RuneLite party.
 		if (groups != null && groupTracker != null && groupTracker.isSharing()) partyService.changeParty(null);
-		if (windows != null) windows.dispose();
 		if (presence != null) presence.shutDown();
 		if (memberMap != null) memberMap.setOpen(false);
 		if (mapOverlay != null) overlayManager.remove(mapOverlay);
@@ -290,7 +287,6 @@ public class TsgHubPlugin extends Plugin
 	TsgHubClan clan() { return clan; }
 	TsgHubKeys keys() { return keys; }
 	TsgHubChat chat() { return chat; }
-	TsgHubWindows windows() { return windows; }
 	TsgHubSessions sessions() { return sessions; }
 	TsgHubLiveSync liveSync() { return liveSync; }
 	TsgHubGameTracker tracker() { return tracker; }
@@ -309,8 +305,7 @@ public class TsgHubPlugin extends Plugin
 
 	void openNews(String id)
 	{
-		if (config.newsOverlay() && newsOverlay.inGame()) newsOverlay.openReader(id);
-		else windows.openNews(id);
+		newsOverlay.openReader(id);
 	}
 	TsgHubTeamColors teamColors() { return teamColors; }
 	TsgHubUsage usage() { return usage; }
@@ -398,7 +393,7 @@ public class TsgHubPlugin extends Plugin
 				sidebar.showLoggedOut();
 			}
 		});
-		windows.hideAll();
+		newsOverlay.closeReader();
 	}
 
 	@Subscribe
@@ -472,7 +467,7 @@ public class TsgHubPlugin extends Plugin
 			if (teamColors != null) teamColors.apply(null);
 			sessions.clearAll();
 			keys.revoke();
-			windows.hideAll();
+			newsOverlay.closeReader();
 		}
 		liveSync.syncNow();
 		sidebarRouted = false;
