@@ -24,96 +24,82 @@
  */
 package com.tsghub;
 
+import com.google.gson.*;
+import java.io.*;
+import java.nio.charset.*;
+import java.util.*;
 import lombok.*;
+import lombok.extern.slf4j.*;
 import net.runelite.api.*;
 import net.runelite.api.gameval.*;
-import net.runelite.api.gameval.SpriteID;
 
-@AllArgsConstructor
-@Getter
-enum PrayerSprites
+@Slf4j
+@RequiredArgsConstructor
+final class PrayerSprites
 {
-	THICK_SKIN(SpriteID.Prayeron.THICK_SKIN, SpriteID.Prayeroff.THICK_SKIN_DISABLED, 20803),
-	BURST_OF_STRENGTH(SpriteID.Prayeron.BURST_OF_STRENGTH, SpriteID.Prayeroff.BURST_OF_STRENGTH_DISABLED, 20804),
-	CLARITY_OF_THOUGHT(SpriteID.Prayeron.CLARITY_OF_THOUGHT, SpriteID.Prayeroff.CLARITY_OF_THOUGHT_DISABLED, 20805),
-	SHARP_EYE(SpriteID.Prayeron.SHARP_EYE, SpriteID.Prayeroff.SHARP_EYE_DISABLED, 20821),
-	MYSTIC_WILL(SpriteID.Prayeron.MYSTIC_WILL, SpriteID.Prayeroff.MYSTIC_WILL_DISABLED, 20822),
+	static final int PRAYER_IS_AVAILABLE = 10154;
+	static final int DEFAULT_UNLOCKED = ~(bit(Prayer.DEADEYE) | bit(Prayer.MYSTIC_VIGOUR));
+	static volatile List<PrayerSprites> all = Collections.emptyList();
 
-	ROCK_SKIN(SpriteID.Prayeron.ROCK_SKIN, SpriteID.Prayeroff.ROCK_SKIN_DISABLED, 20806),
-	SUPERHUMAN_STRENGTH(SpriteID.Prayeron.SUPERHUMAN_STRENGTH, SpriteID.Prayeroff.SUPERHUMAN_STRENGTH_DISABLED, 20807),
-	IMPROVED_REFLEXES(SpriteID.Prayeron.IMPROVED_REFLEXES, SpriteID.Prayeroff.IMPROVED_REFLEXES_DISABLED, 20808),
-	RAPID_RESTORE(SpriteID.Prayeron.RAPID_RESTORE, SpriteID.Prayeroff.RAPID_RESTORE_DISABLED, 20809),
-	RAPID_HEAL(SpriteID.Prayeron.RAPID_HEAL, SpriteID.Prayeroff.RAPID_HEAL_DISABLED, 20810),
+	final Prayer prayer;
+	final int available;
+	final int unavailable;
+	final int itemId;
 
-	PROTECT_ITEM(SpriteID.Prayeron.PROTECT_ITEM, SpriteID.Prayeroff.PROTECT_ITEM_DISABLED, 20811),
-	HAWK_EYE(SpriteID.Prayeron.HAWK_EYE, SpriteID.Prayeroff.HAWK_EYE_DISABLED, 20823),
-	MYSTIC_LORE(SpriteID.Prayeron.MYSTIC_LORE, SpriteID.Prayeroff.MYSTIC_LORE_DISABLED, 20824),
-	STEEL_SKIN(SpriteID.Prayeron.STEEL_SKIN, SpriteID.Prayeroff.STEEL_SKIN_DISABLED, 20812),
-	ULTIMATE_STRENGTH(SpriteID.Prayeron.ULTIMATE_STRENGTH, SpriteID.Prayeroff.ULTIMATE_STRENGTH_DISABLED, 20813),
-
-	INCREDIBLE_REFLEXES(SpriteID.Prayeron.INCREDIBLE_REFLEXES, SpriteID.Prayeroff.INCREDIBLE_REFLEXES_DISABLED, 20814),
-	PROTECT_FROM_MAGIC(SpriteID.Prayeron.PROTECT_FROM_MAGIC, SpriteID.Prayeroff.PROTECT_FROM_MAGIC_DISABLED, 20815),
-	PROTECT_FROM_MISSILES(SpriteID.Prayeron.PROTECT_FROM_MISSILES, SpriteID.Prayeroff.PROTECT_FROM_MISSILES_DISABLED, 20816),
-	PROTECT_FROM_MELEE(SpriteID.Prayeron.PROTECT_FROM_MELEE, SpriteID.Prayeroff.PROTECT_FROM_MELEE_DISABLED, 20817),
-	EAGLE_EYE(SpriteID.Prayeron.EAGLE_EYE, SpriteID.Prayeroff.EAGLE_EYE_DISABLED, 20825)
-		{
-			@Override
-			public boolean isUnlocked(Client client)
-			{
-				return !DEADEYE.isUnlocked(client);
-			}
-		},
-	DEADEYE(SpriteID.Prayeron.DEADEYE, SpriteID.Prayeroff.DEADEYE_DISABLED, 25939)
-		{
-			@Override
-			public boolean isUnlocked(Client client)
-			{
-				boolean inLms = client.getVarbitValue(VarbitID.BR_INGAME) != 0;
-				boolean deadeye = client.getVarbitValue(VarbitID.PRAYER_DEADEYE_UNLOCKED) != 0;
-				return deadeye && !inLms;
-			}
-		},
-
-	MYSTIC_MIGHT(SpriteID.Prayeron.MYSTIC_MIGHT, SpriteID.Prayeroff.MYSTIC_MIGHT_DISABLED, 20826)
-		{
-			@Override
-			public boolean isUnlocked(Client client)
-			{
-				return !MYSTIC_VIGOUR.isUnlocked(client);
-			}
-		},
-	MYSTIC_VIGOUR(SpriteID.Prayeron.MYSTIC_VIGOUR, SpriteID.Prayeroff.MYSTIC_VIGOUR_DISABLED, 27034)
-		{
-			@Override
-			public boolean isUnlocked(Client client)
-			{
-				boolean inLms = client.getVarbitValue(VarbitID.BR_INGAME) != 0;
-				boolean vigour = client.getVarbitValue(VarbitID.PRAYER_MYSTIC_VIGOUR_UNLOCKED) != 0;
-				return vigour && !inLms;
-			}
-		},
-	RETRIBUTION(SpriteID.Prayeron.RETRIBUTION, SpriteID.Prayeroff.RETRIBUTION_DISABLED, 20818),
-	REDEMPTION(SpriteID.Prayeron.REDEMPTION, SpriteID.Prayeroff.REDEMPTION_DISABLED, 20819),
-	SMITE(SpriteID.Prayeron.SMITE, SpriteID.Prayeroff.SMITE_DISABLED, 20820),
-	PRESERVE(SpriteID.Prayeron.PRESERVE, SpriteID.Prayeroff.PRESERVE_DISABLED, 20831),
-
-	CHIVALRY(SpriteID.Prayeron.CHIVALRY, SpriteID.Prayeroff.CHIVALRY_DISABLED, 20828),
-	PIETY(SpriteID.Prayeron.PIETY, SpriteID.Prayeroff.PIETY_DISABLED, 20829),
-	RIGOUR(SpriteID.Prayeron.RIGOUR, SpriteID.Prayeroff.RIGOUR_DISABLED, 20827),
-	AUGURY(SpriteID.Prayeron.AUGURY, SpriteID.Prayeroff.AUGURY_DISABLED, 20830),
-	;
-
-	private final int available;
-	private final int unavailable;
-	private final int itemId;
-
-	Prayer getPrayer()
+	static void load(Gson gson)
 	{
-		return Prayer.valueOf(name());
+		if (!all.isEmpty()) return;
+		List<PrayerSprites> out = new ArrayList<>();
+		InputStream in = PrayerSprites.class.getResourceAsStream("prayers.json");
+		if (in == null) return;
+		try (InputStreamReader reader = new InputStreamReader(in, StandardCharsets.UTF_8))
+		{
+			for (Map.Entry<String, JsonElement> e : gson.fromJson(reader, JsonObject.class).entrySet())
+			{
+				JsonArray v = e.getValue().getAsJsonArray();
+				out.add(new PrayerSprites(Prayer.valueOf(e.getKey()), v.get(0).getAsInt(), v.get(1).getAsInt(), v.get(2).getAsInt()));
+			}
+		}
+		catch (Exception e) { log.debug("TSG Hub prayer table unreadable", e); }
+		all = Collections.unmodifiableList(out);
 	}
 
-	boolean isUnlocked(Client client)
+	static int bit(Prayer prayer)
 	{
-		return true;
+		return 1 << prayer.ordinal();
+	}
+
+	static boolean unlocked(Prayer prayer, Client client)
+	{
+		switch (prayer)
+		{
+			case EAGLE_EYE: return !unlocked(Prayer.DEADEYE, client);
+			case MYSTIC_MIGHT: return !unlocked(Prayer.MYSTIC_VIGOUR, client);
+			case DEADEYE: return client.getVarbitValue(VarbitID.PRAYER_DEADEYE_UNLOCKED) != 0 && client.getVarbitValue(VarbitID.BR_INGAME) == 0;
+			case MYSTIC_VIGOUR: return client.getVarbitValue(VarbitID.PRAYER_MYSTIC_VIGOUR_UNLOCKED) != 0 && client.getVarbitValue(VarbitID.BR_INGAME) == 0;
+			default: return true;
+		}
+	}
+
+	static int[] read(Client client)
+	{
+		int available = 0;
+		int enabled = 0;
+		int unlocked = 0;
+		for (PrayerSprites p : all)
+		{
+			if (!unlocked(p.prayer, client)) continue;
+			int bit = bit(p.prayer);
+			unlocked |= bit;
+			client.runScript(PRAYER_IS_AVAILABLE, p.itemId);
+			if (client.getIntStack()[0] > 0) available |= bit;
+			if (client.getVarbitValue(p.prayer.getVarbit()) == 1) enabled |= bit;
+		}
+		return new int[]{available, enabled, unlocked};
+	}
+
+	static boolean canRunScripts(Client client)
+	{
+		return client.getGameState() == GameState.LOGGED_IN && client.getLocalPlayer() != null;
 	}
 }

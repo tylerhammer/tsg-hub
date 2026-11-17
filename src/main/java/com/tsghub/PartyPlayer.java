@@ -39,7 +39,7 @@ class PartyPlayer
 	private Stats stats;
 	private GameItem[] inventory = new GameItem[28];
 	private GameItem[] equipment = new GameItem[EquipmentInventorySlot.AMMO.getSlotIdx() + 1];
-	private Prayers prayers;
+	private int[] prayers;
 	private int stamina;
 	private int poison;
 	private int disease;
@@ -85,7 +85,7 @@ class PartyPlayer
 				equipment = GameItem.of(worn.getItems(), itemManager);
 				quiver.readEquipment(equipment);
 			}
-			if (prayers == null && Prayers.canRunScripts(client)) prayers = new Prayers(client);
+			if (prayers == null && PrayerSprites.canRunScripts(client)) prayers = PrayerSprites.read(client);
 		}
 		if (quiver.isSlotVisible()) quiver.setQuiverAmmo(Quiver.ammo(client, itemManager));
 	}

@@ -27,10 +27,8 @@ package com.tsghub;
 import java.awt.*;
 import java.awt.image.*;
 import javax.swing.*;
-import lombok.*;
 import net.runelite.client.game.*;
 import net.runelite.client.util.*;
-import static com.tsghub.Prayers.isUnlockedByDefault;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 
@@ -41,29 +39,30 @@ class PrayerSlot extends JComponent
 	private BufferedImage unavailableImage;
 	private BufferedImage availableImage;
 
-	@Getter
-	private PrayerData data;
+	private final int bit;
+	private boolean available;
+	private boolean enabled;
 
 	PrayerSlot(PrayerSprites sprites, SpriteManager spriteManager)
 	{
-		data = new PrayerData(sprites.getPrayer(), false, false, isUnlockedByDefault(sprites.getPrayer()));
-		spriteManager.getSpriteAsync(sprites.getUnavailable(), 0, img -> SwingUtilities.invokeLater(() -> {
+		bit = PrayerSprites.bit(sprites.prayer);
+		spriteManager.getSpriteAsync(sprites.unavailable, 0, img -> SwingUtilities.invokeLater(() -> {
 			unavailableImage = img;
 			repaint();
 		}));
-		spriteManager.getSpriteAsync(sprites.getAvailable(), 0, img -> SwingUtilities.invokeLater(() -> {
+		spriteManager.getSpriteAsync(sprites.available, 0, img -> SwingUtilities.invokeLater(() -> {
 			availableImage = img;
 			repaint();
 		}));
-		setToolTipText(Text.titleCase(sprites.getPrayer()));
+		setToolTipText(Text.titleCase(sprites.prayer));
 		setPreferredSize(SIZE);
 		setMinimumSize(SIZE);
 	}
 
-	void updatePrayerData(PrayerData updatedData)
+	void update(int[] prayers)
 	{
-		if (!data.getPrayer().equals(updatedData.getPrayer())) return;
-		data = updatedData;
+		available = (prayers[0] & bit) != 0;
+		enabled = (prayers[1] & bit) != 0;
 		repaint();
 	}
 
@@ -71,7 +70,7 @@ class PrayerSlot extends JComponent
 	protected void paintComponent(Graphics g0)
 	{
 		Graphics2D g = (Graphics2D) g0.create();
-		boolean active = data.isEnabled();
+		boolean active = enabled;
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		g.setColor(active ? PRAYER_ACTIVE : SLOT);
 		g.fillRoundRect(0, 0, getWidth(), getHeight(), RADIUS, RADIUS);
@@ -81,7 +80,7 @@ class PrayerSlot extends JComponent
 			g.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, RADIUS, RADIUS);
 		}
 		else g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.35f));
-		BufferedImage icon = data.isAvailable() || active ? availableImage : unavailableImage;
+		BufferedImage icon = available || active ? availableImage : unavailableImage;
 		if (icon != null) g.drawImage(icon, (getWidth() - icon.getWidth()) / 2, (getHeight() - icon.getHeight()) / 2, null);
 		g.dispose();
 	}

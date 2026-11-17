@@ -468,7 +468,7 @@ final class TsgHubSessions
 		body.addProperty("clanName", clan.name());
 		body.addProperty("clanRank", rank);
 		syncedClanRanks.put(key, rank);
-		plugin.tracker().report("clan-rank", "/v1/events/" + eventId + "/clan-rank", token, body);
+		plugin.tracker().report("clan-rank", "POST", "/v1/events/" + eventId + "/clan-rank", token, body);
 	}
 
 	void forgetEvent(String eventId)

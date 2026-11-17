@@ -131,7 +131,7 @@ final class TsgHubDefenceTarget
 
 	private boolean doubled()
 	{
-		return boss.name.equals("Corporeal Beast") || boss.name.equals("Pestilent Bloat");
+		return boss.has('B');
 	}
 
 	void drain(SpecialWeapon weapon, int hit, boolean missDrain)
@@ -206,28 +206,5 @@ final class TsgHubDefenceTarget
 			damage = atk > 0 ? 0 : damage - start;
 		}
 		if (damage > 0) magic = Math.max(0, magic - damage);
-	}
-
-	static boolean drains(SpecialWeapon weapon)
-	{
-		switch (weapon)
-		{
-			case DRAGON_WARHAMMER:
-			case ELDER_MAUL:
-			case BANDOS_GODSWORD:
-			case TONALZTICS_OF_RALOS:
-			case ARCLIGHT:
-			case DARKLIGHT:
-			case EMBERLIGHT:
-			case BARRELCHEST_ANCHOR:
-			case BONE_DAGGER:
-			case DORGESHUUN_CROSSBOW:
-			case ACCURSED_SCEPTRE:
-			case SEERCULL:
-			case EYE_OF_AYAK:
-				return true;
-			default:
-				return false;
-		}
 	}
 }

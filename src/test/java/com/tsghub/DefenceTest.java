@@ -32,6 +32,10 @@ public class DefenceTest
 		assertNull(TsgHubDefence.boss(BOSSES, "Ocellus"));
 		assertEquals(150, target("Ocellus P3").floor);
 		assertEquals(2, target("Ocellus P3").toCap(SpecialWeapon.DRAGON_WARHAMMER));
+		assertTrue(TsgHubDefence.drains(SpecialWeapon.SEERCULL));
+		assertTrue(!TsgHubDefence.drains(SpecialWeapon.BULWARK));
+		assertEquals("Dorg xbow", TsgHubDefence.shortName(SpecialWeapon.DORGESHUUN_CROSSBOW));
+		assertEquals("Arclight", TsgHubDefence.shortName(SpecialWeapon.ARCLIGHT));
 	}
 
 	@Test

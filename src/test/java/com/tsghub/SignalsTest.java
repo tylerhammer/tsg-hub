@@ -170,7 +170,7 @@ public class SignalsTest
 	public void salesSkipHttpFallback()
 	{
 		TsgHubSignals signals = signals();
-		signals.send("sale", TsgHubSales.update("", 20997, GrandExchangeOfferState.SOLD, 2, 1_400_000_000, 2, 2_800_000_000L, "offer").sale);
+		signals.send("sale", TsgHubSales.update("", 20997, GrandExchangeOfferState.SOLD, 2, 1_400_000_000, 2, 2_800_000_000L, "offer").getValue());
 		signals.send("loot", new JsonObject());
 		signals.flush(Map.of("e1", "member"));
 		assertEquals(1, posted.get(0).getAsJsonArray("signals").size());
