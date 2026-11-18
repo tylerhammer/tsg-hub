@@ -582,7 +582,7 @@ final class TsgHubBoardView
 			text.add(wrapped(str(team, "name"), TEXT, boldFont(), 120));
 			int lines = integer(score, "lines", 0);
 			int bonus = integer(score, "bonusPoints", 0);
-			text.add(caption(integer(score, "completedTasks", 0) + "/" + totalTasks + " tasks" + (lines > 0 ? " · " + TsgHubFormat.plural(lines, "line") : "") + (bonus > 0 ? " (+" + bonus + ")" : "")));
+			text.add(caption(integer(score, "completedTasks", 0) + "/" + totalTasks + " tasks" + (lines > 0 ? " · " + TsgHubFormat.plural(lines, "line") : "") + (bonus > 0 ? " (+" + bonus + ")" : "") + (finished(score) ? " · Finished" : "")));
 			card.add(text, BorderLayout.CENTER);
 			card.add(label(integer(score, "points", 0) + " pts", i == 0 ? ACCENT : TEXT, boldFont()), BorderLayout.EAST);
 			addCard(scoreboardTab, fitHeight(card));
