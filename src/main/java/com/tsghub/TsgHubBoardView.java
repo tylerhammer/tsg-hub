@@ -637,7 +637,7 @@ final class TsgHubBoardView
 	private void confirmLeave()
 	{
 		if (boardEvent == null) return;
-		if (confirm(shell, "Disconnect from event", "Stop tracking \"" + eventName(boardEvent) + "\" on this device?\nYour team keeps its progress and you can rejoin with your team code.", "Disconnect", true))
+		if (confirm(shell, "Disconnect from event", "Stop tracking \"" + eventName(boardEvent) + "\" on this device?\n" + (solo(boardEvent) ? "You keep your progress and can sign up again to rejoin." : "Your team keeps its progress and you can rejoin with your team code."), "Disconnect", true))
 			plugin.sessions().leaveEvent(str(boardEvent, "id"));
 	}
 

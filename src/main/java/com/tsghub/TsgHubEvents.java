@@ -235,16 +235,21 @@ final class TsgHubEvents
 		return closes == null || clock.instant().isBefore(closes);
 	}
 
+	static boolean solo(JsonObject event)
+	{
+		return bool(event, "solo");
+	}
+
 	static String signupSummary(JsonObject event, ZoneId zone)
 	{
 		JsonObject signups = object(event, "signups");
 		int count = integer(signups, "count", 0);
-		String waiting = count == 0 ? "No one waiting yet" : count + " waiting for a team";
+		String waiting = solo(event) ? "" : count == 0 ? "No one waiting yet" : count + " waiting for a team";
 		Instant closes = instant(str(signups, "closesAt"));
 		if (closes == null) return waiting;
 		ZonedDateTime at = closes.atZone(zone);
 		String verb = clock.instant().isBefore(closes) ? "Closes " : "Closed ";
-		return waiting + " · " + verb + when(at, clock.instant()) + " " + zoneName(at);
+		return (waiting.isEmpty() ? "" : waiting + " · ") + verb + when(at, clock.instant()) + " " + zoneName(at);
 	}
 
 	static String taskGoal(JsonObject task)
