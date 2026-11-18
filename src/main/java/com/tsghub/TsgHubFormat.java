@@ -172,10 +172,20 @@ final class TsgHubFormat
 	static String formatGp(long value)
 	{
 		if (value <= 0) return "";
+		return value < 1_000L ? value + " gp" : compact(value);
+	}
+
+	static String ratio(long value, long max)
+	{
+		return max >= 10_000 ? compact(value) + "/" + compact(max) : value + "/" + max;
+	}
+
+	static String compact(long value)
+	{
 		if (value >= 1_000_000_000L) return trimDecimal(value / 1_000_000_000.0) + "B";
 		if (value >= 1_000_000L) return trimDecimal(value / 1_000_000.0) + "M";
 		if (value >= 1_000L) return trimDecimal(value / 1_000.0) + "K";
-		return value + " gp";
+		return String.valueOf(value);
 	}
 
 	private static String trimDecimal(double value)

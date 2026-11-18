@@ -13,6 +13,7 @@ import javax.swing.Timer;
 import net.runelite.api.*;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.*;
+import net.runelite.client.input.KeyListener;
 import net.runelite.client.input.MouseListener;
 import net.runelite.client.input.MouseWheelListener;
 import net.runelite.client.ui.overlay.*;
@@ -21,7 +22,7 @@ import static com.tsghub.TsgHubJson.*;
 import static com.tsghub.TsgHubTheme.*;
 import static com.tsghub.TsgHubUi.*;
 
-final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWheelListener
+final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWheelListener, KeyListener
 {
 	private static final int WIDTH = 300;
 	private static final int READER_W = TsgHubNewsWindow.TEXT_W + 2 * (GAP_L + 4);
@@ -246,6 +247,24 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 		g.drawLine(c - 4, m + 4, c + 4, m - 4);
 		g.dispose();
 		return null;
+	}
+
+	@Override
+	public void keyPressed(KeyEvent event)
+	{
+		if (event.getKeyCode() != KeyEvent.VK_ESCAPE || page == null) return;
+		event.consume();
+		closeReader();
+	}
+
+	@Override
+	public void keyTyped(KeyEvent event)
+	{
+	}
+
+	@Override
+	public void keyReleased(KeyEvent event)
+	{
 	}
 
 	@Override

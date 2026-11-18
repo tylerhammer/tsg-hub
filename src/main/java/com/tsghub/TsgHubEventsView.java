@@ -339,8 +339,25 @@ final class TsgHubEventsView
 		shell.setView(View.PREVIEW);
 		shell.setEventHeader(event, true, false);
 		shell.page.removeAll();
-		shell.page.add(eventSummaryCard(event, "Bingo", "Complete tasks with your team for points. Most points wins."));
+		boolean solo = solo(event);
+		shell.page.add(eventSummaryCard(event, "Bingo", solo ? "Complete tasks on your own for points. Most points wins." : "Complete tasks with your team for points. Most points wins."));
 		boolean signups = signupsOpen(event);
+		if (solo)
+		{
+			String summary = signupSummary(event, ZoneId.systemDefault());
+			addGap(shell.page, GAP_L, label(signups ? "Sign up to play" : "Sign-ups are closed", TEXT, smallFont()));
+			if (!summary.isEmpty()) addGap(shell.page, GAP_XS, hint(summary));
+			if (signups)
+			{
+				shell.page.add(gap(GAP_S));
+				resetNoteForm("", "Sign up");
+				addNoteForm();
+				addGap(shell.page, GAP_S, hint("Everyone plays solo. Signing up joins you straight away and opens your board."));
+				SwingUtilities.invokeLater(noteField::requestFocusInWindow);
+			}
+			shell.refreshPage();
+			return;
+		}
 		if (signups)
 		{
 			addGap(shell.page, GAP_L, label("Sign up for a team", TEXT, smallFont()));

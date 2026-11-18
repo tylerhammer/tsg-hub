@@ -235,15 +235,40 @@ final class TsgHubEvents
 		return closes == null || clock.instant().isBefore(closes);
 	}
 
+	static boolean solo(JsonObject event)
+	{
+		return bool(event, "solo");
+	}
+
 	static String signupSummary(JsonObject event, ZoneId zone)
 	{
 		JsonObject signups = object(event, "signups");
 		int count = integer(signups, "count", 0);
-		String waiting = count == 0 ? "No one waiting yet" : count + " waiting for a team";
+		String waiting = solo(event) ? "" : count == 0 ? "No one waiting yet" : count + " waiting for a team";
 		Instant closes = instant(str(signups, "closesAt"));
 		if (closes == null) return waiting;
 		ZonedDateTime at = closes.atZone(zone);
 		String verb = clock.instant().isBefore(closes) ? "Closes " : "Closed ";
-		return waiting + " · " + verb + when(at, clock.instant()) + " " + zoneName(at);
+		return (waiting.isEmpty() ? "" : waiting + " · ") + verb + when(at, clock.instant()) + " " + zoneName(at);
+	}
+
+	static String taskGoal(JsonObject task)
+	{
+		JsonObject config = object(task, "config");
+		if ("xp".equals(str(task, "type")))
+		{
+			long xp = longValue(config, "targetXp", 0);
+			return xp > 0 ? "Gain " + number(xp) + " " + skillName(str(config, "skill")) + " XP" : "";
+		}
+		String limit = timeLimit(task);
+		return limit.isEmpty() ? "" : "Finish " + str(config, "activity") + " in under " + limit;
+	}
+
+	static String timeLimit(JsonObject task)
+	{
+		long seconds = "timed".equals(str(task, "type")) ? longValue(object(task, "config"), "maxSeconds", 0) : 0;
+		if (seconds <= 0) return "";
+		long h = seconds / 3600, m = seconds % 3600 / 60, s = seconds % 60;
+		return h > 0 ? String.format(Locale.ROOT, "%d:%02d:%02d", h, m, s) : String.format(Locale.ROOT, "%d:%02d", m, s);
 	}
 }

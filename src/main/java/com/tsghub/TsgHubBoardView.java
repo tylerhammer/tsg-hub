@@ -292,7 +292,8 @@ final class TsgHubBoardView
 
 		JPanel body = stack();
 		String description = str(task, "description").trim();
-		if (!description.isEmpty() && !completed) body.add(cardNote(description));
+		String goal = taskGoal(task);
+		if (!goal.isEmpty() && !completed) body.add(cardNote(goal));
 
 		int value = integer(progress, "progress", 0);
 		int target = Math.max(1, integer(progress, "target", 1));
@@ -331,7 +332,7 @@ final class TsgHubBoardView
 		for (JsonObject claim : claims) claimers.add(claimName(claim));
 		if (!claims.isEmpty()) body.add(cardNoteHtml("Claimed: " + firstThenRest(claimers, CARD_CLAIMS, ", ")));
 		addLineSpacing(body);
-		addScopeIcon(body, solo, individual);
+		addScopeIcon(body, solo, individual, description);
 		card.add(body, BorderLayout.CENTER);
 		JsonObject myClaim = completed ? null : TsgHubTileClaims.mine(boardEvent, taskId);
 		if (myClaim != null) highlightSelf(card);
@@ -400,12 +401,23 @@ final class TsgHubBoardView
 		renderTasks();
 	}
 
-	private static void addScopeIcon(JPanel body, boolean solo, boolean individual)
+	private static void addScopeIcon(JPanel body, boolean solo, boolean individual, String description)
 	{
 		JLabel scope = new JLabel(icon("scope" + (solo ? 1 : individual ? 3 : 2), MUTED));
 		scope.setToolTipText(solo ? "Solo: one player completes it" : individual ? "Everyone: each teammate completes it" : "Team: progress is shared");
 		JPanel corner = panel(new BorderLayout());
 		corner.add(scope, BorderLayout.SOUTH);
+		if (!description.isEmpty())
+		{
+			JLabel note = new JLabel(icon("note", MUTED));
+			note.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, GAP_S));
+			note.setToolTipText(html(escape(description).replace("\n", "<br>"), 240));
+			JPanel icons = panel(new BorderLayout());
+			icons.add(note, BorderLayout.WEST);
+			icons.add(scope, BorderLayout.EAST);
+			corner.removeAll();
+			corner.add(icons, BorderLayout.SOUTH);
+		}
 		int last = body.getComponentCount() - 1;
 		Component line = last >= 0 && body.getComponent(last) instanceof JLabel ? body.getComponent(last) : new JLabel();
 		if (line.getParent() == body) body.remove(last);
@@ -463,7 +475,7 @@ final class TsgHubBoardView
 		boolean solo = "solo".equals(str(task, "scope"));
 		String head = titleCut ? "<b>" + escape(str(task, "title")) + "</b>" : "";
 		String description = str(task, "description").trim();
-		if (completed && !description.isEmpty()) head += (head.isEmpty() ? "" : "<br>") + escape(description).replace("\n", "<br>");
+		if (!description.isEmpty()) head += (head.isEmpty() ? "" : "<br>") + escape(description).replace("\n", "<br>");
 
 		String sections = "";
 		if (!completed && !individual && !solo) sections += setSections(progress, head.isEmpty());
@@ -519,9 +531,9 @@ final class TsgHubBoardView
 			String name = nameHtml(str(member, "displayName"), boardDisplayName);
 			int have = integer(member, "progress", 0);
 			int need = integer(member, "target", 1);
-			if (solo) waiting.add(name + " " + tipLine(MUTED, have + "/" + need));
+			if (solo) waiting.add(name + " " + tipLine(MUTED, TsgHubFormat.ratio(have, need)));
 			else if (bool(member, "completed")) done.add(name);
-			else waiting.add(need > 1 ? name + " " + tipLine(MUTED, have + "/" + need) : name);
+			else waiting.add(need > 1 ? name + " " + tipLine(MUTED, TsgHubFormat.ratio(have, need)) : name);
 		}
 		if (solo) return tipSection(first, tipLine(MUTED, "<b>STANDINGS</b>")) + tipCard(null, String.join("<br>", waiting));
 		String out = "";
@@ -534,7 +546,7 @@ final class TsgHubBoardView
 	{
 		String leader = str(progress, "leader");
 		if (leader.isEmpty()) return;
-		body.add(caption("Leader: " + leader + " (" + integer(progress, "progress", 0) + "/" + integer(progress, "target", 1) + ")"));
+		body.add(caption("Leader: " + leader + " (" + TsgHubFormat.ratio(integer(progress, "progress", 0), integer(progress, "target", 1)) + ")"));
 	}
 
 	private static String contributorsHtml(JsonObject progress, String separator, int max, String self)
@@ -625,14 +637,13 @@ final class TsgHubBoardView
 	private void confirmLeave()
 	{
 		if (boardEvent == null) return;
-		if (confirm(shell, "Disconnect from event", "Stop tracking \"" + eventName(boardEvent) + "\" on this device?\nYour team keeps its progress and you can rejoin with your team code.", "Disconnect", true))
+		if (confirm(shell, "Disconnect from event", "Stop tracking \"" + eventName(boardEvent) + "\" on this device?\n" + (solo(boardEvent) ? "You keep your progress and can sign up again to rejoin." : "Your team keeps its progress and you can rejoin with your team code."), "Disconnect", true))
 			plugin.sessions().leaveEvent(str(boardEvent, "id"));
 	}
 
 	private void addBar(JPanel body, int value, int max, String label)
 	{
 		body.add(gap(GAP_S));
-		body.add(progressBar(value, max, label, value + "/" + max));
+		body.add(progressBar(value, max, label, TsgHubFormat.ratio(value, max)));
 		body.add(gap(GAP_S));
-	}
-}
+	}}
