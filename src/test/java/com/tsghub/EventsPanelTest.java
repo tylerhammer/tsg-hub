@@ -81,6 +81,22 @@ public class EventsPanelTest
 		assertEquals("No one waiting yet", TsgHubEvents.signupSummary(event("{\"signups\":{\"open\":true,\"count\":0}}"), sydney));
 		assertEquals("3 waiting for a team · Closes Mon 5 Oct, 7pm AEDT", TsgHubEvents.signupSummary(event("{\"signups\":{\"open\":true,\"count\":3,\"closesAt\":\"2026-10-05T08:00:00Z\"}}"), sydney));
 		assertEquals("1 waiting for a team · Closed Sun 4 Oct, 12pm AEDT", TsgHubEvents.signupSummary(event("{\"signups\":{\"open\":false,\"count\":1,\"closesAt\":\"2026-10-04T01:00:00Z\"}}"), sydney));
+		assertEquals("Teams of 5 · 3 waiting for a team · Closes Mon 5 Oct, 7pm AEDT", TsgHubEvents.signupSummary(event("{\"signups\":{\"open\":true,\"count\":3,\"teamSize\":5,\"closesAt\":\"2026-10-05T08:00:00Z\"}}"), sydney));
+		assertEquals("Teams of 1 · No one waiting yet", TsgHubEvents.signupSummary(event("{\"signups\":{\"open\":true,\"count\":0,\"teamSize\":1}}"), sydney));
+		assertEquals("No one waiting yet", TsgHubEvents.signupSummary(event("{\"signups\":{\"open\":true,\"count\":0,\"teamSize\":0}}"), sydney));
+		assertEquals("", TsgHubEvents.signupSummary(event("{\"solo\":true,\"signups\":{\"open\":true,\"teamSize\":5}}"), sydney));
+	}
+
+	@Test
+	public void teamSize()
+	{
+		assertEquals(5, TsgHubEvents.teamSize(event("{\"signups\":{\"teamSize\":5}}")));
+		assertEquals(50, TsgHubEvents.teamSize(event("{\"signups\":{\"teamSize\":50}}")));
+		assertEquals(0, TsgHubEvents.teamSize(event("{\"signups\":{\"teamSize\":51}}")));
+		assertEquals(0, TsgHubEvents.teamSize(event("{\"signups\":{\"teamSize\":\"x\"}}")));
+		assertEquals(0, TsgHubEvents.teamSize(event("{\"signups\":{}}")));
+		assertEquals(0, TsgHubEvents.teamSize(event("{}")));
+		assertEquals(0, TsgHubEvents.teamSize(event("{\"solo\":true,\"signups\":{\"teamSize\":5}}")));
 	}
 
 	@Test
