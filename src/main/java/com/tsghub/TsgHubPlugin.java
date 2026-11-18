@@ -97,6 +97,7 @@ public class TsgHubPlugin extends Plugin
 	@Inject private WorldMapOverlay worldMapOverlay;
 	@Inject private OverlayManager overlayManager;
 	@Inject private MouseManager mouseManager;
+	@Inject private KeyManager keyManager;
 	@Inject private DrawManager drawManager;
 	@Inject private AudioPlayer audioPlayer;
 	@Inject private PluginManager pluginManager;
@@ -168,6 +169,7 @@ public class TsgHubPlugin extends Plugin
 		overlayManager.add(newsOverlay);
 		mouseManager.registerMouseListener(newsOverlay);
 		mouseManager.registerMouseWheelListener(newsOverlay);
+		keyManager.registerKeyListener(newsOverlay);
 		announcements = new TsgHubAnnouncements(this, executor, this::api, chat::clanAnnouncement);
 		TsgHubRankIcons rankIcons = new TsgHubRankIcons(chatIconManager);
 		windows = new TsgHubWindows(client, () -> announcements);
@@ -265,6 +267,7 @@ public class TsgHubPlugin extends Plugin
 			overlayManager.remove(newsOverlay);
 			mouseManager.unregisterMouseListener(newsOverlay);
 			mouseManager.unregisterMouseWheelListener(newsOverlay);
+			keyManager.unregisterKeyListener(newsOverlay);
 			newsOverlay.closeReader();
 		}
 		if (liveSync != null) liveSync.socket().disconnect();

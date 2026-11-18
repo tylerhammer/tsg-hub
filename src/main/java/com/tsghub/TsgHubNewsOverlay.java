@@ -15,6 +15,7 @@ import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.geom.RoundRectangle2D;
@@ -31,13 +32,14 @@ import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
+import net.runelite.client.input.KeyListener;
 import net.runelite.client.input.MouseListener;
 import net.runelite.client.input.MouseWheelListener;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 
-final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWheelListener
+final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWheelListener, KeyListener
 {
 	private static final int WIDTH = 300;
 	private static final int READER_W = TsgHubNewsWindow.TEXT_W + 2 * (GAP_L + 4);
@@ -279,6 +281,24 @@ final class TsgHubNewsOverlay extends Overlay implements MouseListener, MouseWhe
 		g.drawLine(c - 4, m + 4, c + 4, m - 4);
 		g.dispose();
 		return null;
+	}
+
+	@Override
+	public void keyPressed(KeyEvent event)
+	{
+		if (event.getKeyCode() != KeyEvent.VK_ESCAPE || page == null) return;
+		event.consume();
+		closeReader();
+	}
+
+	@Override
+	public void keyTyped(KeyEvent event)
+	{
+	}
+
+	@Override
+	public void keyReleased(KeyEvent event)
+	{
 	}
 
 	@Override

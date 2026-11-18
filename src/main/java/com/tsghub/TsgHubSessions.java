@@ -129,7 +129,7 @@ final class TsgHubSessions
 			session().set(MEMBER_NAME + eventId, memberName);
 			session().set(SIGNUP_NOTE + eventId, TsgHubJson.str(member, "note"));
 			setActiveEvent(eventId, memberToken, memberName);
-			plugin.memberStatus("Signed up! An admin will put you on a team.", Tone.SUCCESS);
+			plugin.memberStatus(TsgHubEvents.solo(result.getAsJsonObject("event")) ? "You're in! Your progress counts from now." : "Signed up! An admin will put you on a team.", Tone.SUCCESS);
 			applyBoard(eventId, memberToken, result.getAsJsonObject("event"), true);
 		}, e -> signupFailed(TsgHubFormat.friendlyError(e))), executor);
 	}
@@ -180,7 +180,10 @@ final class TsgHubSessions
 		if (!revokeToken.isEmpty()) disconnect(eventId, revokeToken);
 		session().clear(MEMBER_TOKEN + eventId, MEMBER_NAME + eventId, SIGNUP_NOTE + eventId);
 		if (eventId.equals(session().get(EVENT_ID))) session().clear(TOKEN, EVENT_ID);
-		plugin.memberStatus("Disconnected. Rejoin anytime with your team code.", Tone.SUCCESS);
+		boolean solo = false;
+		JsonArray events = clanEvents;
+		if (events != null) for (JsonObject event : objects(events)) if (eventId.equals(str(event, "id"))) solo = TsgHubEvents.solo(event);
+		plugin.memberStatus(solo ? "Disconnected. Sign up again anytime to rejoin." : "Disconnected. Rejoin anytime with your team code.", Tone.SUCCESS);
 		plugin.ui(s -> s.eventsView.showEventList());
 		loadClanEvents();
 	}
@@ -388,7 +391,7 @@ final class TsgHubSessions
 			return;
 		}
 		plugin.sidebarBusy(true);
-		api().call("GET", "/v1/events?clanName=" + TsgHubApi.encode(clanName), null, null).whenCompleteAsync(TsgHubApi.handle(response ->
+		api().call("GET", "/v1/events?clanName=" + TsgHubApi.encode(clanName), plugin.keys().adminKey(), null).whenCompleteAsync(TsgHubApi.handle(response ->
 		{
 			applyClanEvents(response);
 		}, e -> plugin.memberError("Couldn't load events. ", e), () -> plugin.sidebarBusy(false)), executor);

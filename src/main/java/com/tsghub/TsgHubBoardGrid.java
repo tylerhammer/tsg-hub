@@ -183,7 +183,7 @@ final class TsgHubBoardGrid extends JComponent
 	{
 		int value = TsgHubJson.integer(progress, "progress", 0);
 		int target = Math.max(1, TsgHubJson.integer(progress, "target", 1));
-		return done ? "Done" : TsgHubJson.bool(progress, "pending") ? "Awaiting review" : target > 1 ? value + " / " + target : "Not done yet";
+		return done ? "Done" : TsgHubJson.bool(progress, "pending") ? "Awaiting review" : target > 1 ? TsgHubFormat.ratio(value, target).replace("/", " / ") : "Not done yet";
 	}
 
 	@Override
@@ -218,6 +218,8 @@ final class TsgHubBoardGrid extends JComponent
 		JsonObject row = progress.get(id);
 		StringBuilder text = new StringBuilder("<html><b>").append(TsgHubHtml.escape(TsgHubJson.str(task, "title"))).append("</b>");
 		text.append("<br>").append(TsgHubJson.integer(task, "points", 1)).append(" pts");
+		String goal = done.contains(id) ? "" : TsgHubEvents.taskGoal(task);
+		if (!goal.isEmpty()) text.append("<br>").append(TsgHubHtml.escape(goal));
 		text.append("<br>").append(status(row, done.contains(id)));
 		return text.append("</html>").toString();
 	}
