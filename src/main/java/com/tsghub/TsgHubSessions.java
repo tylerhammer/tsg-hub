@@ -368,7 +368,7 @@ final class TsgHubSessions
 			return;
 		}
 		plugin.sidebarBusy(true);
-		api().call("GET", "/v1/events?clanName=" + TsgHubApi.encode(clanName), null, null, response ->
+		api().call("GET", "/v1/events?clanName=" + TsgHubApi.encode(clanName), plugin.keys().adminKey(), null, response ->
 		{
 			applyClanEvents(response);
 		}, e -> plugin.memberError("Couldn't load events. ", e), () -> plugin.sidebarBusy(false));

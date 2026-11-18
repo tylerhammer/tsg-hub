@@ -234,7 +234,8 @@ final class TsgHubBoardOverlay extends Overlay
 		y += 2;
 		int value = integer(progress, "progress", 0);
 		int target = Math.max(1, integer(progress, "target", 1));
-		String status = TsgHubBoardGrid.status(progress, done);
+		String limit = TsgHubEvents.timeLimit(task);
+		String status = !done && target <= 1 && !limit.isEmpty() && !bool(progress, "pending") ? "Under " + limit : TsgHubBoardGrid.status(progress, done);
 		y += metrics.getHeight();
 		text.setColor(done ? TsgHubTheme.SUCCESS : bool(progress, "pending") ? TsgHubTheme.WARNING : TsgHubTheme.TEXT);
 		text.drawString(status, x, y);
@@ -266,7 +267,7 @@ final class TsgHubBoardOverlay extends Overlay
 
 	private boolean active(MouseEvent event)
 	{
-		return visible && snapshot != null && !event.isAltDown() && SwingUtilities.isLeftMouseButton(event);
+		return visible && snapshot != null && event.isShiftDown() && !event.isAltDown() && SwingUtilities.isLeftMouseButton(event);
 	}
 
 	final MouseAdapter mouse = new MouseAdapter()
@@ -313,7 +314,7 @@ final class TsgHubBoardOverlay extends Overlay
 
 		@Override public MouseEvent mouseMoved(MouseEvent event)
 		{
-			Point point = visible ? local(event) : null;
+			Point point = visible && event.isShiftDown() ? local(event) : null;
 			setHover(point == null ? null : tileAt(point));
 			return event;
 		}
