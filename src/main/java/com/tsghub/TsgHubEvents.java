@@ -243,16 +243,32 @@ final class TsgHubEvents
 		return bool(event, "solo");
 	}
 
+	static int teamSize(JsonObject event)
+	{
+		if (solo(event)) return 0;
+		int size = integer(object(event, "signups"), "teamSize", 0);
+		return size >= 1 && size <= 50 ? size : 0;
+	}
+
 	static String signupSummary(JsonObject event, ZoneId zone)
 	{
 		JsonObject signups = object(event, "signups");
 		int count = integer(signups, "count", 0);
+		int size = teamSize(event);
+		String summary = size > 0 ? "Teams of " + size : "";
 		String waiting = solo(event) ? "" : count == 0 ? "No one waiting yet" : count + " waiting for a team";
+		summary = join(summary, waiting);
 		Instant closes = instant(str(signups, "closesAt"));
-		if (closes == null) return waiting;
+		if (closes == null) return summary;
 		ZonedDateTime at = closes.atZone(zone);
 		String verb = clock.instant().isBefore(closes) ? "Closes " : "Closed ";
-		return (waiting.isEmpty() ? "" : waiting + " · ") + verb + when(at, clock.instant()) + " " + zoneName(at);
+		return join(summary, verb + when(at, clock.instant()) + " " + zoneName(at));
+	}
+
+	private static String join(String left, String right)
+	{
+		if (left.isEmpty()) return right;
+		return right.isEmpty() ? left : left + " · " + right;
 	}
 
 	static String taskGoal(JsonObject task)
