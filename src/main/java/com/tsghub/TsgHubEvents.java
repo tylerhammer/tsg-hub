@@ -185,13 +185,16 @@ final class TsgHubEvents
 
 	static List<JsonObject> rankedTeams(JsonObject event)
 	{
-		JsonArray scores = array(event, "teamScores");
+		Map<String, Integer> order = new HashMap<>();
+		for (JsonObject score : objects(array(event, "teamScores"))) order.putIfAbsent(str(score, "teamId"), order.size());
 		List<JsonObject> ranked = objects(array(event, "teams"));
-		ranked.sort(Comparator
-			.comparingInt((JsonObject team) -> integer(scoreFor(scores, str(team, "id")), "points", 0)).reversed()
-			.thenComparing(Comparator.comparingInt((JsonObject team) -> integer(scoreFor(scores, str(team, "id")), "completedTasks", 0)).reversed())
-			.thenComparing(team -> str(team, "name"), String.CASE_INSENSITIVE_ORDER));
+		ranked.sort(Comparator.comparingInt(team -> order.getOrDefault(str(team, "id"), Integer.MAX_VALUE)));
 		return ranked;
+	}
+
+	static boolean finished(JsonObject score)
+	{
+		return !str(score, "finishedAt").isEmpty();
 	}
 
 	static JsonObject progressFor(JsonArray progressRows, String taskId)
