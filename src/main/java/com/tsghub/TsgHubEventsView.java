@@ -387,14 +387,20 @@ final class TsgHubEventsView
 		if (solo)
 		{
 			String summary = signupSummary(event, ZoneId.systemDefault());
-			addGap(shell.page, GAP_L, label(signups ? "Sign up to play" : "Sign-ups are closed", TEXT, smallFont()));
-			if (!summary.isEmpty()) addGap(shell.page, GAP_XS, hint(summary));
+			shell.page.add(gap(GAP_L));
+			shell.page.add(label(signups ? "Sign up to play" : "Sign-ups are closed", TEXT, smallFont()));
+			if (!summary.isEmpty())
+			{
+				shell.page.add(gap(GAP_XS));
+				shell.page.add(TsgHubSidebarPanel.hint(summary));
+			}
 			if (signups)
 			{
 				shell.page.add(gap(GAP_S));
 				resetNoteForm("", "Sign up");
 				addNoteForm();
-				addGap(shell.page, GAP_S, hint("Everyone plays solo. Signing up joins you straight away and opens your board."));
+				shell.page.add(gap(GAP_S));
+				shell.page.add(TsgHubSidebarPanel.hint("Everyone plays solo. Signing up joins you straight away and opens your board."));
 				SwingUtilities.invokeLater(noteField::requestFocusInWindow);
 			}
 			shell.refreshPage();

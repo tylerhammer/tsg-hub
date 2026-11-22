@@ -182,7 +182,7 @@ final class TsgHubSessions
 		if (eventId.equals(session().get(EVENT_ID))) session().clear(TOKEN, EVENT_ID);
 		boolean solo = false;
 		JsonArray events = clanEvents;
-		if (events != null) for (JsonObject event : objects(events)) if (eventId.equals(str(event, "id"))) solo = TsgHubEvents.solo(event);
+		if (events != null) for (JsonObject event : TsgHubJson.objects(events)) if (eventId.equals(TsgHubJson.str(event, "id"))) solo = TsgHubEvents.solo(event);
 		plugin.memberStatus(solo ? "Disconnected. Sign up again anytime to rejoin." : "Disconnected. Rejoin anytime with your team code.", Tone.SUCCESS);
 		plugin.ui(s -> s.eventsView.showEventList());
 		loadClanEvents();
