@@ -117,7 +117,7 @@ final class TsgHubNewsView
 	{
 		JPanel lines = stack();
 		JPanel icons = newsIcons(announcement);
-		lines.add(row(label(html(escape(str(announcement, "title")), CARD_TEXT_W - icons.getPreferredSize().width - 6), TEXT, boldFont()), north(icons)));
+		lines.add(row(htmlLabel(html(escape(str(announcement, "title")), CARD_TEXT_W - icons.getPreferredSize().width - 6), TEXT, boldFont()), north(icons)));
 		addGap(lines, GAP_XS, cardNote(str(announcement, "postedBy") + " · " + shortDate(str(announcement, "postedAt"), now, zone) + suffix));
 		return lines;
 	}

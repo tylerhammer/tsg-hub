@@ -69,10 +69,8 @@ class PlayerBanner extends JPanel
 
 		nameLabel.setFont(boldFont());
 		nameLabel.setMinimumSize(new Dimension(0, 0));
-		nameLabel.putClientProperty("html.disable", Boolean.TRUE);
 		areaLabel.setFont(smallFont());
 		areaLabel.setMinimumSize(new Dimension(0, 0));
-		areaLabel.putClientProperty("html.disable", Boolean.TRUE);
 
 		JPanel stats = new JPanel(new GridLayout(1, 4, 2, 0))
 		{

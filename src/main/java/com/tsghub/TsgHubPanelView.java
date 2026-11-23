@@ -33,7 +33,7 @@ final class TsgHubPanelView
 		for (JsonObject action : actions(panel, "buttons", self))
 		{
 			JButton button = button(str(action, "label"));
-			button.setToolTipText(str(action, "tooltip").isEmpty() ? null : str(action, "tooltip"));
+			button.setToolTipText(str(action, "tooltip").isEmpty() ? null : TsgHubHtml.plainTip(str(action, "tooltip")));
 			button.addActionListener(e -> {
 				if (perform(parent, action, run, failed)) button.setEnabled(false);
 			});

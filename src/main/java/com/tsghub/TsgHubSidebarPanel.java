@@ -228,7 +228,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	void setAdminAccess(boolean allowed)
 	{
 		admin.setVisible(allowed);
-		title.setText(html(escape(titleText), titleWidth()));
+		setHtml(title, html(escape(titleText), titleWidth()));
 		if (shows(View.MEMBERS)) membersView.renderMembers();
 	}
 
@@ -351,7 +351,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		version.setVisible(next == View.HOME);
 		dock.setShown(!next.gated());
 		pin.setVisible(next.pin != null);
-		title.setText(html(escape(titleText), titleWidth()));
+		setHtml(title, html(escape(titleText), titleWidth()));
 		back.setToolTipText(next == View.LOOKUP ? lookupView.lookupReturn.backLabel() : next.top() ? "Home" : "Back to events");
 	}
 
@@ -516,7 +516,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	void setHeader(String titleText, String subtitleText, boolean showBack, boolean showRefresh)
 	{
 		this.titleText = titleText;
-		title.setText(html(escape(titleText), titleWidth()));
+		setHtml(title, html(escape(titleText), titleWidth()));
 		this.subtitleText = subtitleText;
 		subtitleTip = null;
 		renderSubtitle();

@@ -101,7 +101,7 @@ final class TsgHubNewsWindow extends JPanel
 			for (JsonObject block : objects(blocks))
 			{
 				String type = str(block, "type");
-				if (type.equals("text")) page.add(linkedHtml(medals(str(block, "html")), TEXT, plainFont(), width));
+				if (type.equals("text")) page.add(linkedHtml(postHtml(str(block, "text")), TEXT, plainFont(), width));
 				else if (type.equals("divider")) page.add(divider());
 				else if (type.equals("images")) addImages(array(block, "images"));
 			}

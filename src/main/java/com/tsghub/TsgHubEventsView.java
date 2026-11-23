@@ -134,7 +134,7 @@ final class TsgHubEventsView
 
 	private JLabel detail(String label, String value)
 	{
-		JLabel line = label(html("<font color='" + toHexColor(MUTED) + "'>" + label + ":</font> " + escape(value), CARD_TEXT_W), TEXT, plainFont());
+		JLabel line = htmlLabel(html("<font color='" + toHexColor(MUTED) + "'>" + label + ":</font> " + escape(value), CARD_TEXT_W), TEXT, plainFont());
 		line.setBorder(BorderFactory.createEmptyBorder(1, 0, 1, 0));
 		return line;
 	}

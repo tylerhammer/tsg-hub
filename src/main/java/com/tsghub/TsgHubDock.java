@@ -107,7 +107,7 @@ final class TsgHubDock extends JPanel
 	{
 		title.setText(text);
 		subtitle.setText(detail.isEmpty() ? " " : "· " + detail);
-		bar.setToolTipText(detail.isEmpty() ? text : text + " · " + detail);
+		bar.setToolTipText(TsgHubHtml.plainTip(detail.isEmpty() ? text : text + " · " + detail));
 	}
 
 	void setShown(boolean next)
