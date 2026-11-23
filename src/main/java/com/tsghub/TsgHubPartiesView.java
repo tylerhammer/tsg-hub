@@ -267,7 +267,6 @@ final class TsgHubPartiesView
 		String title = mine ? currentTitle(group) : TsgHubGroups.partyTitle(group);
 
 		JLabel heading = shrinkable(label(title, locked ? MUTED : TEXT, boldFont()));
-		heading.putClientProperty("html.disable", Boolean.TRUE);
 		if (bool(group, "locked"))
 		{
 			heading.setIcon(icon("lock", MUTED));
@@ -281,8 +280,7 @@ final class TsgHubPartiesView
 		boolean showArea = area != null && !area.getKey().equalsIgnoreCase(title) && (area.getValue() >= 2 || members.size() == 1);
 		String extra = showArea ? area.getKey() : leaderListed || leader.isEmpty() ? "" : "Led by " + leader;
 		JLabel detail = shrinkable(showArea ? label(extra, SUCCESS, smallFont()) : caption(extra));
-		detail.putClientProperty("html.disable", Boolean.TRUE);
-		JLabel who = label(html(String.join(", ", names), CARD_TEXT_W), MUTED, smallFont());
+		JLabel who = htmlLabel(html(String.join(", ", names), CARD_TEXT_W), MUTED, smallFont());
 		JPanel text = extra.isEmpty() ? twoLines(top, who) : twoLines(top, detail);
 		if (!extra.isEmpty()) addGap(text, GAP_XS, who);
 		card.add(text, BorderLayout.CENTER);
