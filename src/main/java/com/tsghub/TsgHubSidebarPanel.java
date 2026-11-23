@@ -208,7 +208,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	void setAdminAccess(boolean allowed)
 	{
 		admin.setVisible(allowed);
-		title.setText(html(escape(titleText), titleWidth()));
+		setHtml(title, html(escape(titleText), titleWidth()));
 		if (shows(View.MEMBERS)) membersView.renderMembers();
 	}
 
@@ -350,7 +350,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 		version.setVisible(next == View.HOME);
 		dock.setShown(!gated(next));
 		pin.setVisible(pinnable(next));
-		title.setText(html(escape(titleText), titleWidth()));
+		setHtml(title, html(escape(titleText), titleWidth()));
 		back.setToolTipText(next == View.LOOKUP ? backLabel(lookupView.lookupReturn) : next == View.EVENTS || next == View.GROUPS || next == View.MEMBERS || next == View.DROPS || next == View.NEWS || next == View.RECORDS ? "Home" : "Back to events");
 	}
 
@@ -557,7 +557,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 	void setHeader(String titleText, String subtitleText, boolean showBack, boolean showRefresh)
 	{
 		this.titleText = titleText;
-		title.setText(html(escape(titleText), titleWidth()));
+		setHtml(title, html(escape(titleText), titleWidth()));
 		this.subtitleText = subtitleText;
 		subtitleTip = null;
 		renderSubtitle();
@@ -582,7 +582,7 @@ final class TsgHubSidebarPanel extends PluginPanel
 
 	static JLabel cardNoteHtml(String innerHtml)
 	{
-		return label(html(innerHtml, CARD_TEXT_W), MUTED, smallFont());
+		return htmlLabel(html(innerHtml, CARD_TEXT_W), MUTED, smallFont());
 	}
 
 	void refreshPage()

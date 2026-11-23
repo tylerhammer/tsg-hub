@@ -166,6 +166,7 @@ public final class TsgHubTheme
 				return "<html><b>" + TsgHubHtml.escape(getText()) + "</b>" + (extra == null ? "" : "<br>" + TsgHubHtml.escape(extra)) + "</html>";
 			}
 		};
+		label.putClientProperty("html.disable", Boolean.TRUE);
 		ToolTipManager.sharedInstance().registerComponent(label);
 		return label;
 	}

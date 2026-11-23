@@ -175,7 +175,7 @@ final class TsgHubNewsGallery extends JPanel
 		memory.selected.put(photos.get(0).url, index);
 		Photo photo = photos.get(index);
 		int before = captionRow.getPreferredSize().height;
-		caption.setText(photo.caption.isEmpty() ? "" : TsgHubHtml.html(TsgHubHtml.escape(photo.caption), width - countW));
+		TsgHubUi.setHtml(caption, photo.caption.isEmpty() ? "" : TsgHubHtml.html(TsgHubHtml.escape(photo.caption), width - countW));
 		count.setText(photos.size() > 1 ? (index + 1) + " / " + photos.size() : "");
 		int after = captionRow.getPreferredSize().height;
 		if (after != before || captionRow.getMaximumSize().height != after)

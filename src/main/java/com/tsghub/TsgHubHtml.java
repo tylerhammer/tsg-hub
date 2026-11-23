@@ -17,7 +17,7 @@ final class TsgHubHtml
 
 	static String escape(String text)
 	{
-		return text == null ? "" : text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+		return text == null ? "" : text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#39;");
 	}
 
 	// Swing HTML treats px as 1/72in but fonts render at 96dpi, so scale by 3/4.

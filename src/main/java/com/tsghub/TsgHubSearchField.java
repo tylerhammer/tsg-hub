@@ -63,7 +63,9 @@ abstract class TsgHubSearchField extends JPanel
 		resultList.setVisibleRowCount(VISIBLE_ROWS);
 		resultList.setBackground(TsgHubTheme.CARD);
 		resultList.setCellRenderer((list, value, index, selected, focus) -> {
-			JLabel row = new JLabel(value);
+			JLabel row = new JLabel();
+			row.putClientProperty("html.disable", Boolean.TRUE);
+			row.setText(value);
 			row.setOpaque(true);
 			row.setBorder(BorderFactory.createEmptyBorder(3, 6, 3, 6));
 			row.setBackground(selected ? TsgHubTheme.CARD_HOVER : TsgHubTheme.CARD);

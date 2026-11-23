@@ -92,16 +92,31 @@ final class TsgHubUi
 
 	static JLabel label(String text, Color color, Font font)
 	{
-		JLabel label = new JLabel(text);
+		JLabel label = new JLabel();
+		label.putClientProperty("html.disable", Boolean.TRUE);
+		label.setText(text);
 		label.setForeground(color);
 		label.setFont(font);
 		label.setAlignmentX(Component.LEFT_ALIGNMENT);
 		return label;
 	}
 
+	static JLabel htmlLabel(String html, Color color, Font font)
+	{
+		JLabel label = label("", color, font);
+		setHtml(label, html);
+		return label;
+	}
+
+	static void setHtml(JLabel label, String html)
+	{
+		label.putClientProperty("html.disable", null);
+		label.setText(html);
+	}
+
 	static JLabel linkedHtml(String innerHtml, Color color, Font font, int widthPx)
 	{
-		JLabel label = label(html(innerHtml, widthPx), color, font);
+		JLabel label = htmlLabel(html(innerHtml, widthPx), color, font);
 		Consumer<Point> press = point -> {
 			String href = linkAt(label, point);
 			if (href != null && confirm(label, "Open link", "Open this link in your browser?\n\n" + href, "Open", false))
@@ -150,7 +165,7 @@ final class TsgHubUi
 
 	static JLabel wrapped(String text, Color color, Font font, int widthPx)
 	{
-		return label(html(escape(text), widthPx), color, font);
+		return htmlLabel(html(escape(text), widthPx), color, font);
 	}
 
 	static JLabel boldLabel(String text)
@@ -185,7 +200,7 @@ final class TsgHubUi
 		panel.setBorder(BorderFactory.createEmptyBorder(40, 0, 20, 0));
 		JLabel title = boldLabel(heading);
 		title.setAlignmentX(Component.CENTER_ALIGNMENT);
-		JLabel text = caption(html("<div style='text-align:center'>" + escape(body) + "</div>", widthPx));
+		JLabel text = htmlLabel(html("<div style='text-align:center'>" + escape(body) + "</div>", widthPx), MUTED, smallFont());
 		text.setAlignmentX(Component.CENTER_ALIGNMENT);
 		text.setHorizontalAlignment(JLabel.CENTER);
 		panel.add(title);
@@ -199,7 +214,7 @@ final class TsgHubUi
 	static JLabel badge(String text, Color color)
 	{
 		Color fill = ColorUtil.colorLerp(CARD, color, .16);
-		JLabel label = new JLabel(text)
+		JLabel label = new JLabel()
 		{
 			@Override
 			protected void paintComponent(Graphics g)
@@ -212,6 +227,8 @@ final class TsgHubUi
 				super.paintComponent(g);
 			}
 		};
+		label.putClientProperty("html.disable", Boolean.TRUE);
+		label.setText(text);
 		label.setForeground(color);
 		label.setFont(smallFont());
 		label.setBorder(BorderFactory.createEmptyBorder(2, 5, 0, 5));
@@ -517,7 +534,7 @@ final class TsgHubUi
 		if (name != null)
 		{
 			JLabel label = caption(name);
-			label.setToolTipText(name);
+			label.setToolTipText("<html>" + escape(name) + "</html>");
 			label.setPreferredSize(new Dimension(Math.min(Math.max(52, label.getPreferredSize().width), 96), label.getPreferredSize().height));
 			row.add(label, BorderLayout.WEST);
 		}
@@ -746,7 +763,7 @@ final class TsgHubUi
 
 	static void showError(JLabel label, String message, int width)
 	{
-		label.setText(html(escape(message), width));
+		setHtml(label, html(escape(message), width));
 		label.setVisible(true);
 		label.revalidate();
 	}

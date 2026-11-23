@@ -145,7 +145,7 @@ final class TsgHubBoardView
 
 		JPanel card = card();
 		JPanel row = row();
-		row.add(label(html(escape(teamName), CARD_TITLE_W), TEXT, boldFont()), BorderLayout.CENTER);
+		row.add(htmlLabel(html(escape(teamName), CARD_TITLE_W), TEXT, boldFont()), BorderLayout.CENTER);
 		if (rank > 0 && !bool(boardEvent, "hideScores"))
 		{
 			row.add(north(badge("#" + rank + " of " + ranked.size(), rank == 1 ? ACCENT : MUTED)), BorderLayout.EAST);
@@ -225,7 +225,6 @@ final class TsgHubBoardView
 			{
 				JsonObject progress = progressFor(progressRows, str(task, "id"));
 				JLabel title = shrinkable(label(str(task, "title"), MUTED, plainFont()));
-				title.putClientProperty("html.disable", Boolean.TRUE);
 				title.setIcon(icon("check", SUCCESS));
 				JPanel line = fitHeight(row(title, caption(String.valueOf(integer(task, "points", 1)))));
 				lazyTooltip(line, () -> taskTooltip(task, progress, truncated(title)));
@@ -299,7 +298,6 @@ final class TsgHubBoardView
 
 		JPanel card = card();
 		JLabel name = shrinkable(label(str(task, "title"), completed ? MUTED : TEXT, boldFont()));
-		name.putClientProperty("html.disable", Boolean.TRUE);
 		if (completed) name.setIcon(icon("check", SUCCESS));
 		JLabel points = badge(String.valueOf(integer(task, "points", 1)), completed ? MUTED : ACCENT);
 		points.setToolTipText("Points");
@@ -443,7 +441,7 @@ final class TsgHubBoardView
 	{
 		String count = value + " of " + target + " teammates done";
 		if (mine == null || !bool(mine, "completed")) return caption(count);
-		return label(html("<font color='" + toHexColor(SUCCESS) + "'>You're done</font> · " + count, TsgHubSidebarPanel.CARD_TEXT_W), MUTED, smallFont());
+		return htmlLabel(html("<font color='" + toHexColor(SUCCESS) + "'>You're done</font> · " + count, TsgHubSidebarPanel.CARD_TEXT_W), MUTED, smallFont());
 	}
 
 	private boolean addSetProgress(JPanel body, JsonObject source, boolean mine)

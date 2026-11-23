@@ -105,7 +105,7 @@ final class TsgHubNewsView
 		JPanel card = card();
 		JPanel lines = stack();
 		JPanel icons = newsIcons(announcement);
-		lines.add(row(label(html(escape(str(announcement, "title")), TsgHubSidebarPanel.CARD_TEXT_W - icons.getPreferredSize().width - 6), TEXT, boldFont()), north(icons)));
+		lines.add(row(htmlLabel(html(escape(str(announcement, "title")), TsgHubSidebarPanel.CARD_TEXT_W - icons.getPreferredSize().width - 6), TEXT, boldFont()), north(icons)));
 		String poll = TsgHubAnnouncements.poll(announcement) == null ? "" : " · Poll";
 		lines.add(gap(GAP_XS));
 		lines.add(TsgHubSidebarPanel.cardNote(str(announcement, "postedBy") + " · " + TsgHubFormat.shortDate(str(announcement, "postedAt"), now, zone) + poll));
@@ -120,7 +120,7 @@ final class TsgHubNewsView
 		JPanel card = card();
 		JPanel lines = stack();
 		JPanel icons = newsIcons(announcement);
-		lines.add(row(label(html(escape(str(announcement, "title")), TsgHubSidebarPanel.CARD_TEXT_W - icons.getPreferredSize().width - 6), TEXT, boldFont()), north(icons)));
+		lines.add(row(htmlLabel(html(escape(str(announcement, "title")), TsgHubSidebarPanel.CARD_TEXT_W - icons.getPreferredSize().width - 6), TEXT, boldFont()), north(icons)));
 		lines.add(gap(GAP_XS));
 		lines.add(TsgHubSidebarPanel.cardNote(str(announcement, "postedBy") + " · " + TsgHubFormat.shortDate(str(announcement, "postedAt"), now, zone)));
 		lines.add(plugin.announcements().polls().block(str(announcement, "id"), TsgHubAnnouncements.poll(announcement), TsgHubSidebarPanel.CARD_TEXT_W));

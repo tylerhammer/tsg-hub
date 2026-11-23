@@ -98,7 +98,7 @@ final class TsgHubNewsPoll
 			block.add(bar);
 		}
 		String error = errors.get(id);
-		if (error != null) block.add(label(html(escape(error), widthPx), TsgHubTheme.ERROR, smallFont()));
+		if (error != null) block.add(htmlLabel(html(escape(error), widthPx), TsgHubTheme.ERROR, smallFont()));
 		Runnable cast = () -> {
 			voting.add(id);
 			errors.remove(id);
