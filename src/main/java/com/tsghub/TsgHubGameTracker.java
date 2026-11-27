@@ -6,7 +6,9 @@ import java.util.concurrent.*;
 import lombok.*;
 import net.runelite.api.*;
 import net.runelite.api.events.*;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.InventoryID;
+import net.runelite.api.widgets.*;
 import net.runelite.client.callback.*;
 import net.runelite.client.eventbus.*;
 import net.runelite.client.events.*;
@@ -32,6 +34,7 @@ final class TsgHubGameTracker
 	private String lastGroupContent = "";
 	private int lastGroupContentTick = -1;
 	private Set<Integer> inventoryPets = Collections.emptySet();
+	private final TsgHubCaskets caskets = new TsgHubCaskets();
 
 	@Subscribe
 	public void onWidgetLoaded(WidgetLoaded event)
@@ -112,6 +115,7 @@ final class TsgHubGameTracker
 	public void onItemContainerChanged(ItemContainerChanged event)
 	{
 		if (event.getContainerId() != InventoryID.INV || !plugin.sharingInClan()) return;
+		trackCaskets(event.getItemContainer());
 		Set<Integer> pets = inventoryPetIds();
 		int added = 0;
 		for (int itemId : pets) if (!inventoryPets.contains(itemId)) added = itemId;
@@ -123,6 +127,44 @@ final class TsgHubGameTracker
 			recentPet = added;
 			recentPetTick = client.getTickCount();
 		}
+	}
+
+	@Subscribe
+	public void onGameStateChanged(GameStateChanged event)
+	{
+		if (event.getGameState() != GameState.LOGGED_IN) caskets.reset();
+	}
+
+	private void trackCaskets(ItemContainer inventory)
+	{
+		if (inventory == null) return;
+		Map<String, Integer> casketCounts = new HashMap<>();
+		Map<String, Integer> clueCounts = new HashMap<>();
+		for (Item item : inventory.getItems())
+		{
+			if (item.getId() <= 0) continue;
+			String name = itemManager.getItemComposition(item.getId()).getName();
+			String casket = TsgHubCaskets.casketTier(name);
+			if (casket != null) casketCounts.merge(casket, item.getQuantity(), Integer::sum);
+			String clue = TsgHubCaskets.clueTier(name);
+			if (clue != null) clueCounts.merge(clue, item.getQuantity(), Integer::sum);
+		}
+		for (String tier : caskets.update(casketCounts, clueCounts, client.getTickCount(), storageOpen()))
+		{
+			JsonObject casket = new JsonObject();
+			casket.addProperty("tier", tier);
+			plugin.signals().send("casket", casket);
+		}
+	}
+
+	private boolean storageOpen()
+	{
+		for (int id : new int[]{InterfaceID.Bankmain.UNIVERSE, InterfaceID.SharedBank.UNIVERSE})
+		{
+			Widget widget = client.getWidget(id);
+			if (widget != null && !widget.isHidden()) return true;
+		}
+		return false;
 	}
 
 	void reportXp(String skills)
@@ -157,6 +199,7 @@ final class TsgHubGameTracker
 		lastGroupContent = "";
 		lastGroupContentTick = -1;
 		inventoryPets = Collections.emptySet();
+		caskets.reset();
 	}
 
 	private void reportGroupContent(String text, String key)
