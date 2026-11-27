@@ -10,6 +10,7 @@ import java.util.*;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.function.*;
+import java.util.regex.*;
 import javax.imageio.*;
 import lombok.*;
 import lombok.extern.slf4j.*;
@@ -59,7 +60,7 @@ final class TsgHubDrops
 		if (!plugin.sharingEnabled()) return;
 		if (event.getType() == ChatMessageType.GAMEMESSAGE)
 		{
-			String text = Text.removeTags(event.getMessage()).trim();
+			String text = plain(event.getMessage()).trim();
 			String lower = text.toLowerCase(Locale.ROOT);
 			if (TsgHubRules.get().dropContext.stream().anyMatch(lower::contains)) countMessages.add(client.getTickCount(), text);
 			return;
@@ -158,10 +159,29 @@ final class TsgHubDrops
 		return samePlayer(message.substring(0, self.length()), self);
 	}
 
+	private static final Pattern PARAM = Pattern.compile("<([A-Za-z]+_\\d+)=([^>]*)>");
+	private static final Pattern PLACEHOLDER = Pattern.compile("<([A-Za-z]+_\\d+):[^>]*>");
+
+	/**
+	 * Strips tags but keeps the values the game passes as parameters. Since the 2026-11-18 update a broadcast like
+	 * "Bones<int_0=44> (<int_0:spacer> coins)." defines a value in one tag and shows it where a placeholder tag sits.
+	 */
+	static String plain(String raw)
+	{
+		Map<String, String> params = new HashMap<>();
+		Matcher defined = PARAM.matcher(raw);
+		while (defined.find()) params.put(defined.group(1), defined.group(2));
+		Matcher placed = PLACEHOLDER.matcher(PARAM.matcher(raw).replaceAll(""));
+		StringBuilder out = new StringBuilder();
+		while (placed.find()) placed.appendReplacement(out, Matcher.quoteReplacement(params.getOrDefault(placed.group(1), "")));
+		placed.appendTail(out);
+		return Text.removeTags(out.toString());
+	}
+
 	static String broadcast(String raw)
 	{
 		if (raw == null) return null;
-		String message = Text.removeTags(raw).replace(' ', ' ').trim();
+		String message = plain(raw).replace(' ', ' ').trim();
 		String lower = message.toLowerCase(Locale.ROOT);
 		for (String keyword : TsgHubRules.get().broadcastKeywords) if (lower.contains(keyword)) return message;
 		return null;

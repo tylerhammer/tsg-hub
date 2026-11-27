@@ -90,6 +90,12 @@ public class DropsPanelTest
 		assertEquals("Bob received special loot from a raid: Twisted bow.", TsgHubDrops.broadcast("Bob received special loot from a raid: Twisted bow."));
 		assertEquals("itsHammerKR has a funny feeling like he would have been followed: Vorki at 912 killcount from Vorkath.",
 			TsgHubDrops.broadcast("itsHammerKR has a funny feeling like he would have been followed: Vorki at 912 killcount from Vorkath."));
+		assertEquals("Bob received a drop: Bones (44 coins).", TsgHubDrops.broadcast("Bob received a drop: Bones<int_0=44> (<int_0:spacer> coins)."));
+		assertEquals("Bob received a drop: 100 x Sunfire splinters (1,500 coins) from Sol Heredit.",
+			TsgHubDrops.broadcast("Bob received a drop: <int_1=100><int_1:spacer> x <col=ef1020>Sunfire splinters</col><int_0=1,500> (<int_0:spacer> coins) from Sol Heredit."));
+		assertEquals("Bob has a funny feeling like he's being followed: Rock golem at 5000000 XP.",
+			TsgHubDrops.broadcast("Bob has a funny feeling like <str_0=he's><str_0:spacer> being followed: Rock golem at <int_0=5000000><int_0:spacer> XP."));
+		assertEquals("Bob received a drop: Bones ( coins).", TsgHubDrops.broadcast("Bob received a drop: Bones (<int_0:spacer> coins)."));
 		assertNull(TsgHubDrops.broadcast("Bob has reached combat level 100."));
 		assertNull(TsgHubDrops.broadcast(null));
 	}
